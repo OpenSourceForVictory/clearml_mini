@@ -109,6 +109,7 @@ class Job(Base):
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     error: Mapped[Optional[str]] = mapped_column(String(1000))
     runs: Mapped[list[Run]] = relationship(back_populates='job', order_by='Run.attempt')
+    owner: Mapped[User] = relationship()
 
 
 class Run(Base):

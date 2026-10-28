@@ -33,6 +33,7 @@ def test_submit_idempotency_and_ownership(tmp_path, monkeypatch):
     first = client.post('/api/v1/jobs', json=body, headers=headers)
     second = client.post('/api/v1/jobs', json=body, headers=headers)
     assert first.status_code == 201
+    assert client.get(f'/api/v1/jobs/{first.json()["id"]}', headers=auth).json()['owner_name'] == 'owner'
     assert first.json()['id'] == second.json()['id']
     other_auth = token('other', 'another-password')
     assert client.get(f'/api/v1/jobs/{first.json()["id"]}', headers=other_auth).status_code == 404

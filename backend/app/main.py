@@ -85,7 +85,7 @@ def visible(job: Job, user: User):
 
 
 def detail(job: Job):
-    return {'id': job.id, 'owner_id': job.owner_id, 'title': job.title, 'benchmark': job.benchmark,
+    return {'id': job.id, 'owner_id': job.owner_id, 'owner_name': job.owner.username, 'title': job.title, 'benchmark': job.benchmark,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
             'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
             'finished_at': job.finished_at, 'error': job.error,
@@ -170,7 +170,7 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
 
 @app.get('/api/v1/jobs')
 def jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), status: Optional[Status] = None, user: User = Depends(current), s: Session = Depends(db)):
-    q = select(Job).options(selectinload(Job.runs)).where(Job.owner_id == user.id).order_by(Job.created_at.desc())
+    q = select(Job).options(selectinload(Job.runs), selectinload(Job.owner)).where(Job.owner_id == user.id).order_by(Job.created_at.desc())
     if status:
         q = q.where(Job.status == status)
     return [detail(j) for j in s.scalars(q.offset((page-1)*page_size).limit(page_size))]
@@ -230,7 +230,7 @@ def admin_jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=1
                status: Optional[Status] = None, user: User = Depends(current), s: Session = Depends(db)):
     if user.role != 'admin':
         raise HTTPException(403, 'admin required')
-    query = select(Job).options(selectinload(Job.runs)).order_by(Job.created_at.desc(), Job.id)
+    query = select(Job).options(selectinload(Job.runs), selectinload(Job.owner)).order_by(Job.created_at.desc(), Job.id)
     if status:
         query = query.where(Job.status == status)
     return [detail(j) for j in s.scalars(query.offset((page-1)*page_size).limit(page_size))]
@@ -257,6 +257,7 @@ def admin_health(user: User = Depends(current), s: Session = Depends(db)):
         raise HTTPException(403, 'admin required')
     state = s.get(SchedulerState, 'heartbeat')
     return {'scheduler': state.value if state else None,
+            'runner_image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
             'quarantined_slots': s.scalar(select(func.count()).select_from(Slot).where(Slot.quarantined))}
 
 

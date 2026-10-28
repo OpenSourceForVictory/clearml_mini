@@ -26,6 +26,7 @@ type Job = {
   id: string;
   title: string;
   owner_id: string;
+  owner_name: string;
   status: string;
   benchmark: string;
   model_ref: string;
@@ -439,6 +440,7 @@ function Jobs({ all }: { all: boolean }) {
               <tr>
                 <th>任务</th>
                 <th>状态</th>
+                <th>提交人</th>
                 <th>模型</th>
                 <th>回合</th>
                 <th>创建时间</th>
@@ -455,6 +457,7 @@ function Jobs({ all }: { all: boolean }) {
                   <td>
                     <Badge status={j.status} />
                   </td>
+                  <td>{j.owner_name}</td>
                   <td className="model">{j.model_ref}</td>
                   <td>{j.episodes}</td>
                   <td>{new Date(j.created_at).toLocaleString()}</td>
@@ -597,6 +600,8 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
               </div>
             </div>
             <dl>
+              <dt>提交人</dt>
+              <dd>{job.owner_name}</dd>
               <dt>模型</dt>
               <dd>{job.model_ref}</dd>
               <dt>任务 ID</dt>
@@ -757,6 +762,7 @@ function Admin() {
   const [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [nodes, setNodes] = useState<Node[]>([]),
+    [runnerImage, setRunnerImage] = useState(""),
     [pools, setPools] = useState<Pool[]>([]),
     [credential, setCredential] = useState<{
       token: string;
@@ -764,10 +770,11 @@ function Admin() {
     } | null>(null),
     [busy, setBusy] = useState(false);
   const refresh = () =>
-    Promise.all([api<Node[]>("admin/nodes"), api<Pool[]>("pools")]).then(
-      ([n, p]) => {
+    Promise.all([api<Node[]>("admin/nodes"), api<Pool[]>("pools"), api<{runner_image:string}>("admin/health")]).then(
+      ([n, p, health]) => {
         setNodes(n);
         setPools(p);
+        setRunnerImage(health.runner_image);
       },
     );
   useEffect(() => {
@@ -816,7 +823,7 @@ function Admin() {
       pool_id: f.get("pool_id"),
       gpu_index: Number(f.get("gpu_index")),
       mock: f.get("mock") === "on",
-      runner_image: "mini-eval-runner:dev",
+      runner_image: runnerImage,
     };
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
