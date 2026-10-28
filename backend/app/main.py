@@ -1,17 +1,20 @@
 from __future__ import annotations
 import os
+import urllib.request
+from urllib.error import URLError
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 import jwt
 from argon2 import PasswordHasher
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
-from .core import Base, Event, Job, Pool, Run, Slot, User, session_factory
+from .core import Event, Job, Pool, Run, Slot, Status, User, session_factory
 
 SessionLocal = session_factory()
 app = FastAPI(title='ClearML Mini Eval')
@@ -78,8 +81,21 @@ def health():
 
 @app.get('/readyz')
 def ready(s: Session = Depends(db)):
-    s.execute(select(User.id).limit(1))
-    return {'database': 'ok', 'clearml': 'not_checked'}
+    try:
+        s.execute(select(User.id).limit(1))
+    except SQLAlchemyError:
+        return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'unavailable', 'clearml': 'unknown'})
+    host = os.getenv('CLEARML_API_HOST')
+    if not host:
+        return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'ok', 'clearml': 'not_configured'})
+    request = urllib.request.Request(host.rstrip('/') + '/debug.ping', data=b'{}', headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            if response.status == 200:
+                return {'status': 'ready', 'database': 'ok', 'clearml': 'ok'}
+    except (URLError, TimeoutError, OSError):
+        pass
+    return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'ok', 'clearml': 'unavailable'})
 
 
 @app.post('/api/v1/auth/login')
@@ -142,11 +158,11 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
 
 
 @app.get('/api/v1/jobs')
-def jobs(page: int = 1, page_size: int = 20, status: Optional[str] = None, user: User = Depends(current), s: Session = Depends(db)):
+def jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), status: Optional[Status] = None, user: User = Depends(current), s: Session = Depends(db)):
     q = select(Job).options(selectinload(Job.runs)).where(Job.owner_id == user.id).order_by(Job.created_at.desc())
     if status:
         q = q.where(Job.status == status)
-    return [detail(j) for j in s.scalars(q.offset((max(1,page)-1)*min(page_size,100)).limit(min(page_size,100)))]
+    return [detail(j) for j in s.scalars(q.offset((page-1)*page_size).limit(page_size))]
 
 
 @app.get('/api/v1/jobs/{job_id}')

@@ -35,3 +35,5 @@ OpenSpec `initial-mvp` 已补 `design.md`，任务拆为 P0、P1、P2 与 RoboTw
 ## P0 适配器阶段记录
 
 真实 ClearML 适配器已封装 `Task.create`、`Task.enqueue`、`Task.get_task`、日志和终止请求，并使用固定的 `RUNNER_REPO_URL`、`RUNNER_COMMIT`、`RUNNER_IMAGE`。SDK 方法签名在 clearml 2.1.12 容器中核对，假 Task 测试验证按 job/attempt 标记恢复和重复入队保护。尚未接入真实 ClearML Server；Worker 清单和队列任务清单没有经过真实 API 验证，因此不启动生产调度器。Runner 镜像用 CMD 而不是 ENTRYPOINT，使 Agent 能覆盖执行命令。
+
+`GET /readyz` 现在检查数据库和 ClearML API 的 `POST /debug.ping`（2 秒超时）。未配置或无法连接 ClearML 时返回 503，并在响应中标记 degraded；`/healthz` 仅表示 API 进程存活。ClearML API 应使用独立的 8008 端口，平台 API 使用 8000 端口。

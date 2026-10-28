@@ -5,7 +5,7 @@
 - [x] 建立确定性 mock Runner；完成无 GPU 的重复性测试和容器运行验证。
 - [x] 固定 ClearML SDK 版本并验证 Python 3.11 后端镜像构建。
 - [x] 补齐 PostgreSQL 的 Alembic 初始迁移、索引、UTC 时间戳及数据库集成测试。
-- [ ] 完成管理员引导、用户鉴权、任务提交与所有 API 合同测试。
+- [x] 完成管理员引导、用户鉴权、任务提交、列表/详情、资源池/Worker 概览与健康检查的 P0 API 合同测试。
 - [ ] 完成真实 ClearMLAdapter、远程 Runner repo/commit 配置及 Agent 可执行演示。
 - [ ] 完成 Compose 控制节点启动、健康检查和真实服务 smoke test。
 
@@ -17,7 +17,7 @@
 - [ ] 通过多用户、多机型、多卡与单卡并发验收。
 
 ## P2 — 产品与运维
-- [ ] 完成取消、重试、日志、指标 API 及权限测试。
+- [ ] 完成取消、重试、日志、指标 API、所有剩余错误码及权限合同测试。
 - [ ] 完成 React 登录、任务、详情、Worker/Pool 和管理员界面。
 - [ ] 补齐部署脚本、中文运维文档、OpenAPI/curl 示例及全部 CI 检查。
 

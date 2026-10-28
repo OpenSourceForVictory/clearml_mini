@@ -82,6 +82,10 @@ def test_auth_pool_worker_and_admin_boundaries(tmp_path, monkeypatch):
     bob_job = client.post('/api/v1/jobs', json=body, headers={**bob_auth, 'Idempotency-Key': 'same'}).json()['id']
     assert alice_job != bob_job
     assert [x['id'] for x in client.get('/api/v1/jobs', headers=alice_auth).json()] == [alice_job]
+    assert client.get('/api/v1/jobs?page=0', headers=alice_auth).status_code == 400
+    assert client.get('/api/v1/jobs?page_size=101', headers=alice_auth).status_code == 400
+    assert client.get('/api/v1/jobs?status=NOT_A_STATE', headers=alice_auth).status_code == 400
+    assert len(client.get('/api/v1/jobs?status=PENDING', headers=alice_auth).json()) == 1
     assert client.get(f'/api/v1/jobs/{bob_job}', headers=alice_auth).status_code == 404
     assert client.get('/api/v1/admin/jobs', headers=alice_auth).status_code == 403
     assert len(client.get('/api/v1/admin/jobs', headers=admin_auth).json()) == 2
