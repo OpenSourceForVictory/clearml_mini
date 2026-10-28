@@ -1,12 +1,12 @@
-# ClearML Mini Eval Platform
+# Mini Eval Platform
 
-项目正在实现中。需求基线见 `IMPLEMENTATION_SPEC.md`；OpenSpec 规范见 `openspec/`；当前完成度和风险见 `docs/operations.md`。
+项目正在实现中。原始需求见 `IMPLEMENTATION_SPEC.md`；用户决定将 ClearML Server 方案改为轻量 Worker，变更计划见 `openspec/changes/lightweight-workers/`。当前完成度和风险见 `docs/operations.md`。
 
-设计以单张物理 GPU 为一个槽位。单卡机器注册一个，多卡机器逐卡注册，型号和显存归属资源池。每槽位预留独立 ClearML 队列。RoboTwin 适配器目前只是明确的接口占位，尚未经过真实 GPU 验收。
+设计以单张物理 GPU 为一个槽位。单卡机器注册一个，多卡机器逐卡注册，型号和显存归属资源池。控制节点将只运行 API 与 PostgreSQL，GPU 机器运行轻量 Worker，通过 API 拉取任务并在固定镜像中执行。RoboTwin 适配器目前只是接口占位，尚未经过真实 GPU 验收。
 
-开发依赖列于 `backend/requirements.txt`。当前环境没有安装 Python 依赖和 Docker，尚未运行 API 集成测试或 Compose 验证。
+开发依赖列于 `backend/requirements.txt`。已验证后端容器、Mock Runner、数据库迁移及控制节点 Compose；轻量 Worker 链路仍在实现中。
 
-OpenSpec CLI 需使用 Node 24（项目 `.nvmrc`）。当前账户可执行 `export PATH=/data5T/d00942093/.local/node24/bin:$PATH` 后运行 `npx @fission-ai/openspec@latest status --change initial-mvp`。平台功能按 `openspec/changes/initial-mvp/tasks.md` 的 P0 → P1 → P2 顺序实施；任务只有在代码与对应测试均完成后才勾选。
+OpenSpec CLI 需使用 Node 24（项目 `.nvmrc`）。当前账户可执行 `export PATH=/data5T/d00942093/.local/node24/bin:$PATH` 后运行 `npx @fission-ai/openspec@latest status --change lightweight-workers`。平台功能按 `openspec/changes/lightweight-workers/tasks.md` 的 P0 → P1 → P2 顺序实施；任务只有在代码与对应测试均完成后才勾选。
 
 Codex CLI 要在本项目目录启动才能发现 `.agents/skills` 中的 OpenSpec 工作流。进入项目后运行 `codex`，在交互界面输入 `/skills` 或 `$openspec-apply-change`。OpenSpec 的终端命令是独立的 `openspec` CLI，不会变成 Codex 的 `/openspec` 命令。
 

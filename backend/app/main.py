@@ -1,7 +1,5 @@
 from __future__ import annotations
 import os
-import urllib.request
-from urllib.error import URLError
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 import jwt
@@ -17,7 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, Slot, Status, User, session_factory
 
 SessionLocal = session_factory()
-app = FastAPI(title='ClearML Mini Eval')
+app = FastAPI(title='Mini Eval Platform')
 bearer = HTTPBearer(auto_error=False)
 
 
@@ -84,18 +82,8 @@ def ready(s: Session = Depends(db)):
     try:
         s.execute(select(User.id).limit(1))
     except SQLAlchemyError:
-        return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'unavailable', 'clearml': 'unknown'})
-    host = os.getenv('CLEARML_API_HOST')
-    if not host:
-        return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'ok', 'clearml': 'not_configured'})
-    request = urllib.request.Request(host.rstrip('/') + '/debug.ping', data=b'{}', headers={'Content-Type': 'application/json'}, method='POST')
-    try:
-        with urllib.request.urlopen(request, timeout=2) as response:
-            if response.status == 200:
-                return {'status': 'ready', 'database': 'ok', 'clearml': 'ok'}
-    except (URLError, TimeoutError, OSError):
-        pass
-    return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'ok', 'clearml': 'unavailable'})
+        return JSONResponse(status_code=503, content={'status': 'degraded', 'database': 'unavailable'})
+    return {'status': 'ready', 'database': 'ok'}
 
 
 @app.post('/api/v1/auth/login')

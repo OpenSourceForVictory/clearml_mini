@@ -32,16 +32,6 @@ def main():
     if os.getenv('MOCK_FAIL') == '1':
         raise RuntimeError('injected failure')
     result['runtime'] = time.monotonic() - started
-    try:
-        from clearml import Task
-        task = Task.current_task()
-        if task:
-            logger = task.get_logger()
-            logger.report_scalar('evaluation', 'success_rate', result['success_rate'], 0)
-            logger.report_scalar('evaluation', 'episode_count', args.episodes, 0)
-            logger.report_scalar('evaluation', 'runtime', result['runtime'], 0)
-    except ImportError:
-        pass
     print(json.dumps({'final': result}), flush=True)
 
 

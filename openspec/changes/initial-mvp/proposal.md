@@ -1,5 +1,7 @@
 # 初始 MVP
 
+此变更中的 ClearML Server 执行链路已由用户决定替换；后续执行计划见 `../lightweight-workers/`。保留此变更供历史追溯。
+
 实现多用户评测提交、按物理 GPU 槽位调度、模拟评测与 RoboTwin Runner 接口。
 
 ## 范围

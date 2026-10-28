@@ -1,8 +1,12 @@
 # 运行状态
 
-当前项目是初始工程，尚未达到 `IMPLEMENTATION_SPEC.md` 的 MVP 验收标准。API、数据库模型、保守调度器和 mock runner 有代码，但已有初始 Alembic 迁移，但缺少完整的管理员引导、真实 ClearML 适配器、对账、前端和 RoboTwin 执行环境。不要把此版本接入真实 GPU Agent。
+## 2026-10-28 架构调整
 
-数据库和 ClearML 之间没有共享事务。现有调度器还不能证明崩溃恢复后不重复投递，因此生产调度必须等待 stable marker 对账和故障注入测试完成。
+用户决定以现有 API、PostgreSQL 和 mock Runner 为基础实现轻量 Worker 执行链路，不再部署 ClearML Server。OpenSpec 变更见 `openspec/changes/lightweight-workers/`；原始 `IMPLEMENTATION_SPEC.md` 的 ClearML 强制要求由此变更覆盖。当前 API 的 `/readyz` 只检查 PostgreSQL，Compose 只包含数据库和平台服务，后端与 Runner 的新镜像不再安装 ClearML SDK。旧 ClearML 适配器和 Fake 调度器已移除；数据库字段为兼容历史迁移暂时保留，生产调度器尚未启用。跨机器 Worker 协议、身份、租约与端到端执行仍待实现，不应把 P0 视为完成。
+
+此前的 ClearML 相关记录仅用于说明历史验证，不代表当前架构仍依赖 ClearML。
+
+当前项目尚未达到 MVP 验收标准。已有 API、数据库迁移、管理员引导和 mock Runner；尚缺轻量 Worker 协议、调度、前端和 RoboTwin 执行环境。不要把此版本接入真实 GPU Worker。
 
 文档管理：需求基线在 `IMPLEMENTATION_SPEC.md`，逐项能力在 `openspec/specs/`，变更计划在 `openspec/changes/`。修改行为时同步更新对应规范和任务清单。
 
