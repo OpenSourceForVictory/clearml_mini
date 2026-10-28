@@ -1,1 +1,1 @@
-clearml==1.18.0
+clearml==2.1.12

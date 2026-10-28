@@ -11,3 +11,7 @@
 ## 2026-10-28 验证记录
 
 Docker Engine 27.2.0 可用；本机无 Compose 插件，使用临时下载的官方 Compose v5.6.1 执行 `compose -f deploy/compose.yml config --quiet`，通过。`docker build -f backend/Dockerfile -t clearml-mini-eval-api:test .` 因 Docker Hub `registry-1.docker.io` 超时失败，未生成镜像。Python 当前是 3.9.9；通过临时安装依赖执行 `PYTHONPATH=/tmp/clearml-mini-eval-deps python -m pytest -q backend/tests`，2 个测试通过。仍需在 Python 3.11+ 和真实服务上完成验收。
+
+## ClearML SDK 版本
+
+API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）。此前的 1.18.0 是未验证的脚手架选择，现已更正。已验证与 PyJWT 2.9.0 可共同安装，并确认 `Task.create`、`Task.enqueue`、`Task.get_task`、`Task.get_tasks` 在 SDK 中存在；`get_console_output` 不是 `Task` 方法，日志接口实施时需按官方 SDK 核验。尚未验证与实际 ClearML Server 和 Agent 的互通。
