@@ -27,3 +27,7 @@ API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）
 ## 数据库迁移验证
 
 在项目专用的临时 PostgreSQL 16.8 容器中执行 `alembic -c backend/alembic.ini upgrade head`、`alembic check` 和集成测试，均通过。首次部署应先运行迁移，再执行 `python -m scripts.bootstrap`；bootstrap 不再调用 `create_all`。
+
+## 2026-10-28 OpenSpec 与 P0 更新
+
+OpenSpec `initial-mvp` 已补 `design.md`，任务拆为 P0、P1、P2 与 RoboTwin 验收，共 17 项。目前 4 项完成。当前账户安装了独立 Node 24.22.1；未替换系统 Node 12。数据库初始迁移现覆盖需求文档字段和 PostgreSQL JSONB；在项目专用临时 PostgreSQL 16.8 容器中执行 upgrade、check 与集成测试均通过。后端容器测试 4 passed、1 skipped；跳过项需显式 `TEST_DATABASE_URL`。临时数据库容器已停止。

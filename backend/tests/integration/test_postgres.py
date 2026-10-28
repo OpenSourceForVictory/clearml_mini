@@ -13,7 +13,8 @@ pytestmark = pytest.mark.skipif(not DATABASE_URL, reason='TEST_DATABASE_URL is n
 def test_migrated_postgres_schema_and_constraints():
     engine = create_engine(DATABASE_URL)
     tables = set(inspect(engine).get_table_names())
-    assert {'users', 'resource_pools', 'gpu_slots', 'evaluation_jobs', 'evaluation_runs', 'job_events', 'alembic_version'} <= tables
+    assert {'users', 'resource_pools', 'gpu_slots', 'evaluation_jobs', 'evaluation_runs', 'job_events', 'scheduler_state', 'alembic_version'} <= tables
+    assert 'JSONB' in str(next(c for c in inspect(engine).get_columns('evaluation_runs') if c['name'] == 'result_json')['type'])
     with Session(engine) as s:
         owner = User(username='migration-test', password_hash='test')
         pool = Pool(name='migration-test', gpu_model='virtual')

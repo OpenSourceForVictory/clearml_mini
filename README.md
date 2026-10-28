@@ -5,3 +5,5 @@
 设计以单张物理 GPU 为一个槽位。单卡机器注册一个，多卡机器逐卡注册，型号和显存归属资源池。每槽位预留独立 ClearML 队列。RoboTwin 适配器目前只是明确的接口占位，尚未经过真实 GPU 验收。
 
 开发依赖列于 `backend/requirements.txt`。当前环境没有安装 Python 依赖和 Docker，尚未运行 API 集成测试或 Compose 验证。
+
+OpenSpec CLI 需使用 Node 24（项目 `.nvmrc`）。当前账户可执行 `export PATH=/data5T/d00942093/.local/node24/bin:$PATH` 后运行 `npx @fission-ai/openspec@latest status --change initial-mvp`。平台功能按 `openspec/changes/initial-mvp/tasks.md` 的 P0 → P1 → P2 顺序实施；任务只有在代码与对应测试均完成后才勾选。

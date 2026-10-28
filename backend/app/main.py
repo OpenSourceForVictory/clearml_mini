@@ -5,15 +5,22 @@ from typing import Literal, Optional
 import jwt
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 from .core import Base, Event, Job, Pool, Run, Slot, User, session_factory
 
 SessionLocal = session_factory()
 app = FastAPI(title='ClearML Mini Eval')
-bearer = HTTPBearer()
+bearer = HTTPBearer(auto_error=False)
+
+
+@app.exception_handler(RequestValidationError)
+def validation_error(request, exc):
+    return JSONResponse(status_code=400, content={"detail": "invalid request parameters"})
 ph = PasswordHasher()
 SECRET = os.getenv('JWT_SECRET')
 if not SECRET:
@@ -25,7 +32,9 @@ def db():
         yield s
 
 
-def current(token: HTTPAuthorizationCredentials = Depends(bearer), s: Session = Depends(db)):
+def current(token: Optional[HTTPAuthorizationCredentials] = Depends(bearer), s: Session = Depends(db)):
+    if token is None:
+        raise HTTPException(401, "authentication required")
     try:
         uid = jwt.decode(token.credentials, SECRET, algorithms=['HS256'])['sub']
     except (jwt.PyJWTError, KeyError):
@@ -108,14 +117,18 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
 
 @app.post('/api/v1/jobs', status_code=201)
 def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: User = Depends(current), s: Session = Depends(db)):
-    if not s.get(Pool, body.pool_id):
-        raise HTTPException(400, 'unknown pool')
+    s.execute(select(User.id).where(User.id == user.id).with_for_update())
+    pool = s.get(Pool, body.pool_id)
+    if not pool or not pool.enabled:
+        raise HTTPException(400, 'unknown or disabled pool')
+    if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
+        raise HTTPException(400, 'invalid idempotency key')
     if idempotency_key:
         old = s.scalar(select(Job).where(Job.owner_id == user.id, Job.idempotency_key == idempotency_key))
         if old:
             return {'id': old.id, 'status': old.status}
-    pending = s.scalars(select(Job).where(Job.owner_id == user.id, Job.status == 'PENDING')).all()
-    if len(pending) >= 20:
+    pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status == 'PENDING'))
+    if pending >= int(os.getenv('MAX_PENDING_PER_USER', '20')):
         raise HTTPException(429, 'pending limit')
     job = Job(owner_id=user.id, idempotency_key=idempotency_key, **body.model_dump())
     s.add(job)
