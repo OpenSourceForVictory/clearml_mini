@@ -77,6 +77,7 @@ def test_auth_pool_worker_and_admin_boundaries(tmp_path, monkeypatch):
     assert client.get('/api/v1/workers', headers=admin_auth).json()[0]['node_name'] == 'private-host'
     body = {'title': 'test', 'benchmark': 'mock', 'model_ref': 'model', 'episodes': 1, 'pool_id': pool_id}
     assert client.post('/api/v1/jobs', json={**body, 'episodes': 0}, headers=alice_auth).status_code == 400
+    assert client.post('/api/v1/jobs', json={**body, 'benchmark': 'robotwin'}, headers=alice_auth).status_code == 400
     alice_job = client.post('/api/v1/jobs', json=body, headers={**alice_auth, 'Idempotency-Key': 'same'}).json()['id']
     bob_job = client.post('/api/v1/jobs', json=body, headers={**bob_auth, 'Idempotency-Key': 'same'}).json()['id']
     assert alice_job != bob_job

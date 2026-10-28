@@ -52,7 +52,7 @@ class Login(BaseModel):
 
 class Submit(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    benchmark: Literal['mock', 'robotwin']
+    benchmark: Literal['mock']
     model_ref: str = Field(min_length=1, max_length=500)
     episodes: int = Field(ge=1, le=10000)
     pool_id: str

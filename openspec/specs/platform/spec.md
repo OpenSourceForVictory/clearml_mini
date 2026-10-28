@@ -25,3 +25,10 @@
 #### Scenario: 投递期间重启
 - **WHEN** 调度器在创建 ClearML Task 后重启
 - **THEN** 调度器按任务标记恢复原 Task
+
+### Requirement: 评测类型准入
+系统 SHALL 仅接受已有可执行且经过验证的评测类型。
+
+#### Scenario: RoboTwin Runner 尚未验收
+- **WHEN** 用户提交 RoboTwin 评测
+- **THEN** API 返回参数错误且不创建任务
