@@ -19,3 +19,7 @@ API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）
 ## 国内镜像源
 
 在当前环境中，Docker daemon 直连 `registry-1.docker.io` 返回 `connection refused`，而 DaoCloud 公共镜像代理 `m.daocloud.io/docker.io/library/python:3.11-slim` 和对应的 `postgres:16.8` 均成功拉取。Dockerfile 默认使用该代理地址，可通过 `--build-arg PYTHON_BASE_IMAGE=python:3.11-slim` 覆盖。此变更只影响项目镜像引用，不需要修改 Docker daemon 配置或重启已有容器。生产环境宜将验收过的镜像同步到自有仓库，并固定 digest。
+
+## 国内镜像构建验证
+
+使用 DaoCloud 代理成功拉取 Python 3.11 slim 和 PostgreSQL 16.8。Python 包使用清华 PyPI 镜像后，`docker build -f backend/Dockerfile -t clearml-mini-eval-api:dev .` 与 `docker build -f runner/Dockerfile -t clearml-mini-eval-runner:dev .` 均成功。只新建临时测试容器，未修改 Docker daemon 或现有容器。后端镜像内运行 `python -m pytest -q backend/tests`：2 passed。Runner 镜像执行 3 回合 mock 评测，输出 success_rate 0.6666666666666666，退出码 0。
