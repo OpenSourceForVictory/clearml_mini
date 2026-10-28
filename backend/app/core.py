@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -113,7 +113,10 @@ class Job(Base):
 
 class Run(Base):
     __tablename__ = 'evaluation_runs'
-    __table_args__ = (UniqueConstraint('job_id', 'attempt'),)
+    __table_args__ = (UniqueConstraint('job_id', 'attempt'),
+        Index('uq_active_run_slot', 'slot_id', unique=True,
+              postgresql_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED')"),
+              sqlite_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED')")),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'), index=True)
     attempt: Mapped[int] = mapped_column(Integer)

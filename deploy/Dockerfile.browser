@@ -1,0 +1,6 @@
+FROM m.daocloud.io/docker.io/library/node:24-slim
+WORKDIR /workspace/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources && npx playwright install-deps chromium
+CMD ["npx", "playwright", "test"]

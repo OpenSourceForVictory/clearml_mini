@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 from datetime import timedelta, timezone
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from .core import Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
 
 ACTIVE = ('RESERVED', 'STARTING', 'RUNNING', 'CANCEL_REQUESTED')
@@ -67,7 +67,9 @@ def tick(factory, at=None):
             return 0
         reconcile(s, at)
         s.flush()
-        active = s.scalars(select(Run).where(Run.status.in_(ACTIVE))).all()
+        # A timed-out worker may still be running its container. Keep its global,
+        # user and node resource credits until cleanup is explicitly confirmed.
+        active = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
         pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.enabled))}
         workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.enabled))}
         slots = {x.id: x for x in s.scalars(select(Slot))}

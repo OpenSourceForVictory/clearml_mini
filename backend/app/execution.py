@@ -7,9 +7,10 @@ from typing import Literal, Optional
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, ConfigDict
+from argon2 import PasswordHasher
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from .core import Job, Pool, Run, RunLog, Slot, Worker, now
+from .core import Job, Pool, Run, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc
 
 MAX_LOG_BYTES = 262144
@@ -65,6 +66,12 @@ class Enabled(BaseModel):
     enabled: bool
 
 
+class UserCreate(BaseModel):
+    username: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=12, max_length=200)
+    role: Literal['user', 'admin'] = 'user'
+
+
 def token_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
@@ -102,6 +109,16 @@ def install(app, db, current):
         if run.status not in ('STARTING', 'RUNNING', 'CANCEL_REQUESTED') or not run.lease_expires_at or utc(run.lease_expires_at) <= now():
             raise HTTPException(409, 'execution lease is no longer valid')
 
+    @app.post('/api/v1/admin/users', status_code=201)
+    def create_user(body: UserCreate, user=Depends(admin), s: Session = Depends(db)):
+        lock(s)
+        if s.scalar(select(User).where(User.username == body.username)):
+            raise HTTPException(409, 'username already exists')
+        account = User(username=body.username, role=body.role, password_hash=PasswordHasher().hash(body.password))
+        s.add(account)
+        s.commit()
+        return {'id': account.id, 'username': account.username, 'role': account.role}
+
     @app.post('/api/v1/admin/worker-credentials', status_code=201)
     def provision(body: WorkerCreate, user=Depends(admin), s: Session = Depends(db)):
         lock(s)
@@ -118,6 +135,17 @@ def install(app, db, current):
         return [{'id': w.id, 'node_name': w.node_name, 'enabled': w.enabled,
                  'max_concurrent': w.max_concurrent, 'cpu_capacity': w.cpu_capacity,
                  'ram_gb_capacity': w.ram_gb_capacity} for w in s.scalars(select(Worker))]
+
+    @app.post('/api/v1/admin/nodes/{worker_id}/rotate-token')
+    def rotate(worker_id: str, user=Depends(admin), s: Session = Depends(db)):
+        lock(s)
+        w = s.get(Worker, worker_id)
+        if not w:
+            raise HTTPException(404, 'node not found')
+        token = 'wk_' + secrets.token_urlsafe(32)
+        w.token_hash = token_hash(token)
+        s.commit()
+        return {'id': w.id, 'node_name': w.node_name, 'token': token}
 
     @app.patch('/api/v1/admin/nodes/{worker_id}')
     def enable_node(worker_id: str, body: Enabled, user=Depends(admin), s: Session = Depends(db)):

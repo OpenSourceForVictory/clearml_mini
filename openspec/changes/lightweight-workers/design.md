@@ -14,6 +14,8 @@
 
 ## Migration
 
+调度循环内置于 API 进程，以 PostgreSQL 事务 advisory lock 选出每轮领导者；状态变更接口使用相同锁。未确认清理的超时尝试继续占用全局、用户和节点额度。数据库部分唯一索引限制每槽位一个活动尝试。React 构建产物直接由 API 服务，运行时不增加 Node 服务。
+
 保留现有任务和历史记录，新增 Worker 协议与数据库字段后切换调度。迁移必须可回滚；旧的 ClearML 字段在新执行链路验收后再移除。原 `initial-mvp` 中尚未完成的 ClearML 投递任务由本变更替代。按 P0、P1、P2 实施，真实 RoboTwin 验收单列。
 
 ## Risks

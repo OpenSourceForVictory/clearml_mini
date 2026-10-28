@@ -4,6 +4,7 @@ import fcntl
 import json
 import logging
 import os
+import signal
 from pathlib import Path
 import subprocess
 import threading
@@ -175,6 +176,16 @@ class Worker:
         thread = threading.Thread(target=watchdog, daemon=True)
         thread.start()
         try:
+            requested_at = time.monotonic()
+            initial = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
+            deadline[0] = requested_at + initial['lease_seconds'] - 2
+            if initial['cancel']:
+                self.stop_container(execution)
+                self.api.post(f'worker/executions/{execution}/complete', {'status': 'CANCELLED'})
+                self.remove(execution)
+                self.state = None
+                self.save()
+                return
             container = self.inspect(execution)
             if not container:
                 if self.state['created'] or task['status'] == 'RUNNING':
@@ -192,7 +203,11 @@ class Worker:
                 if lease_lost.is_set():
                     raise RuntimeError('lease expired')
                 requested_at = time.monotonic()
-                reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
+                try:
+                    reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
+                except (urllib.error.URLError, TimeoutError):
+                    time.sleep(.5)
+                    continue  # Watchdog enforces the existing deadline during transient outages.
                 deadline[0] = requested_at + reply['lease_seconds'] - 2
                 if reply['cancel']:
                     self.stop_container(execution)
@@ -202,7 +217,10 @@ class Worker:
                 output = docker('logs', self.name(execution), timeout=5).stdout
                 # stderr may contain the only useful failure message.
                 err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
-                logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
+                try:
+                    logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
+                except (urllib.error.URLError, TimeoutError):
+                    continue
                 if not container['State']['Running']:
                     if not logs_done:
                         continue
@@ -287,7 +305,20 @@ def main():
     Path(state_path).parent.mkdir(parents=True, exist_ok=True)
     with open(str(state_path)+'.lock', 'a') as lockfile:
         fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        Worker(config, state_path).run(args.once)
+        worker = Worker(config, state_path)
+        def stop_signal(signum, frame):
+            raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM, stop_signal)
+        try:
+            worker.run(args.once)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if worker.state:
+                try:
+                    worker.cleanup(worker.state['task']['execution_id'])
+                except Exception:
+                    LOG.exception('shutdown cleanup pending; journal retained for reconnect')
 
 
 if __name__ == '__main__':

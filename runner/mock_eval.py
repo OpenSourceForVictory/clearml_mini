@@ -31,6 +31,7 @@ def main():
         time.sleep(float(os.getenv('MOCK_EPISODE_SLEEP', '0')))
     if os.getenv('MOCK_FAIL') == '1':
         raise RuntimeError('injected failure')
+    result.pop('episodes')
     result['runtime'] = time.monotonic() - started
     print(json.dumps({'final': result}), flush=True)
 

@@ -1,43 +1,72 @@
-# 运行状态
+# 部署与运维
 
-## 2026-10-28 架构调整
+## 当前状态
 
-用户决定以现有 API、PostgreSQL 和 mock Runner 为基础实现轻量 Worker 执行链路，不再部署 ClearML Server。OpenSpec 变更见 `openspec/changes/lightweight-workers/`；原始 `IMPLEMENTATION_SPEC.md` 的 ClearML 强制要求由此变更覆盖。当前 API 的 `/readyz` 只检查 PostgreSQL，Compose 只包含数据库和平台服务，后端与 Runner 的新镜像不再安装 ClearML SDK。旧 ClearML 适配器和 Fake 调度器已移除；数据库字段为兼容历史迁移暂时保留，生产调度器尚未启用。跨机器 Worker 协议、身份、租约与端到端执行仍待实现，不应把 P0 视为完成。
+控制节点、轻量 Worker、mock Docker 评测、调度、取消/重试、日志/指标和 Web UI 已实现。实际验证记录见本文件末尾。真实单卡/多卡 GPU 和 RoboTwin 尚未验收；不将模拟槽位测试计作真实硬件验收。
 
-此前的 ClearML 相关记录仅用于说明历史验证，不代表当前架构仍依赖 ClearML。
+## 启停
 
-当前项目尚未达到 MVP 验收标准。已有 API、数据库迁移、管理员引导和 mock Runner；尚缺轻量 Worker 协议、调度、前端和 RoboTwin 执行环境。不要把此版本接入真实 GPU Worker。
+```bash
+python scripts/control.py up
+python scripts/control.py status
+python scripts/control.py down
+```
 
-文档管理：需求基线在 `IMPLEMENTATION_SPEC.md`，逐项能力在 `openspec/specs/`，变更计划在 `openspec/changes/`。修改行为时同步更新对应规范和任务清单。
+Compose 项目名固定为 `mini-eval`。常驻服务只有 `api`、`db`；`migrate`、`bootstrap` 是执行后退出的初始化任务。API 同时提供前端和调度循环。脚本仅管理本项目，不重启 Docker daemon，不停止其他容器。停止控制节点保留 PostgreSQL 卷。
 
-启动 API 前设置 `DATABASE_URL`、`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`，执行 `python -m scripts.bootstrap`。Compose 中暂不启动调度器，以免 FakeAdapter 将数据库任务标记为已投递而实际没有远程执行。
+初始账号和随机密码保存在项目 `.env`（0600、Git 忽略）。修改 `.env` 的初始密码不会重置已有管理员密码。当前账户若无 Compose 插件，可设置 `MINIEVAL_COMPOSE=/tmp/docker-compose-clearml` 使用已有独立可执行文件。
 
-## 2026-10-28 验证记录
+默认只监听 `127.0.0.1:8000`。跨机器使用时，将 `API_BIND_HOST` 设置成控制节点私网地址或通过 TLS 反向代理提供服务，Worker `api_url` 与该入口一致。数据库不映射宿主机端口。端口冲突时修改 `API_BIND_PORT`，再运行 `up`。
 
-Docker Engine 27.2.0 可用；本机无 Compose 插件，使用临时下载的官方 Compose v5.6.1 执行 `compose -f deploy/compose.yml config --quiet`，通过。`docker build -f backend/Dockerfile -t clearml-mini-eval-api:test .` 因 Docker Hub `registry-1.docker.io` 超时失败，未生成镜像。Python 当前是 3.9.9；通过临时安装依赖执行 `PYTHONPATH=/tmp/clearml-mini-eval-deps python -m pytest -q backend/tests`，2 个测试通过。仍需在 Python 3.11+ 和真实服务上完成验收。
+镜像默认使用 DaoCloud Python/Node/PostgreSQL 地址，Python 包使用清华镜像。可通过 Docker build args `PYTHON_BASE_IMAGE`、`NODE_BASE_IMAGE`、`PIP_INDEX_URL` 覆盖。已验证 ARM64 控制节点构建。Runner 镜像在 GPU 节点本地构建或同步到内部仓库；部署时建议固定经验证的镜像版本或 digest。
 
-## ClearML SDK 版本
+## 参数
 
-API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）。此前的 1.18.0 是未验证的脚手架选择，现已更正。已验证与 PyJWT 2.9.0 可共同安装，并确认 `Task.create`、`Task.enqueue`、`Task.get_task`、`Task.get_tasks` 在 SDK 中存在；`get_console_output` 不是 `Task` 方法，日志接口实施时需按官方 SDK 核验。尚未验证与实际 ClearML Server 和 Agent 的互通。
+| 变量 | 默认值 | 含义 |
+|---|---:|---|
+| MAX_ACTIVE_GLOBAL | 2 | 全局活动尝试上限，包含预留和取消中 |
+| MAX_ACTIVE_PER_USER | 2 | 每用户活动尝试上限 |
+| MAX_PENDING_PER_USER | 20 | 每用户排队任务上限 |
+| WORKER_TTL_SECONDS | 30 | 槽位停止新准入的心跳时限 |
+| LEASE_SECONDS | 30 | 已认领执行的租约 |
+| LOST_WORKER_GRACE_SECONDS | 30 | 租约过期后的服务端宽限期 |
+| EXECUTION_TIMEOUT_SECONDS | 3600 | 单次尝试最大运行时间 |
+| STARTUP_TIMEOUT_SECONDS | 120 | 认领到首次执行心跳的时限 |
+| RUNNER_IMAGE | mini-eval-runner:dev | 管理员批准的固定镜像 |
 
-## 国内镜像源
+租约建议至少 15 秒，给心跳、Docker 操作及网络延迟留出余量。超时槽位会隔离，直到原 Worker 确认旧容器已停止。不能通过删除任务或清空数据库来“释放”不确定执行。
 
-在当前环境中，Docker daemon 直连 `registry-1.docker.io` 返回 `connection refused`，而 DaoCloud 公共镜像代理 `m.daocloud.io/docker.io/library/python:3.11-slim` 和对应的 `postgres:16.8` 均成功拉取。Dockerfile 默认使用该代理地址，可通过 `--build-arg PYTHON_BASE_IMAGE=python:3.11-slim` 覆盖。此变更只影响项目镜像引用，不需要修改 Docker daemon 配置或重启已有容器。生产环境宜将验收过的镜像同步到自有仓库，并固定 digest。
+## 监控
 
-## 国内镜像构建验证
+- `/healthz`：API 进程存活；Compose 使用它做健康检查。
+- `/readyz`：数据库可访问。
+- 管理员调用 `/api/v1/admin/health` 查看调度器最近成功 tick 的时间及隔离槽位数；超过 10 秒未更新应检查 API 日志。
+- Web「计算资源」查看心跳，「管理设置」查看机器额度；普通用户只能看到槽位数量汇总。
+- `docker compose -p mini-eval -f deploy/compose.yml logs --tail=200 api` 查看控制节点错误；执行时使用与启动一致的 `--env-file`。
 
-使用 DaoCloud 代理成功拉取 Python 3.11 slim 和 PostgreSQL 16.8。Python 包使用清华 PyPI 镜像后，`docker build -f backend/Dockerfile -t clearml-mini-eval-api:dev .` 与 `docker build -f runner/Dockerfile -t clearml-mini-eval-runner:dev .` 均成功。只新建临时测试容器，未修改 Docker daemon 或现有容器。后端镜像内运行 `python -m pytest -q backend/tests`：2 passed。Runner 镜像执行 3 回合 mock 评测，输出 success_rate 0.6666666666666666，退出码 0。
+日志最多保存每次尝试 256 KiB，指标独立保存，因此日志截断不会丢失成功率。大资产和 checkpoint 尚不通过平台上传，RoboTwin 阶段再确定共享存储或 S3 契约。
 
-## 数据库迁移验证
+## 备份与恢复
 
-在项目专用的临时 PostgreSQL 16.8 容器中执行 `alembic -c backend/alembic.ini upgrade head`、`alembic check` 和集成测试，均通过。首次部署应先运行迁移，再执行 `python -m scripts.bootstrap`；bootstrap 不再调用 `create_all`。
+```bash
+python scripts/control.py backup --output /safe/path/mini-eval.dump
+sha256sum -c /safe/path/mini-eval.dump.sha256
+```
 
-## 2026-10-28 OpenSpec 与 P0 更新
+备份使用 `pg_dump -Fc`，可在正常运行时生成一致性快照。备份文件含账户摘要、Worker 凭据摘要、任务和日志，权限为 0600。另行安全备份 `.env` 和 GPU 节点的 Worker 配置/执行记录。
 
-OpenSpec `initial-mvp` 已补 `design.md`，任务拆为 P0、P1、P2 与 RoboTwin 验收，共 17 项。目前 4 项完成。当前账户安装了独立 Node 24.22.1；未替换系统 Node 12。数据库初始迁移现覆盖需求文档字段和 PostgreSQL JSONB；在项目专用临时 PostgreSQL 16.8 容器中执行 upgrade、check 与集成测试均通过。后端容器测试 4 passed、1 skipped；跳过项需显式 `TEST_DATABASE_URL`。临时数据库容器已停止。
+恢复时先停止新准入和 Worker，在独立的新 PostgreSQL 实例中创建空 `eval` 数据库，然后执行 `pg_restore -U eval -d eval --no-owner mini-eval.dump`。先验收数据和迁移版本，再切换 API。不要对已有数据库直接覆盖；不要清空数据库来回滚软件。
 
-## P0 适配器阶段记录
+Alembic 提供两次新增迁移及 downgrade。回滚前先停止 API/Worker 并备份；退回旧 schema 会删除新 Worker 表和执行字段，不能保留新执行链路的运行中状态。
 
-真实 ClearML 适配器已封装 `Task.create`、`Task.enqueue`、`Task.get_task`、日志和终止请求，并使用固定的 `RUNNER_REPO_URL`、`RUNNER_COMMIT`、`RUNNER_IMAGE`。SDK 方法签名在 clearml 2.1.12 容器中核对，假 Task 测试验证按 job/attempt 标记恢复和重复入队保护。尚未接入真实 ClearML Server；Worker 清单和队列任务清单没有经过真实 API 验证，因此不启动生产调度器。Runner 镜像用 CMD 而不是 ENTRYPOINT，使 Agent 能覆盖执行命令。
+## 验证记录（2026-10-28）
 
-`GET /readyz` 现在检查数据库和 ClearML API 的 `POST /debug.ping`（2 秒超时）。未配置或无法连接 ClearML 时返回 503，并在响应中标记 degraded；`/healthz` 仅表示 API 进程存活。ClearML API 应使用独立的 8008 端口，平台 API 使用 8000 端口。
+- ARM64 API 与 Runner 镜像构建通过；API 镜像包含 React 编译产物。
+- PostgreSQL 16.8 上 `alembic upgrade head`、`alembic check` 通过；后端 20 项测试通过，包含数据库约束和 8 个并发调度调用。
+- `scripts/smoke_worker.py`：真实 Docker 执行、日志和指标、SIGKILL 后恢复原容器、运行中取消、注入失败和新尝试重试、Worker 失联超时、隔离及清理后重试均通过。
+- `scripts/smoke_farm.py`：3 用户 × 5 任务，3 个真实 Worker 进程模拟 1+2 槽位节点，全局峰值并发 2，全部成功且每任务仅 1 次尝试。
+- 模拟机群在同一宿主机运行，不是两台真实 GPU 机器。RoboTwin 上游版本、checkpoint 和资产尚未确定，未执行真实 RoboTwin 验收。
+
+- Playwright 浏览器验收通过：登录、提交、取消、重试、成功指标/日志、资源页、管理员机器注册与配置下载，以及移动宽度导航。浏览器依赖安装在专用测试镜像中。
+- `control.py up --port 18000` 已启动本机实例；备份校验和恢复到独立数据库通过；迁移 upgrade → downgrade base → upgrade → check 通过。
+- Worker 安装和 systemd 单元语法验证通过；本机没有可用的用户 systemd 会话，因此实际运行采用安装后的 Python 客户端，已完成正式实例的 demo 任务。

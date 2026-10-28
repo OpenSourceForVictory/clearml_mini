@@ -64,7 +64,8 @@ def main():
             wait(job, {'RUNNING'})
             state = json.loads(Path(str(path)+'.state').read_text())
             execution = state['task']['execution_id']
-            stop()  # Crash/restart while the Docker container remains alive.
+            process.kill()  # SIGKILL simulates a crash while the Docker container remains alive.
+            process.wait(timeout=10)
             process = start()
             result = wait(job, {'SUCCEEDED'})
             assert len(result['attempts']) == 1
@@ -90,6 +91,27 @@ def main():
             retried = wait(failed, {'SUCCEEDED'})
             assert [r['status'] for r in retried['attempts']] == ['FAILED', 'SUCCEEDED']
             print('PASS: injected runner failure and new retry attempt', flush=True)
+            lost = submit(100)
+            wait(lost, {'RUNNING'})
+            process.kill()
+            process.wait(timeout=10)
+            timed_out = wait(lost, {'TIMED_OUT'}, timeout=90)
+            assert not timed_out['attempts'][-1]['cleanup_confirmed']
+            try:
+                api('POST', f'jobs/{lost}/retry')
+                raise AssertionError('unsafe retry was allowed')
+            except urllib.error.HTTPError as exc:
+                assert exc.code == 409
+            process = start()
+            deadline = time.monotonic() + 30
+            while not api('GET', 'jobs/'+lost)['attempts'][-1]['cleanup_confirmed']:
+                if time.monotonic() > deadline:
+                    raise TimeoutError('worker did not confirm cleanup')
+                time.sleep(.5)
+            assert api('POST', f'jobs/{lost}/retry')['attempt'] == 2
+            api('POST', f'jobs/{lost}/cancel')
+            wait(lost, {'CANCELLED'})
+            print('PASS: lost worker timeout, quarantine, stale execution cleanup and safe retry', flush=True)
         except Exception:
             log.flush()
             log.seek(0)

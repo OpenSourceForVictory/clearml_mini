@@ -46,8 +46,15 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://eval:${POSTGRES_PASSWORD}@db:5432/eval
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      RUNNER_IMAGE: ${RUNNER_IMAGE:-mini-eval-runner:dev}
+      MAX_ACTIVE_GLOBAL: ${MAX_ACTIVE_GLOBAL:-2}
+      MAX_ACTIVE_PER_USER: ${MAX_ACTIVE_PER_USER:-2}
+      MAX_PENDING_PER_USER: ${MAX_PENDING_PER_USER:-20}
+      LEASE_SECONDS: ${LEASE_SECONDS:-30}
+      LOST_WORKER_GRACE_SECONDS: ${LOST_WORKER_GRACE_SECONDS:-30}
+      EXECUTION_TIMEOUT_SECONDS: ${EXECUTION_TIMEOUT_SECONDS:-3600}
     ports:
-      - "127.0.0.1:${API_BIND_PORT:-8000}:8000"
+      - "${API_BIND_HOST:-127.0.0.1}:${API_BIND_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
       interval: 5s

@@ -2,6 +2,13 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+.env.*
+worker-*.json
 node_modules/
 dist/
 *.pyc
+.runtime/
+test-results/
+playwright-report/
+*.dump
+*.dump.sha256

@@ -3,5 +3,12 @@
 **/*.pyc
 .pytest_cache
 .env
+.env.*
+worker-*.json
 frontend/node_modules
 frontend/dist
+.runtime
+**/test-results
+**/playwright-report
+*.dump
+*.dump.sha256

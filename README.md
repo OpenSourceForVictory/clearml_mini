@@ -1,13 +1,72 @@
 # Mini Eval Platform
 
-项目正在实现中。原始需求见 `IMPLEMENTATION_SPEC.md`；用户决定将 ClearML Server 方案改为轻量 Worker，变更计划见 `openspec/changes/lightweight-workers/`。当前完成度和风险见 `docs/operations.md`。
+轻量、多用户的评测工作台。控制节点运行 **API + PostgreSQL**，各评测机器运行 Python Worker，在固定 Docker 镜像中执行任务。支持单卡或多卡机器逐卡注册、按资源池匹配、公平排队、日志和指标、取消及重试。
 
-设计以单张物理 GPU 为一个槽位。单卡机器注册一个，多卡机器逐卡注册，型号和显存归属资源池。控制节点将只运行 API 与 PostgreSQL，GPU 机器运行轻量 Worker，通过 API 拉取任务并在固定镜像中执行。RoboTwin 适配器目前只是接口占位，尚未经过真实 GPU 验收。
+当前可用评测类型是 **mock**。真实单卡/多卡 GPU 机器和 RoboTwin 尚未验收；RoboTwin 入口会明确拒绝提交，不会显示模拟的真实评测结果。
 
-开发依赖列于 `backend/requirements.txt`。已验证后端容器、Mock Runner、数据库迁移及控制节点 Compose；轻量 Worker 链路仍在实现中。
+## 启动控制节点
 
-OpenSpec CLI 需使用 Node 24（项目 `.nvmrc`）。当前账户可执行 `export PATH=/data5T/d00942093/.local/node24/bin:$PATH` 后运行 `npx @fission-ai/openspec@latest status --change lightweight-workers`。平台功能按 `openspec/changes/lightweight-workers/tasks.md` 的 P0 → P1 → P2 顺序实施；任务只有在代码与对应测试均完成后才勾选。
+需要 Docker Engine、Docker Compose 和宿主机 Python 3。首次启动会在 `.env` 中生成管理员凭据（权限 0600）；构建镜像后运行迁移和管理员引导。
 
-Codex CLI 要在本项目目录启动才能发现 `.agents/skills` 中的 OpenSpec 工作流。进入项目后运行 `codex`，在交互界面输入 `/skills` 或 `$openspec-apply-change`。OpenSpec 的终端命令是独立的 `openspec` CLI，不会变成 Codex 的 `/openspec` 命令。
+```bash
+python scripts/control.py up
+```
 
-多用户账号由管理员在控制节点创建：设置 `USERNAME` 和 `USER_PASSWORD`（至少 12 字符），再运行 `python -m scripts.create_user`。首次引导管理员则设置 `ADMIN_USERNAME`、`ADMIN_PASSWORD` 并运行 `python -m scripts.bootstrap`；运行脚本前必须先完成 Alembic 迁移。
+浏览器打开 `http://127.0.0.1:8000`，用 `.env` 中的 `ADMIN_USERNAME`、`ADMIN_PASSWORD` 登录。API 文档在 `/docs`。宿主机不需要 Node；前端在 Docker 构建阶段编译，运行时由 API 提供。
+
+如果 Compose 是独立可执行文件：
+
+```bash
+MINIEVAL_COMPOSE=/path/to/docker-compose python scripts/control.py up
+```
+
+脚本只管理 `mini-eval` Compose 项目。`down` 保留数据库卷，任何操作都不重启 Docker daemon。端口或私网监听地址可在 `.env` 配置，完整示例见 `deploy/example.env`。
+
+本机部署使用 `http://127.0.0.1:18000`，因为 8000 已被其他服务占用。首次启动也可显式指定：`python scripts/control.py up --port 18000`。
+
+无 GPU 时可在另一终端启动本地 mock Worker，随后在页面提交到 `mock` 池：
+
+```bash
+docker build -f runner/Dockerfile -t mini-eval-runner:dev .
+python scripts/demo_worker.py
+```
+
+demo 凭据保存在 `.runtime/local-mock.json`（0600、Git 忽略），Ctrl+C 会停止 Worker 并尝试清理运行中的容器。
+
+## 接入 Worker
+
+1. 在「管理设置」创建资源池和评测机器，设置机器并发、CPU、内存额度。
+2. 下载 Worker 配置。单卡下载 GPU 0 的配置，多卡按 GPU 编号分别下载；凭据属于机器，可用于该机器各槽位。
+3. 在评测机器准备 Python 3、Docker 和 Runner 镜像。NVIDIA GPU 还需要驱动及 NVIDIA Container Toolkit。mock 模式不需要 GPU。
+4. 将配置中的 `api_url` 改成 Worker 可访问的控制节点私网地址，然后安装：
+
+```bash
+docker build -f runner/Dockerfile -t mini-eval-runner:dev .
+python scripts/install_worker.py --config worker-node-0.json --instance gpu0 --start
+```
+
+`--start` 启用 systemd 用户服务；没有用户级 systemd 时，省略它，按安装脚本输出的命令运行即可。每个实例有独立持久化执行记录。更多说明见 [Worker 安装](docs/worker-setup.md)。
+
+## 验证
+
+```bash
+# Python 3.11+，安装 backend/requirements.txt 后
+python -m pytest -q backend/tests
+# PostgreSQL 测试需在独立测试库上先运行迁移，并设置 TEST_DATABASE_URL
+alembic -c backend/alembic.ini upgrade head
+alembic -c backend/alembic.ini check
+# 前端构建，Node 24
+cd frontend && npm ci && npm run build
+```
+
+真实 Docker smoke：在隔离测试部署上设置 `EVAL_API_URL`、`ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 后，运行 `python -m scripts.smoke_worker`。模拟机群测试运行 `python -m scripts.smoke_farm`。脚本创建测试用户、资源池和任务，不能对生产数据库运行。
+
+## 文档与进度
+
+- [架构和恢复协议](docs/architecture.md)
+- [Worker 安装](docs/worker-setup.md)
+- [部署、备份和监控](docs/operations.md)
+- [API 示例](docs/api-examples.md)
+- [OpenSpec 任务](openspec/changes/lightweight-workers/tasks.md)
+
+原始 `IMPLEMENTATION_SPEC.md` 保留为历史需求；其中 ClearML 强制依赖已由用户决定的 `lightweight-workers` 变更替代。开发使用 Git 和 OpenSpec，只有代码与对应验证完成后才勾选任务。OpenSpec CLI 使用 Node 24；进入本项目目录启动 Codex 后，可使用 `$openspec-apply-change lightweight-workers`。

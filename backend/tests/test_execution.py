@@ -136,3 +136,19 @@ def test_log_cap_and_stale_slot(env):
         s.commit()
     assert c.post(f'/api/v1/worker/executions/{ex}/logs', headers=token, json={'sequence': 0, 'content': 'overflow'}).status_code == 413
     assert c.post(f'/api/v1/worker/executions/{ex}/logs', headers=token, json={'sequence': 0, 'content': 'x'*8193}).status_code == 400
+
+
+def test_admin_provisioning_and_token_revocation(env):
+    main, c, auth = env
+    assert c.post('/api/v1/admin/users', headers=auth['alice'], json={'username': 'evil', 'password': 'long-password'}).status_code == 403
+    assert c.post('/api/v1/admin/users', headers=auth['admin'], json={'username': 'new', 'password': 'long-password'}).status_code == 201
+    token, slots = node(env)
+    nodes = c.get('/api/v1/admin/nodes', headers=auth['admin']).json()
+    node_id = nodes[0]['id']
+    rotated = c.post(f'/api/v1/admin/nodes/{node_id}/rotate-token', headers=auth['admin'])
+    assert rotated.status_code == 200
+    assert c.post('/api/v1/worker/heartbeat', headers=token, json={'slot_id': slots[0]}).status_code == 401
+    fresh = {'Authorization': 'Bearer '+rotated.json()['token']}
+    assert c.post('/api/v1/worker/heartbeat', headers=fresh, json={'slot_id': slots[0]}).status_code == 200
+    assert c.patch(f'/api/v1/admin/nodes/{node_id}', headers=auth['admin'], json={'enabled': False}).status_code == 200
+    assert c.post('/api/v1/worker/heartbeat', headers=fresh, json={'slot_id': slots[0]}).status_code == 401

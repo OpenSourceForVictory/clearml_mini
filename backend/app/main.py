@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import threading
+from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
@@ -9,6 +10,7 @@ from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -224,10 +226,14 @@ def retry(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
 
 
 @app.get('/api/v1/admin/jobs')
-def admin_jobs(user: User = Depends(current), s: Session = Depends(db)):
+def admin_jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
+               status: Optional[Status] = None, user: User = Depends(current), s: Session = Depends(db)):
     if user.role != 'admin':
         raise HTTPException(403, 'admin required')
-    return [detail(j) for j in s.scalars(select(Job).options(selectinload(Job.runs)))]
+    query = select(Job).options(selectinload(Job.runs)).order_by(Job.created_at.desc(), Job.id)
+    if status:
+        query = query.where(Job.status == status)
+    return [detail(j) for j in s.scalars(query.offset((page-1)*page_size).limit(page_size))]
 
 
 @app.get('/api/v1/jobs/{job_id}/logs')
@@ -255,3 +261,7 @@ def admin_health(user: User = Depends(current), s: Session = Depends(db)):
 
 
 install(app, db, current)
+
+frontend = Path(os.getenv('FRONTEND_DIST', str(Path(__file__).resolve().parents[2] / 'frontend' / 'dist')))
+if frontend.is_dir():
+    app.mount('/', StaticFiles(directory=frontend, html=True), name='frontend')

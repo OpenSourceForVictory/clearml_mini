@@ -1,0 +1,56 @@
+name: verify
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.8
+        env:
+          POSTGRES_DB: eval
+          POSTGRES_USER: eval
+          POSTGRES_PASSWORD: test-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U eval"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://eval:test-password@127.0.0.1:5432/eval
+      TEST_DATABASE_URL: postgresql+psycopg://eval:test-password@127.0.0.1:5432/eval
+      JWT_SECRET: ci-only-signing-secret
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ci-only-admin-password
+      EVAL_API_URL: http://127.0.0.1:18080
+      LEASE_SECONDS: '8'
+      LOST_WORKER_GRACE_SECONDS: '3'
+      SCHEDULER_TICK_SECONDS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: pip install -r backend/requirements.txt
+      - run: alembic -c backend/alembic.ini upgrade head && alembic -c backend/alembic.ini check
+      - run: python -m pytest -q backend/tests
+      - run: npx --yes @fission-ai/openspec@1.15.0 validate --all
+      - run: npm ci && npm run build
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: |
+          python -m scripts.bootstrap
+          python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 18080 > /tmp/mini-eval-api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:18080/healthz && break || sleep 1; done
+      - run: docker build --build-arg PYTHON_BASE_IMAGE=python:3.11-slim -f runner/Dockerfile -t mini-eval-runner:dev .
+      - run: python -m scripts.smoke_worker && python -m scripts.smoke_farm
+      - run: npx playwright test
+        working-directory: frontend
+      - run: docker compose --env-file deploy/example.env -f deploy/compose.yml config --quiet
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-diagnostics
+          path: |
+            frontend/test-results
+            /tmp/mini-eval-api.log
