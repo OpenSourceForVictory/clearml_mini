@@ -2,7 +2,7 @@
 import os
 from argon2 import PasswordHasher
 from sqlalchemy import select
-from backend.app.core import Base, Pool, User, session_factory
+from backend.app.core import Pool, User, session_factory
 
 
 def main():
@@ -11,7 +11,6 @@ def main():
     if len(password) < 12:
         raise ValueError('ADMIN_PASSWORD must be at least 12 characters')
     factory = session_factory()
-    Base.metadata.create_all(factory.kw['bind'])
     with factory() as s:
         if not s.scalar(select(User).where(User.username == username)):
             s.add(User(username=username, password_hash=PasswordHasher().hash(password), role='admin'))

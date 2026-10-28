@@ -1,6 +1,6 @@
 # 运行状态
 
-当前项目是初始工程，尚未达到 `IMPLEMENTATION_SPEC.md` 的 MVP 验收标准。API、数据库模型、保守调度器和 mock runner 有代码，但缺少 Alembic 迁移、管理员引导、真实 ClearML 适配器、对账、前端和 RoboTwin 执行环境。不要把此版本接入真实 GPU Agent。
+当前项目是初始工程，尚未达到 `IMPLEMENTATION_SPEC.md` 的 MVP 验收标准。API、数据库模型、保守调度器和 mock runner 有代码，但已有初始 Alembic 迁移，但缺少完整的管理员引导、真实 ClearML 适配器、对账、前端和 RoboTwin 执行环境。不要把此版本接入真实 GPU Agent。
 
 数据库和 ClearML 之间没有共享事务。现有调度器还不能证明崩溃恢复后不重复投递，因此生产调度必须等待 stable marker 对账和故障注入测试完成。
 
@@ -23,3 +23,7 @@ API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）
 ## 国内镜像构建验证
 
 使用 DaoCloud 代理成功拉取 Python 3.11 slim 和 PostgreSQL 16.8。Python 包使用清华 PyPI 镜像后，`docker build -f backend/Dockerfile -t clearml-mini-eval-api:dev .` 与 `docker build -f runner/Dockerfile -t clearml-mini-eval-runner:dev .` 均成功。只新建临时测试容器，未修改 Docker daemon 或现有容器。后端镜像内运行 `python -m pytest -q backend/tests`：2 passed。Runner 镜像执行 3 回合 mock 评测，输出 success_rate 0.6666666666666666，退出码 0。
+
+## 数据库迁移验证
+
+在项目专用的临时 PostgreSQL 16.8 容器中执行 `alembic -c backend/alembic.ini upgrade head`、`alembic check` 和集成测试，均通过。首次部署应先运行迁移，再执行 `python -m scripts.bootstrap`；bootstrap 不再调用 `create_all`。

@@ -77,7 +77,7 @@ class Job(Base):
     episodes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(30), default=Status.PENDING.value, index=True)
     idempotency_key: Mapped[Optional[str]] = mapped_column(String(200))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     runs: Mapped[list[Run]] = relationship(back_populates='job', order_by='Run.attempt')
 
@@ -89,7 +89,7 @@ class Run(Base):
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'), index=True)
     attempt: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(30), default=Status.PENDING.value, index=True)
-    slot_id: Mapped[Optional[str]] = mapped_column(ForeignKey('gpu_slots.id'))
+    slot_id: Mapped[Optional[str]] = mapped_column(ForeignKey('gpu_slots.id'), index=True)
     queue_name: Mapped[Optional[str]] = mapped_column(String(150))
     clearml_task_id: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     reserved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
