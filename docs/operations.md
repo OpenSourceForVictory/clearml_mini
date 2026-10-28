@@ -7,3 +7,7 @@
 文档管理：需求基线在 `IMPLEMENTATION_SPEC.md`，逐项能力在 `openspec/specs/`，变更计划在 `openspec/changes/`。修改行为时同步更新对应规范和任务清单。
 
 启动 API 前设置 `DATABASE_URL`、`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`，执行 `python -m scripts.bootstrap`。Compose 中暂不启动调度器，以免 FakeAdapter 将数据库任务标记为已投递而实际没有远程执行。
+
+## 2026-10-28 验证记录
+
+Docker Engine 27.2.0 可用；本机无 Compose 插件，使用临时下载的官方 Compose v5.6.1 执行 `compose -f deploy/compose.yml config --quiet`，通过。`docker build -f backend/Dockerfile -t clearml-mini-eval-api:test .` 因 Docker Hub `registry-1.docker.io` 超时失败，未生成镜像。Python 当前是 3.9.9；通过临时安装依赖执行 `PYTHONPATH=/tmp/clearml-mini-eval-deps python -m pytest -q backend/tests`，2 个测试通过。仍需在 Python 3.11+ 和真实服务上完成验收。

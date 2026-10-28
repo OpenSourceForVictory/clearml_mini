@@ -3,7 +3,7 @@ uvicorn==0.34.2
 SQLAlchemy==2.0.40
 psycopg[binary]==3.2.6
 pydantic-settings==2.8.1
-PyJWT==2.10.1
+PyJWT==2.9.0
 argon2-cffi==23.1.0
 clearml==1.18.0
 alembic==1.15.2

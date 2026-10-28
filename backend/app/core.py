@@ -3,6 +3,7 @@ import enum
 import os
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -56,11 +57,11 @@ class Slot(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     node_name: Mapped[str] = mapped_column(String(100))
     gpu_index: Mapped[int] = mapped_column(Integer)
-    gpu_uuid: Mapped[str | None] = mapped_column(String(100), unique=True)
+    gpu_uuid: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     pool_id: Mapped[str] = mapped_column(ForeignKey('resource_pools.id'))
     queue_name: Mapped[str] = mapped_column(String(150), unique=True)
-    agent_id: Mapped[str | None] = mapped_column(String(150))
-    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    agent_id: Mapped[Optional[str]] = mapped_column(String(150))
+    last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -75,7 +76,7 @@ class Job(Base):
     model_ref: Mapped[str] = mapped_column(String(500))
     episodes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(30), default=Status.PENDING.value, index=True)
-    idempotency_key: Mapped[str | None] = mapped_column(String(200))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     runs: Mapped[list[Run]] = relationship(back_populates='job', order_by='Run.attempt')
@@ -88,13 +89,13 @@ class Run(Base):
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'), index=True)
     attempt: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(30), default=Status.PENDING.value, index=True)
-    slot_id: Mapped[str | None] = mapped_column(ForeignKey('gpu_slots.id'))
-    queue_name: Mapped[str | None] = mapped_column(String(150))
-    clearml_task_id: Mapped[str | None] = mapped_column(String(100), unique=True)
-    reserved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    enqueued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    error: Mapped[str | None] = mapped_column(String(1000))
+    slot_id: Mapped[Optional[str]] = mapped_column(ForeignKey('gpu_slots.id'))
+    queue_name: Mapped[Optional[str]] = mapped_column(String(150))
+    clearml_task_id: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
+    reserved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    enqueued_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    error: Mapped[Optional[str]] = mapped_column(String(1000))
     job: Mapped[Job] = relationship(back_populates='runs')
 
 
@@ -102,8 +103,8 @@ class Event(Base):
     __tablename__ = 'job_events'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'))
-    run_id: Mapped[str | None] = mapped_column(ForeignKey('evaluation_runs.id'))
-    old_status: Mapped[str | None] = mapped_column(String(30))
+    run_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_runs.id'))
+    old_status: Mapped[Optional[str]] = mapped_column(String(30))
     new_status: Mapped[str] = mapped_column(String(30))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

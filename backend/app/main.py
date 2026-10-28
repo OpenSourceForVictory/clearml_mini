@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, Optional
 import jwt
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, Header, HTTPException, status
@@ -107,7 +107,7 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
 
 
 @app.post('/api/v1/jobs', status_code=201)
-def submit(body: Submit, idempotency_key: str | None = Header(None), user: User = Depends(current), s: Session = Depends(db)):
+def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: User = Depends(current), s: Session = Depends(db)):
     if not s.get(Pool, body.pool_id):
         raise HTTPException(400, 'unknown pool')
     if idempotency_key:
@@ -129,7 +129,7 @@ def submit(body: Submit, idempotency_key: str | None = Header(None), user: User 
 
 
 @app.get('/api/v1/jobs')
-def jobs(page: int = 1, page_size: int = 20, status: str | None = None, user: User = Depends(current), s: Session = Depends(db)):
+def jobs(page: int = 1, page_size: int = 20, status: Optional[str] = None, user: User = Depends(current), s: Session = Depends(db)):
     q = select(Job).options(selectinload(Job.runs)).where(Job.owner_id == user.id).order_by(Job.created_at.desc())
     if status:
         q = q.where(Job.status == status)
