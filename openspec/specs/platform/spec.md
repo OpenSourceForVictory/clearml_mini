@@ -1,13 +1,27 @@
-# 平台规范
+# Evaluation Platform
 
-## 需求：异构 GPU 槽位
-每台机器可注册一张或多张 GPU；每张卡用物理 UUID 唯一标识并对应独立 ClearML 队列、Agent。任务一次使用一张卡。调度时同时校验资源池、在线状态和空闲状态。
+## Purpose
+管理多用户评测请求，并按物理 GPU 卡安全分配执行槽位。
 
-## 需求：安全提交
-提交先写 PostgreSQL。只有调度器能创建和投递 ClearML Task。用户不能指定镜像、命令或宿主机挂载。
+## Requirements
 
-## 需求：可恢复投递
-每个任务尝试具有稳定标记。数据库预留和 ClearML 操作分阶段进行；重启后先按标记对账，再决定是否继续投递。
+### Requirement: 异构 GPU 槽位
+系统 SHALL 允许每台机器注册一张或多张 GPU，每张卡有唯一队列。
 
-## 需求：RoboTwin
-通过固定版本 Runner 执行管理员批准的评测入口，提交仅包含任务、checkpoint 引用、回合数等白名单参数。实际支持范围以远程 GPU Agent 的验收结果为准。
+#### Scenario: 多卡机器
+- **WHEN** 管理员注册同一机器的两张不同 GPU
+- **THEN** 系统为每张 GPU 保存独立槽位和队列
+
+### Requirement: 提交先入库
+系统 SHALL 将任务保存到数据库，由调度器决定何时投递。
+
+#### Scenario: 用户提交任务
+- **WHEN** 用户提交有效评测请求
+- **THEN** 系统保存 PENDING 任务和首次尝试
+
+### Requirement: 可恢复投递
+系统 SHALL 使用稳定任务标记对账，避免崩溃后重复投递。
+
+#### Scenario: 投递期间重启
+- **WHEN** 调度器在创建 ClearML Task 后重启
+- **THEN** 调度器按任务标记恢复原 Task
