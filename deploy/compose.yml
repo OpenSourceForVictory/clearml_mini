@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16.8
+    image: m.daocloud.io/docker.io/library/postgres:16.8
     environment:
       POSTGRES_DB: eval
       POSTGRES_USER: eval

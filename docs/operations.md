@@ -15,3 +15,7 @@ Docker Engine 27.2.0 可用；本机无 Compose 插件，使用临时下载的�
 ## ClearML SDK 版本
 
 API 和 Runner 固定使用 `clearml==2.1.12`（2026-08-19 发布的稳定版）。此前的 1.18.0 是未验证的脚手架选择，现已更正。已验证与 PyJWT 2.9.0 可共同安装，并确认 `Task.create`、`Task.enqueue`、`Task.get_task`、`Task.get_tasks` 在 SDK 中存在；`get_console_output` 不是 `Task` 方法，日志接口实施时需按官方 SDK 核验。尚未验证与实际 ClearML Server 和 Agent 的互通。
+
+## 国内镜像源
+
+在当前环境中，Docker daemon 直连 `registry-1.docker.io` 返回 `connection refused`，而 DaoCloud 公共镜像代理 `m.daocloud.io/docker.io/library/python:3.11-slim` 和对应的 `postgres:16.8` 均成功拉取。Dockerfile 默认使用该代理地址，可通过 `--build-arg PYTHON_BASE_IMAGE=python:3.11-slim` 覆盖。此变更只影响项目镜像引用，不需要修改 Docker daemon 配置或重启已有容器。生产环境宜将验收过的镜像同步到自有仓库，并固定 digest。

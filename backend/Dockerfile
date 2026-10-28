@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+ARG PYTHON_BASE_IMAGE=m.daocloud.io/docker.io/library/python:3.11-slim
+FROM ${PYTHON_BASE_IMAGE}
 WORKDIR /app
 COPY backend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
