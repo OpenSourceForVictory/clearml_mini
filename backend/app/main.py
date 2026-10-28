@@ -15,7 +15,9 @@ SessionLocal = session_factory()
 app = FastAPI(title='ClearML Mini Eval')
 bearer = HTTPBearer()
 ph = PasswordHasher()
-SECRET = os.getenv('JWT_SECRET', 'development-only-change-me')
+SECRET = os.getenv('JWT_SECRET')
+if not SECRET:
+    raise RuntimeError('JWT_SECRET is required')
 
 
 def db():

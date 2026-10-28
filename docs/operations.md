@@ -5,3 +5,5 @@
 数据库和 ClearML 之间没有共享事务。现有调度器还不能证明崩溃恢复后不重复投递，因此生产调度必须等待 stable marker 对账和故障注入测试完成。
 
 文档管理：需求基线在 `IMPLEMENTATION_SPEC.md`，逐项能力在 `openspec/specs/`，变更计划在 `openspec/changes/`。修改行为时同步更新对应规范和任务清单。
+
+启动 API 前设置 `DATABASE_URL`、`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`，执行 `python -m scripts.bootstrap`。Compose 中暂不启动调度器，以免 FakeAdapter 将数据库任务标记为已投递而实际没有远程执行。
