@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, UniqueConstraint, create_engine
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -55,6 +55,20 @@ class Pool(Base):
     min_vram_gb: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     labels: Mapped[dict] = mapped_column(JSON_TYPE, default=dict)
+    cpu_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    ram_gb_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+
+
+class Worker(Base):
+    __tablename__ = 'workers'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    node_name: Mapped[str] = mapped_column(String(100), unique=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    max_concurrent: Mapped[int] = mapped_column(Integer, default=1)
+    cpu_capacity: Mapped[int] = mapped_column(Integer, default=4)
+    ram_gb_capacity: Mapped[int] = mapped_column(Integer, default=8)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class Slot(Base):
@@ -70,6 +84,9 @@ class Slot(Base):
     heartbeat_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    worker_id: Mapped[Optional[str]] = mapped_column(ForeignKey('workers.id'), index=True)
+    quarantined: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
 
 
 class Job(Base):
@@ -111,7 +128,18 @@ class Run(Base):
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     result_json: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     error: Mapped[Optional[str]] = mapped_column(String(1000))
+    execution_id: Mapped[Optional[str]] = mapped_column(String(36), unique=True)
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    cleanup_confirmed: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    log_bytes: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     job: Mapped[Job] = relationship(back_populates='runs')
+
+
+class RunLog(Base):
+    __tablename__ = 'run_logs'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), primary_key=True)
+    sequence: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content: Mapped[str] = mapped_column(Text)
 
 
 class Event(Base):

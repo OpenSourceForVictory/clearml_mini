@@ -1,5 +1,7 @@
 from __future__ import annotations
 import os
+import threading
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 import jwt
@@ -12,10 +14,25 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
-from .core import Event, Job, Pool, Run, Slot, Status, User, session_factory
+from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
+from .scheduling import lock, loop, online, transition, TERMINAL
+from .execution import install
 
 SessionLocal = session_factory()
-app = FastAPI(title='Mini Eval Platform')
+@asynccontextmanager
+async def lifespan(app):
+    stop = threading.Event()
+    thread = None
+    if os.getenv('SCHEDULER_ENABLED', '1') == '1':
+        thread = threading.Thread(target=loop, args=(SessionLocal, stop), daemon=True)
+        thread.start()
+    yield
+    stop.set()
+    if thread:
+        thread.join(timeout=5)
+
+
+app = FastAPI(title='Mini Eval Platform', lifespan=lifespan)
 bearer = HTTPBearer(auto_error=False)
 
 
@@ -68,8 +85,11 @@ def visible(job: Job, user: User):
 def detail(job: Job):
     return {'id': job.id, 'owner_id': job.owner_id, 'title': job.title, 'benchmark': job.benchmark,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
-            'status': job.status, 'attempts': [{'id': r.id, 'attempt': r.attempt, 'status': r.status,
-            'queue_name': r.queue_name, 'error': r.error} for r in job.runs]}
+            'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
+            'finished_at': job.finished_at, 'error': job.error,
+            'attempts': [{'id': r.id, 'attempt': r.attempt, 'status': r.status,
+            'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed,
+            'log_bytes': r.log_bytes} for r in job.runs]}
 
 
 @app.get('/healthz')
@@ -115,8 +135,9 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
     slots = s.scalars(select(Slot)).all()
     if user.role == 'admin':
         return [{'id': x.id, 'node_name': x.node_name, 'gpu_index': x.gpu_index,
-                 'gpu_uuid': x.gpu_uuid, 'queue_name': x.queue_name, 'last_seen_at': x.last_seen_at} for x in slots]
-    return {'total': len(slots), 'online': sum(bool(x.last_seen_at) for x in slots)}
+                 'gpu_uuid': x.gpu_uuid, 'pool_id': x.pool_id, 'online': online(x),
+                 'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at} for x in slots]
+    return {'total': len(slots), 'online': sum(online(x) for x in slots)}
 
 
 @app.post('/api/v1/jobs', status_code=201)
@@ -163,30 +184,37 @@ def get_job(job_id: str, user: User = Depends(current), s: Session = Depends(db)
 
 @app.post('/api/v1/jobs/{job_id}/cancel', status_code=202)
 def cancel(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
+    lock(s)
     job = s.get(Job, job_id, options=[selectinload(Job.runs)])
     if not job:
         raise HTTPException(404, 'job not found')
     visible(job, user)
     if job.status in ('SUCCEEDED','FAILED','CANCELLED','TIMED_OUT'):
         raise HTTPException(409, 'terminal job')
-    old = job.status
-    job.status = 'CANCELLED' if old == 'PENDING' else 'CANCEL_REQUESTED'
-    job.runs[-1].status = job.status
-    s.add(Event(job_id=job.id, run_id=job.runs[-1].id, old_status=old, new_status=job.status))
+    if job.status != 'CANCEL_REQUESTED':
+        transition(s, job.runs[-1], 'CANCELLED' if job.status in ('PENDING', 'RESERVED') else 'CANCEL_REQUESTED')
     s.commit()
     return {'status': job.status}
 
 
 @app.post('/api/v1/jobs/{job_id}/retry', status_code=202)
 def retry(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
+    lock(s)
     job = s.get(Job, job_id, options=[selectinload(Job.runs)])
     if not job:
         raise HTTPException(404, 'job not found')
     visible(job, user)
     if job.status not in ('FAILED','CANCELLED','TIMED_OUT'):
         raise HTTPException(409, 'job not retryable')
+    if not job.runs[-1].cleanup_confirmed:
+        raise HTTPException(409, 'previous execution cleanup is not confirmed')
+    s.execute(select(User.id).where(User.id == job.owner_id).with_for_update())
+    pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == job.owner_id, Job.status == 'PENDING'))
+    if pending >= int(os.getenv('MAX_PENDING_PER_USER', '20')):
+        raise HTTPException(429, 'pending limit')
     old = job.status
     job.status = 'PENDING'
+    job.started_at = job.finished_at = job.queued_at = job.error = None
     run = Run(job_id=job.id, attempt=job.runs[-1].attempt + 1)
     s.add(run)
     s.flush()
@@ -200,3 +228,30 @@ def admin_jobs(user: User = Depends(current), s: Session = Depends(db)):
     if user.role != 'admin':
         raise HTTPException(403, 'admin required')
     return [detail(j) for j in s.scalars(select(Job).options(selectinload(Job.runs)))]
+
+
+@app.get('/api/v1/jobs/{job_id}/logs')
+def job_logs(job_id: str, run_id: Optional[str] = None, after: int = Query(-1, ge=-1),
+             limit: int = Query(20, ge=1, le=100), user: User = Depends(current), s: Session = Depends(db)):
+    job = s.get(Job, job_id, options=[selectinload(Job.runs)])
+    if not job:
+        raise HTTPException(404, 'job not found')
+    visible(job, user)
+    run = next((r for r in job.runs if r.id == run_id), None) if run_id else job.runs[-1]
+    if not run:
+        raise HTTPException(404, 'attempt not found')
+    rows = s.scalars(select(RunLog).where(RunLog.run_id == run.id, RunLog.sequence > after).order_by(RunLog.sequence).limit(limit)).all()
+    return {'run_id': run.id, 'chunks': [{'sequence': r.sequence, 'content': r.content} for r in rows],
+            'next_after': rows[-1].sequence if rows else after, 'max_bytes': 262144}
+
+
+@app.get('/api/v1/admin/health')
+def admin_health(user: User = Depends(current), s: Session = Depends(db)):
+    if user.role != 'admin':
+        raise HTTPException(403, 'admin required')
+    state = s.get(SchedulerState, 'heartbeat')
+    return {'scheduler': state.value if state else None,
+            'quarantined_slots': s.scalar(select(func.count()).select_from(Slot).where(Slot.quarantined))}
+
+
+install(app, db, current)
