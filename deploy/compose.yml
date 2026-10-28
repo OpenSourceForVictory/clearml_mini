@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16.8
+    environment:
+      POSTGRES_DB: eval
+      POSTGRES_USER: eval
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eval"]
+      interval: 5s
+      retries: 10
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://eval:${POSTGRES_PASSWORD}@db:5432/eval
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+  scheduler:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "app.scheduler"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://eval:${POSTGRES_PASSWORD}@db:5432/eval
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:

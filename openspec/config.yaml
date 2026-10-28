@@ -1,0 +1,4 @@
+schema: spec-driven
+context: |
+  ClearML Mini Eval Platform: FastAPI, PostgreSQL, React, ClearML Agent.
+  Chinese documentation and Python 3.11+.
