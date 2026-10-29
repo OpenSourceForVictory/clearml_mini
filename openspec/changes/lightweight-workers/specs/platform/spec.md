@@ -20,6 +20,13 @@
 
 ## ADDED Requirements
 
+### Requirement: RoboTwin 轻量环境自检
+系统 SHALL 提供可选的 GPU SAPIEN 环境自检，固定上游参考版本与运行依赖，明确区分环境检查结果与模型评测结果。
+
+#### Scenario: 真实 GPU 渲染与物理检查
+- **WHEN** 管理员启用环境自检且用户选择真实 GPU 池提交 `robotwin-render`
+- **THEN** Worker 在固定镜像中验证图像有效性和物理接触，通过现有日志及指标协议返回环境检查结果，不宣称完成机器人策略评测
+
 ### Requirement: 无 ClearML Server 的执行链路
 系统 SHALL 仅依赖 API 与 PostgreSQL 控制任务队列；Worker SHALL 从 API 拉取任务，并在管理员固定的 Runner 镜像中执行。
 

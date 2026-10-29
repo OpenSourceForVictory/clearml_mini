@@ -1,6 +1,7 @@
 """One-command control node deployment; only manages the mini-eval Compose project."""
 import argparse
 import hashlib
+import ipaddress
 import os
 from pathlib import Path
 import secrets
@@ -11,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def compose():
+    if not shutil.which('docker'):
+        raise SystemExit('Docker is not installed. Install Docker Engine and Docker Compose first.')
     custom = os.getenv('MINIEVAL_COMPOSE')
     if custom:
         return [custom]
@@ -26,6 +29,7 @@ def main():
     parser.add_argument('action', choices=['up', 'down', 'status', 'backup'])
     parser.add_argument('--env-file', type=Path, default=ROOT / '.env')
     parser.add_argument('--port', type=int, help='set the API host port (default 8000 on first creation)')
+    parser.add_argument('--bind-host', type=ipaddress.ip_address, help='API listen IP, e.g. the control node private IP')
     parser.add_argument('--output', type=Path, help='backup destination (must not exist)')
     args = parser.parse_args()
     if args.port is not None and not 1 <= args.port <= 65535:
@@ -42,6 +46,10 @@ def main():
     elif args.port is not None and args.action == 'up':
         lines = [line for line in env.read_text().splitlines() if not line.startswith('API_BIND_PORT=')]
         env.write_text('\n'.join(lines)+f'\nAPI_BIND_PORT={args.port}\n')
+    if args.bind_host is not None and args.action == 'up':
+        lines = [line for line in env.read_text().splitlines() if not line.startswith('API_BIND_HOST=')]
+        host = f'[{args.bind_host}]' if args.bind_host.version == 6 else str(args.bind_host)
+        env.write_text('\n'.join(lines)+f'\nAPI_BIND_HOST={host}\n')
     command = compose() + ['--env-file', str(env), '-p', 'mini-eval', '-f', str(ROOT / 'deploy/compose.yml')]
     if args.action == 'up':
         subprocess.run(command + ['build', 'api'], check=True, cwd=ROOT)

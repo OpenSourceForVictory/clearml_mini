@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, ConfigDict
 from argon2 import PasswordHasher
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from .core import Job, Pool, Run, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc
@@ -22,11 +22,25 @@ class Register(BaseModel):
     gpu_uuid: str = Field(min_length=1, max_length=100)
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
+    vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
+    protocol_version: Literal[1, 2] = 1
+
+
+class Telemetry(BaseModel):
+    free_vram_mb: int = Field(ge=0, le=10240000)
+    gpu_utilization: int = Field(ge=0, le=100)
+
+
+class Claim(BaseModel):
+    known_execution_ids: list[str] = Field(default_factory=list, max_length=1024)
 
 
 class Heartbeat(BaseModel):
     slot_id: str
     execution_id: Optional[str] = None
+    started: bool = True
+    telemetry: Optional[Telemetry] = None
+    telemetry_failed: bool = False
 
 
 class Metrics(BaseModel):
@@ -54,16 +68,26 @@ class WorkerCreate(BaseModel):
     ram_gb_capacity: int = Field(default=8, ge=1, le=100000)
 
 
-class PoolCreate(BaseModel):
+class PoolPolicy(BaseModel):
+    allow_shared: bool = False
+    max_tasks_per_gpu: int = Field(default=1, ge=1, le=32)
+    vram_reserve_gb: int = Field(default=2, ge=0, le=10000)
+    max_gpu_utilization: int = Field(default=90, ge=1, le=100)
+
+
+class PoolCreate(PoolPolicy):
     name: str = Field(min_length=1, max_length=100)
-    gpu_model: str = Field(min_length=1, max_length=100)
+    gpu_model: str = Field(default='*', min_length=1, max_length=100)
     min_vram_gb: int = Field(default=0, ge=0, le=10000)
     cpu_per_job: int = Field(default=1, ge=1, le=10000)
     ram_gb_per_job: int = Field(default=1, ge=1, le=100000)
 
 
 class Enabled(BaseModel):
-    enabled: bool
+    enabled: Optional[bool] = None
+    max_concurrent: Optional[int] = Field(default=None, ge=1, le=1024)
+    cpu_capacity: Optional[int] = Field(default=None, ge=1, le=10000)
+    ram_gb_capacity: Optional[int] = Field(default=None, ge=1, le=100000)
 
 
 class UserCreate(BaseModel):
@@ -153,7 +177,8 @@ def install(app, db, current):
         w = s.get(Worker, worker_id)
         if not w:
             raise HTTPException(404, 'node not found')
-        w.enabled = body.enabled
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(w, key, value)
         s.commit()
         return {'enabled': w.enabled}
 
@@ -162,18 +187,31 @@ def install(app, db, current):
         lock(s)
         if s.scalar(select(Pool).where(Pool.name == body.name)):
             raise HTTPException(409, 'pool name already exists')
-        p = Pool(**body.model_dump())
+        values = body.model_dump()
+        values['gpu_model'] = 'virtual' if body.gpu_model == 'virtual' else '*'
+        p = Pool(**values)
         s.add(p)
         s.commit()
-        return {'id': p.id, **body.model_dump()}
+        return {'id': p.id, **values}
+
+    @app.patch('/api/v1/admin/pools/{pool_id}')
+    def update_pool(pool_id: str, body: PoolPolicy, user=Depends(admin), s: Session = Depends(db)):
+        lock(s)
+        pool = s.get(Pool, pool_id)
+        if not pool:
+            raise HTTPException(404, 'pool not found')
+        for key, value in body.model_dump().items():
+            setattr(pool, key, value)
+        s.commit()
+        return {'id': pool.id, **body.model_dump()}
 
     @app.post('/api/v1/worker/register')
     def register(body: Register, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
         pool = s.get(Pool, body.pool_id)
-        if not pool or not pool.enabled or pool.gpu_model != body.gpu_model or pool.min_vram_gb > body.vram_gb:
+        if not pool or not pool.enabled or pool.min_vram_gb > body.vram_gb:
             raise HTTPException(400, 'device does not match pool requirements')
-        if (pool.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
+        if (pool.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:') or (body.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
             raise HTTPException(400, 'virtual and physical device identities must be distinct')
         existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid))
         indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index))
@@ -183,11 +221,19 @@ def install(app, db, current):
             raise HTTPException(409, 'GPU index already registered to another UUID')
         slot = existing or indexed
         if slot and slot.pool_id != pool.id:
-            raise HTTPException(409, 'registered slot pool cannot be changed')
+            held = s.scalar(select(Run.id).where(Run.slot_id == slot.id,
+                or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False))).limit(1))
+            if held:
+                raise HTTPException(409, 'cannot move a slot with held executions')
+            slot.pool_id = pool.id
         if not slot:
             slot = Slot(node_name=worker.node_name, gpu_index=body.gpu_index, gpu_uuid=body.gpu_uuid,
                         pool_id=pool.id, worker_id=worker.id, queue_name=f'{worker.id}-{body.gpu_index}', agent_id=worker.id)
             s.add(slot)
+        slot.gpu_model = body.gpu_model
+        slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
+        slot.protocol_version = body.protocol_version
+        slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
         return {'slot_id': slot.id, 'quarantined': slot.quarantined}
@@ -202,23 +248,33 @@ def install(app, db, current):
             if run.slot_id != slot.id:
                 raise HTTPException(409, 'execution belongs to another slot')
             live(run)
-            if run.status == 'STARTING':
+            if run.status == 'STARTING' and body.started:
                 run.started_at = s.get(Job, run.job_id).started_at = now()
                 transition(s, run, 'RUNNING')
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             cancel = run.status == 'CANCEL_REQUESTED'
+        if body.telemetry_failed:
+            slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
+        elif body.telemetry is not None:
+            if body.telemetry.free_vram_mb > slot.vram_mb:
+                raise HTTPException(400, 'free VRAM exceeds device capacity')
+            slot.free_vram_mb = body.telemetry.free_vram_mb
+            slot.gpu_utilization = body.telemetry.gpu_utilization
+            slot.telemetry_at = now()
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
         return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
-    def claim(slot_id: str, worker=Depends(worker_auth), s: Session = Depends(db)):
+    def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
         slot = slot_for(s, slot_id, worker)
         cleanup = list(s.scalars(select(Run.execution_id).where(Run.slot_id == slot.id, Run.cleanup_confirmed.is_(False), Run.status.in_(TERMINAL))))
         if cleanup:
             return {'task': None, 'cleanup': cleanup}
-        run = s.scalar(select(Run).where(Run.slot_id == slot.id, Run.status.in_(ACTIVE)))
+        known = body.known_execution_ids if body else []
+        run = s.scalar(select(Run).where(Run.slot_id == slot.id, Run.status.in_(ACTIVE),
+            Run.execution_id.not_in(known)).order_by(Run.reserved_at, Run.id).limit(1))
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
@@ -235,7 +291,10 @@ def install(app, db, current):
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
                 'gpu_uuid': None if pool.gpu_model == 'virtual' else slot.gpu_uuid,
-                'cpus': pool.cpu_per_job, 'ram_gb': pool.ram_gb_per_job,
+                'cpus': run.reserved_cpu, 'ram_gb': run.reserved_ram_gb,
+                'gpu_mode': 'exclusive' if run.exclusive else 'shared',
+                'requested_vram_mb': job.requested_vram_gb * 1024,
+                'vram_reserve_mb': pool.vram_reserve_gb * 1024,
                 'timeout_seconds': seconds('EXECUTION_TIMEOUT_SECONDS', 3600),
                 'lease_seconds': seconds('LEASE_SECONDS', 30)}
         s.commit()

@@ -51,12 +51,17 @@ class Pool(Base):
     __tablename__ = 'resource_pools'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     name: Mapped[str] = mapped_column(String(100), unique=True)
-    gpu_model: Mapped[str] = mapped_column(String(100))
+    gpu_model: Mapped[str] = mapped_column(String(100), default='*')
     min_vram_gb: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     labels: Mapped[dict] = mapped_column(JSON_TYPE, default=dict)
     cpu_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
     ram_gb_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+
+    allow_shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    max_tasks_per_gpu: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    vram_reserve_gb: Mapped[int] = mapped_column(Integer, default=2, server_default='2')
+    max_gpu_utilization: Mapped[int] = mapped_column(Integer, default=90, server_default='90')
 
 
 class Worker(Base):
@@ -88,6 +93,13 @@ class Slot(Base):
     worker_id: Mapped[Optional[str]] = mapped_column(ForeignKey('workers.id'), index=True)
     quarantined: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
 
+    gpu_model: Mapped[Optional[str]] = mapped_column(String(100))
+    vram_mb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    protocol_version: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    free_vram_mb: Mapped[Optional[int]] = mapped_column(Integer)
+    gpu_utilization: Mapped[Optional[int]] = mapped_column(Integer)
+    telemetry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
 
 class Job(Base):
     __tablename__ = 'evaluation_jobs'
@@ -108,6 +120,9 @@ class Job(Base):
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     error: Mapped[Optional[str]] = mapped_column(String(1000))
+    gpu_mode: Mapped[str] = mapped_column(String(20), default='exclusive', server_default='exclusive')
+    requested_vram_gb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    required_gpu_model: Mapped[Optional[str]] = mapped_column(String(100))
     runs: Mapped[list[Run]] = relationship(back_populates='job', order_by='Run.attempt')
     owner: Mapped[User] = relationship()
 
@@ -115,9 +130,9 @@ class Job(Base):
 class Run(Base):
     __tablename__ = 'evaluation_runs'
     __table_args__ = (UniqueConstraint('job_id', 'attempt'),
-        Index('uq_active_run_slot', 'slot_id', unique=True,
-              postgresql_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED')"),
-              sqlite_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED')")),)
+        Index('uq_held_run_share', 'slot_id', 'allocation_index', unique=True,
+              postgresql_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED') OR cleanup_confirmed = false"),
+              sqlite_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED') OR cleanup_confirmed = false")),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'), index=True)
     attempt: Mapped[int] = mapped_column(Integer)
@@ -136,6 +151,11 @@ class Run(Base):
     lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     cleanup_confirmed: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
     log_bytes: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    allocation_index: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    reserved_vram_mb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    exclusive: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    reserved_cpu: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    reserved_ram_gb: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
     job: Mapped[Job] = relationship(back_populates='runs')
 
 

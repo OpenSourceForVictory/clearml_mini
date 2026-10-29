@@ -2,7 +2,7 @@
 
 轻量、多用户的评测工作台。控制节点运行 **API + PostgreSQL**，各评测机器运行 Python Worker，在固定 Docker 镜像中执行任务。支持单卡或多卡机器逐卡注册、按资源池匹配、公平排队、日志和指标、取消及重试。
 
-当前可用评测类型是 **mock**。真实单卡/多卡 GPU 机器和 RoboTwin 尚未验收；RoboTwin 入口会明确拒绝提交，不会显示模拟的真实评测结果。
+默认可用评测类型是 **mock**，可选部署 [RoboTwin 环境自检](docs/robotwin-render.md) 验证 GPU 上的 SAPIEN 物理仿真与渲染。完整 RoboTwin 任务和模型评测尚未验收；`robotwin` 入口仍拒绝提交，不会显示模拟的真实评测结果。
 
 ## 启动控制节点
 
@@ -11,6 +11,8 @@
 ```bash
 python scripts/control.py up
 ```
+
+跨机器部署可指定控制节点私网地址：`python scripts/control.py up --bind-host 192.168.137.223 --port 18000`，本机浏览器访问 `http://192.168.137.223:18000`。
 
 浏览器打开 `http://127.0.0.1:8000`，用 `.env` 中的 `ADMIN_USERNAME`、`ADMIN_PASSWORD` 登录。API 文档在 `/docs`。宿主机不需要 Node；前端在 Docker 构建阶段编译，运行时由 API 提供。
 
@@ -70,3 +72,5 @@ cd frontend && npm ci && npm run build
 - [OpenSpec 任务](openspec/changes/lightweight-workers/tasks.md)
 
 原始 `IMPLEMENTATION_SPEC.md` 保留为历史需求；其中 ClearML 强制依赖已由用户决定的 `lightweight-workers` 变更替代。开发使用 Git 和 OpenSpec，只有代码与对应验证完成后才勾选任务。OpenSpec CLI 使用 Node 24；进入本项目目录启动 Codex 后，可使用 `$openspec-apply-change lightweight-workers`。
+
+GPU 调度支持不同型号共池与显式同卡共享，默认任务仍按卡独占。配置方法、显存预留和利用率的保障边界见 [GPU 调度说明](docs/gpu-scheduling.md)。

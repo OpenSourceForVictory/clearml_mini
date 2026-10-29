@@ -60,6 +60,39 @@ def reconcile(s, at):
             s.get(Slot, run.slot_id).quarantined = True
 
 
+def telemetry_fresh(slot, at):
+    return (slot.telemetry_at is not None and slot.free_vram_mb is not None
+            and slot.gpu_utilization is not None
+            and timedelta(0) <= at - utc(slot.telemetry_at) < timedelta(seconds=15))
+
+
+def eligible(slot, pool, job, held, at):
+    """Both physical capacity and observed headroom must fit; utilization is advisory."""
+    if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:
+        return False
+    requested = job.requested_vram_gb * 1024
+    if job.gpu_mode == 'exclusive':
+        if held:
+            return False
+        if not requested:
+            return True  # Backward-compatible exclusive protocol.
+    else:
+        if not pool.allow_shared or slot.protocol_version < 2 or requested <= 0:
+            return False
+        if len(held) >= pool.max_tasks_per_gpu or any(r.exclusive for r in held):
+            return False
+    if slot.protocol_version < 2 or not telemetry_fresh(slot, at):
+        return False
+    margin = pool.vram_reserve_gb * 1024
+    if requested + sum(r.reserved_vram_mb for r in held) > slot.vram_mb - margin:
+        return False
+    # RUNNING telemetry already includes actual usage. Unstarted reservations do not.
+    starting = sum(r.reserved_vram_mb for r in held if r.started_at is None)
+    if requested + starting > slot.free_vram_mb - margin:
+        return False
+    return job.gpu_mode == 'exclusive' or slot.gpu_utilization < pool.max_gpu_utilization
+
+
 def tick(factory, at=None):
     at = at or now()
     with factory() as s:
@@ -73,7 +106,10 @@ def tick(factory, at=None):
         pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.enabled))}
         workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.enabled))}
         slots = {x.id: x for x in s.scalars(select(Slot))}
-        busy = {r.slot_id for r in active}
+        by_slot = {x.id: [] for x in slots.values()}
+        for r in active:
+            if r.slot_id in by_slot:
+                by_slot[r.slot_id].append(r)
         counts, node_counts, node_cpu, node_ram = {}, {}, {}, {}
         for r in active:
             job = s.get(Job, r.job_id)
@@ -83,11 +119,10 @@ def tick(factory, at=None):
             if slot:
                 n = slot.worker_id
                 node_counts[n] = node_counts.get(n, 0) + 1
-                node_cpu[n] = node_cpu.get(n, 0) + pool.cpu_per_job
-                node_ram[n] = node_ram.get(n, 0) + pool.ram_gb_per_job
-        free = [x for x in slots.values() if x.id not in busy and not x.quarantined
+                node_cpu[n] = node_cpu.get(n, 0) + r.reserved_cpu
+                node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
+        free = [x for x in slots.values() if not x.quarantined
                 and x.worker_id in workers and x.pool_id in pools and online(x, at)]
-        free.sort(key=lambda x: (x.node_name, x.gpu_index))
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
             Job.status == 'PENDING', User.active).order_by(Job.created_at, Job.id)).all()
         cursor = s.get(SchedulerState, 'rotation')
@@ -109,7 +144,10 @@ def tick(factory, at=None):
                     pool = pools.get(job.pool_id)
                     if not pool:
                         continue
+                    free.sort(key=lambda x: (x.gpu_utilization if telemetry_fresh(x, at) else 101,
+                                             len(by_slot[x.id]), x.node_name, x.gpu_index))
                     slot = next((x for x in free if x.pool_id == job.pool_id
+                        and eligible(x, pool, job, by_slot[x.id], at)
                         and node_counts.get(x.worker_id, 0) < workers[x.worker_id].max_concurrent
                         and node_cpu.get(x.worker_id, 0) + pool.cpu_per_job <= workers[x.worker_id].cpu_capacity
                         and node_ram.get(x.worker_id, 0) + pool.ram_gb_per_job <= workers[x.worker_id].ram_gb_capacity), None)
@@ -117,6 +155,11 @@ def tick(factory, at=None):
                         continue
                     run = s.scalar(select(Run).where(Run.job_id == job.id).order_by(Run.attempt.desc()))
                     run.slot_id, run.queue_name, run.execution_id = slot.id, slot.queue_name, uid()
+                    used = {r.allocation_index for r in by_slot[slot.id]}
+                    run.allocation_index = next(i for i in range(len(used)+1) if i not in used)
+                    run.exclusive = job.gpu_mode == 'exclusive'
+                    run.reserved_vram_mb = slot.vram_mb if run.exclusive else job.requested_vram_gb * 1024
+                    run.reserved_cpu, run.reserved_ram_gb = pool.cpu_per_job, pool.ram_gb_per_job
                     run.reserved_at = at
                     run.reservation_expires_at = at + timedelta(seconds=seconds('RESERVATION_SECONDS', 30))
                     job.queued_at = at
@@ -127,7 +170,7 @@ def tick(factory, at=None):
                     node_cpu[n] = node_cpu.get(n, 0) + pool.cpu_per_job
                     node_ram[n] = node_ram.get(n, 0) + pool.ram_gb_per_job
                     cursor.value = {'owner': owner}
-                    free.remove(slot)
+                    by_slot[slot.id].append(run)
                     pending.remove(job)
                     admitted += 1
                     made_progress = True

@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: m.daocloud.io/docker.io/library/postgres:16.8
     environment:
       POSTGRES_DB: eval
@@ -39,6 +40,7 @@ services:
         condition: service_completed_successfully
 
   api:
+    restart: unless-stopped
     image: mini-eval-api:dev
     build:
       context: ..
@@ -47,6 +49,7 @@ services:
       DATABASE_URL: postgresql+psycopg://eval:${POSTGRES_PASSWORD}@db:5432/eval
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       RUNNER_IMAGE: ${RUNNER_IMAGE:-mini-eval-runner:dev}
+      ROBOTWIN_RENDER_ENABLED: ${ROBOTWIN_RENDER_ENABLED:-0}
       MAX_ACTIVE_GLOBAL: ${MAX_ACTIVE_GLOBAL:-2}
       MAX_ACTIVE_PER_USER: ${MAX_ACTIVE_PER_USER:-2}
       MAX_PENDING_PER_USER: ${MAX_PENDING_PER_USER:-20}

@@ -17,6 +17,8 @@ docker run --rm --gpus all mini-eval-runner:dev nvidia-smi
 
 CPU 架构不同的机器需要各自架构的 Runner 镜像，可在目标机器原生构建，或使用内部仓库的多架构镜像。`RUNNER_IMAGE` 与 Worker 配置的 `runner_image` 必须一致。
 
+需要 RoboTwin GPU 环境自检时，使用 [渲染检查镜像及配置](robotwin-render.md)。该文档也说明可选的 `gpu_runtime: nvidia` 配置。
+
 ## 配置和安装
 
 在 Web 管理页面创建资源池和机器后下载配置。`api_url` 必须能从 GPU 机器访问；浏览器在控制节点本机打开时，下载配置可能是 `127.0.0.1`，需改成私网地址。配置含 Worker token，文件权限应为 0600。
@@ -57,3 +59,9 @@ systemctl --user restart mini-eval-worker@gpu0
 禁用机器会拒绝其 Worker 认证，Worker 会停止容器；重新启用后会恢复状态对账。token 丢失时管理员可调用 `POST /api/v1/admin/nodes/{id}/rotate-token` 重新生成，并更新所有该机器的 Worker 配置。旧 token 立即失效。
 
 Worker 正常退出会尝试确认清理。突然掉电或 SIGKILL 后，服务端在租约和宽限期后隔离槽位；重启原 Worker 可停止遗留容器并解除隔离。任务重试前必须先完成这一步。
+
+## 异构池和同卡共享
+
+新 Worker 自动声明协议 v2，每卡保持一个进程，按执行 ID 保存独立 journal 和租约。通过 `nvidia-smi` 上报每卡空闲显存与利用率，采集失败时暂停该卡的新共享准入。`--once` 只处理一个执行后退出；常驻服务支持多执行。
+
+管理员在资源池开启共享并设置每卡上限，同时提高节点并发额度；任务需要声明显存需求。更改配置 `pool_id` 后可将空闲卡迁入同一异构池，忙卡拒绝迁移。不要删除 `.state.runs` 内的恢复记录。详见 [GPU 调度](gpu-scheduling.md)。

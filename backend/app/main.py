@@ -13,11 +13,11 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
-from .scheduling import lock, loop, online, transition, TERMINAL
+from .scheduling import lock, loop, online, transition, TERMINAL, ACTIVE, utc
 from .execution import install
 
 SessionLocal = session_factory()
@@ -72,10 +72,13 @@ class Login(BaseModel):
 
 class Submit(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    benchmark: Literal['mock']
+    benchmark: Literal['mock', 'robotwin-render']
     model_ref: str = Field(min_length=1, max_length=500)
     episodes: int = Field(ge=1, le=10000)
     pool_id: str
+    gpu_mode: Literal['exclusive', 'shared'] = 'exclusive'
+    requested_vram_gb: int = Field(default=0, ge=0, le=10000)
+    required_gpu_model: Optional[str] = Field(default=None, min_length=1, max_length=100)
 
 
 def visible(job: Job, user: User):
@@ -87,10 +90,12 @@ def visible(job: Job, user: User):
 def detail(job: Job):
     return {'id': job.id, 'owner_id': job.owner_id, 'owner_name': job.owner.username, 'title': job.title, 'benchmark': job.benchmark,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
+            'gpu_mode': job.gpu_mode, 'requested_vram_gb': job.requested_vram_gb,
+            'required_gpu_model': job.required_gpu_model,
             'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
             'finished_at': job.finished_at, 'error': job.error,
             'attempts': [{'id': r.id, 'attempt': r.attempt, 'status': r.status,
-            'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed,
+            'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
             'log_bytes': r.log_bytes} for r in job.runs]}
 
 
@@ -128,7 +133,9 @@ def me(user: User = Depends(current)):
 
 @app.get('/api/v1/pools')
 def pools(user: User = Depends(current), s: Session = Depends(db)):
-    return [{'id': p.id, 'name': p.name, 'gpu_model': p.gpu_model, 'min_vram_gb': p.min_vram_gb}
+    return [{'id': p.id, 'name': p.name, 'gpu_model': p.gpu_model, 'min_vram_gb': p.min_vram_gb,
+             'allow_shared': p.allow_shared, 'max_tasks_per_gpu': p.max_tasks_per_gpu,
+             'vram_reserve_gb': p.vram_reserve_gb, 'max_gpu_utilization': p.max_gpu_utilization}
             for p in s.scalars(select(Pool).where(Pool.enabled))]
 
 
@@ -136,10 +143,25 @@ def pools(user: User = Depends(current), s: Session = Depends(db)):
 def workers(user: User = Depends(current), s: Session = Depends(db)):
     slots = s.scalars(select(Slot)).all()
     if user.role == 'admin':
+        held = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
         return [{'id': x.id, 'node_name': x.node_name, 'gpu_index': x.gpu_index,
                  'gpu_uuid': x.gpu_uuid, 'pool_id': x.pool_id, 'online': online(x),
-                 'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at} for x in slots]
+                 'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at,
+                 'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,
+                 'gpu_utilization': x.gpu_utilization, 'telemetry_at': x.telemetry_at,
+                 'telemetry_fresh': bool(x.telemetry_at and datetime.now(timezone.utc)-utc(x.telemetry_at) < timedelta(seconds=15)),
+                 'protocol_version': x.protocol_version,
+                 'active_tasks': sum(r.slot_id == x.id for r in held),
+                 'reserved_vram_mb': sum(r.reserved_vram_mb for r in held if r.slot_id == x.id)} for x in slots]
     return {'total': len(slots), 'online': sum(online(x) for x in slots)}
+
+
+@app.get('/api/v1/benchmarks')
+def benchmarks(user: User = Depends(current)):
+    values = [{'id': 'mock', 'name': '模拟评测'}]
+    if os.getenv('ROBOTWIN_RENDER_ENABLED') == '1':
+        values.append({'id': 'robotwin-render', 'name': 'RoboTwin 环境自检'})
+    return values
 
 
 @app.post('/api/v1/jobs', status_code=201)
@@ -148,6 +170,15 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     pool = s.get(Pool, body.pool_id)
     if not pool or not pool.enabled:
         raise HTTPException(400, 'unknown or disabled pool')
+    if body.gpu_mode == 'shared' and (not pool.allow_shared or body.requested_vram_gb < 1):
+        raise HTTPException(400, 'shared jobs require an enabled pool and positive VRAM request')
+    if pool.gpu_model == 'virtual' and (body.gpu_mode == 'shared' or body.requested_vram_gb):
+        raise HTTPException(400, 'virtual pools do not allocate GPU memory')
+    if body.benchmark == 'robotwin-render':
+        if os.getenv('ROBOTWIN_RENDER_ENABLED') != '1':
+            raise HTTPException(400, 'RoboTwin environment check is not enabled')
+        if pool.gpu_model == 'virtual' or body.model_ref != 'sapien-render' or body.episodes > 100:
+            raise HTTPException(400, 'environment check requires a GPU pool, model_ref=sapien-render and 1-100 episodes')
     if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
         raise HTTPException(400, 'invalid idempotency key')
     if idempotency_key:

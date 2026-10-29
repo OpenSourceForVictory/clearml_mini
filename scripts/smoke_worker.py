@@ -40,10 +40,16 @@ def main():
     global TOKEN
     TOKEN = api('POST', 'auth/login', {'username': os.environ['ADMIN_USERNAME'], 'password': os.environ['ADMIN_PASSWORD']})['access_token']
     suffix = uuid.uuid4().hex[:10]
-    pool = api('POST', 'admin/pools', {'name': 'smoke-'+suffix, 'gpu_model': 'virtual'})['id']
+    gpu_index = os.getenv('SMOKE_GPU_INDEX')
+    from worker.client import device
+    hardware = device({'mock': gpu_index is None, 'gpu_index': int(gpu_index or 0), 'node_name': 'smoke-'+suffix})
+    pool = api('POST', 'admin/pools', {'name': 'smoke-'+suffix, 'gpu_model': hardware['gpu_model']})['id']
     node = api('POST', 'admin/worker-credentials', {'node_name': 'smoke-'+suffix})
     config = {'api_url': BASE, 'token': node['token'], 'node_name': node['node_name'], 'pool_id': pool,
-              'mock': True, 'gpu_index': 0, 'runner_image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'), 'mock_episode_sleep': .3}
+              'mock': gpu_index is None, 'gpu_index': int(gpu_index or 0),
+              'runner_image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'), 'mock_episode_sleep': .3}
+    if os.getenv('SMOKE_GPU_RUNTIME'):
+        config['gpu_runtime'] = os.environ['SMOKE_GPU_RUNTIME']
     process = None
     with tempfile.TemporaryDirectory(prefix='mini-eval-smoke-') as directory:
         path = Path(directory) / 'worker.json'
@@ -64,6 +70,18 @@ def main():
             wait(job, {'RUNNING'})
             state = json.loads(Path(str(path)+'.state').read_text())
             execution = state['task']['execution_id']
+            if gpu_index is not None:
+                container = json.loads(subprocess.check_output(['docker', 'inspect', 'mini-eval-'+execution]))[0]
+                if config.get('gpu_runtime') == 'nvidia':
+                    assert container['HostConfig']['Runtime'] == 'nvidia'
+                    assert 'NVIDIA_VISIBLE_DEVICES='+hardware['gpu_uuid'] in container['Config']['Env']
+                else:
+                    requests = container['HostConfig']['DeviceRequests']
+                    assert any(hardware['gpu_uuid'] in (r.get('DeviceIDs') or []) for r in requests)
+                observed = subprocess.check_output(['docker', 'exec', 'mini-eval-'+execution,
+                    'nvidia-smi', '--query-gpu=uuid', '--format=csv,noheader'], text=True).strip()
+                assert observed == hardware['gpu_uuid'], observed
+                print('PASS: container sees only the selected physical GPU', flush=True)
             process.kill()  # SIGKILL simulates a crash while the Docker container remains alive.
             process.wait(timeout=10)
             process = start()

@@ -91,6 +91,20 @@ def test_auth_pool_worker_and_admin_boundaries(tmp_path, monkeypatch):
     assert client.get('/api/v1/admin/jobs', headers=alice_auth).status_code == 403
     assert len(client.get('/api/v1/admin/jobs', headers=admin_auth).json()) == 2
 
+    # Environment checks are opt-in and cannot masquerade as checkpoint evaluations.
+    render = {**body, 'benchmark': 'robotwin-render', 'model_ref': 'sapien-render'}
+    monkeypatch.delenv('ROBOTWIN_RENDER_ENABLED', raising=False)
+    assert client.post('/api/v1/jobs', json=render, headers=alice_auth).status_code == 400
+    assert client.get('/api/v1/benchmarks', headers=alice_auth).json() == [{'id': 'mock', 'name': '模拟评测'}]
+    monkeypatch.setenv('ROBOTWIN_RENDER_ENABLED', '1')
+    assert client.post('/api/v1/jobs', json={**render, 'model_ref': 'checkpoint'}, headers=alice_auth).status_code == 400
+    assert client.post('/api/v1/jobs', json={**render, 'episodes': 101}, headers=alice_auth).status_code == 400
+    assert client.post('/api/v1/jobs', json=render, headers=alice_auth).status_code == 201
+    with main.SessionLocal() as s:
+        s.get(Pool, pool_id).gpu_model = 'virtual'
+        s.commit()
+    assert client.post('/api/v1/jobs', json=render, headers=alice_auth).status_code == 400
+
 
 def test_pending_limit_and_disabled_pool(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_URL', f'sqlite:///{tmp_path / "limits.db"}')

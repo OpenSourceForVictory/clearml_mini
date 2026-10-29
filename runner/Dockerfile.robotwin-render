@@ -1,0 +1,14 @@
+ARG PYTHON_BASE_IMAGE=m.daocloud.io/docker.io/library/python:3.11-slim-bookworm
+FROM ${PYTHON_BASE_IMAGE}
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG DEBIAN_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
+RUN sed -i "s|http://deb.debian.org|${DEBIAN_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    libvulkan1 libgl1 libegl1 libx11-6 libxext6 libglx0 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir numpy==1.26.4 sapien==3.0.0b1 opencv-python==4.10.0.84
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+ENV PYTHONUNBUFFERED=1
+WORKDIR /workspace
+COPY runner/ /workspace/runner/
+CMD ["python", "-m", "runner.robotwin_render", "--help"]

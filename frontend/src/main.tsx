@@ -8,6 +8,10 @@ type Pool = {
   name: string;
   gpu_model: string;
   min_vram_gb: number;
+  allow_shared: boolean;
+  max_tasks_per_gpu: number;
+  vram_reserve_gb: number;
+  max_gpu_utilization: number;
 };
 type Attempt = {
   id: string;
@@ -31,6 +35,9 @@ type Job = {
   benchmark: string;
   model_ref: string;
   episodes: number;
+  gpu_mode: string;
+  requested_vram_gb: number;
+  required_gpu_model: string | null;
   created_at: string;
   attempts: Attempt[];
   error: string | null;
@@ -44,6 +51,13 @@ type Slot = {
   online: boolean;
   quarantined: boolean;
   last_seen_at: string | null;
+  gpu_model: string | null;
+  vram_mb: number;
+  free_vram_mb: number | null;
+  gpu_utilization: number | null;
+  telemetry_fresh: boolean;
+  active_tasks: number;
+  reserved_vram_mb: number;
 };
 type Node = {
   id: string;
@@ -257,6 +271,8 @@ function App() {
   );
 }
 function Jobs({ all }: { all: boolean }) {
+  const [benchmarks, setBenchmarks] = useState<{ id: string; name: string }[]>([]);
+  const [benchmark, setBenchmark] = useState('mock');
   const [jobs, setJobs] = useState<Job[]>([]),
     [pools, setPools] = useState<Pool[]>([]),
     [selected, setSelected] = useState(""),
@@ -270,15 +286,17 @@ function Jobs({ all }: { all: boolean }) {
     let active = true;
     const load = async () => {
       try {
-        const [j, p] = await Promise.all([
+        const [j, p, b] = await Promise.all([
           api<Job[]>(
             `${all ? "admin/jobs" : "jobs"}?page=${page}&page_size=20${filter ? "&status=" + filter : ""}`,
           ),
           api<Pool[]>("pools"),
+          api<{ id: string; name: string }[]>("benchmarks"),
         ]);
         if (active) {
           setJobs(j);
           setPools(p);
+          setBenchmarks(b);
           setError("");
         }
       } catch (e) {
@@ -299,10 +317,13 @@ function Jobs({ all }: { all: boolean }) {
     const form = new FormData(e.currentTarget);
     const body = {
       title: form.get("title"),
-      model_ref: form.get("model_ref"),
+      model_ref: benchmark === 'robotwin-render' ? 'sapien-render' : form.get("model_ref"),
       episodes: Number(form.get("episodes")),
       pool_id: form.get("pool_id"),
-      benchmark: "mock",
+      benchmark,
+      gpu_mode: form.get("gpu_mode"),
+      requested_vram_gb: Number(form.get("requested_vram_gb")),
+      required_gpu_model: String(form.get("required_gpu_model") || "").trim() || null,
     };
     const serialized = JSON.stringify(body);
     if (submission.current.body !== serialized)
@@ -366,6 +387,11 @@ function Jobs({ all }: { all: boolean }) {
         <section className="panel">
           <h2>新建评测</h2>
           <form onSubmit={submit} className="submit-grid">
+            <Field label="评测类型">
+              <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}>
+                {benchmarks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </Field>
             <Field label="任务名称">
               <input
                 name="title"
@@ -374,32 +400,44 @@ function Jobs({ all }: { all: boolean }) {
                 maxLength={200}
               />
             </Field>
-            <Field label="模型 / checkpoint 标识">
+            {benchmark === 'mock' && <Field label="模型 / checkpoint 标识">
               <input
                 name="model_ref"
                 placeholder="model-v1"
                 required
                 maxLength={500}
               />
-            </Field>
+            </Field>}
             <Field label="资源池">
-              <select name="pool_id" required defaultValue="">
+              <select key={benchmark} name="pool_id" required defaultValue="">
                 <option value="" disabled>
                   选择资源池
                 </option>
-                {pools.map((p) => (
+                {pools.filter((p) => benchmark === 'mock' || p.gpu_model !== 'virtual').map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} · {p.gpu_model}
+                    {p.name} · {p.gpu_model === "virtual" ? "模拟池" : "异构 GPU 池"}{p.allow_shared ? " · 可共享" : " · GPU 独占"}
                   </option>
                 ))}
               </select>
+            </Field>
+            <Field label="GPU 使用模式">
+              <select name="gpu_mode" defaultValue="exclusive">
+                <option value="exclusive">独占：每卡一个任务</option>
+                <option value="shared">共享：需资源池开启并声明显存</option>
+              </select>
+            </Field>
+            <Field label="所需显存 GiB（共享至少 1）">
+              <input name="requested_vram_gb" type="number" min={0} max={10000} defaultValue={0} required />
+            </Field>
+            <Field label="指定 GPU 型号（可选，精确匹配）">
+              <input name="required_gpu_model" maxLength={100} placeholder="留空使用池内任意合格 GPU" />
             </Field>
             <Field label="评测回合">
               <input
                 name="episodes"
                 type="number"
                 min={1}
-                max={10000}
+                max={benchmark === 'robotwin-render' ? 100 : 10000}
                 defaultValue={10}
                 required
               />
@@ -409,7 +447,9 @@ function Jobs({ all }: { all: boolean }) {
             </button>
           </form>
           <p className="hint">
-            当前使用可重复的模拟评测。RoboTwin 将在环境与资产验收后开放。
+            {benchmark === 'robotwin-render'
+              ? '验证 GPU 上的 SAPIEN 物理仿真和图像渲染，不使用模型 checkpoint；通过率表示环境检查结果。'
+              : '使用可重复的模拟评测。真实机器人任务与模型评测将在环境和资产验收后开放。'}
           </p>
         </section>
       )}
@@ -602,10 +642,12 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
             <dl>
               <dt>提交人</dt>
               <dd>{job.owner_name}</dd>
-              <dt>模型</dt>
+              <dt>{job.benchmark === 'robotwin-render' ? '环境检查' : '模型'}</dt>
               <dd>{job.model_ref}</dd>
               <dt>任务 ID</dt>
               <dd>{job.id}</dd>
+              <dt>GPU 需求</dt>
+              <dd>{job.gpu_mode === "shared" ? "共享" : "独占"} · {job.requested_vram_gb || "未指定"} GiB · {job.required_gpu_model || "不限型号"}</dd>
               <dt>回合数</dt>
               <dd>{job.episodes}</dd>
             </dl>
@@ -624,7 +666,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
             {run?.metrics && (
               <div className="stats metrics">
                 <div>
-                  <small>成功率</small>
+                  <small>{job.benchmark === 'robotwin-render' ? '环境检查通过率' : '成功率'}</small>
                   <strong>
                     {(run.metrics.success_rate * 100).toFixed(1)}%
                   </strong>
@@ -713,12 +755,15 @@ function Resources({ admin }: { admin: boolean }) {
           <strong>{pools.length}</strong>
         </div>
       </div>
+      <p className="hint">共享显存是调度预留，不是显存硬隔离；GPU 利用率用于辅助准入，不代表可保证的算力比例。</p>
       <div className="pool-grid">
         {pools.map((p) => (
           <section key={p.id} className="panel">
             <span className="eyebrow">RESOURCE POOL</span>
             <h2>{p.name}</h2>
-            <p>{p.gpu_model}</p>
+            <p>{p.gpu_model === "virtual" ? "模拟池" : "异构 GPU 池"}</p>
+            <p>{p.allow_shared ? `允许共享，每卡最多 ${p.max_tasks_per_gpu} 个任务` : "GPU 独占：每卡一个任务"}</p>
+            <p className="muted">显存安全余量 {p.vram_reserve_gb} GiB · 共享准入利用率低于 {p.max_gpu_utilization}%</p>
             <p className="muted">最低显存 {p.min_vram_gb} GiB</p>
             <small>{p.id}</small>
           </section>
@@ -731,6 +776,9 @@ function Resources({ admin }: { admin: boolean }) {
             <thead>
               <tr>
                 <th>机器 / GPU</th>
+                <th>型号 / 总显存</th>
+                <th>空闲显存 / 利用率</th>
+                <th>活动任务 / 显存预留</th>
                 <th>连接</th>
                 <th>准入</th>
                 <th>最近心跳</th>
@@ -742,6 +790,9 @@ function Resources({ admin }: { admin: boolean }) {
                   <td>
                     {s.node_name} / {s.gpu_index}
                   </td>
+                  <td>{s.gpu_model || "待登记"}<small>{(s.vram_mb / 1024).toFixed(1)} GiB</small></td>
+                  <td>{s.telemetry_fresh ? `${((s.free_vram_mb || 0) / 1024).toFixed(1)} GiB / ${s.gpu_utilization}%` : "遥测过期或不可用"}</td>
+                  <td>{s.active_tasks} / {(s.reserved_vram_mb / 1024).toFixed(1)} GiB</td>
                   <td>{s.online ? "在线" : "离线"}</td>
                   <td>{s.quarantined ? "等待清理" : "正常"}</td>
                   <td>
@@ -757,6 +808,17 @@ function Resources({ admin }: { admin: boolean }) {
       )}
     </>
   );
+}
+function SharingFields({pool}: {pool?: Pool}) {
+  return <>
+    <label className="check"><input name="allow_shared" type="checkbox" defaultChecked={pool?.allow_shared || false} />允许 GPU 共享</label>
+    <div className="row">
+      <Field label="每卡任务上限"><input name="max_tasks_per_gpu" type="number" min={1} max={32} defaultValue={pool?.max_tasks_per_gpu || 1} required /></Field>
+      <Field label="显存安全余量 GiB"><input name="vram_reserve_gb" type="number" min={0} max={10000} defaultValue={pool?.vram_reserve_gb ?? 2} required /></Field>
+      <Field label="共享准入利用率阈值 %"><input name="max_gpu_utilization" type="number" min={1} max={100} defaultValue={pool?.max_gpu_utilization || 90} required /></Field>
+    </div>
+    <p className="hint">显存额度不提供硬隔离。独占是每卡一个任务，资源池内不同卡仍可并行。</p>
+  </>;
 }
 function Admin() {
   const [error, setError] = useState(""),
@@ -795,8 +857,12 @@ function Admin() {
       "min_vram_gb",
       "cpu_per_job",
       "ram_gb_per_job",
+      "max_tasks_per_gpu",
+      "vram_reserve_gb",
+      "max_gpu_utilization",
     ])
       if (key in values) values[key] = Number(values[key]);
+    if (kind === "pools") values.allow_shared = values.allow_shared === "on";
     try {
       const result = await api<{ token: string; node_name: string }>(
         "admin/" + kind,
@@ -879,9 +945,13 @@ function Admin() {
             <Field label="名称">
               <input name="name" required />
             </Field>
-            <Field label="GPU 型号（模拟池填写 virtual）">
-              <input name="gpu_model" required defaultValue="virtual" />
+            <Field label="设备类型">
+              <select name="gpu_model" defaultValue="*">
+                <option value="*">物理 GPU（允许不同型号）</option>
+                <option value="virtual">模拟设备（无 GPU）</option>
+              </select>
             </Field>
+            <SharingFields />
             <div className="row">
               <Field label="最低显存 GiB">
                 <input
@@ -990,6 +1060,27 @@ function Admin() {
         )}
       </div>
       <section className="panel">
+        <h2>资源池 GPU 策略</h2>
+        <p className="hint">共享任务必须声明显存；同时受每卡、机器、用户及全局并发额度限制。降低额度不打断正在执行的任务。</p>
+        {pools.filter(p => p.gpu_model !== "virtual").map(p => (
+          <form key={p.id} onSubmit={async e => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            try {
+              await api("admin/pools/" + p.id, "PATCH", {
+                allow_shared: f.get("allow_shared") === "on",
+                max_tasks_per_gpu: Number(f.get("max_tasks_per_gpu")),
+                vram_reserve_gb: Number(f.get("vram_reserve_gb")),
+                max_gpu_utilization: Number(f.get("max_gpu_utilization")),
+              });
+              setMessage("资源池策略已更新"); await refresh();
+            } catch (e) { setError(String(e)); }
+          }}>
+            <h3>{p.name}</h3><SharingFields pool={p} /><button>保存 {p.name} 策略</button>
+          </form>
+        ))}
+      </section>
+      <section className="panel">
         <h2>已注册机器</h2>
         <table>
           <thead>
@@ -1005,7 +1096,21 @@ function Admin() {
             {nodes.map((n) => (
               <tr key={n.id}>
                 <td>{n.node_name}</td>
-                <td>{n.max_concurrent}</td>
+                <td>
+                  <form className="row" onSubmit={async e => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    try {
+                      await api("admin/nodes/" + n.id, "PATCH", {max_concurrent: Number(f.get("max_concurrent")), cpu_capacity: Number(f.get("cpu_capacity")), ram_gb_capacity: Number(f.get("ram_gb_capacity"))});
+                      setMessage("机器并发额度已更新"); await refresh();
+                    } catch (e) { setError(String(e)); }
+                  }}>
+                    <input aria-label={n.node_name + " 并发上限"} name="max_concurrent" type="number" min={1} max={1024} defaultValue={n.max_concurrent} required />
+                    <input aria-label={n.node_name + " CPU 额度"} name="cpu_capacity" type="number" min={1} max={10000} defaultValue={n.cpu_capacity} required />
+                    <input aria-label={n.node_name + " 内存额度 GiB"} name="ram_gb_capacity" type="number" min={1} max={100000} defaultValue={n.ram_gb_capacity} required />
+                    <button>保存</button>
+                  </form>
+                </td>
                 <td>
                   {n.cpu_capacity} 核 / {n.ram_gb_capacity} GiB
                 </td>
