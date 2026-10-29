@@ -36,7 +36,10 @@ def main():
     units = home / '.config/systemd/user'
     for directory in (app, conf, state, units):
         directory.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(Path(__file__).resolve().parents[1] / 'worker/client.py', app / 'worker.py')
+    source = Path(__file__).resolve().parents[1]
+    for package in ('worker', 'runner'):
+        shutil.copytree(source/package, app/package, dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+    config.setdefault('workspace_root', str(home/'.local/share/mini-eval-workspaces'/args.instance))
     config['state_path'] = str(state / (args.instance+'.json'))
     target = conf / (args.instance+'.json')
     with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
@@ -45,7 +48,8 @@ def main():
     quote = lambda p: json.dumps(str(p).replace('%', '%%'))
     unit = '[Unit]\nDescription=Mini Eval Worker (%i)\nAfter=network-online.target\n\n[Service]\nType=simple\n'
     config_argument = json.dumps(str(conf).replace('%', '%%')+'/%i.json')
-    unit += f'ExecStart={quote(sys.executable)} {quote(app / "worker.py")} --config {config_argument}\n'
+    unit += f'ExecStart={quote(sys.executable)} -m worker.client --config {config_argument}\n'
+    unit += f'WorkingDirectory={quote(app)}\n'
     unit += 'Restart=always\nRestartSec=5\nTimeoutStopSec=20\n\n[Install]\nWantedBy=default.target\n'
     (units / 'mini-eval-worker@.service').write_text(unit)
     print(f'Installed config: {target}')
@@ -53,7 +57,7 @@ def main():
         subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
         subprocess.run(['systemctl', '--user', 'enable', '--now', f'mini-eval-worker@{args.instance}'], check=True)
     else:
-        print(f'Run: {sys.executable} {app / "worker.py"} --config {target}')
+        print(f'From {app}, run: {sys.executable} -m worker.client --config {target}')
         print(f'Or enable systemd: systemctl --user daemon-reload && systemctl --user enable --now mini-eval-worker@{args.instance}')
 
 

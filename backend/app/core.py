@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -95,9 +95,13 @@ class Slot(Base):
 
     gpu_model: Mapped[Optional[str]] = mapped_column(String(100))
     vram_mb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    client_images: Mapped[list] = mapped_column(JSON_TYPE, default=list, server_default='[]')
     protocol_version: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
     free_vram_mb: Mapped[Optional[int]] = mapped_column(Integer)
     gpu_utilization: Mapped[Optional[int]] = mapped_column(Integer)
+    disk_free_mb: Mapped[Optional[int]] = mapped_column(Integer)
+    disk_min_free_mb: Mapped[Optional[int]] = mapped_column(Integer)
+    disk_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     telemetry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
@@ -120,6 +124,9 @@ class Job(Base):
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     error: Mapped[Optional[str]] = mapped_column(String(1000))
+    batch_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_batches.id'), index=True)
+    case_id: Mapped[Optional[str]] = mapped_column(String(100))
+    client_spec: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     gpu_mode: Mapped[str] = mapped_column(String(20), default='exclusive', server_default='exclusive')
     requested_vram_gb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     required_gpu_model: Mapped[Optional[str]] = mapped_column(String(100))
@@ -187,3 +194,84 @@ class SchedulerState(Base):
 def session_factory(url=None):
     engine = create_engine(url or os.getenv('DATABASE_URL', 'sqlite:///./eval.db'))
     return sessionmaker(engine, expire_on_commit=False)
+
+
+class EvaluationSuite(Base):
+    __tablename__ = 'evaluation_suites'
+    __table_args__ = (UniqueConstraint('owner_id', 'name', 'version'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    version: Mapped[str] = mapped_column(String(100))
+    template_id: Mapped[str] = mapped_column(ForeignKey('client_templates.id'))
+    cases: Mapped[list] = mapped_column(JSON_TYPE)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EpisodeRecord(Base):
+    __tablename__ = 'episode_records'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), primary_key=True)
+    episode_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    seed: Mapped[int] = mapped_column(Integer)
+    started: Mapped[dict] = mapped_column(JSON_TYPE)
+    result: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class ClientTemplate(Base):
+    __tablename__ = 'client_templates'
+    owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey('users.id'), index=True)
+    __table_args__ = (UniqueConstraint('name', 'version'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    name: Mapped[str] = mapped_column(String(100))
+    version: Mapped[str] = mapped_column(String(100))
+    image: Mapped[str] = mapped_column(String(500))
+    command: Mapped[list] = mapped_column(JSON_TYPE)
+    protocols: Mapped[list] = mapped_column(JSON_TYPE)
+    episode_reporting: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class RunArtifact(Base):
+    __tablename__ = 'run_artifacts'
+    __table_args__ = (UniqueConstraint('run_id', 'name'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), index=True)
+    name: Mapped[str] = mapped_column(String(180))
+    sha256: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    data: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EvaluationBatch(Base):
+    __tablename__ = 'evaluation_batches'
+    __table_args__ = (UniqueConstraint('owner_id', 'idempotency_key'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    suite_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_suites.id'))
+    max_concurrent: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    title: Mapped[str] = mapped_column(String(200))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ClientBuild(Base):
+    __tablename__ = 'client_builds'
+    __table_args__ = (UniqueConstraint('owner_id', 'name', 'version'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    version: Mapped[str] = mapped_column(String(100))
+    entrypoint: Mapped[str] = mapped_column(String(200))
+    source: Mapped[dict] = mapped_column(JSON_TYPE, deferred=True)
+    sha256: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(20), default='PENDING', index=True)
+    claim_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    log: Mapped[str] = mapped_column(Text, default='')
+    image: Mapped[Optional[str]] = mapped_column(String(500))
+    template_id: Mapped[Optional[str]] = mapped_column(ForeignKey('client_templates.id'))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

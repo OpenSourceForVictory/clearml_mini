@@ -1,0 +1,7 @@
+ARG PYTHON_BASE_IMAGE=m.daocloud.io/docker.io/library/python:3.11-slim
+FROM ${PYTHON_BASE_IMAGE}
+WORKDIR /workspace
+COPY runner/ /workspace/runner/
+ENV PYTHONUNBUFFERED=1
+# Your client image must also include the runner package and its own dependencies.
+CMD ["python", "-m", "runner.cs_entry"]

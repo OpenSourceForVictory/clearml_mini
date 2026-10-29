@@ -74,3 +74,5 @@ cd frontend && npm ci && npm run build
 原始 `IMPLEMENTATION_SPEC.md` 保留为历史需求；其中 ClearML 强制依赖已由用户决定的 `lightweight-workers` 变更替代。开发使用 Git 和 OpenSpec，只有代码与对应验证完成后才勾选任务。OpenSpec CLI 使用 Node 24；进入本项目目录启动 Codex 后，可使用 `$openspec-apply-change lightweight-workers`。
 
 GPU 调度支持不同型号共池与显式同卡共享，默认任务仍按卡独占。配置方法、显存预留和利用率的保障边界见 [GPU 调度说明](docs/gpu-scheduling.md)。
+
+仿真客户端 SDK、可复用集合和逐回合进度：[仿真评测框架](docs/evaluation-framework.md)。

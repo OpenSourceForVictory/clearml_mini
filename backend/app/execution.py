@@ -1,5 +1,7 @@
 """Authenticated worker protocol and administrator provisioning."""
 import hashlib
+import base64
+import binascii
 import os
 import secrets
 from datetime import timedelta
@@ -10,8 +12,9 @@ from pydantic import BaseModel, Field, ConfigDict
 from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
-from .core import Job, Pool, Run, RunLog, Slot, User, Worker, now
-from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc
+from .core import Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
+from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
+from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
 
 MAX_LOG_BYTES = 262144
 
@@ -23,12 +26,18 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
-    protocol_version: Literal[1, 2] = 1
+    protocol_version: Literal[1, 2, 3] = 1
+    client_images: list[str] = Field(default_factory=list, max_length=100)
 
 
 class Telemetry(BaseModel):
     free_vram_mb: int = Field(ge=0, le=10240000)
     gpu_utilization: int = Field(ge=0, le=100)
+
+
+class DiskTelemetry(BaseModel):
+    free_mb: int = Field(ge=0, le=2147483647)
+    min_free_mb: int = Field(ge=0, le=2147483647)
 
 
 class Claim(BaseModel):
@@ -41,6 +50,7 @@ class Heartbeat(BaseModel):
     started: bool = True
     telemetry: Optional[Telemetry] = None
     telemetry_failed: bool = False
+    disk: Optional[DiskTelemetry] = None
 
 
 class Metrics(BaseModel):
@@ -59,6 +69,11 @@ class Finish(BaseModel):
 class LogBody(BaseModel):
     sequence: int = Field(ge=0)
     content: str = Field(min_length=1, max_length=8192)
+
+
+class ArtifactUpload(BaseModel):
+    name: str = Field(min_length=1, max_length=180)
+    content_base64: str = Field(max_length=4*((MAX_ARTIFACT_BYTES+2)//3))
 
 
 class WorkerCreate(BaseModel):
@@ -233,6 +248,7 @@ def install(app, db, current):
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
         slot.protocol_version = body.protocol_version
+        slot.client_images = body.client_images if body.protocol_version >= 3 else []
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
@@ -253,6 +269,10 @@ def install(app, db, current):
                 transition(s, run, 'RUNNING')
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             cancel = run.status == 'CANCEL_REQUESTED'
+        if body.disk is not None:
+            slot.disk_free_mb = body.disk.free_mb
+            slot.disk_min_free_mb = body.disk.min_free_mb
+            slot.disk_at = now()
         if body.telemetry_failed:
             slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         elif body.telemetry is not None:
@@ -295,8 +315,11 @@ def install(app, db, current):
                 'gpu_mode': 'exclusive' if run.exclusive else 'shared',
                 'requested_vram_mb': job.requested_vram_gb * 1024,
                 'vram_reserve_mb': pool.vram_reserve_gb * 1024,
-                'timeout_seconds': seconds('EXECUTION_TIMEOUT_SECONDS', 3600),
+                'timeout_seconds': execution_timeout(job),
                 'lease_seconds': seconds('LEASE_SECONDS', 30)}
+        if job.client_spec:
+            task['client_spec'] = job.client_spec
+            task['image'] = job.client_spec['template']['image']
         s.commit()
         return {'task': task, 'cleanup': []}
 
@@ -321,6 +344,43 @@ def install(app, db, current):
         s.commit()
         return {'accepted': True}
 
+    @app.post('/api/v1/worker/executions/{execution_id}/episodes')
+    def episode(execution_id: str, body: dict, worker=Depends(worker_auth), s: Session = Depends(db)):
+        from .episodes import record
+        lock(s)
+        run = run_for(s, execution_id, worker)
+        live(run)
+        record(s, run, body)
+        s.commit()
+        return {'accepted': True}
+
+    @app.post('/api/v1/worker/executions/{execution_id}/artifacts')
+    def upload_artifact(execution_id: str, body: ArtifactUpload, worker=Depends(worker_auth), s: Session = Depends(db)):
+        lock(s)
+        run = run_for(s, execution_id, worker)
+        live(run)
+        if not artifact_name(body.name):
+            raise HTTPException(400, 'invalid artifact name')
+        try:
+            data = base64.b64decode(body.content_base64, validate=True)
+        except (ValueError, binascii.Error):
+            raise HTTPException(400, 'invalid artifact encoding')
+        if len(data) > MAX_ARTIFACT_BYTES:
+            raise HTTPException(413, 'artifact size limit exceeded')
+        digest = hashlib.sha256(data).hexdigest()
+        old = s.scalar(select(RunArtifact).where(RunArtifact.run_id == run.id, RunArtifact.name == body.name))
+        if old:
+            if old.sha256 != digest:
+                raise HTTPException(409, 'artifact name already has different content')
+            return {'id': old.id, 'sha256': old.sha256}
+        count, total = s.execute(select(func.count(), func.coalesce(func.sum(RunArtifact.size_bytes), 0))
+                                .where(RunArtifact.run_id == run.id)).one()
+        if count >= MAX_ARTIFACT_COUNT or total + len(data) > MAX_ARTIFACT_TOTAL:
+            raise HTTPException(413, 'run artifact quota exceeded')
+        artifact = RunArtifact(run_id=run.id, name=body.name, sha256=digest, size_bytes=len(data), data=data)
+        s.add(artifact); s.commit()
+        return {'id': artifact.id, 'sha256': artifact.sha256}
+
     @app.post('/api/v1/worker/executions/{execution_id}/complete')
     def complete(execution_id: str, body: Finish, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
@@ -332,6 +392,12 @@ def install(app, db, current):
         live(run)
         if body.status == 'SUCCEEDED' and (not body.metrics or body.metrics.episode_count != s.get(Job, run.job_id).episodes):
             raise HTTPException(400, 'successful execution requires complete metrics')
+        job = s.get(Job, run.job_id)
+        if body.status == 'SUCCEEDED' and job.client_spec and job.client_spec['template'].get('episode_reporting'):
+            from .episodes import progress
+            p = progress(s, run)
+            if p['completed'] != job.episodes or abs(p['success_rate'] - body.metrics.success_rate) > 1e-9:
+                raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
         status = 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else body.status
         run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' else None
         run.cleanup_confirmed = True

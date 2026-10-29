@@ -95,7 +95,7 @@ def test_auth_pool_worker_and_admin_boundaries(tmp_path, monkeypatch):
     render = {**body, 'benchmark': 'robotwin-render', 'model_ref': 'sapien-render'}
     monkeypatch.delenv('ROBOTWIN_RENDER_ENABLED', raising=False)
     assert client.post('/api/v1/jobs', json=render, headers=alice_auth).status_code == 400
-    assert client.get('/api/v1/benchmarks', headers=alice_auth).json() == [{'id': 'mock', 'name': '模拟评测'}]
+    assert client.get('/api/v1/benchmarks', headers=alice_auth).json() == [{'id': 'mock', 'name': '模拟评测'}, {'id': 'cs-client', 'name': 'CS 客户端评测'}]
     monkeypatch.setenv('ROBOTWIN_RENDER_ENABLED', '1')
     assert client.post('/api/v1/jobs', json={**render, 'model_ref': 'checkpoint'}, headers=alice_auth).status_code == 400
     assert client.post('/api/v1/jobs', json={**render, 'episodes': 101}, headers=alice_auth).status_code == 400

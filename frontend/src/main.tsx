@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
+import { api } from "./api";
+import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
 
 type User = { id: string; username: string; role: string };
 type Pool = {
@@ -38,6 +40,9 @@ type Job = {
   gpu_mode: string;
   requested_vram_gb: number;
   required_gpu_model: string | null;
+  client_spec: null | {endpoint: string; task_name: string; seed: number; parameters: Record<string, unknown>};
+  batch_id: string | null;
+  case_id: string | null;
   created_at: string;
   attempts: Attempt[];
   error: string | null;
@@ -53,6 +58,9 @@ type Slot = {
   last_seen_at: string | null;
   gpu_model: string | null;
   vram_mb: number;
+  disk_free_mb: number | null;
+  disk_min_free_mb: number | null;
+  disk_fresh: boolean;
   free_vram_mb: number | null;
   gpu_utilization: number | null;
   telemetry_fresh: boolean;
@@ -79,42 +87,6 @@ const labels: Record<string, string> = {
   TIMED_OUT: "已超时",
 };
 const terminal = ["SUCCEEDED", "FAILED", "CANCELLED", "TIMED_OUT"];
-const errors: Record<string, string> = {
-  "invalid credentials": "用户名或密码错误",
-  "invalid token": "登录已过期，请重新登录",
-  "pending limit": "排队任务已达上限，请等待部分任务完成",
-  "previous execution cleanup is not confirmed":
-    "正在等待 Worker 确认旧容器已停止，暂时无法重试",
-  "node already provisioned": "该机器名称已注册",
-  "username already exists": "用户名已存在",
-  "pool name already exists": "资源池名称已存在",
-};
-async function api<T>(
-  path: string,
-  method = "GET",
-  body?: unknown,
-  extra: Record<string, string> = {},
-): Promise<T> {
-  const token = sessionStorage.getItem("eval-token");
-  const res = await fetch("/api/v1/" + path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...extra,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const value = await res.json();
-  if (!res.ok) {
-    if (res.status === 401 && path !== "auth/login")
-      window.dispatchEvent(new Event("eval-logout"));
-    throw new Error(
-      errors[value.detail] || value.detail || `请求失败 (${res.status})`,
-    );
-  }
-  return value;
-}
 function Badge({ status }: { status: string }) {
   return (
     <span className={"badge " + status.toLowerCase()}>
@@ -221,6 +193,7 @@ function App() {
           {[
             ["jobs", "我的任务"],
             ["workers", "计算资源"],
+            ["cs", "CS 评测批次"],
             ...(user.role === "admin"
               ? [
                   ["all", "全部任务"],
@@ -261,6 +234,8 @@ function App() {
         </header>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />
+        ) : tab === "cs" ? (
+          <CSWorkbench renderJob={(id, close) => <JobDetail id={id} close={close} />} />
         ) : tab === "workers" ? (
           <Resources admin={user.role === "admin"} />
         ) : (
@@ -296,7 +271,7 @@ function Jobs({ all }: { all: boolean }) {
         if (active) {
           setJobs(j);
           setPools(p);
-          setBenchmarks(b);
+          setBenchmarks(b.filter(x => x.id !== 'cs-client'));
           setError("");
         }
       } catch (e) {
@@ -651,6 +626,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
               <dt>回合数</dt>
               <dd>{job.episodes}</dd>
             </dl>
+            {job.client_spec && <><h3>客户端配置</h3><pre className="logs">{JSON.stringify(job.client_spec, null, 2)}</pre></>}
             <Field label="执行尝试">
               <select
                 value={run?.id || ""}
@@ -685,6 +661,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
             {run && !run.cleanup_confirmed && terminal.includes(run.status) && (
               <p className="hint">等待 Worker 确认旧容器已停止后，才可重试。</p>
             )}
+            {run && <ArtifactList jobId={id} runId={run.id} />}
             <h3>执行日志</h3>
             <p className="hint">每次尝试最多保存 256 KiB 日志。</p>
             <pre className="logs">
@@ -778,7 +755,7 @@ function Resources({ admin }: { admin: boolean }) {
                 <th>机器 / GPU</th>
                 <th>型号 / 总显存</th>
                 <th>空闲显存 / 利用率</th>
-                <th>活动任务 / 显存预留</th>
+                <th>工作磁盘空闲 / 安全阈值</th><th>活动任务 / 显存预留</th>
                 <th>连接</th>
                 <th>准入</th>
                 <th>最近心跳</th>
@@ -792,6 +769,7 @@ function Resources({ admin }: { admin: boolean }) {
                   </td>
                   <td>{s.gpu_model || "待登记"}<small>{(s.vram_mb / 1024).toFixed(1)} GiB</small></td>
                   <td>{s.telemetry_fresh ? `${((s.free_vram_mb || 0) / 1024).toFixed(1)} GiB / ${s.gpu_utilization}%` : "遥测过期或不可用"}</td>
+                  <td>{s.disk_fresh ? `${((s.disk_free_mb||0)/1024).toFixed(1)} / ${((s.disk_min_free_mb||0)/1024).toFixed(1)} GiB${(s.disk_free_mb||0)<(s.disk_min_free_mb||0)?' · 空间不足，暂停准入':''}` : '未上报或已过期'}</td>
                   <td>{s.active_tasks} / {(s.reserved_vram_mb / 1024).toFixed(1)} GiB</td>
                   <td>{s.online ? "在线" : "离线"}</td>
                   <td>{s.quarantined ? "等待清理" : "正常"}</td>
@@ -911,6 +889,7 @@ function Admin() {
       </div>
       {error && <p className="error">{error}</p>}
       {message && <p className="success">{message}</p>}
+      <ClientTemplates />
       <div className="admin-grid">
         <section className="panel">
           <h2>创建成员</h2>

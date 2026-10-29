@@ -4,7 +4,7 @@ import os
 import threading
 from datetime import timedelta, timezone
 from sqlalchemy import or_, select, text
-from .core import Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
+from .core import EvaluationBatch, Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
 
 ACTIVE = ('RESERVED', 'STARTING', 'RUNNING', 'CANCEL_REQUESTED')
 TERMINAL = ('SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT')
@@ -43,6 +43,11 @@ def transition(s, run, status, message=None):
     s.add(Event(job_id=job.id, run_id=run.id, old_status=old, new_status=status, message=message))
 
 
+def execution_timeout(job):
+    limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
+    return min(limit, job.client_spec['timeout_seconds']) if job.client_spec else limit
+
+
 def reconcile(s, at):
     for run in s.scalars(select(Run).where(Run.status.in_(ACTIVE))).all():
         if run.status == 'RESERVED':
@@ -52,7 +57,7 @@ def reconcile(s, at):
                 run.slot_id = run.execution_id = run.reservation_expires_at = None
             continue
         expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
-        overrun = run.started_at and utc(run.started_at) + timedelta(seconds=seconds('EXECUTION_TIMEOUT_SECONDS', 3600)) <= at
+        overrun = run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
         startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
             transition(s, run, 'TIMED_OUT', 'worker lease or execution deadline expired')
@@ -68,6 +73,12 @@ def telemetry_fresh(slot, at):
 
 def eligible(slot, pool, job, held, at):
     """Both physical capacity and observed headroom must fit; utilization is advisory."""
+    if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
+            or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
+        return False
+    if job.client_spec and (slot.protocol_version < 3 or
+                            job.client_spec['template']['image'] not in (slot.client_images or [])):
+        return False
     if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:
         return False
     requested = job.requested_vram_gb * 1024
@@ -110,9 +121,12 @@ def tick(factory, at=None):
         for r in active:
             if r.slot_id in by_slot:
                 by_slot[r.slot_id].append(r)
+        batch_counts = {}
+        batches = {b.id: b for b in s.scalars(select(EvaluationBatch))}
         counts, node_counts, node_cpu, node_ram = {}, {}, {}, {}
         for r in active:
             job = s.get(Job, r.job_id)
+            batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
             counts[job.owner_id] = counts.get(job.owner_id, 0) + 1
             slot = slots.get(r.slot_id)
             pool = s.get(Pool, job.pool_id)
@@ -140,7 +154,19 @@ def tick(factory, at=None):
                     break
                 if counts.get(owner, 0) >= seconds('MAX_ACTIVE_PER_USER', 2):
                     continue
-                for job in [j for j in pending if j.owner_id == owner]:
+                candidates = [j for j in pending if j.owner_id == owner]
+                rotation = s.get(SchedulerState, 'batch:'+owner)
+                if not rotation:
+                    rotation = SchedulerState(key='batch:'+owner, value={})
+                    s.add(rotation)
+                groups = sorted({j.batch_id or 'standalone' for j in candidates})
+                previous = rotation.value.get('group', '')
+                groups = [g for g in groups if g > previous] + [g for g in groups if g <= previous]
+                order = {g: i for i, g in enumerate(groups)}
+                candidates.sort(key=lambda j: order[j.batch_id or 'standalone'])
+                for job in candidates:
+                    if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
+                        continue
                     pool = pools.get(job.pool_id)
                     if not pool:
                         continue
@@ -170,6 +196,8 @@ def tick(factory, at=None):
                     node_cpu[n] = node_cpu.get(n, 0) + pool.cpu_per_job
                     node_ram[n] = node_ram.get(n, 0) + pool.ram_gb_per_job
                     cursor.value = {'owner': owner}
+                    rotation.value = {'group': job.batch_id or 'standalone'}
+                    batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
                     by_slot[slot.id].append(run)
                     pending.remove(job)
                     admitted += 1

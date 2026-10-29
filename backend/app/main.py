@@ -19,6 +19,10 @@ from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
 from .scheduling import lock, loop, online, transition, TERMINAL, ACTIVE, utc
 from .execution import install
+from .clients import ClientRequest, snapshot, install as install_clients
+from .batches import install as install_batches
+from .episodes import install as install_episodes
+from .builds import install as install_builds
 
 SessionLocal = session_factory()
 @asynccontextmanager
@@ -72,13 +76,14 @@ class Login(BaseModel):
 
 class Submit(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    benchmark: Literal['mock', 'robotwin-render']
-    model_ref: str = Field(min_length=1, max_length=500)
+    benchmark: Literal['mock', 'robotwin-render', 'cs-client']
+    model_ref: str = Field(default='client', min_length=1, max_length=500)
     episodes: int = Field(ge=1, le=10000)
     pool_id: str
     gpu_mode: Literal['exclusive', 'shared'] = 'exclusive'
     requested_vram_gb: int = Field(default=0, ge=0, le=10000)
     required_gpu_model: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    client: Optional[ClientRequest] = None
 
 
 def visible(job: Job, user: User):
@@ -89,6 +94,7 @@ def visible(job: Job, user: User):
 
 def detail(job: Job):
     return {'id': job.id, 'owner_id': job.owner_id, 'owner_name': job.owner.username, 'title': job.title, 'benchmark': job.benchmark,
+            'client_spec': job.client_spec, 'batch_id': job.batch_id, 'case_id': job.case_id,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
             'gpu_mode': job.gpu_mode, 'requested_vram_gb': job.requested_vram_gb,
             'required_gpu_model': job.required_gpu_model,
@@ -149,6 +155,8 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
                  'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at,
                  'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,
                  'gpu_utilization': x.gpu_utilization, 'telemetry_at': x.telemetry_at,
+                 'disk_free_mb': x.disk_free_mb, 'disk_min_free_mb': x.disk_min_free_mb,
+                 'disk_fresh': bool(x.disk_at and datetime.now(timezone.utc)-utc(x.disk_at) < timedelta(seconds=15)),
                  'telemetry_fresh': bool(x.telemetry_at and datetime.now(timezone.utc)-utc(x.telemetry_at) < timedelta(seconds=15)),
                  'protocol_version': x.protocol_version,
                  'active_tasks': sum(r.slot_id == x.id for r in held),
@@ -158,7 +166,7 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
 
 @app.get('/api/v1/benchmarks')
 def benchmarks(user: User = Depends(current)):
-    values = [{'id': 'mock', 'name': '模拟评测'}]
+    values = [{'id': 'mock', 'name': '模拟评测'}, {'id': 'cs-client', 'name': 'CS 客户端评测'}]
     if os.getenv('ROBOTWIN_RENDER_ENABLED') == '1':
         values.append({'id': 'robotwin-render', 'name': 'RoboTwin 环境自检'})
     return values
@@ -188,7 +196,14 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status == 'PENDING'))
     if pending >= int(os.getenv('MAX_PENDING_PER_USER', '20')):
         raise HTTPException(429, 'pending limit')
-    job = Job(owner_id=user.id, idempotency_key=idempotency_key, **body.model_dump())
+    values = body.model_dump(exclude={'client'})
+    if body.benchmark == 'cs-client':
+        values['client_spec'] = snapshot(s, body.client, user.id)
+        template = values['client_spec']['template']
+        values['model_ref'] = template['name'] + ':' + template['version']
+    elif body.client is not None:
+        raise HTTPException(400, 'client configuration is only valid for CS evaluation')
+    job = Job(owner_id=user.id, idempotency_key=idempotency_key, **values)
     s.add(job)
     s.flush()
     run = Run(job_id=job.id, attempt=1)
@@ -242,8 +257,10 @@ def retry(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
     if not job.runs[-1].cleanup_confirmed:
         raise HTTPException(409, 'previous execution cleanup is not confirmed')
     s.execute(select(User.id).where(User.id == job.owner_id).with_for_update())
-    pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == job.owner_id, Job.status == 'PENDING'))
-    if pending >= int(os.getenv('MAX_PENDING_PER_USER', '20')):
+    condition = Job.status.not_in(TERMINAL) if job.batch_id else Job.status == 'PENDING'
+    pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == job.owner_id, condition))
+    limit = int(os.getenv('MAX_BATCH_BACKLOG_PER_USER', '10000')) if job.batch_id else int(os.getenv('MAX_PENDING_PER_USER', '20'))
+    if pending >= limit:
         raise HTTPException(429, 'pending limit')
     old = job.status
     job.status = 'PENDING'
@@ -293,6 +310,10 @@ def admin_health(user: User = Depends(current), s: Session = Depends(db)):
 
 
 install(app, db, current)
+install_clients(app, db, current)
+install_batches(app, db, current)
+install_episodes(app, db, current)
+install_builds(app, db, current)
 
 frontend = Path(os.getenv('FRONTEND_DIST', str(Path(__file__).resolve().parents[2] / 'frontend' / 'dist')))
 if frontend.is_dir():

@@ -1,5 +1,7 @@
 """Standard-library-only worker. One instance per GPU (or virtual mock slot)."""
 import argparse
+import base64
+import tempfile
 import fcntl
 import json
 import logging
@@ -12,6 +14,10 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+
+from runner.cs_contract import INPUT_PATH, VERSION, endpoint_parts
+from .artifacts import read_artifacts
+from .workspace import prepare, execution_dirs, read_events, disk_status
 
 LOG = logging.getLogger('mini-eval-worker')
 MAX_LOG_BYTES = 262144
@@ -70,6 +76,8 @@ class Worker:
         self.config = config
         self.api = Client(config)
         self.path = Path(state_path)
+        self.workspace = prepare(config, str(self.path.resolve().parent/'workspace'))
+        self.config['workspace_root'] = str(self.workspace)
         self.state = json.loads(self.path.read_text()) if self.path.exists() else None
         self.slot_id = None
         self.stop_event = threading.Event()
@@ -124,12 +132,22 @@ class Worker:
             self.save()
 
     def create(self, task):
-        modules = {'mock': 'runner.mock_eval', 'robotwin-render': 'runner.robotwin_render'}
-        if task['benchmark'] not in modules or task['image'] != self.config['runner_image']:
+        disk = disk_status(self.workspace, self.config)
+        if disk['free_mb'] < disk['min_free_mb']:
+            raise RuntimeError('insufficient disk space in worker workspace before start')
+        modules = {'mock': 'runner.mock_eval', 'robotwin-render': 'runner.robotwin_render', 'cs-client': 'runner.cs_entry'}
+        cs = task['benchmark'] == 'cs-client'
+        approved = task['image'] in self.config.get('client_images', []) if cs else task['image'] == self.config['runner_image']
+        if task['benchmark'] not in modules or not approved:
             raise RuntimeError('task benchmark or image is not approved by this worker')
         if task['benchmark'] == 'robotwin-render' and (not task['gpu_uuid'] or task['model_ref'] != 'sapien-render'
                                                        or not 1 <= task['episodes'] <= 100):
             raise RuntimeError('invalid GPU environment check parameters')
+        if cs:
+            spec = task['client_spec']
+            if spec['contract_version'] != VERSION or spec['template']['image'] != task['image']:
+                raise RuntimeError('invalid CS client contract')
+            endpoint_parts(spec['endpoint'])
         requested = task.get('requested_vram_mb', 0)
         if requested:
             observed = telemetry(self.config)
@@ -137,25 +155,98 @@ class Worker:
                 raise RuntimeError('insufficient free GPU memory before start; retry when resources are available')
         args = ['create', '--name', self.name(task['execution_id']),
                 '--label', 'mini-eval.execution=' + task['execution_id'], '--label', 'mini-eval.slot=' + self.slot_id,
-                '--network', 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+                '--network', 'bridge' if cs else 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                 '--pids-limit', '256', '--cpus', str(task['cpus']), '--memory', str(task['ram_gb'])+'g',
                 '--log-driver', 'json-file', '--log-opt', 'max-size=1m', '--log-opt', 'max-file=1']
+        if cs:
+            directory = execution_dirs(self.workspace, task['execution_id'])
+            for source, target, readonly in [
+                (self.workspace/'assets', '/opt/mini-eval/assets', True),
+                (self.workspace/'cache', '/opt/mini-eval/cache', True),
+                (directory/'work', '/tmp/mini-eval-work', False),
+                (directory/'output', '/tmp/mini-eval-output', False)]:
+                args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
+            args.extend(['--env', 'MINI_EVAL_WORK_DIR=/tmp/mini-eval-work',
+                         '--env', 'MINI_EVAL_ASSETS_DIR=/opt/mini-eval/assets',
+                         '--env', 'MINI_EVAL_CACHE_DIR=/opt/mini-eval/cache'])
         if task['gpu_uuid']:
             if self.config.get('gpu_runtime') == 'nvidia':
                 args.extend(['--runtime', 'nvidia', '--env', 'NVIDIA_VISIBLE_DEVICES=' + task['gpu_uuid'],
                              '--env', 'NVIDIA_DRIVER_CAPABILITIES=compute,utility'])
             else:
                 args.extend(['--gpus', 'device=' + task['gpu_uuid']])
-        if task['benchmark'] == 'robotwin-render':
+        if task['benchmark'] in ('robotwin-render', 'cs-client'):
             args.extend(['--env', 'NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics'])
         if 'mock_episode_sleep' in self.config:
             args.extend(['--env', 'MOCK_EPISODE_SLEEP=' + str(self.config['mock_episode_sleep'])])
         if self.config.get('mock_fail'):
             args.extend(['--env', 'MOCK_FAIL=1'])
-        args.extend([task['image'], 'python', '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']),
-                     'python', '-m', modules[task['benchmark']], '--job-id='+task['job_id'], '--model-ref='+task['model_ref'],
-                     '--benchmark='+task['benchmark'], '--episodes='+str(task['episodes'])])
+        command = ['python', '-m', modules[task['benchmark']]]
+        if not cs:
+            command += ['--job-id='+task['job_id'], '--model-ref='+task['model_ref'],
+                        '--benchmark='+task['benchmark'], '--episodes='+str(task['episodes'])]
+        args.extend([task['image'], 'python', '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']), *command])
         docker(*args, timeout=20)
+        if cs:
+            # No bind mount or shell expansion. The file lives inside the container.
+            config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
+                      'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
+            (execution_dirs(self.workspace, task['execution_id'])/'input.json').write_text(json.dumps(config))
+            with tempfile.TemporaryDirectory(prefix='eval-input-') as directory:
+                path = Path(directory)/'input.json'
+                path.write_text(json.dumps(config)); path.chmod(0o644)
+                docker('cp', str(path), self.name(task['execution_id']) + ':' + INPUT_PATH)
+
+    def upload_artifacts(self, task, deadline=None):
+        execution = task['execution_id']
+        for name, data in read_artifacts(self.name(execution)):
+            requested = time.monotonic()
+            reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
+            if deadline is not None:
+                deadline[0] = requested + reply['lease_seconds'] - 2
+            self.api.post(f'worker/executions/{execution}/artifacts',
+                          {'name': name, 'content_base64': base64.b64encode(data).decode()})
+
+    def send_episode_journal(self, execution):
+        offset = self.state.get('episode_file_offset', 0)
+        path = execution_dirs(self.workspace, execution)/'work'/'episodes.jsonl'
+        data = read_events(path, offset)
+        sent = 0
+        for line in data.splitlines(keepends=True):
+            if not line.endswith(b'\n'):
+                if len(line) > 16384:
+                    raise RuntimeError('episode event exceeds size limit')
+                break
+            if sent >= 16:
+                return False
+            if len(line) > 16384:
+                raise RuntimeError('episode event exceeds size limit')
+            event = json.loads(line)
+            self.api.post(f'worker/executions/{execution}/episodes', event)
+            offset += len(line); sent += 1
+            self.state['episode_file_offset'] = offset
+            self.save()
+        return len(data) < 1024*1024
+
+    def send_episodes(self, execution, output):
+        from runner.sdk import EVENT_PREFIX
+        # Separate durable cursor: log truncation must not discard evaluation results.
+        offset = self.state.get('episode_offset', 0)
+        tail = output[offset:]
+        sent = 0
+        for line in tail.splitlines(keepends=True):
+            if sent >= 16:
+                return False
+            if not line.endswith('\n'):
+                break
+            if line.startswith(EVENT_PREFIX):
+                event = json.loads(line[len(EVENT_PREFIX):])
+                self.api.post(f'worker/executions/{execution}/episodes', event)
+                sent += 1
+            offset += len(line)
+            self.state['episode_offset'] = offset
+            self.save()
+        return True
 
     def send_logs(self, execution, output):
         # Persist the exact pending chunk before sending; response loss cannot change a retry's body.
@@ -250,6 +341,12 @@ class Worker:
                 # stderr may contain the only useful failure message.
                 err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
                 try:
+                    if task.get('benchmark') == 'cs-client':
+                        if task['client_spec']['template'].get('episode_reporting'):
+                            if not self.send_episode_journal(execution):
+                                continue
+                        elif not self.send_episodes(execution, output):
+                            continue
                     logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
                 except (urllib.error.URLError, TimeoutError):
                     continue
@@ -269,6 +366,8 @@ class Worker:
                     status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if code == 0 and result else 'FAILED')
                     body = {'status': status, 'metrics': result if status == 'SUCCEEDED' else None,
                             'error': None if status == 'SUCCEEDED' else (err[-900:] or f'runner exited with code {code}')}
+                    if task.get('benchmark') == 'cs-client':
+                        self.upload_artifacts(task, deadline)
                     self.api.post(f'worker/executions/{execution}/complete', body)
                     self.remove(execution)
                     self.state = None
@@ -355,7 +454,7 @@ class Worker:
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config['pool_id'],
-            **hardware, 'protocol_version': 2})
+            **hardware, 'protocol_version': 3, 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -374,7 +473,7 @@ class Worker:
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
                     return
-                body = {'slot_id': self.slot_id}
+                body = {'slot_id': self.slot_id, 'disk': disk_status(self.workspace, self.config)}
                 try:
                     body['telemetry'] = telemetry(self.config)
                 except (subprocess.SubprocessError, OSError, ValueError):
@@ -410,7 +509,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     path = Path(args.config).resolve()
     config = json.loads(path.read_text())
-    state_path = config.get('state_path', str(path) + '.state')
+    root = prepare(config, str(path.parent/('workspace-'+path.stem)))
+    config['workspace_root'] = str(root)
+    state_path = config.get('state_path', str(root/'state'/'worker.json'))
     Path(state_path).parent.mkdir(parents=True, exist_ok=True)
     with open(str(state_path)+'.lock', 'a') as lockfile:
         fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
