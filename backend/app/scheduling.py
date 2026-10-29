@@ -71,6 +71,19 @@ def telemetry_fresh(slot, at):
             and timedelta(0) <= at - utc(slot.telemetry_at) < timedelta(seconds=15))
 
 
+def endpoint_conflict(job, held_jobs):
+    from runner.cs_contract import endpoint_parts
+    if not job.client_spec:
+        return False
+    def key(spec):
+        parts, port = endpoint_parts(spec['endpoint'])
+        return parts.hostname.lower().rstrip('.'), port
+    wanted = key(job.client_spec)
+    exclusive = job.client_spec['template'].get('endpoint_exclusive', False)
+    return any(other.client_spec and key(other.client_spec) == wanted and
+               (exclusive or other.client_spec['template'].get('endpoint_exclusive', False)) for other in held_jobs)
+
+
 def eligible(slot, pool, job, held, at):
     """Both physical capacity and observed headroom must fit; utilization is advisory."""
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
@@ -121,6 +134,7 @@ def tick(factory, at=None):
         for r in active:
             if r.slot_id in by_slot:
                 by_slot[r.slot_id].append(r)
+        held_jobs = [s.get(Job, r.job_id) for r in active]
         batch_counts = {}
         batches = {b.id: b for b in s.scalars(select(EvaluationBatch))}
         counts, node_counts, node_cpu, node_ram = {}, {}, {}, {}
@@ -165,6 +179,8 @@ def tick(factory, at=None):
                 order = {g: i for i, g in enumerate(groups)}
                 candidates.sort(key=lambda j: order[j.batch_id or 'standalone'])
                 for job in candidates:
+                    if endpoint_conflict(job, held_jobs):
+                        continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
                         continue
                     pool = pools.get(job.pool_id)
@@ -198,6 +214,7 @@ def tick(factory, at=None):
                     cursor.value = {'owner': owner}
                     rotation.value = {'group': job.batch_id or 'standalone'}
                     batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
+                    held_jobs.append(job)
                     by_slot[slot.id].append(run)
                     pending.remove(job)
                     admitted += 1

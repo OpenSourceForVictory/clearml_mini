@@ -230,6 +230,7 @@ class ClientTemplate(Base):
     command: Mapped[list] = mapped_column(JSON_TYPE)
     protocols: Mapped[list] = mapped_column(JSON_TYPE)
     episode_reporting: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    endpoint_exclusive: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

@@ -76,3 +76,5 @@ cd frontend && npm ci && npm run build
 GPU 调度支持不同型号共池与显式同卡共享，默认任务仍按卡独占。配置方法、显存预留和利用率的保障边界见 [GPU 调度说明](docs/gpu-scheduling.md)。
 
 仿真客户端 SDK、可复用集合和逐回合进度：[仿真评测框架](docs/evaluation-framework.md)。
+
+具体客户端样本：[Cosmos / RoboTwin](examples/cosmos_robotwin/README.md)，包含集合清单、SDK 适配器和镜像配方；真实服务与仿真环境在运行时接入。

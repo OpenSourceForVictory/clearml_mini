@@ -1,0 +1,30 @@
+[
+  {
+    "case_id": "adjust-bottle-clean-joint",
+    "task_name": "adjust_bottle",
+    "episodes": 2,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "max_steps": 32,
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "hammer-clean-joint",
+    "task_name": "beat_block_hammer",
+    "episodes": 2,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "max_steps": 32,
+      "video_fps": 30
+    }
+  }
+]

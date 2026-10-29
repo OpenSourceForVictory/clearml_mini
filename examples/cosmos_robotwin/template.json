@@ -1,0 +1,9 @@
+{
+  "name": "Cosmos RoboTwin 客户端",
+  "version": "2ba852c-platform1",
+  "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+  "command": ["python", "-m", "runner.sdk", "examples.cosmos_robotwin.client:CosmosRobotwinClient"],
+  "protocols": ["ws", "wss"],
+  "episode_reporting": true,
+  "endpoint_exclusive": true
+}

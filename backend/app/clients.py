@@ -17,6 +17,7 @@ class TemplateCreate(BaseModel):
     version: str = Field(min_length=1, max_length=100)
     image: str = Field(min_length=1, max_length=500, pattern=r'^[A-Za-z0-9][A-Za-z0-9_./:@-]*$')
     episode_reporting: bool = False
+    endpoint_exclusive: bool = False
     command: list[str] = Field(min_length=1, max_length=64)
     protocols: list[Literal['http', 'https', 'ws', 'wss']] = Field(default=['http'], min_length=1, max_length=4)
 
@@ -57,7 +58,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive')}
 
 
 def snapshot(s, body, owner_id=None):

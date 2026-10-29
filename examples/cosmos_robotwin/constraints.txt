@@ -1,0 +1,10 @@
+# RoboTwin native extensions use NumPy 1.x. Keep OpenCV and Torch ABI compatible.
+numpy==1.26.4
+torch==2.4.1
+torchvision==0.19.1
+opencv-python==4.10.0.84
+opencv-python-headless==4.10.0.84
+websockets==15.0.1
+zarr<3
+setuptools==69.5.1
+warp-lang==1.12.0
