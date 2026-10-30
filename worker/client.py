@@ -477,7 +477,7 @@ class Worker:
 
     def run(self, once=False):
         hardware = device(self.config)
-        registration = self.api.post('worker/register', {'pool_id': self.config['pool_id'],
+        registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
             **hardware, 'protocol_version': 4, 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')

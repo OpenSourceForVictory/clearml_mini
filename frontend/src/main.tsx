@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { api } from "./api";
+import { Memberships, admissionLabels } from "./memberships";
 import { StorageSettings } from "./storage";
 import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
 
@@ -53,7 +54,8 @@ type Slot = {
   node_name: string;
   gpu_index: number;
   gpu_uuid: string;
-  pool_id: string;
+  pool_id: string | null;
+  admission_reasons?: string[];
   online: boolean;
   quarantined: boolean;
   last_seen_at: string | null;
@@ -773,7 +775,7 @@ function Resources({ admin }: { admin: boolean }) {
                   <td>{s.disk_fresh ? `${((s.disk_free_mb||0)/1024).toFixed(1)} / ${((s.disk_min_free_mb||0)/1024).toFixed(1)} GiB${(s.disk_free_mb||0)<(s.disk_min_free_mb||0)?' · 空间不足，暂停准入':''}` : '未上报或已过期'}</td>
                   <td>{s.active_tasks} / {(s.reserved_vram_mb / 1024).toFixed(1)} GiB</td>
                   <td>{s.online ? "在线" : "离线"}</td>
-                  <td>{s.quarantined ? "等待清理" : "正常"}</td>
+                  <td>{s.admission_reasons?.map(r => admissionLabels[r] || r).join("、") || (s.quarantined ? "等待清理" : "基础就绪")}</td>
                   <td>
                     {s.last_seen_at
                       ? new Date(s.last_seen_at).toLocaleString()
@@ -800,6 +802,8 @@ function SharingFields({pool}: {pool?: Pool}) {
   </>;
 }
 function Admin() {
+  const [tab,setTab]=useState("machines");
+  const [connected,setConnected]=useState<Slot[]>([]);
   const [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [nodes, setNodes] = useState<Node[]>([]),
@@ -811,8 +815,9 @@ function Admin() {
     } | null>(null),
     [busy, setBusy] = useState(false);
   const refresh = () =>
-    Promise.all([api<Node[]>("admin/nodes"), api<Pool[]>("pools"), api<{runner_image:string}>("admin/health")]).then(
-      ([n, p, health]) => {
+    Promise.all([api<Node[]>("admin/nodes"), api<Pool[]>("pools"), api<{runner_image:string}>("admin/health"), api<Slot[]>("workers")]).then(
+      ([n, p, health, slots]) => {
+        setConnected(slots);
         setNodes(n);
         setPools(p);
         setRunnerImage(health.runner_image);
@@ -820,6 +825,8 @@ function Admin() {
     );
   useEffect(() => {
     void refresh().catch((e) => setError(String(e)));
+    const timer=setInterval(()=>void refresh().catch(e=>setError(String(e))),5000);
+    return ()=>clearInterval(timer);
   }, []);
   async function save(e: React.FormEvent<HTMLFormElement>, kind: string) {
     e.preventDefault();
@@ -862,12 +869,12 @@ function Admin() {
     if (!credential) return;
     const f = new FormData(e.currentTarget);
     const value = {
-      api_url: location.origin,
+      api_url: String(f.get("api_url")).replace(/\/$/, ""),
       token: credential.token,
       node_name: credential.node_name,
-      pool_id: f.get("pool_id"),
+      pool_id: f.get("pool_id") || null,
       gpu_index: Number(f.get("gpu_index")),
-      mock: f.get("mock") === "on",
+      mock: f.get("device_type") === "mock",
       runner_image: runnerImage,
     };
     const url = URL.createObjectURL(
@@ -890,9 +897,13 @@ function Admin() {
       </div>
       {error && <p className="error">{error}</p>}
       {message && <p className="success">{message}</p>}
-      <ClientTemplates />
+      <div className="tabs" role="tablist" aria-label="管理分类">
+        {[["machines","机器管理"],["pools","资源池管理"],["accounts","账号管理"],["clients","客户端模板"]].map(([key,label])=><button key={key} role="tab" aria-selected={tab===key} onClick={()=>setTab(key)}>{label}</button>)}
+      </div>
+      {tab==="clients" && <ClientTemplates />}
+      {tab==="pools" && <Memberships />}
       <div className="admin-grid">
-        <section className="panel">
+        <section className="panel" hidden={tab!=="accounts"}>
           <h2>创建成员</h2>
           <form onSubmit={(e) => save(e, "users")}>
             <Field label="用户名">
@@ -919,7 +930,7 @@ function Admin() {
             </button>
           </form>
         </section>
-        <section className="panel">
+        <section className="panel" hidden={tab!=="pools"}>
           <h2>创建资源池</h2>
           <form onSubmit={(e) => save(e, "pools")}>
             <Field label="名称">
@@ -966,7 +977,7 @@ function Admin() {
             </button>
           </form>
         </section>
-        <section className="panel">
+        <section className="panel" hidden={tab!=="machines"}>
           <h2>注册评测机器</h2>
           <form onSubmit={(e) => save(e, "worker-credentials")}>
             <Field label="机器名称">
@@ -1007,14 +1018,17 @@ function Admin() {
           </form>
         </section>
         {credential && (
-          <section className="panel credential">
+          <section className="panel credential" hidden={tab!=="machines"}>
             <h2>{credential.node_name} 的 Worker 配置</h2>
             <p className="hint">
-              凭据仅在本次页面中提供。请下载配置并妥善保存；多卡机器按卡下载对应配置。
+              凭据仅在本次页面中提供。请下载配置并妥善保存；多卡机器可使用安装器 --gpus all 生成独立实例。
             </p>
             <form onSubmit={download}>
+              <Field label="Worker 接入 API 地址"><input name="api_url" type="url" required defaultValue={location.origin}/></Field>
+              <p className="hint">请确认此地址能从 Worker 主机访问。127.0.0.1 / localhost 指 Worker 自己；浏览器使用隧道时通常需改为平台的内网地址，或 Worker 已建立的本地隧道地址。</p>
               <Field label="资源池">
-                <select name="pool_id" required>
+                <select name="pool_id" defaultValue="">
+                  <option value="">暂不分配资源池</option>
                   {pools.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -1030,16 +1044,13 @@ function Admin() {
                   defaultValue={0}
                 />
               </Field>
-              <label className="check">
-                <input name="mock" type="checkbox" defaultChecked />无 GPU
-                的模拟 Worker
-              </label>
+              <Field label="Worker 设备类型"><select name="device_type" defaultValue="real"><option value="real">真实 GPU</option><option value="mock">模拟设备（无 GPU）</option></select></Field>
               <button className="primary">下载配置文件</button>
             </form>
           </section>
         )}
       </div>
-      <section className="panel">
+      <section className="panel" hidden={tab!=="pools"}>
         <h2>资源池 GPU 策略</h2>
         <p className="hint">共享任务必须声明显存；同时受每卡、机器、用户及全局并发额度限制。降低额度不打断正在执行的任务。</p>
         {pools.filter(p => p.gpu_model !== "virtual").map(p => (
@@ -1060,7 +1071,7 @@ function Admin() {
           </form>
         ))}
       </section>
-      <section className="panel">
+      <section className="panel" hidden={tab!=="machines"}>
         <h2>已注册机器</h2>
         <table>
           <thead>
@@ -1094,7 +1105,7 @@ function Admin() {
                 <td>
                   {n.cpu_capacity} 核 / {n.ram_gb_capacity} GiB
                 </td>
-                <td>{n.enabled ? "已启用" : "已禁用"}</td>
+                <td>{!n.enabled ? "已禁用" : !connected.some(s=>s.node_name===n.node_name) ? "等待连接" : connected.some(s=>s.node_name===n.node_name && s.online) ? "已连接" : "离线"}</td>
                 <td>
                   <button
                     onClick={async () => {

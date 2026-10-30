@@ -1,0 +1,477 @@
+{
+  "kind": "membership-contract-not-model-evaluation",
+  "hosts": {
+    "local": {
+      "worker_id": "04119798-4a4e-410e-8aab-e939e140d076",
+      "root": "/home/dgh/Code/clearml_mini/.runtime/membership-2b66a1a2b3"
+    },
+    "r8000": {
+      "worker_id": "50eb303a-0924-41e5-add9-a5aaf807ef98",
+      "root": "/home/huawei/mini-eval-membership-2b66a1a2b3"
+    }
+  },
+  "batches": [
+    "3b780ae8-c2bb-45a5-a74d-9106cf5113e7",
+    "38a6f171-77ac-4017-80a8-a5192e5f4f49"
+  ],
+  "unassigned": [
+    {
+      "id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "worker_id": "04119798-4a4e-410e-8aab-e939e140d076",
+      "desired_pool_id": null,
+      "membership_revision": 1,
+      "membership_applied_revision": 1,
+      "membership_updated_at": null,
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false,
+      "node_name": "membership-local-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-local-2b66a1a2b3:0",
+      "pool_id": null,
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:22.148117+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:22.148116+00:00",
+      "disk_free_mb": 165899,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    },
+    {
+      "id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "worker_id": "50eb303a-0924-41e5-add9-a5aaf807ef98",
+      "desired_pool_id": null,
+      "membership_revision": 1,
+      "membership_applied_revision": 1,
+      "membership_updated_at": null,
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false,
+      "node_name": "membership-r8000-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-r8000-2b66a1a2b3:0",
+      "pool_id": null,
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:22.633638+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:22.633638+00:00",
+      "disk_free_mb": 1550400,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    }
+  ],
+  "assigned": [
+    {
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "membership_revision": 2,
+      "membership_applied_revision": 2,
+      "membership_updated_at": "2026-10-30T10:19:23.073540+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true
+    },
+    {
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "membership_revision": 2,
+      "membership_applied_revision": 2,
+      "membership_updated_at": "2026-10-30T10:19:23.075187+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true
+    }
+  ],
+  "draining": [
+    {
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "membership_revision": 3,
+      "membership_applied_revision": 2,
+      "membership_updated_at": "2026-10-30T10:19:26.662083+00:00",
+      "membership_state": "draining",
+      "membership_error": null,
+      "admission_reasons": [
+        "draining"
+      ],
+      "basic_ready": false
+    },
+    {
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "membership_revision": 3,
+      "membership_applied_revision": 2,
+      "membership_updated_at": "2026-10-30T10:19:26.662925+00:00",
+      "membership_state": "draining",
+      "membership_error": null,
+      "admission_reasons": [
+        "draining"
+      ],
+      "basic_ready": false
+    }
+  ],
+  "old_jobs": [
+    {
+      "job_id": "b778419e-8dc7-4519-b1b7-fb6059aef522",
+      "run_id": "73eb2f57-dea7-44f6-b921-94eedc1f712f",
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 24.037698604006437,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-local-2b66a1a2b3",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-local-2b66a1a2b3",
+          "episode": 2
+        }
+      ]
+    },
+    {
+      "job_id": "1a47a45e-b380-41b0-8fe9-ad6335ab787e",
+      "run_id": "e956d2fc-b7ff-417b-b727-d08d27f9c58f",
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 24.009898251009872,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-r8000-2b66a1a2b3",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-r8000-2b66a1a2b3",
+          "episode": 2
+        }
+      ]
+    }
+  ],
+  "moved": [
+    {
+      "id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "worker_id": "04119798-4a4e-410e-8aab-e939e140d076",
+      "desired_pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "membership_revision": 3,
+      "membership_applied_revision": 3,
+      "membership_updated_at": "2026-10-30T10:19:26.662083+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true,
+      "node_name": "membership-local-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-local-2b66a1a2b3:0",
+      "pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:51.383056+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:50.420920+00:00",
+      "disk_free_mb": 165897,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    },
+    {
+      "id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "worker_id": "50eb303a-0924-41e5-add9-a5aaf807ef98",
+      "desired_pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "membership_revision": 3,
+      "membership_applied_revision": 3,
+      "membership_updated_at": "2026-10-30T10:19:26.662925+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true,
+      "node_name": "membership-r8000-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-r8000-2b66a1a2b3:0",
+      "pool_id": "d74b1c4e-de58-4c05-896d-ac094ba49fa2",
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:51.262734+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:49.668053+00:00",
+      "disk_free_mb": 1550398,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    }
+  ],
+  "removed": [
+    {
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "pool_id": null,
+      "desired_pool_id": null,
+      "membership_revision": 4,
+      "membership_applied_revision": 4,
+      "membership_updated_at": "2026-10-30T10:19:51.505655+00:00",
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false
+    },
+    {
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "pool_id": null,
+      "desired_pool_id": null,
+      "membership_revision": 4,
+      "membership_applied_revision": 4,
+      "membership_updated_at": "2026-10-30T10:19:51.506906+00:00",
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false
+    }
+  ],
+  "restarted_with_stale_hint": [
+    {
+      "id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "worker_id": "04119798-4a4e-410e-8aab-e939e140d076",
+      "desired_pool_id": null,
+      "membership_revision": 4,
+      "membership_applied_revision": 4,
+      "membership_updated_at": "2026-10-30T10:19:51.505655+00:00",
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false,
+      "node_name": "membership-local-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-local-2b66a1a2b3:0",
+      "pool_id": null,
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:55.509679+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:55.509678+00:00",
+      "disk_free_mb": 165899,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    },
+    {
+      "id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "worker_id": "50eb303a-0924-41e5-add9-a5aaf807ef98",
+      "desired_pool_id": null,
+      "membership_revision": 4,
+      "membership_applied_revision": 4,
+      "membership_updated_at": "2026-10-30T10:19:51.506906+00:00",
+      "membership_state": "unassigned",
+      "membership_error": null,
+      "admission_reasons": [
+        "unassigned"
+      ],
+      "basic_ready": false,
+      "node_name": "membership-r8000-2b66a1a2b3",
+      "gpu_index": 0,
+      "gpu_uuid": "mock:membership-r8000-2b66a1a2b3:0",
+      "pool_id": null,
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T10:19:55.867831+00:00",
+      "gpu_model": "virtual",
+      "vram_mb": 0,
+      "free_vram_mb": 0,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T10:19:55.867830+00:00",
+      "disk_free_mb": 1550400,
+      "disk_min_free_mb": 0,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    }
+  ],
+  "rejoined": [
+    {
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "membership_revision": 5,
+      "membership_applied_revision": 5,
+      "membership_updated_at": "2026-10-30T10:19:56.332121+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true
+    },
+    {
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "desired_pool_id": "ac39bbe6-aee9-4c0b-b19a-03a01c516fc0",
+      "membership_revision": 5,
+      "membership_applied_revision": 5,
+      "membership_updated_at": "2026-10-30T10:19:56.332825+00:00",
+      "membership_state": "assigned",
+      "membership_error": null,
+      "admission_reasons": [],
+      "basic_ready": true
+    }
+  ],
+  "rejoined_jobs": [
+    {
+      "job_id": "85746be7-d4ac-4e3f-8977-93faa4fbc73f",
+      "run_id": "a9ffee12-c30a-4786-957c-a134e5301689",
+      "slot_id": "8155134b-e820-4a4a-baf3-7f7416b433cd",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 6.0545879660057835,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-local-2b66a1a2b3",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-local-2b66a1a2b3",
+          "episode": 2
+        }
+      ]
+    },
+    {
+      "job_id": "a4880d7b-e9c8-4317-bdde-1bc73ca5b055",
+      "run_id": "e1884659-a72f-4d2b-aee2-2262cb515a00",
+      "slot_id": "920832d2-2cb2-4fc7-ad14-daf8309c67ad",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 6.0139704489847645,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-r8000-2b66a1a2b3",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-membership-r8000-2b66a1a2b3",
+          "episode": 2
+        }
+      ]
+    }
+  ]
+}

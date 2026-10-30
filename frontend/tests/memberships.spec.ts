@@ -1,0 +1,46 @@
+import {test,expect} from '@playwright/test';
+test('poolless onboarding and grouped membership selection survive polling',async({page})=>{
+  let revision=1, submitted:any;
+  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+  await page.route('**/api/v1/**', async route=>{
+    const path=new URL(route.request().url()).pathname.replace('/api/v1/','');
+    let data:any=[];
+    if(path==='auth/me')data={username:'admin',role:'admin'};
+    if(path==='admin/nodes/n/storage')data={revision:0,config:null,slots:[],all_applied:false};
+    if(path==='admin/health')data={runner_image:'runner:1'};
+    if(path==='admin/nodes')data=[{id:'n',node_name:'host',enabled:true,max_concurrent:2,cpu_capacity:4,ram_gb_capacity:8}];
+    if(path==='admin/worker-credentials')data={node_name:'newhost',token:'test-worker'};
+    if(path==='workers')data=[0,1].map(i=>({id:'s'+i,node_name:'host',gpu_index:i,gpu_model:'GPU',vram_mb:24000,pool_id:i?'pool':null,desired_pool_id:i?'pool':null,membership_revision:revision,membership_applied_revision:revision,membership_state:i?'assigned':'unassigned',admission_reasons:i?[]:['unassigned'],online:true,active_tasks:0}));
+    if(path==='pools')data=[{id:'pool',name:'Mixed',gpu_model:'*',member_count:1,online_count:1,ready_count:1,incoming_count:0,models:{GPU:{count:1,vram_mb:24000}},pending_jobs:0,active_jobs:0}];
+    if(path==='admin/resource-memberships'){submitted=route.request().postDataJSON();data=submitted.members.map((x:any)=>({slot_id:x.slot_id,membership_revision:revision+1}));}
+    await route.fulfill({json:data});
+  });
+  await page.goto('/');
+  await page.getByRole('button',{name:'管理设置',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'创建成员'})).toBeHidden();
+  await page.getByLabel('机器名称',{exact:true}).fill('newhost');
+  await page.getByRole('button',{name:'生成 Worker 凭据'}).click();
+  await expect(page.getByText(/127.0.0.1 \/ localhost 指 Worker 自己/)).toBeVisible();
+  await expect(page.getByLabel('Worker 设备类型',{exact:true})).toHaveValue('real');
+  await page.getByLabel('Worker 接入 API 地址').fill('http://192.168.137.223:18000');
+  const download=page.waitForEvent('download');
+  await page.getByRole('button',{name:'下载配置文件'}).click();
+  const d=await download;const stream=await d.createReadStream();let text='';for await(const chunk of stream!)text+=chunk;
+  expect(JSON.parse(text)).toMatchObject({pool_id:null,mock:false,api_url:'http://192.168.137.223:18000'});
+  await page.getByRole('tab',{name:'资源池管理'}).click();
+  await page.getByLabel('成员来源',{exact:true}).selectOption('unassigned');
+  await page.getByLabel('host 全选当前显示 GPU').check();
+  await expect(page.getByText(/已选择 1 卡/)).toBeVisible();
+  revision=2;
+  await expect(page.getByText('成员版本已变化，请刷新选择后再提交。')).toBeVisible({timeout:10000});
+  await expect(page.getByLabel('host GPU 0',{exact:true})).toBeChecked();
+  await page.getByRole('button',{name:'刷新选择版本'}).click();
+  await page.getByLabel('目标资源池',{exact:true}).selectOption('pool');
+  await page.getByRole('button',{name:'确认变更选中 GPU'}).click();
+  expect(submitted).toEqual({pool_id:'pool',members:[{slot_id:'s0',expected_revision:2}]});
+  await expect(page.getByRole('status')).toContainText('本批已生效');
+  await page.getByRole('tab',{name:'账号管理'}).click();
+  await expect(page.getByRole('heading',{name:'创建成员'})).toBeVisible();
+  await page.getByRole('tab',{name:'客户端模板',exact:true}).click();
+  await expect(page.getByRole('heading',{name:/客户端/}).first()).toBeVisible();
+});

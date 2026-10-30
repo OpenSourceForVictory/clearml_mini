@@ -139,18 +139,20 @@ def me(user: User = Depends(current)):
 
 @app.get('/api/v1/pools')
 def pools(user: User = Depends(current), s: Session = Depends(db)):
+    from .memberships import summary
     return [{'id': p.id, 'name': p.name, 'gpu_model': p.gpu_model, 'min_vram_gb': p.min_vram_gb,
              'allow_shared': p.allow_shared, 'max_tasks_per_gpu': p.max_tasks_per_gpu,
-             'vram_reserve_gb': p.vram_reserve_gb, 'max_gpu_utilization': p.max_gpu_utilization}
+             'vram_reserve_gb': p.vram_reserve_gb, 'max_gpu_utilization': p.max_gpu_utilization, **summary(s, p)}
             for p in s.scalars(select(Pool).where(Pool.enabled))]
 
 
 @app.get('/api/v1/workers')
 def workers(user: User = Depends(current), s: Session = Depends(db)):
+    from .memberships import view
     slots = s.scalars(select(Slot)).all()
     if user.role == 'admin':
         held = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
-        return [{'id': x.id, 'node_name': x.node_name, 'gpu_index': x.gpu_index,
+        return [{'id': x.id, 'worker_id': x.worker_id, **view(s, x), 'node_name': x.node_name, 'gpu_index': x.gpu_index,
                  'gpu_uuid': x.gpu_uuid, 'pool_id': x.pool_id, 'online': online(x),
                  'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at,
                  'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,

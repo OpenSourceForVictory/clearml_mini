@@ -29,7 +29,7 @@ export async function api<T>(
     if (res.status === 401 && path !== "auth/login")
       window.dispatchEvent(new Event("eval-logout"));
     throw new Error(
-      errors[value.detail] || value.detail || `请求失败 (${res.status})`,
+      (Array.isArray(value.detail) ? value.detail.map((x:{slot_id?:string;reason?:string}) => (x.slot_id||'')+': '+(x.reason||JSON.stringify(x))).join('; ') : errors[value.detail] || value.detail) || `请求失败 (${res.status})`,
     );
   }
   return value;

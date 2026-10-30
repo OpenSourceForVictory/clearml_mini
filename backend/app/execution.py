@@ -13,6 +13,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
+from . import memberships
 from .core import Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -21,7 +22,7 @@ MAX_LOG_BYTES = 262144
 
 
 class Register(BaseModel):
-    pool_id: str
+    pool_id: str | None = None
     gpu_index: int = Field(ge=0, le=1023)
     gpu_uuid: str = Field(min_length=1, max_length=100)
     gpu_model: str = Field(min_length=1, max_length=100)
@@ -134,6 +135,11 @@ def install(app, db, current):
         return user
 
     storage_protocol.install(app, db, admin)
+    memberships.install(app, db, admin)
+
+    @app.get("/api/v1/worker/self")
+    def worker_self(worker=Depends(worker_auth)):
+        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4"]}
 
     def slot_for(s, slot_id, worker):
         slot = s.get(Slot, slot_id)
@@ -227,10 +233,7 @@ def install(app, db, current):
     @app.post('/api/v1/worker/register')
     def register(body: Register, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
-        pool = s.get(Pool, body.pool_id)
-        if not pool or not pool.enabled or pool.min_vram_gb > body.vram_gb:
-            raise HTTPException(400, 'device does not match pool requirements')
-        if (pool.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:') or (body.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
+        if (body.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
             raise HTTPException(400, 'virtual and physical device identities must be distinct')
         existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid))
         indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index))
@@ -239,15 +242,28 @@ def install(app, db, current):
         if indexed and indexed.gpu_uuid != body.gpu_uuid:
             raise HTTPException(409, 'GPU index already registered to another UUID')
         slot = existing or indexed
-        if slot and slot.pool_id != pool.id:
-            held = s.scalar(select(Run.id).where(Run.slot_id == slot.id,
-                or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False))).limit(1))
-            if held:
-                raise HTTPException(409, 'cannot move a slot with held executions')
-            slot.pool_id = pool.id
+        managed = slot is not None and slot.membership_revision > 0
+        if not managed and body.pool_id is not None:
+            pool = s.get(Pool, body.pool_id)
+            if not pool or not pool.enabled or pool.min_vram_gb * 1024 > (body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024):
+                raise HTTPException(400, 'device does not match pool requirements')
+            if (pool.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
+                raise HTTPException(400, 'virtual and physical device identities must be distinct')
+        if slot and not managed:
+            if slot.pool_id != body.pool_id:
+                held = s.scalar(select(Run.id).where(Run.slot_id == slot.id,
+                    or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False))).limit(1))
+                if held:
+                    raise HTTPException(409, 'cannot move a slot with held executions')
+            slot.pool_id = slot.desired_pool_id = body.pool_id
+            if body.pool_id is None:
+                slot.membership_revision = slot.membership_applied_revision = 1
         if not slot:
+            revision = 1 if body.pool_id is None else 0
             slot = Slot(node_name=worker.node_name, gpu_index=body.gpu_index, gpu_uuid=body.gpu_uuid,
-                        pool_id=pool.id, worker_id=worker.id, queue_name=f'{worker.id}-{body.gpu_index}', agent_id=worker.id)
+                        pool_id=body.pool_id, desired_pool_id=body.pool_id,
+                        membership_revision=revision, membership_applied_revision=revision,
+                        worker_id=worker.id, queue_name=f'{worker.id}-{body.gpu_index}', agent_id=worker.id)
             s.add(slot)
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
@@ -257,7 +273,7 @@ def install(app, db, current):
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'slot_id': slot.id, 'quarantined': slot.quarantined}
+        return {'slot_id': slot.id, 'quarantined': slot.quarantined, 'pool_id': slot.pool_id, **memberships.view(s, slot)}
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -308,7 +324,7 @@ def install(app, db, current):
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
             s.refresh(worker)
-            if not storage_protocol.ready(worker, slot, now()):
+            if not memberships.ready(slot) or not storage_protocol.ready(worker, slot, now()):
                 return {'task': None, 'cleanup': []}
             if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
                     or slot.disk_at is None or (now()-utc(slot.disk_at)).total_seconds() >= 15):
@@ -321,7 +337,8 @@ def install(app, db, current):
             transition(s, run, 'STARTING')
         else:
             live(run)
-        job, pool = s.get(Job, run.job_id), s.get(Pool, slot.pool_id)
+        job = s.get(Job, run.job_id)
+        pool = s.get(Pool, job.pool_id)
         task = {'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
@@ -417,6 +434,7 @@ def install(app, db, current):
         run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' else None
         run.cleanup_confirmed = True
         transition(s, run, status, body.error)
+        memberships.reconcile(s)
         s.commit()
         return {'status': status}
 
@@ -431,5 +449,6 @@ def install(app, db, current):
         others = s.scalar(select(func.count()).select_from(Run).where(Run.slot_id == run.slot_id, Run.cleanup_confirmed.is_(False)))
         if not others:
             s.get(Slot, run.slot_id).quarantined = False
+        memberships.reconcile(s)
         s.commit()
         return {'status': run.status}

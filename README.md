@@ -37,8 +37,8 @@ demo 凭据保存在 `.runtime/local-mock.json`（0600、Git 忽略），Ctrl+C 
 
 ## 接入 Worker
 
-1. 在「管理设置」创建资源池和评测机器，设置机器并发、CPU、内存额度。
-2. 下载 Worker 配置。单卡下载 GPU 0 的配置，多卡按 GPU 编号分别下载；凭据属于机器，可用于该机器各槽位。
+1. 在「管理设置 → 机器管理」注册评测机器，设置机器并发、CPU、内存额度；可暂不分配资源池。
+2. 确认 Worker 可访问的 API 地址并下载配置。多卡安装可加 --gpus all；凭据属于机器，可用于该机器各槽位。设备连接后在「资源池管理」选卡加入或迁移。
 3. 在评测机器准备 Python 3、Docker 和 Runner 镜像。NVIDIA GPU 还需要驱动及 NVIDIA Container Toolkit。mock 模式不需要 GPU。
 4. 将配置中的 `api_url` 改成 Worker 可访问的控制节点私网地址，然后安装：
 
@@ -67,6 +67,7 @@ cd frontend && npm ci && npm run build
 
 - [架构和恢复协议](docs/architecture.md)
 - [Worker 安装](docs/worker-setup.md)
+- [机器接入与资源池成员管理](docs/resource-pool-membership.md)
 - [部署、备份和监控](docs/operations.md)
 - [API 示例](docs/api-examples.md)
 - [OpenSpec 任务](openspec/changes/lightweight-workers/tasks.md)

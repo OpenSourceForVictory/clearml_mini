@@ -85,7 +85,11 @@ class Slot(Base):
     node_name: Mapped[str] = mapped_column(String(100))
     gpu_index: Mapped[int] = mapped_column(Integer)
     gpu_uuid: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
-    pool_id: Mapped[str] = mapped_column(ForeignKey('resource_pools.id'))
+    pool_id: Mapped[Optional[str]] = mapped_column(ForeignKey('resource_pools.id'))
+    desired_pool_id: Mapped[Optional[str]] = mapped_column(ForeignKey('resource_pools.id'))
+    membership_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    membership_applied_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    membership_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     queue_name: Mapped[str] = mapped_column(String(150), unique=True)
     agent_id: Mapped[Optional[str]] = mapped_column(String(150))
     heartbeat_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -108,6 +112,17 @@ class Slot(Base):
     storage_report: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     storage_reported_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     telemetry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class MembershipAudit(Base):
+    __tablename__ = 'membership_audits'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    actor_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    slot_id: Mapped[str] = mapped_column(ForeignKey('gpu_slots.id'), index=True)
+    old_pool_id: Mapped[Optional[str]] = mapped_column(ForeignKey('resource_pools.id'))
+    target_pool_id: Mapped[Optional[str]] = mapped_column(ForeignKey('resource_pools.id'))
+    revision: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class Job(Base):
