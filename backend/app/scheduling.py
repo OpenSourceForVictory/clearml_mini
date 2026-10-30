@@ -118,6 +118,7 @@ def eligible(slot, pool, job, held, at):
 
 
 def tick(factory, at=None):
+    from .storage import ready
     at = at or now()
     with factory() as s:
         if not lock(s, wait=False):
@@ -150,7 +151,8 @@ def tick(factory, at=None):
                 node_cpu[n] = node_cpu.get(n, 0) + r.reserved_cpu
                 node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
         free = [x for x in slots.values() if not x.quarantined
-                and x.worker_id in workers and x.pool_id in pools and online(x, at)]
+                and x.worker_id in workers and x.pool_id in pools and online(x, at)
+                and ready(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
             Job.status == 'PENDING', User.active).order_by(Job.created_at, Job.id)).all()
         cursor = s.get(SchedulerState, 'rotation')

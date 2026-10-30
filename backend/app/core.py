@@ -73,6 +73,8 @@ class Worker(Base):
     max_concurrent: Mapped[int] = mapped_column(Integer, default=1)
     cpu_capacity: Mapped[int] = mapped_column(Integer, default=4)
     ram_gb_capacity: Mapped[int] = mapped_column(Integer, default=8)
+    storage_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    storage_config: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -102,6 +104,9 @@ class Slot(Base):
     disk_free_mb: Mapped[Optional[int]] = mapped_column(Integer)
     disk_min_free_mb: Mapped[Optional[int]] = mapped_column(Integer)
     disk_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    storage_applied_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    storage_report: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    storage_reported_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     telemetry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 

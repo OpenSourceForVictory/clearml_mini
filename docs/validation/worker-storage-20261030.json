@@ -1,0 +1,542 @@
+{
+  "kind": "storage-contract-not-model-evaluation",
+  "hosts": {
+    "local": {
+      "worker_id": "1cfc2c02-639d-425e-b022-4d0854aaa505",
+      "root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5"
+    },
+    "r8000": {
+      "worker_id": "b7ea104d-77c3-4fb4-997b-7683dbdf8e4f",
+      "root": "/home/huawei/mini-eval-storage-19abb708d5"
+    }
+  },
+  "batches": [
+    "9e826c1b-e606-44d7-abeb-a6d2f250d730",
+    "6ac072d4-322e-4267-a5fa-15bee8d214f1",
+    "67bd6199-afc6-4a7b-a60a-74a45d07fb23"
+  ],
+  "original_run_ids": [
+    "f9bc3ac2-b7a5-4383-83ed-7986f6257296",
+    "348c39f3-f477-45ec-8dd8-03c0e158f1cb"
+  ],
+  "waiting": [
+    {
+      "worker_id": "1cfc2c02-639d-425e-b022-4d0854aaa505",
+      "revision": 1,
+      "config": {
+        "cache_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-cache",
+        "assets_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-assets",
+        "workspace_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/managed",
+        "min_free_disk_gb": 0.0
+      },
+      "slots": [
+        {
+          "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+          "gpu_index": 0,
+          "status": "waiting",
+          "applied_revision": 0,
+          "report": {
+            "error": null,
+            "status": "waiting",
+            "capacity": {
+              "cache": 165919,
+              "assets": 165919,
+              "workspace": 165919
+            },
+            "revision": 1,
+            "effective": {
+              "cache_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original/cache",
+              "assets_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original/assets",
+              "workspace_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 0
+          },
+          "reported_at": "2026-10-30T09:12:36.895194+00:00"
+        }
+      ],
+      "all_applied": false
+    },
+    {
+      "worker_id": "b7ea104d-77c3-4fb4-997b-7683dbdf8e4f",
+      "revision": 1,
+      "config": {
+        "cache_root": "/home/huawei/mini-eval-storage-19abb708d5/new-cache",
+        "assets_root": "/home/huawei/mini-eval-storage-19abb708d5/new-assets",
+        "workspace_root": "/home/huawei/mini-eval-storage-19abb708d5/managed",
+        "min_free_disk_gb": 0.0
+      },
+      "slots": [
+        {
+          "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+          "gpu_index": 0,
+          "status": "waiting",
+          "applied_revision": 0,
+          "report": {
+            "error": null,
+            "status": "waiting",
+            "capacity": {
+              "cache": 1565136,
+              "assets": 1565136,
+              "workspace": 1565136
+            },
+            "revision": 1,
+            "effective": {
+              "cache_root": "/home/huawei/mini-eval-storage-19abb708d5/original/cache",
+              "assets_root": "/home/huawei/mini-eval-storage-19abb708d5/original/assets",
+              "workspace_root": "/home/huawei/mini-eval-storage-19abb708d5/original",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 0
+          },
+          "reported_at": "2026-10-30T09:12:37.245169+00:00"
+        }
+      ],
+      "all_applied": false
+    }
+  ],
+  "old_jobs": [
+    {
+      "job_id": "09238082-2ff1-4a22-b6ae-fae32c23ee2f",
+      "run_id": "f9bc3ac2-b7a5-4383-83ed-7986f6257296",
+      "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 20.047642845995142,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-local-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-local-19abb708d5",
+          "episode": 2
+        }
+      ]
+    },
+    {
+      "job_id": "2d1882da-f41c-4a6a-b986-6933f8779013",
+      "run_id": "348c39f3-f477-45ec-8dd8-03c0e158f1cb",
+      "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 20.037650416983524,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-r8000-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-r8000-19abb708d5",
+          "episode": 2
+        }
+      ]
+    }
+  ],
+  "managed": [
+    {
+      "worker_id": "1cfc2c02-639d-425e-b022-4d0854aaa505",
+      "revision": 1,
+      "config": {
+        "cache_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-cache",
+        "assets_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-assets",
+        "workspace_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/managed",
+        "min_free_disk_gb": 0.0
+      },
+      "slots": [
+        {
+          "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 1,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 165917,
+              "assets": 165917,
+              "workspace": 165917
+            },
+            "revision": 1,
+            "effective": {
+              "cache_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-cache",
+              "assets_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-assets",
+              "workspace_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/managed/slots/165a5634-5b09-4756-a4a0-df1257bdcf51",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 1
+          },
+          "reported_at": "2026-10-30T09:12:57.990705+00:00"
+        }
+      ],
+      "all_applied": true
+    },
+    {
+      "worker_id": "b7ea104d-77c3-4fb4-997b-7683dbdf8e4f",
+      "revision": 1,
+      "config": {
+        "cache_root": "/home/huawei/mini-eval-storage-19abb708d5/new-cache",
+        "assets_root": "/home/huawei/mini-eval-storage-19abb708d5/new-assets",
+        "workspace_root": "/home/huawei/mini-eval-storage-19abb708d5/managed",
+        "min_free_disk_gb": 0.0
+      },
+      "slots": [
+        {
+          "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 1,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 1565111,
+              "assets": 1565111,
+              "workspace": 1565111
+            },
+            "revision": 1,
+            "effective": {
+              "cache_root": "/home/huawei/mini-eval-storage-19abb708d5/new-cache",
+              "assets_root": "/home/huawei/mini-eval-storage-19abb708d5/new-assets",
+              "workspace_root": "/home/huawei/mini-eval-storage-19abb708d5/managed/slots/407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 1
+          },
+          "reported_at": "2026-10-30T09:12:58.168909+00:00"
+        }
+      ],
+      "all_applied": true
+    }
+  ],
+  "local_mounts": [
+    {
+      "name": "/mini-eval-7329974e-79c4-4033-860d-c513be1c6aa5",
+      "mounts": [
+        {
+          "Type": "bind",
+          "Source": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-assets",
+          "Destination": "/opt/mini-eval/assets",
+          "Mode": "",
+          "RW": false,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/new-cache",
+          "Destination": "/opt/mini-eval/cache",
+          "Mode": "",
+          "RW": false,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/managed/slots/165a5634-5b09-4756-a4a0-df1257bdcf51/runs/7329974e-79c4-4033-860d-c513be1c6aa5/work",
+          "Destination": "/tmp/mini-eval-work",
+          "Mode": "",
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/managed/slots/165a5634-5b09-4756-a4a0-df1257bdcf51/runs/7329974e-79c4-4033-860d-c513be1c6aa5/output",
+          "Destination": "/tmp/mini-eval-output",
+          "Mode": "",
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "execution_id": "7329974e-79c4-4033-860d-c513be1c6aa5"
+    }
+  ],
+  "remote_mounts": [
+    {
+      "name": "/mini-eval-9cfc23f2-70b1-4aef-9ab3-f5c47426f303",
+      "mounts": [
+        {
+          "Type": "bind",
+          "Source": "/home/huawei/mini-eval-storage-19abb708d5/new-assets",
+          "Destination": "/opt/mini-eval/assets",
+          "Mode": "",
+          "RW": false,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/huawei/mini-eval-storage-19abb708d5/new-cache",
+          "Destination": "/opt/mini-eval/cache",
+          "Mode": "",
+          "RW": false,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/huawei/mini-eval-storage-19abb708d5/managed/slots/407b8b7e-eca7-4c49-b2a9-741bbcb56ffb/runs/9cfc23f2-70b1-4aef-9ab3-f5c47426f303/work",
+          "Destination": "/tmp/mini-eval-work",
+          "Mode": "",
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "bind",
+          "Source": "/home/huawei/mini-eval-storage-19abb708d5/managed/slots/407b8b7e-eca7-4c49-b2a9-741bbcb56ffb/runs/9cfc23f2-70b1-4aef-9ab3-f5c47426f303/output",
+          "Destination": "/tmp/mini-eval-output",
+          "Mode": "",
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "execution_id": "9cfc23f2-70b1-4aef-9ab3-f5c47426f303"
+    }
+  ],
+  "new_jobs": [
+    {
+      "job_id": "daf328dd-b8fd-431e-a415-f3b07238bf6e",
+      "run_id": "8b8e3b5d-1c57-433d-8a24-6e38cf0c04e2",
+      "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 8.062052476001554,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "new-storage-local-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "new-storage-local-19abb708d5",
+          "episode": 2
+        }
+      ]
+    },
+    {
+      "job_id": "5705772e-c367-4505-a12c-03464bbdf830",
+      "run_id": "0776e5c2-0014-45fc-a5ed-e00d20c0348a",
+      "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 8.051382851990638,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "new-storage-r8000-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "new-storage-r8000-19abb708d5",
+          "episode": 2
+        }
+      ]
+    }
+  ],
+  "restored": [
+    {
+      "worker_id": "1cfc2c02-639d-425e-b022-4d0854aaa505",
+      "revision": 2,
+      "config": null,
+      "slots": [
+        {
+          "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 2,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 165914,
+              "assets": 165914,
+              "workspace": 165914
+            },
+            "revision": 2,
+            "effective": {
+              "cache_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original/cache",
+              "assets_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original/assets",
+              "workspace_root": "/home/dgh/Code/clearml_mini/.runtime/storage-19abb708d5/original",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 2
+          },
+          "reported_at": "2026-10-30T09:13:18.724929+00:00"
+        }
+      ],
+      "all_applied": true
+    },
+    {
+      "worker_id": "b7ea104d-77c3-4fb4-997b-7683dbdf8e4f",
+      "revision": 2,
+      "config": null,
+      "slots": [
+        {
+          "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 2,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 1565090,
+              "assets": 1565090,
+              "workspace": 1565090
+            },
+            "revision": 2,
+            "effective": {
+              "cache_root": "/home/huawei/mini-eval-storage-19abb708d5/original/cache",
+              "assets_root": "/home/huawei/mini-eval-storage-19abb708d5/original/assets",
+              "workspace_root": "/home/huawei/mini-eval-storage-19abb708d5/original",
+              "min_free_disk_gb": 0.0
+            },
+            "applied_revision": 2
+          },
+          "reported_at": "2026-10-30T09:13:18.941320+00:00"
+        }
+      ],
+      "all_applied": true
+    }
+  ],
+  "restored_jobs": [
+    {
+      "job_id": "a7c70e58-2ea2-4622-acc6-2dd5d214998c",
+      "run_id": "49817bd6-22e4-4ce1-9efb-2e357d85be93",
+      "slot_id": "165a5634-5b09-4756-a4a0-df1257bdcf51",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 12.054758815007517,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-local-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-local-19abb708d5",
+          "episode": 2
+        }
+      ]
+    },
+    {
+      "job_id": "19901125-1d75-4bb4-8fd2-34ed117c257f",
+      "run_id": "545ecd74-8e16-4249-9d54-8300224610ae",
+      "slot_id": "407b8b7e-eca7-4c49-b2a9-741bbcb56ffb",
+      "status": "SUCCEEDED",
+      "metrics": {
+        "runtime": 12.04062767099822,
+        "success_rate": 1.0,
+        "episode_count": 2
+      },
+      "progress": {
+        "completed": 2,
+        "successes": 2,
+        "errors": 0,
+        "running": [],
+        "success_rate": 1.0
+      },
+      "artifacts": [
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-r8000-19abb708d5",
+          "episode": 1
+        },
+        {
+          "assets": "/opt/mini-eval/assets",
+          "cache": "/opt/mini-eval/cache",
+          "work": "/tmp/mini-eval-work",
+          "output": "/tmp/mini-eval-output",
+          "marker": "old-storage-r8000-19abb708d5",
+          "episode": 2
+        }
+      ]
+    }
+  ]
+}

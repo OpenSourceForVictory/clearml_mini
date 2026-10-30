@@ -65,7 +65,7 @@ Idempotency-Key: my-evaluation-001
 {"client_images":["mini-eval-client:cs-v1"]}
 ```
 
-重启 Worker 后会以协议 v3 登记能力。平台只向声明对应镜像的 Worker 分配 CS 任务，旧 Worker 仍可运行旧评测类型。
+重启 Worker 后会以协议 v4 登记能力（包含 v3 客户端能力）。平台只向声明对应镜像的 Worker 分配 CS 任务，旧 Worker 仍可运行旧评测类型。
 
 ## 容器协议
 
@@ -101,3 +101,11 @@ URL 不接受用户名/密码、查询串和片段。集中服务密钥管理尚
 测试结果只证明客户端协议和平台链路，不代表真实仿真或 RoboTwin 模型评测质量。
 
 完整 SDK、集合版本、逐回合结果和代码构建流程见 [仿真评测框架](evaluation-framework.md)。
+
+## Worker v4 存储握手
+
+任务客户端契约不变；新增的是 Worker 监督进程协议。注册 `protocol_version: 4`。监督心跳 `storage` 包含 `revision`（当前校验版本）、`applied_revision`、`status`（applied/waiting/failed）、`effective`（实际 workspace_root/assets_root/cache_root/min_free_disk_gb）、`capacity`（workspace/assets/cache 可用 MiB）、`error`（最多 1000 字符）。心跳响应增加 `storage: {revision, config}` 与 `storage_busy`。
+
+Worker 在本地无子执行/journal 且服务器无持有或待清理执行时校验、探测、原子持久化，再发送 applied 确认。过期确认不更新记录；有持有执行时确认新版本返回 409。携带 execution_id 的子执行心跳不能更改存储确认或磁盘门槛。claim 返回 `storage_revision`；执行创建前必须与路径快照版本一致。
+
+调度和新任务领取都检查当前确认版本及 15 秒报告新鲜度。恢复已有执行及清理接口不受新配置阻塞。只读资产/缓存路径保持稳定，客户端无须感知宿主机切换。

@@ -1,0 +1,122 @@
+{
+  "release": "storage-release-20261030-171911",
+  "remote_stage": "/home/huawei/clearml_mini/.runtime/storage-release-20261030-171911",
+  "backup_image": "mini-eval-api:before-storage-release-20261030-171911",
+  "status": "deployed",
+  "deployed_at": "2026-10-30T09:26:21.418412+00:00",
+  "production_ui": "passed",
+  "database_revision": "c396d08",
+  "api_health": "healthy",
+  "workers": [
+    {
+      "id": "49318310-d096-4125-a2b3-76ff182f3b39",
+      "node_name": "r8000",
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-92feb9af-ce4b-48e9-dc5f-a61799e2365f",
+      "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T09:26:20.602212+00:00",
+      "gpu_model": "Quadro RTX 8000",
+      "vram_mb": 49152,
+      "free_vram_mb": 24444,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T09:26:20.602211+00:00",
+      "disk_free_mb": 1564246,
+      "disk_min_free_mb": 2048,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    },
+    {
+      "id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+      "node_name": "local-4090",
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+      "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+      "online": true,
+      "quarantined": false,
+      "last_seen_at": "2026-10-30T09:26:18.986358+00:00",
+      "gpu_model": "NVIDIA GeForce RTX 4090",
+      "vram_mb": 24564,
+      "free_vram_mb": 23810,
+      "gpu_utilization": 0,
+      "telemetry_at": "2026-10-30T09:26:18.986355+00:00",
+      "disk_free_mb": 165947,
+      "disk_min_free_mb": 2048,
+      "disk_fresh": true,
+      "telemetry_fresh": true,
+      "protocol_version": 4,
+      "active_tasks": 0,
+      "reserved_vram_mb": 0
+    }
+  ],
+  "storage": [
+    {
+      "worker_id": "03d9d778-4ce2-4fe1-8a0c-cb61cb47bea8",
+      "revision": 0,
+      "config": null,
+      "slots": [
+        {
+          "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 0,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 1564246,
+              "assets": 1564246,
+              "workspace": 1564246
+            },
+            "revision": 0,
+            "effective": {
+              "cache_root": "/home/huawei/mini-eval-workspaces/r8000/cache",
+              "assets_root": "/home/huawei/mini-eval-workspaces/r8000/assets",
+              "workspace_root": "/home/huawei/mini-eval-workspaces/r8000",
+              "min_free_disk_gb": 2.0
+            },
+            "applied_revision": 0
+          },
+          "reported_at": "2026-10-30T09:26:20.602202+00:00"
+        }
+      ],
+      "all_applied": true
+    },
+    {
+      "worker_id": "e47fd92d-234a-4e8e-a8bf-f293992bfebb",
+      "revision": 0,
+      "config": null,
+      "slots": [
+        {
+          "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+          "gpu_index": 0,
+          "status": "applied",
+          "applied_revision": 0,
+          "report": {
+            "error": null,
+            "status": "applied",
+            "capacity": {
+              "cache": 165947,
+              "assets": 165947,
+              "workspace": 165947
+            },
+            "revision": 0,
+            "effective": {
+              "cache_root": "/home/dgh/mini-eval-workspaces/local4090/cache",
+              "assets_root": "/home/dgh/mini-eval-workspaces/local4090/assets",
+              "workspace_root": "/home/dgh/mini-eval-workspaces/local4090",
+              "min_free_disk_gb": 2.0
+            },
+            "applied_revision": 0
+          },
+          "reported_at": "2026-10-30T09:26:21.675949+00:00"
+        }
+      ],
+      "all_applied": true
+    }
+  ]
+}

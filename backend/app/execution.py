@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
+from . import storage as storage_protocol
 from .core import Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -26,7 +27,7 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
-    protocol_version: Literal[1, 2, 3] = 1
+    protocol_version: Literal[1, 2, 3, 4] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
 
 
@@ -51,6 +52,7 @@ class Heartbeat(BaseModel):
     telemetry: Optional[Telemetry] = None
     telemetry_failed: bool = False
     disk: Optional[DiskTelemetry] = None
+    storage: Optional[storage_protocol.StorageReport] = None
 
 
 class Metrics(BaseModel):
@@ -130,6 +132,8 @@ def install(app, db, current):
         if user.role != 'admin':
             raise HTTPException(403, 'admin required')
         return user
+
+    storage_protocol.install(app, db, admin)
 
     def slot_for(s, slot_id, worker):
         slot = s.get(Slot, slot_id)
@@ -249,6 +253,7 @@ def install(app, db, current):
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
         slot.protocol_version = body.protocol_version
         slot.client_images = body.client_images if body.protocol_version >= 3 else []
+        slot.storage_reported_at = None
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
@@ -258,6 +263,7 @@ def install(app, db, current):
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
         slot = slot_for(s, body.slot_id, worker)
+        s.refresh(worker)
         cancel = False
         if body.execution_id:
             run = run_for(s, body.execution_id, worker)
@@ -269,7 +275,9 @@ def install(app, db, current):
                 transition(s, run, 'RUNNING')
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             cancel = run.status == 'CANCEL_REQUESTED'
-        if body.disk is not None:
+        if not body.execution_id and body.storage is not None:
+            storage_protocol.acknowledge(s, worker, slot, body.storage)
+        if body.disk is not None and not body.execution_id:
             slot.disk_free_mb = body.disk.free_mb
             slot.disk_min_free_mb = body.disk.min_free_mb
             slot.disk_at = now()
@@ -283,7 +291,8 @@ def install(app, db, current):
             slot.telemetry_at = now()
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel}
+        return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
+                'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -298,6 +307,12 @@ def install(app, db, current):
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
+            s.refresh(worker)
+            if not storage_protocol.ready(worker, slot, now()):
+                return {'task': None, 'cleanup': []}
+            if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
+                    or slot.disk_at is None or (now()-utc(slot.disk_at)).total_seconds() >= 15):
+                return {'task': None, 'cleanup': []}
             if utc(run.reservation_expires_at) <= now():
                 return {'task': None, 'cleanup': []}
             run.enqueued_at = now()
@@ -307,7 +322,7 @@ def install(app, db, current):
         else:
             live(run)
         job, pool = s.get(Job, run.job_id), s.get(Pool, slot.pool_id)
-        task = {'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
+        task = {'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
                 'gpu_uuid': None if pool.gpu_model == 'virtual' else slot.gpu_uuid,

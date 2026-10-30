@@ -17,7 +17,8 @@ import uuid
 
 from runner.cs_contract import INPUT_PATH, VERSION, endpoint_parts
 from .artifacts import read_artifacts
-from .workspace import prepare, execution_dirs, read_events, disk_status
+from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
+from .storage import Storage
 
 LOG = logging.getLogger('mini-eval-worker')
 MAX_LOG_BYTES = 262144
@@ -72,13 +73,27 @@ def telemetry(config):
 
 
 class Worker:
-    def __init__(self, config, state_path):
-        self.config = config
-        self.api = Client(config)
+    def __init__(self, config, state_path, snapshot=None):
+        self.config = dict(config)
+        self.api = Client(self.config)
         self.path = Path(state_path)
-        self.workspace = prepare(config, str(self.path.resolve().parent/'workspace'))
-        self.config['workspace_root'] = str(self.workspace)
         self.state = json.loads(self.path.read_text()) if self.path.exists() else None
+        if snapshot is None:
+            if not Path(str(self.path) + '.storage.json').exists():
+                root = prepare(self.config, str(self.path.resolve().parent/'workspace'))
+                self.config['workspace_root'] = str(root)
+            self.storage = Storage(self.config, self.path)
+            snapshot = self.storage.snapshot()
+        else:
+            self.storage = None
+        if self.state and self.state.get('storage'):
+            snapshot = self.state['storage']
+        self.storage_snapshot = snapshot
+        self.config.update(snapshot['config'])
+        self.workspace = Path(self.config['workspace_root'])
+        if self.state and 'storage' not in self.state:
+            self.state['storage'] = snapshot
+            self.save()
         self.slot_id = None
         self.stop_event = threading.Event()
         self.start_lock = threading.Lock()
@@ -132,6 +147,9 @@ class Worker:
             self.save()
 
     def create(self, task):
+        if task.get('storage_revision', 0) != self.storage_snapshot['revision']:
+            raise RuntimeError('task storage revision differs from execution snapshot')
+        validate_storage(self.config, self.config.get('_supervisor_state', self.path), self.config.get('_config_path'))
         disk = disk_status(self.workspace, self.config)
         if disk['free_mb'] < disk['min_free_mb']:
             raise RuntimeError('insufficient disk space in worker workspace before start')
@@ -161,8 +179,8 @@ class Worker:
         if cs:
             directory = execution_dirs(self.workspace, task['execution_id'])
             for source, target, readonly in [
-                (self.workspace/'assets', '/opt/mini-eval/assets', True),
-                (self.workspace/'cache', '/opt/mini-eval/cache', True),
+                (Path(self.config['assets_root']), '/opt/mini-eval/assets', True),
+                (Path(self.config['cache_root']), '/opt/mini-eval/cache', True),
                 (directory/'work', '/tmp/mini-eval-work', False),
                 (directory/'output', '/tmp/mini-eval-output', False)]:
                 args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
@@ -279,7 +297,7 @@ class Worker:
     def execute(self, task):
         execution = task['execution_id']
         if self.state is None:
-            self.state = {'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
+            self.state = {'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
             self.save()
         deadline = [time.monotonic() + task['lease_seconds'] - 2]
         done, lease_lost = threading.Event(), threading.Event()
@@ -403,7 +421,13 @@ class Worker:
         identity = str(uuid.UUID(execution))
         directory = Path(str(self.path) + '.runs')
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        child = Worker(self.config, directory / (identity + '.json'))
+        path = directory / (identity + '.json')
+        config = {**self.config, '_supervisor_state': str(self.path)}
+        snapshot = self.storage_snapshot
+        if path.exists() and json.loads(path.read_text()):
+            # Pre-v4 journals must retain their original bootstrap paths.
+            snapshot = {'config': self.storage.record['bootstrap'], 'revision': 0} if self.storage else snapshot
+        child = Worker(config, path, snapshot=snapshot)
         child.slot_id = self.slot_id
         child.start_lock = self.start_lock
         return child
@@ -454,7 +478,7 @@ class Worker:
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config['pool_id'],
-            **hardware, 'protocol_version': 3, 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': 4, 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -473,13 +497,23 @@ class Worker:
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
                     return
-                body = {'slot_id': self.slot_id, 'disk': disk_status(self.workspace, self.config)}
+                body = {'slot_id': self.slot_id, 'storage': self.storage.report()}
+                try:
+                    body['disk'] = disk_status(self.workspace, self.config)
+                except (OSError, ValueError):
+                    body['disk'] = {'free_mb': 0, 'min_free_mb': 1}
                 try:
                     body['telemetry'] = telemetry(self.config)
                 except (subprocess.SubprocessError, OSError, ValueError):
                     body['telemetry_failed'] = True
                     LOG.warning('GPU telemetry unavailable; shared admission will wait')
-                self.api.post('worker/heartbeat', body)
+                reply = self.api.post('worker/heartbeat', body)
+                if 'storage' in reply:
+                    self.storage.update(reply['storage'], self.slot_id,
+                        bool(self.children) or reply.get('storage_busy', True), docker)
+                    self.storage_snapshot = self.storage.snapshot()
+                    self.config.update(self.storage_snapshot['config'])
+                    self.workspace = Path(self.config['workspace_root'])
                 if once and had_task:
                     time.sleep(2)
                     continue
@@ -509,6 +543,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     path = Path(args.config).resolve()
     config = json.loads(path.read_text())
+    config['_config_path'] = str(path)
     root = prepare(config, str(path.parent/('workspace-'+path.stem)))
     config['workspace_root'] = str(root)
     state_path = config.get('state_path', str(root/'state'/'worker.json'))

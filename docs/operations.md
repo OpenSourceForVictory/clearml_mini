@@ -120,3 +120,11 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 测试任务 ID（隔离数据库）：`4be231cf-8606-4d4e-9690-e4c55713e5ff`、`5d19a0e6-ad55-43b4-89ce-7508116257f8`、`c88fee55-0557-4d12-a010-11d98319e2c9`；渲染 `65a603c3-c752-4881-a2c5-193a8dc289b6`。可用 `scripts/smoke_shared_gpu.py` 在隔离部署重复验收。
 
 回滚材料在 R8000：`/home/huawei/mini-eval-before-shared.dump`（及校验文件）、`/home/huawei/clearml-mini-before-shared.tar.gz`、镜像 `mini-eval-api:before-shared`。回滚采用升级前数据库快照恢复，不只执行 schema downgrade；先排空并停止 API/两台 Worker，再恢复数据库与代码，将两个 Worker 配置的 `pool_id` 改回恢复后数据库中各自 `r8000`/`local-4090` 池 ID，恢复节点服务。数据库快照会丢失升级后任务，正式回滚前另备份当前数据库。
+
+## Worker 存储切换与回退
+
+先升级数据库/API、前端，再升级空闲 Worker。数据库迁移 `c396d08` 新增机器配置及逐卡报告，旧记录默认 revision=0/config=null。首次 v4 启动保留本机目录，并完成挂载验证；需要本地已安装且包含 Python 的批准 runner 镜像。
+
+保存新版本与 claim 共用 PostgreSQL 调度锁。未领取的 RESERVED 返回 PENDING 并释放 GPU/CPU/内存预留；STARTING/RUNNING/CANCEL_REQUESTED 及待清理执行保持原位。每张卡空闲后独立切换。页面的最后报告过期、校验失败或旧 Worker「需升级」都意味着不能领取新任务。
+
+回退先在界面恢复本机配置，等待所有槽位确认、排空任务并确认容器清理后，再降级 Worker/API 和数据库。数据库降级前备份；目录、执行 journal 与 `.storage.json` 不得随数据库回滚删除。存储设置不会改变 Docker 自身镜像/层的 data-root，也不会自动迁移旧执行文件。

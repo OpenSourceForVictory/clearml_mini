@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { api } from "./api";
+import { StorageSettings } from "./storage";
 import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
 
 type User = { id: string; username: string; role: string };
@@ -1114,6 +1115,7 @@ function Admin() {
             ))}
           </tbody>
         </table>
+        {nodes.map(n => <StorageSettings key={n.id} id={n.id} name={n.node_name} />)}
       </section>
     </>
   );
