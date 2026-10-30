@@ -36,8 +36,6 @@ class CosmosRobotwinClient(EvaluationClient):
             raise FileNotFoundError('Cosmos client entrypoint is missing: '+str(self.entry))
         if not (self.robotwin/'scripts/eval_policy_xpolicylab.py').is_file():
             raise FileNotFoundError('RoboTwin scripts/eval_policy_xpolicylab.py is required')
-        from .assets import ASSET_REVISION, validate
-        validate(context.assets_dir / 'robotwin' / ASSET_REVISION)
         params = context.config['parameters']
         allowed = {'task_config','control_mode','state_source','eef_config','max_steps','instruction','instruction_type','video_fps'}
         if set(params)-allowed:

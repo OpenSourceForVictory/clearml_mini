@@ -39,11 +39,6 @@ def client_context(tmp_path,monkeypatch):
     robotwin=tmp_path/'RoboTwin';(robotwin/'scripts').mkdir(parents=True)
     (robotwin/'scripts/eval_policy_xpolicylab.py').write_text('# fixture')
     assets=tmp_path/'assets';(assets/'cosmos').mkdir(parents=True)
-    from examples.cosmos_robotwin.assets import ASSET_REVISION, ASSETS
-    version = assets/'robotwin'/ASSET_REVISION
-    for name in ('embodiments', 'objects', 'background_texture'):
-        (version/name).mkdir(parents=True)
-    (version/'manifest.json').write_text(json.dumps({'revision': ASSET_REVISION, 'sha256': ASSETS}))
     (assets/'cosmos/eef.json').write_text('{"eef_pose_frame":"world"}')
     work=tmp_path/'work';work.mkdir();output=tmp_path/'output';output.mkdir()
     monkeypatch.setenv('COSMOS_ROOT',str(cosmos));monkeypatch.setenv('ROBOTWIN_ROOT',str(robotwin))
@@ -170,9 +165,35 @@ def test_asset_version_is_published_only_after_complete_validation(tmp_path, mon
     assets.install(target, cache, 'https://unused.example')
 
 
-def test_client_rejects_unpublished_assets(tmp_path, monkeypatch):
-    from examples.cosmos_robotwin.assets import ASSET_REVISION
+def test_client_starts_without_simulator_asset_manifest(tmp_path, monkeypatch):
     context = client_context(tmp_path, monkeypatch)
-    (context.assets_dir / 'robotwin' / ASSET_REVISION / 'manifest.json').unlink()
-    with pytest.raises(RuntimeError, match='assets are not ready'):
-        CosmosRobotwinClient().setup(context)
+    assert not (context.assets_dir / 'robotwin').exists()
+    client = CosmosRobotwinClient()
+    client.setup(context)
+    command, _ = client.command(context.config, 100000, tmp_path / 'output')
+    assert command[command.index('--task-name') + 1] == 'adjust_bottle'
+
+
+def test_render_only_does_not_load_robotwin(tmp_path, monkeypatch):
+    import sys
+    from examples.cosmos_robotwin import smoke_environment
+    calls = []
+    monkeypatch.setenv('ROBOTWIN_ROOT', str(tmp_path / 'missing-robotwin'))
+    monkeypatch.setattr(sys, 'argv', ['smoke_environment', '--render-only'])
+    monkeypatch.setattr('runner.robotwin_render.evaluate', lambda count: calls.append(count))
+    smoke_environment.main()
+    assert calls == [1]
+
+
+@pytest.mark.parametrize('filename,count,modes', [
+    ('suite-doc-matrix.json', 8, {'joint', 'eef'}),
+    ('suite-joint.json', 4, {'joint'}),
+])
+def test_documented_task_matrix(filename, count, modes):
+    from itertools import product
+    from backend.app.batches import Case
+    cases = [Case.model_validate(c) for c in json.loads((Path('examples/cosmos_robotwin')/filename).read_text())]
+    assert len(cases) == len({c.case_id for c in cases}) == count
+    actual = {(c.task_name, c.parameters['task_config'], c.parameters['control_mode']) for c in cases}
+    assert actual == set(product({'adjust_bottle', 'beat_block_hammer'}, {'demo_clean', 'demo_randomized'}, modes))
+    assert all(c.episodes == 3 and c.seed == 100000 and 'max_steps' not in c.parameters for c in cases)

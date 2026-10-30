@@ -28,8 +28,6 @@ def main():
     encoders=subprocess.check_output(['ffmpeg','-hide_banner','-encoders'],stderr=subprocess.DEVNULL,text=True)
     if 'libx264' not in encoders: raise RuntimeError('ffmpeg libx264 encoder is required')
     if not a.environment_only:
-        from .assets import ASSET_REVISION, validate
-        validate(a.assets_root / 'robotwin' / ASSET_REVISION)
         config=json.loads(asset_path(a.assets_root,a.eef_config).read_text())
         import sys
         sys.path.insert(0,str(cosmos))

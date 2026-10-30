@@ -235,7 +235,7 @@ function App() {
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />
         ) : tab === "cs" ? (
-          <CSWorkbench renderJob={(id, close) => <JobDetail id={id} close={close} />} />
+          <CSWorkbench admin={user.role === "admin"} renderJob={(id, close) => <JobDetail id={id} close={close} />} />
         ) : tab === "workers" ? (
           <Resources admin={user.role === "admin"} />
         ) : (

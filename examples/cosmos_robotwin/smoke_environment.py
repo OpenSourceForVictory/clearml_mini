@@ -9,17 +9,18 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--task', choices=['adjust_bottle', 'beat_block_hammer'], default='adjust_bottle')
+    parser.add_argument('--task', choices=['adjust_bottle', 'beat_block_hammer', 'click_bell'], default='adjust_bottle')
+    parser.add_argument('--render-only', action='store_true', help='Check SAPIEN physics/rendering without RoboTwin assets')
     parser.add_argument('--seed', type=int, default=100000)
     args = parser.parse_args()
-    from .assets import ASSET_REVISION, validate
-    validate(Path('/opt/mini-eval/assets/robotwin') / ASSET_REVISION)
+    from runner.robotwin_render import evaluate
+    evaluate(1)
+    if args.render_only:
+        return
     import numpy as np
     import torch
     if not torch.cuda.is_available():
         raise RuntimeError('CUDA is unavailable inside the container')
-    from runner.robotwin_render import evaluate
-    evaluate(1)
     root = Path(os.environ.get('ROBOTWIN_ROOT', '/opt/RoboTwin'))
     os.chdir(root)
     sys.path.insert(0, str(root))

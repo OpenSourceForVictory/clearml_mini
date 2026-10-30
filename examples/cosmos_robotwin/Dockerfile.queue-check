@@ -1,0 +1,6 @@
+FROM mini-eval-cosmos-robotwin:2ba852c-platform1
+COPY examples/cosmos_robotwin/queue_client.py examples/cosmos_robotwin/smoke_environment.py /app/examples/cosmos_robotwin/
+RUN for name in embodiments objects; do \
+      ln -sfn /opt/mini-eval/assets/robotwin-queue-smoke/3dc3b798668feb99ac61cc9086d84cbcc3d79186/$name /opt/RoboTwin/assets/$name; \
+    done
+CMD ["python", "-m", "runner.sdk", "examples.cosmos_robotwin.queue_client:RobotwinEnvironmentClient"]

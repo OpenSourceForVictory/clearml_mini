@@ -9,7 +9,8 @@ type Batch = {id:string;title:string;status:string;total:number;succeeded:number
   cases:{job_id:string;case_id:string;task_name:string;episodes:number;seed:number;status:string;attempt:number;error:string|null;run_id:string;episode_reporting:boolean;progress:{completed:number;successes:number;errors:number;success_rate:number|null}}[]};
 const labels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 function Field({label,children}:{label:string;children:React.ReactNode}) {
-  return <label className="field">{label}{children}</label>;
+  const id=React.useId();
+  return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
 function parseCases(value:unknown):Case[] {
   if(!Array.isArray(value)||!value.length||value.length>100) throw new Error('清单需要包含 1–100 项任务');
@@ -27,19 +28,20 @@ function parseCases(value:unknown):Case[] {
   });
 }
 
-export function CSWorkbench({renderJob}:{renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
+export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<Pool[]>([]),[batches,setBatches]=useState<Batch[]>([]);
   const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [episodeView,setEpisodeView]=useState<{jobId:string;runId:string}|null>(null);
+  const [tab,setTab]=useState<'suites'|'runs'|'clients'>('runs');
+  const tabs=[{id:'suites',label:'评测集合注册'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
   const key=useRef({body:'',value:''});
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<Pool[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
     setSuites(s);setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
   };
   useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page]);
-  function change(i:number,k:keyof Case,value:unknown) {setCases(old=>old.map((c,n)=>n===i?{...c,[k]:value}:c));}
   async function submit(e:React.FormEvent<HTMLFormElement>) {
     e.preventDefault();setError('');setBusy(true);
     try {
@@ -53,10 +55,34 @@ export function CSWorkbench({renderJob}:{renderJob:(id:string,close:()=>void)=>R
       await api<Batch>('batches','POST',body,{'Idempotency-Key':key.current.value});key.current={body:'',value:''};await refresh();
     } catch(e){setError(String(e));} finally{setBusy(false);}
   }
+  function useSuite(suite:Suite) {
+    setSuiteId(suite.id);setTemplateId(suite.template_id);setCases(suite.cases);setTab('runs');
+  }
   return <>
     <div className="page-title"><div><p className="eyebrow">CLIENT / SERVER</p><h1>CS 评测集合与运行</h1><p className="muted">提交完整清单，逐项调度、查看结果并补跑失败任务。</p></div></div>
     {error&&<p className="error" role="alert">{error}</p>}
-    <ClientSources/>
+    <div className="cs-tabs" role="tablist" aria-label="CS 评测管理">
+      {tabs.map((item,index)=><button key={item.id} id={'cs-tab-'+item.id} type="button" role="tab"
+        aria-selected={tab===item.id} aria-controls={'cs-panel-'+item.id} tabIndex={tab===item.id?0:-1}
+        onClick={()=>setTab(item.id)} onKeyDown={e=>{
+          const next=e.key==='ArrowRight'?(index+1)%tabs.length:e.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:e.key==='Home'?0:e.key==='End'?tabs.length-1:null;
+          if(next!==null){e.preventDefault();setTab(tabs[next].id);document.getElementById('cs-tab-'+tabs[next].id)?.focus();}
+        }}>{item.label}</button>)}
+    </div>
+    <div role="tabpanel" id="cs-panel-suites" aria-labelledby="cs-tab-suites" hidden={tab!=='suites'}>
+      <SuiteRegistration templates={templates} suites={suites} onRun={useSuite} onSaved={suite=>{
+        setSuites(old=>[suite,...old.filter(s=>s.id!==suite.id)]);useSuite(suite);
+      }}/>
+    </div>
+    <div role="tabpanel" id="cs-panel-clients" aria-labelledby="cs-tab-clients" hidden={tab!=='clients'}>
+      <ClientSources/>
+      {admin?<ClientTemplates onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>:
+        <section className="panel"><h2>可用客户端模板</h2><p className="hint">选择已有模板注册集合，或提交自己的客户端代码。</p>
+          {!templates.length&&<p>暂无可用客户端模板。</p>}
+          <ul>{templates.map(t=><li key={t.id}>{t.name} / {t.version} · {t.protocols.join(', ')}</li>)}</ul>
+        </section>}
+    </div>
+    <div role="tabpanel" id="cs-panel-runs" aria-labelledby="cs-tab-runs" hidden={tab!=='runs'}>
     <section className="panel"><h2>发起集合运行</h2>
       <p className="hint">模型由外部推理服务管理。客户端模板定义可执行任务；“协议自检”模板仅验证通信和任务链路。</p>
       <form onSubmit={submit}>
@@ -74,8 +100,28 @@ export function CSWorkbench({renderJob}:{renderJob:(id:string,close:()=>void)=>R
           <Field label="每项总超时秒"><input name="timeout_seconds" type="number" min={1} max={3600} defaultValue={300} required/></Field>
         </div>
         <h3>评测清单</h3>
-        {suiteId&&<p>使用已保存版本；编辑清单请先选择“自定义清单”，再另存新版本。</p>}
-        <fieldset disabled={!!suiteId}>
+        {suiteId&&<p>使用已保存版本。临时调整请先选择“自定义清单”；保存新集合请到“评测集合注册”页。</p>}
+        <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId}/>
+        <button className="primary" disabled={busy||!templates.length}>{busy?'提交中…':'提交评测批次'}</button>
+      </form>
+    </section>
+    <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
+      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。失败和取消不计为成功。</p>
+        <table><thead><tr><th>标识 / 任务</th><th>回合 / 种子</th><th>状态</th><th>尝试</th><th></th></tr></thead><tbody>{b.cases.map(c=><tr key={c.job_id}><td>{c.case_id}<small>{c.task_name}</small></td><td>{c.episode_reporting?`${c.progress.completed} / ${c.episodes} 回合，目标成功 ${c.progress.successes}`:`计划 ${c.episodes} 回合（客户端未上报回合）`}<small>种子 {c.seed}</small></td><td>{labels[c.status]}</td><td>{c.attempt}</td><td><button onClick={()=>setEpisodeView({jobId:c.job_id,runId:c.run_id})}>回合结果</button><button onClick={()=>setSelected(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table>
+      </div>)}
+      <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
+    </section>
+    {episodeView&&<section className="panel"><button onClick={()=>setEpisodeView(null)}>关闭回合结果</button><EpisodeList {...episodeView}/></section>}
+    {selected&&renderJob(selected,()=>setSelected(''))}
+    </div>
+  </>;
+}
+
+
+function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCases:React.Dispatch<React.SetStateAction<Case[]>>;setError:(error:string)=>void;disabled?:boolean}) {
+  function change(i:number,k:keyof Case,value:unknown) {setCases(old=>old.map((c,n)=>n===i?{...c,[k]:value}:c));}
+  return <>
+        <fieldset disabled={disabled}>
         <Field label="导入 JSON 清单"><input type="file" accept="application/json,.json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>1048576)throw new Error('清单文件不能超过 1 MiB');setCases(parseCases(JSON.parse(await file.text())));setError('');}catch(error){setError(String(error));}e.target.value='';}}/></Field>
         <div className="table-scroll"><table><thead><tr><th>唯一标识</th><th>仿真任务名</th><th>回合数</th><th>种子</th><th>参数 JSON</th><th></th></tr></thead><tbody>
           {cases.map((c,i)=><tr key={i}>
@@ -90,32 +136,49 @@ export function CSWorkbench({renderJob}:{renderJob:(id:string,close:()=>void)=>R
         <button type="button" disabled={cases.length>=100} onClick={()=>setCases(old=>[...old,{case_id:'case-'+(old.length+1)+'-'+Date.now().toString(36),task_name:'',episodes:3,seed:0,parameters:{}}])}>添加任务</button>
         </fieldset>
         <p>共 {cases.length} 项、{cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合。每项独立调度；资源不足时保留排队；最大并发是上限。</p>
-        {!suiteId&&<div className="submit-grid"><Field label="集合名称"><input name="suite_name" maxLength={200}/></Field><Field label="集合版本"><input name="suite_version" maxLength={100} defaultValue="1"/></Field>
-          <button type="button" disabled={busy} onClick={async e=>{const form=e.currentTarget.closest('form')!;const f=new FormData(form);setBusy(true);try{const saved=await api<Suite>('suites','POST',{name:f.get('suite_name'),version:f.get('suite_version'),template_id:templateId,cases:parseCases(cases)});await refresh();setSuiteId(saved.id);setError('');}catch(err){setError(String(err));}finally{setBusy(false);}}}>保存集合版本</button></div>}
-        <button className="primary" disabled={busy||!templates.length}>{busy?'提交中…':'提交评测批次'}</button>
-      </form>
-    </section>
-    <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
-      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。失败和取消不计为成功。</p>
-        <table><thead><tr><th>标识 / 任务</th><th>回合 / 种子</th><th>状态</th><th>尝试</th><th></th></tr></thead><tbody>{b.cases.map(c=><tr key={c.job_id}><td>{c.case_id}<small>{c.task_name}</small></td><td>{c.episode_reporting?`${c.progress.completed} / ${c.episodes} 回合，目标成功 ${c.progress.successes}`:`计划 ${c.episodes} 回合（客户端未上报回合）`}<small>种子 {c.seed}</small></td><td>{labels[c.status]}</td><td>{c.attempt}</td><td><button onClick={()=>setEpisodeView({jobId:c.job_id,runId:c.run_id})}>回合结果</button><button onClick={()=>setSelected(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table>
-      </div>)}
-      <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
-    </section>
-    {episodeView&&<section className="panel"><button onClick={()=>setEpisodeView(null)}>关闭回合结果</button><EpisodeList {...episodeView}/></section>}
-    {selected&&renderJob(selected,()=>setSelected(''))}
   </>;
 }
 
-export function ClientTemplates() {
+function SuiteRegistration({templates,suites,onSaved,onRun}:{templates:Template[];suites:Suite[];onSaved:(suite:Suite)=>void;onRun:(suite:Suite)=>void}) {
+  const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
+  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+  return <>
+    <section className="panel"><h2>注册评测集合</h2><p className="hint">选择客户端、定义任务与参数，保存为可重复运行的集合版本。推理服务和资源在运行时填写。</p>
+      {error&&<p role="alert" className="error">{error}</p>}
+      <form onSubmit={async e=>{
+        e.preventDefault();const f=new FormData(e.currentTarget);setBusy(true);setError('');
+        try{const suite=await api<Suite>('suites','POST',{name:f.get('suite_name'),version:f.get('suite_version'),template_id:f.get('template_id'),cases:parseCases(cases)});onSaved(suite);}
+        catch(err){setError(String(err));}finally{setBusy(false);}
+      }}>
+        <div className="submit-grid">
+          <Field label="集合名称"><input name="suite_name" required maxLength={200}/></Field>
+          <Field label="集合版本"><input name="suite_version" required maxLength={100} defaultValue="1"/></Field>
+          <Field label="客户端模板"><select name="template_id" required defaultValue=""><option value="" disabled>选择客户端及版本</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
+        </div>
+        <h3>评测清单</h3><CaseEditor cases={cases} setCases={setCases} setError={setError}/>
+        <button className="primary" disabled={busy||!templates.length}>{busy?'保存中…':'保存集合版本'}</button>
+      </form>
+    </section>
+    <section className="panel"><h2>已注册集合</h2>{!suites.length?<p>尚无集合，可导入 JSON 清单或手动添加任务。</p>:
+      <div className="table-scroll"><table><thead><tr><th>名称 / 版本</th><th>客户端</th><th>任务 / 回合</th><th>操作</th></tr></thead><tbody>{suites.map(suite=>{
+        const template=templates.find(t=>t.id===suite.template_id);
+        return <tr key={suite.id}><td>{suite.name}<small>{suite.version}</small></td><td>{template?`${template.name} / ${template.version}`:'模板已停用或不可用'}</td>
+          <td>{suite.cases.length} 项 / {suite.cases.reduce((n,c)=>n+c.episodes,0)} 回合</td><td><button disabled={!template} onClick={()=>onRun(suite)}>运行此集合</button></td></tr>;
+      })}</tbody></table></div>}
+    </section>
+  </>;
+}
+
+export function ClientTemplates({onChange}:{onChange?:()=>void}={}) {
   const [templates,setTemplates]=useState<Template[]>([]),[error,setError]=useState('');
   const refresh=()=>api<Template[]>('client-templates').then(setTemplates);
   useEffect(()=>{void refresh().catch(e=>setError(String(e)));},[]);
   return <section className="panel"><h2>客户端模板</h2><p className="hint">每个版本固定镜像和命令。镜像需包含平台 runner 包，并在 Worker 的 client_images 中登记。生产建议使用镜像 digest。</p>{error&&<p role="alert" className="error">{error}</p>}
-    <form onSubmit={async e=>{e.preventDefault();try{const f=new FormData(e.currentTarget);await api('admin/client-templates','POST',{name:f.get('name'),version:f.get('version'),image:f.get('image'),command:JSON.parse(String(f.get('command'))),protocols:String(f.get('protocols')).split(',').map(x=>x.trim()),episode_reporting:f.get('episode_reporting')==='on',endpoint_exclusive:f.get('endpoint_exclusive')==='on'});await refresh();setError('');}catch(e){setError(String(e));}}}>
+    <form onSubmit={async e=>{e.preventDefault();try{const f=new FormData(e.currentTarget);await api('admin/client-templates','POST',{name:f.get('name'),version:f.get('version'),image:f.get('image'),command:JSON.parse(String(f.get('command'))),protocols:String(f.get('protocols')).split(',').map(x=>x.trim()),episode_reporting:f.get('episode_reporting')==='on',endpoint_exclusive:f.get('endpoint_exclusive')==='on'});await refresh();onChange?.();setError('');}catch(e){setError(String(e));}}}>
       <div className="submit-grid"><Field label="客户端名称"><input name="name" required maxLength={100}/></Field><Field label="客户端版本"><input name="version" required maxLength={100}/></Field><Field label="客户端镜像"><input name="image" required maxLength={500}/></Field><Field label="启动参数数组 JSON"><textarea name="command" defaultValue='["python", "-m", "runner.cs_demo"]' required/></Field><Field label="支持协议（逗号分隔）"><input name="protocols" defaultValue="http" required/></Field></div>
       <label><input type="checkbox" name="episode_reporting"/>SDK 逐回合上报（成功收尾时校验完整性）</label><label><input type="checkbox" name="endpoint_exclusive"/>推理服务独占连接（同主机端口串行）</label><button>登记客户端模板</button>
     </form>
-    <table><thead><tr><th>名称 / 版本</th><th>镜像</th><th>协议</th><th></th></tr></thead><tbody>{templates.map(t=><tr key={t.id}><td>{t.name} / {t.version}</td><td>{t.image}</td><td>{t.protocols.join(', ')}</td><td><button onClick={async()=>{try{await api('admin/client-templates/'+t.id,'PATCH',{enabled:!t.enabled});await refresh();}catch(e){setError(String(e));}}}>{t.enabled?'停用模板':'启用模板'}</button></td></tr>)}</tbody></table>
+    <table><thead><tr><th>名称 / 版本</th><th>镜像</th><th>协议</th><th></th></tr></thead><tbody>{templates.map(t=><tr key={t.id}><td>{t.name} / {t.version}</td><td>{t.image}</td><td>{t.protocols.join(', ')}</td><td><button onClick={async()=>{try{await api('admin/client-templates/'+t.id,'PATCH',{enabled:!t.enabled});await refresh();onChange?.();}catch(e){setError(String(e));}}}>{t.enabled?'停用模板':'启用模板'}</button></td></tr>)}</tbody></table>
   </section>;
 }
 

@@ -1,0 +1,2 @@
+# Design
+三项为 adjust_bottle、beat_block_hammer、click_bell，每项一次 demo_clean 初始化与三路 RGB 检查。无推理服务参与，独立模板明确命名环境检查，endpoint_exclusive=false。因现有 CS 契约要求 endpoint，提交平台自身 HTTP 地址作为未使用字段，客户端不向它发推理请求，并在报告注明。每个批次最大并发 2，每项 GPU 独占、8 GiB 显存；三个批次共 9 项，使用已有总并发限制与同一混合 GPU 池。Worker 资产中保存已校验机器人/物体的独立快照，环境检查镜像将资产链接指向该快照，完整资产下载不受影响。仅对上游明确 UnStableError 做最多三次 seed 尝试；异常、超时或缺失报告必须失败，不将进程退出零替代成功证据。每次尝试保存日志，结果保存实际 seed 与相机形状、kind=environment-check、model_evaluation=false。轮询批次、节点和执行记录，验证两节点运行区间有重叠、初期队列存在、释放资源后排队项启动以及所有项最终状态。

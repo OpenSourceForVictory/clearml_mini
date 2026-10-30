@@ -1,0 +1,280 @@
+{
+  "suite_id": "e5bef998-52c5-4339-93de-b33b2dbc95b2",
+  "batches": [
+    "75cef6e6-f421-4ce8-bbd1-0219169d8824",
+    "de38b75f-6dce-4e6c-97a8-0cea80451e42",
+    "0ca52670-1028-44ac-a781-cb0480136ad0"
+  ],
+  "statuses": {
+    "SUCCEEDED": 9
+  },
+  "node_counts": {
+    "local-4090": 5,
+    "r8000": 4
+  },
+  "peak_active": 2,
+  "peak_running_from_timestamps": 2,
+  "max_pending": 9,
+  "queued_then_started": 9,
+  "cross_node_overlap": [
+    {
+      "jobs": [
+        "1220212c-11e6-45e2-9ee1-4d984f4b5f07",
+        "41e36e8e-a03e-4a32-a8a0-58be9457813f"
+      ],
+      "nodes": [
+        "local-4090",
+        "r8000"
+      ],
+      "seconds": 25.327917
+    },
+    {
+      "jobs": [
+        "44537931-35b3-46bf-b74e-8cc624b252f9",
+        "2adbd4e2-41e9-497f-bf51-69fcafc3fe53"
+      ],
+      "nodes": [
+        "r8000",
+        "local-4090"
+      ],
+      "seconds": 2.508048
+    },
+    {
+      "jobs": [
+        "44537931-35b3-46bf-b74e-8cc624b252f9",
+        "9a07e0be-6c77-4fbb-ab17-d44ea4d6a7f1"
+      ],
+      "nodes": [
+        "r8000",
+        "local-4090"
+      ],
+      "seconds": 24.349416
+    },
+    {
+      "jobs": [
+        "34d47183-f28b-4450-a4c4-9959a1f6a35d",
+        "dd329c1f-8e14-4cda-8e5f-050e59c7b014"
+      ],
+      "nodes": [
+        "local-4090",
+        "r8000"
+      ],
+      "seconds": 15.918738
+    },
+    {
+      "jobs": [
+        "34d47183-f28b-4450-a4c4-9959a1f6a35d",
+        "6462a6f9-3417-47b9-b7a1-0ec60831b00f"
+      ],
+      "nodes": [
+        "local-4090",
+        "r8000"
+      ],
+      "seconds": 5.795792
+    },
+    {
+      "jobs": [
+        "2adbd4e2-41e9-497f-bf51-69fcafc3fe53",
+        "6462a6f9-3417-47b9-b7a1-0ec60831b00f"
+      ],
+      "nodes": [
+        "local-4090",
+        "r8000"
+      ],
+      "seconds": 19.030583
+    },
+    {
+      "jobs": [
+        "dd329c1f-8e14-4cda-8e5f-050e59c7b014",
+        "f5430912-e118-4036-ae1d-9c5f9510aeaf"
+      ],
+      "nodes": [
+        "r8000",
+        "local-4090"
+      ],
+      "seconds": 9.435483
+    }
+  ],
+  "checks": {
+    "nine_successful_jobs": true,
+    "two_hosts_overlap": true,
+    "capacity_and_queue": true,
+    "nine_reported_scene_checks": true
+  },
+  "passed": true,
+  "kind": "environment-check",
+  "model_evaluation": false,
+  "jobs": [
+    {
+      "batch": 1,
+      "task": "adjust_bottle",
+      "id": "1220212c-11e6-45e2-9ee1-4d984f4b5f07",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:42:42.397045+00:00",
+      "finished_at": "2026-10-30T07:43:07.724962+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 1,
+      "task": "beat_block_hammer",
+      "id": "44537931-35b3-46bf-b74e-8cc624b252f9",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:43:12.665542+00:00",
+      "finished_at": "2026-10-30T07:43:41.541171+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 1,
+      "task": "click_bell",
+      "id": "34d47183-f28b-4450-a4c4-9959a1f6a35d",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:44:08.545389+00:00",
+      "finished_at": "2026-10-30T07:44:34.042788+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 2,
+      "task": "adjust_bottle",
+      "id": "41e36e8e-a03e-4a32-a8a0-58be9457813f",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:42:41.936229+00:00",
+      "finished_at": "2026-10-30T07:43:10.900902+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 2,
+      "task": "beat_block_hammer",
+      "id": "2adbd4e2-41e9-497f-bf51-69fcafc3fe53",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:43:39.033123+00:00",
+      "finished_at": "2026-10-30T07:44:04.432048+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 2,
+      "task": "click_bell",
+      "id": "dd329c1f-8e14-4cda-8e5f-050e59c7b014",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:44:18.124050+00:00",
+      "finished_at": "2026-10-30T07:44:46.862308+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 3,
+      "task": "adjust_bottle",
+      "id": "9a07e0be-6c77-4fbb-ab17-d44ea4d6a7f1",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:43:11.607851+00:00",
+      "finished_at": "2026-10-30T07:43:37.014958+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 3,
+      "task": "beat_block_hammer",
+      "id": "6462a6f9-3417-47b9-b7a1-0ec60831b00f",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:43:45.401465+00:00",
+      "finished_at": "2026-10-30T07:44:14.341181+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    },
+    {
+      "batch": 3,
+      "task": "click_bell",
+      "id": "f5430912-e118-4036-ae1d-9c5f9510aeaf",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "started_at": "2026-10-30T07:44:37.426825+00:00",
+      "finished_at": "2026-10-30T07:45:02.805968+00:00",
+      "metrics": {
+        "actual_seed": 100001,
+        "camera_count": 3,
+        "skipped_seeds": 0,
+        "model_evaluation": 0,
+        "environment_check": 1
+      },
+      "artifacts": [
+        "environment-episode-1.json"
+      ]
+    }
+  ]
+}

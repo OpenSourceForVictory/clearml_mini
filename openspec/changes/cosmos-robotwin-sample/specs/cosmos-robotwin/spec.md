@@ -27,8 +27,12 @@
 - **THEN** 预检明确失败，不启动伪造评测
 
 ### Requirement: 内置仿真环境
-样本镜像 SHALL 内置固定版本 RoboTwin、SAPIEN、CUDA 运动规划依赖，无需用户预装 RoboTwin。官方机器人与场景资产 SHALL 在宿主机按固定版本后台下载，校验后原子发布，并只读挂载给容器；未完成版本 SHALL 不可用于评测。镜像构建 SHALL 不依赖资产下载完成。构建和不连接模型的 GPU 自检 SHALL 独立于真实推理服务与 EEF 配置。
+样本镜像 SHALL 内置固定版本 RoboTwin、SAPIEN、CUDA 运动规划依赖，无需用户预装 RoboTwin。官方机器人与场景资产 SHALL 在宿主机按固定版本后台下载，校验后原子发布，并只读挂载给容器；完整性 manifest SHALL 仅用于下载器校验，平台调度、客户端启动和基础渲染自检 SHALL NOT 以全量资产或 manifest 就绪为前提；具体仿真实际需要的文件缺失时 SHALL 如实报错。镜像构建 SHALL 不依赖资产下载完成。构建和不连接模型的 GPU 自检 SHALL 独立于真实推理服务与 EEF 配置。
 
 #### Scenario: 新 Worker 使用样本镜像
 - **WHEN** 具备兼容 NVIDIA 驱动和容器运行时的 Worker 拉取镜像
 - **THEN** 可直接执行镜像依赖自检；宿主机资产就绪后执行 GPU 仿真初始化自检，真实模型评测另行提供服务地址和对应 EEF 配置
+
+#### Scenario: 全量资产尚未下载完成
+- **WHEN** 用户提交任务或执行基础渲染自检，完整资产 manifest 不存在
+- **THEN** 不因缺少 manifest 拦截，客户端按参数启动；基础渲染不读取 RoboTwin 资产，真实任务缺少所需文件时报告具体执行错误

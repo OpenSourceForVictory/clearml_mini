@@ -1,0 +1,106 @@
+[
+  {
+    "case_id": "adjust_bottle-demo_clean-joint",
+    "task_name": "adjust_bottle",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "adjust_bottle-demo_clean-eef",
+    "task_name": "adjust_bottle",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "eef",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "adjust_bottle-demo_randomized-joint",
+    "task_name": "adjust_bottle",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_randomized",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "adjust_bottle-demo_randomized-eef",
+    "task_name": "adjust_bottle",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_randomized",
+      "control_mode": "eef",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "beat_block_hammer-demo_clean-joint",
+    "task_name": "beat_block_hammer",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "beat_block_hammer-demo_clean-eef",
+    "task_name": "beat_block_hammer",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "eef",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "beat_block_hammer-demo_randomized-joint",
+    "task_name": "beat_block_hammer",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_randomized",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  },
+  {
+    "case_id": "beat_block_hammer-demo_randomized-eef",
+    "task_name": "beat_block_hammer",
+    "episodes": 3,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_randomized",
+      "control_mode": "eef",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json",
+      "video_fps": 30
+    }
+  }
+]

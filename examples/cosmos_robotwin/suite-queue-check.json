@@ -1,0 +1,29 @@
+[
+  {
+    "case_id": "adjust_bottle",
+    "task_name": "adjust_bottle",
+    "episodes": 1,
+    "seed": 100001,
+    "parameters": {
+      "max_seed_attempts": 3
+    }
+  },
+  {
+    "case_id": "beat_block_hammer",
+    "task_name": "beat_block_hammer",
+    "episodes": 1,
+    "seed": 100001,
+    "parameters": {
+      "max_seed_attempts": 3
+    }
+  },
+  {
+    "case_id": "click_bell",
+    "task_name": "click_bell",
+    "episodes": 1,
+    "seed": 100001,
+    "parameters": {
+      "max_seed_attempts": 3
+    }
+  }
+]

@@ -12,7 +12,8 @@ test('save reusable suite and run with concurrency; view partial episode results
   await page.getByLabel('密码',{exact:true}).fill(credentials.password);
   await page.getByRole('button',{name:'登录',exact:true}).click();
   await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
-  await page.getByRole('combobox',{name:'客户端模板',exact:true}).selectOption(t.id);
+  await page.getByRole('tab',{name:'评测集合注册',exact:true}).click();
+  await page.getByRole('tabpanel',{name:'评测集合注册',exact:true}).getByRole('combobox',{name:'客户端模板',exact:true}).selectOption(t.id);
   await page.getByLabel('集合名称',{exact:true}).fill('browser-suite-'+Date.now());
   await page.getByRole('button',{name:'保存集合版本',exact:true}).click();
   await expect(page.getByLabel('选择已保存集合')).not.toHaveValue('');

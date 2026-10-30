@@ -544,3 +544,21 @@ dd {
     font-size: 26px;
   }
 }
+
+.cs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  border-bottom: 1px solid #d5dfd7;
+  padding-bottom: 12px;
+}
+.cs-tabs [aria-selected="true"] {
+  background: #27463b;
+  border-color: #27463b;
+  color: white;
+}
+.cs-tabs button:focus-visible {
+  outline: 3px solid #64a68c;
+  outline-offset: 3px;
+}

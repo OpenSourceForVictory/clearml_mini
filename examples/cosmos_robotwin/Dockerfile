@@ -30,8 +30,14 @@ RUN --mount=type=cache,target=/root/.cache/pip git clone --branch ${CUROBO_REF} 
     && python -m pip install -c /tmp/constraints.txt -e /opt/RoboTwin/envs/curobo --no-build-isolation \
     && python -m pip install -c /tmp/constraints.txt warp-lang==1.12.0
 # Point-cloud sampling is optional upstream; include it for user task variants too.
+# Official V0.7.8 uses an uppercase V. Pin its commit and verify the source archive.
+ARG PYTORCH3D_SOURCE_URL=https://codeload.github.com/facebookresearch/pytorch3d/tar.gz/75ebeeaea0908c5527e7b1e305fbc7681382db47
+RUN curl --noproxy localhost,127.0.0.1 --fail --location --http1.1 --retry 5 --retry-all-errors --connect-timeout 30 \
+      "${PYTORCH3D_SOURCE_URL}" -o /tmp/pytorch3d.tar.gz \
+    && echo '09378f154554ccdf02a8a0373ff715edb44ddfc3814d2cfdc308f4f49af67ab9  /tmp/pytorch3d.tar.gz' | sha256sum -c -
 RUN --mount=type=cache,target=/root/.cache/pip python -m pip install -c /tmp/constraints.txt \
-    'git+https://github.com/facebookresearch/pytorch3d.git@v0.7.8' --no-build-isolation
+    /tmp/pytorch3d.tar.gz --no-build-isolation \
+    && rm /tmp/pytorch3d.tar.gz
 WORKDIR /app
 COPY runner /app/runner
 COPY examples/cosmos_robotwin /app/examples/cosmos_robotwin
