@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {api} from './api';
+import {SuiteManager} from './suites';
 
 type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean};
 type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[]};
@@ -35,13 +36,13 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
   const [suites,setSuites]=useState<Suite[]>([]),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [episodeView,setEpisodeView]=useState<{jobId:string;runId:string}|null>(null);
   const [tab,setTab]=useState<'suites'|'runs'|'clients'>('runs');
-  const tabs=[{id:'suites',label:'评测集合注册'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
+  const tabs=[{id:'suites',label:'评测集合管理'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
   const key=useRef({body:'',value:''});
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<Pool[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-    setSuites(s);setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
+    setSuites(old=>{const selected=old.find(x=>x.id===suiteId);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
   };
-  useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page]);
+  useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page,suiteId]);
   async function submit(e:React.FormEvent<HTMLFormElement>) {
     e.preventDefault();setError('');setBusy(true);
     try {
@@ -56,6 +57,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
     } catch(e){setError(String(e));} finally{setBusy(false);}
   }
   function useSuite(suite:Suite) {
+    setSuites(old=>[suite,...old.filter(x=>x.id!==suite.id)]);
     setSuiteId(suite.id);setTemplateId(suite.template_id);setCases(suite.cases);setTab('runs');
   }
   return <>
@@ -70,9 +72,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
         }}>{item.label}</button>)}
     </div>
     <div role="tabpanel" id="cs-panel-suites" aria-labelledby="cs-tab-suites" hidden={tab!=='suites'}>
-      <SuiteRegistration templates={templates} suites={suites} onRun={useSuite} onSaved={suite=>{
-        setSuites(old=>[suite,...old.filter(s=>s.id!==suite.id)]);useSuite(suite);
-      }}/>
+      <SuiteManager templates={templates} onRun={useSuite} onJob={id=>{setSelected(id);setTab('runs');}} onSaved={()=>{void refresh().catch(e=>setError(String(e)));}}/>
     </div>
     <div role="tabpanel" id="cs-panel-clients" aria-labelledby="cs-tab-clients" hidden={tab!=='clients'}>
       <ClientSources/>
@@ -100,7 +100,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
           <Field label="每项总超时秒"><input name="timeout_seconds" type="number" min={1} max={3600} defaultValue={300} required/></Field>
         </div>
         <h3>评测清单</h3>
-        {suiteId&&<p>使用已保存版本。临时调整请先选择“自定义清单”；保存新集合请到“评测集合注册”页。</p>}
+        {suiteId&&<p>使用已保存版本。临时调整请先选择“自定义清单”；保存新集合请到“评测集合管理”页。</p>}
         <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId}/>
         <button className="primary" disabled={busy||!templates.length}>{busy?'提交中…':'提交评测批次'}</button>
       </form>
@@ -136,36 +136,6 @@ function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCa
         <button type="button" disabled={cases.length>=100} onClick={()=>setCases(old=>[...old,{case_id:'case-'+(old.length+1)+'-'+Date.now().toString(36),task_name:'',episodes:3,seed:0,parameters:{}}])}>添加任务</button>
         </fieldset>
         <p>共 {cases.length} 项、{cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合。每项独立调度；资源不足时保留排队；最大并发是上限。</p>
-  </>;
-}
-
-function SuiteRegistration({templates,suites,onSaved,onRun}:{templates:Template[];suites:Suite[];onSaved:(suite:Suite)=>void;onRun:(suite:Suite)=>void}) {
-  const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
-  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
-  return <>
-    <section className="panel"><h2>注册评测集合</h2><p className="hint">选择客户端、定义任务与参数，保存为可重复运行的集合版本。推理服务和资源在运行时填写。</p>
-      {error&&<p role="alert" className="error">{error}</p>}
-      <form onSubmit={async e=>{
-        e.preventDefault();const f=new FormData(e.currentTarget);setBusy(true);setError('');
-        try{const suite=await api<Suite>('suites','POST',{name:f.get('suite_name'),version:f.get('suite_version'),template_id:f.get('template_id'),cases:parseCases(cases)});onSaved(suite);}
-        catch(err){setError(String(err));}finally{setBusy(false);}
-      }}>
-        <div className="submit-grid">
-          <Field label="集合名称"><input name="suite_name" required maxLength={200}/></Field>
-          <Field label="集合版本"><input name="suite_version" required maxLength={100} defaultValue="1"/></Field>
-          <Field label="客户端模板"><select name="template_id" required defaultValue=""><option value="" disabled>选择客户端及版本</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
-        </div>
-        <h3>评测清单</h3><CaseEditor cases={cases} setCases={setCases} setError={setError}/>
-        <button className="primary" disabled={busy||!templates.length}>{busy?'保存中…':'保存集合版本'}</button>
-      </form>
-    </section>
-    <section className="panel"><h2>已注册集合</h2>{!suites.length?<p>尚无集合，可导入 JSON 清单或手动添加任务。</p>:
-      <div className="table-scroll"><table><thead><tr><th>名称 / 版本</th><th>客户端</th><th>任务 / 回合</th><th>操作</th></tr></thead><tbody>{suites.map(suite=>{
-        const template=templates.find(t=>t.id===suite.template_id);
-        return <tr key={suite.id}><td>{suite.name}<small>{suite.version}</small></td><td>{template?`${template.name} / ${template.version}`:'模板已停用或不可用'}</td>
-          <td>{suite.cases.length} 项 / {suite.cases.reduce((n,c)=>n+c.episodes,0)} 回合</td><td><button disabled={!template} onClick={()=>onRun(suite)}>运行此集合</button></td></tr>;
-      })}</tbody></table></div>}
-    </section>
   </>;
 }
 

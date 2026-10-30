@@ -1,0 +1,602 @@
+[
+  {
+    "case_id": "adjust_bottle",
+    "task_name": "adjust_bottle",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "beat_block_hammer",
+    "task_name": "beat_block_hammer",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "blocks_ranking_rgb",
+    "task_name": "blocks_ranking_rgb",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "blocks_ranking_size",
+    "task_name": "blocks_ranking_size",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "click_alarmclock",
+    "task_name": "click_alarmclock",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "click_bell",
+    "task_name": "click_bell",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "dump_bin_bigbin",
+    "task_name": "dump_bin_bigbin",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "grab_roller",
+    "task_name": "grab_roller",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "handover_block",
+    "task_name": "handover_block",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "handover_mic",
+    "task_name": "handover_mic",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "hanging_mug",
+    "task_name": "hanging_mug",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "lift_pot",
+    "task_name": "lift_pot",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "move_can_pot",
+    "task_name": "move_can_pot",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "move_pillbottle_pad",
+    "task_name": "move_pillbottle_pad",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "move_playingcard_away",
+    "task_name": "move_playingcard_away",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "move_stapler_pad",
+    "task_name": "move_stapler_pad",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "open_laptop",
+    "task_name": "open_laptop",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "open_microwave",
+    "task_name": "open_microwave",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "pick_diverse_bottles",
+    "task_name": "pick_diverse_bottles",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "pick_dual_bottles",
+    "task_name": "pick_dual_bottles",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_a2b_left",
+    "task_name": "place_a2b_left",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_a2b_right",
+    "task_name": "place_a2b_right",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_bread_basket",
+    "task_name": "place_bread_basket",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_bread_skillet",
+    "task_name": "place_bread_skillet",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_burger_fries",
+    "task_name": "place_burger_fries",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_can_basket",
+    "task_name": "place_can_basket",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_cans_plasticbox",
+    "task_name": "place_cans_plasticbox",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_container_plate",
+    "task_name": "place_container_plate",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_dual_shoes",
+    "task_name": "place_dual_shoes",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_empty_cup",
+    "task_name": "place_empty_cup",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_fan",
+    "task_name": "place_fan",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_mouse_pad",
+    "task_name": "place_mouse_pad",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_object_basket",
+    "task_name": "place_object_basket",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_object_scale",
+    "task_name": "place_object_scale",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_object_stand",
+    "task_name": "place_object_stand",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_phone_stand",
+    "task_name": "place_phone_stand",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "place_shoe",
+    "task_name": "place_shoe",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "press_stapler",
+    "task_name": "press_stapler",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "put_bottles_dustbin",
+    "task_name": "put_bottles_dustbin",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "put_object_cabinet",
+    "task_name": "put_object_cabinet",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "rotate_qrcode",
+    "task_name": "rotate_qrcode",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "scan_object",
+    "task_name": "scan_object",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "shake_bottle",
+    "task_name": "shake_bottle",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "shake_bottle_horizontally",
+    "task_name": "shake_bottle_horizontally",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "stack_blocks_three",
+    "task_name": "stack_blocks_three",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "stack_blocks_two",
+    "task_name": "stack_blocks_two",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "stack_bowls_three",
+    "task_name": "stack_bowls_three",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "stack_bowls_two",
+    "task_name": "stack_bowls_two",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "stamp_seal",
+    "task_name": "stamp_seal",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  },
+  {
+    "case_id": "turn_switch",
+    "task_name": "turn_switch",
+    "episodes": 100,
+    "seed": 100000,
+    "parameters": {
+      "task_config": "demo_clean",
+      "control_mode": "joint",
+      "state_source": "command",
+      "eef_config": "cosmos/eef.json"
+    }
+  }
+]

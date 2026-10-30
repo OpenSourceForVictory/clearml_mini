@@ -1,0 +1,34 @@
+{
+  "release": "suite-release-20261030-185647",
+  "remote_stage": "/home/huawei/clearml_mini/.runtime/suite-release-20261030-185647",
+  "backup_image": "mini-eval-api:before-suite-release-20261030-185647",
+  "status": "deployed-verified",
+  "database_head": "e518f10",
+  "original_suite_count": 2,
+  "original_suites_unchanged": true,
+  "workers": [
+    {
+      "node_name": "r8000",
+      "online": true,
+      "basic_ready": true
+    },
+    {
+      "node_name": "local-4090",
+      "online": true,
+      "basic_ready": true
+    }
+  ],
+  "browser": {
+    "production_ui": "passed",
+    "draft_id": "02204710-bbbe-404b-a580-78fded2eb31b",
+    "task_count": 3,
+    "episodes": 6,
+    "deleted": true,
+    "screenshot": ".runtime/suite-live-ui.png"
+  },
+  "tests": {
+    "backend": 102,
+    "browser": 7,
+    "migration": "passed"
+  }
+}

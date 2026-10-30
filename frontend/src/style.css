@@ -562,3 +562,6 @@ dd {
   outline: 3px solid #64a68c;
   outline-offset: 3px;
 }
+
+.suite-task-table { max-height: 520px; overflow: auto; }
+.suite-task-table thead { position: sticky; top: 0; background: #fff; z-index: 1; }

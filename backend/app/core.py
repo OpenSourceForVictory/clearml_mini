@@ -224,6 +224,12 @@ class EvaluationSuite(Base):
     name: Mapped[str] = mapped_column(String(200))
     version: Mapped[str] = mapped_column(String(100))
     template_id: Mapped[str] = mapped_column(ForeignKey('client_templates.id'))
+    status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    description: Mapped[str] = mapped_column(String(2000), default='', server_default='')
+    tags: Mapped[list] = mapped_column(JSON_TYPE, default=list, server_default='[]')
+    source: Mapped[str] = mapped_column(String(1000), default='', server_default='')
     cases: Mapped[list] = mapped_column(JSON_TYPE)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

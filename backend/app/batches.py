@@ -60,7 +60,7 @@ class SuiteCreate(BaseModel):
 
 
 def suite_view(suite):
-    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at')}
+    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source')}
 
 
 def batch_view(s, batch):
@@ -89,23 +89,12 @@ def batch_view(s, batch):
 
 
 def install(app, db, current):
+    from . import suites as suite_management
+    suite_management.install(app, db, current)
     @app.get('/api/v1/suites')
     def suites(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
-        q = select(EvaluationSuite).where(EvaluationSuite.owner_id == user.id).order_by(EvaluationSuite.created_at.desc())
+        q = select(EvaluationSuite).where(EvaluationSuite.owner_id == user.id, EvaluationSuite.status == 'published', EvaluationSuite.archived.is_(False)).order_by(EvaluationSuite.created_at.desc())
         return [suite_view(x) for x in s.scalars(q.offset((page-1)*100).limit(100))]
-
-    @app.post('/api/v1/suites', status_code=201)
-    def save_suite(body: SuiteCreate, user=Depends(current), s: Session = Depends(db)):
-        lock(s)
-        template = s.get(ClientTemplate, body.template_id)
-        if not template or not template.enabled or (template.owner_id is not None and template.owner_id != user.id):
-            raise HTTPException(400, 'unknown or disabled client template')
-        if s.scalar(select(EvaluationSuite.id).where(EvaluationSuite.owner_id == user.id,
-                EvaluationSuite.name == body.name, EvaluationSuite.version == body.version)):
-            raise HTTPException(409, 'suite version already exists')
-        suite = EvaluationSuite(owner_id=user.id, **body.model_dump())
-        s.add(suite); s.commit()
-        return suite_view(suite)
 
     @app.post('/api/v1/batches', status_code=201)
     def create(body: BatchSubmit, idempotency_key: Optional[str] = Header(None), user=Depends(current), s: Session = Depends(db)):
@@ -122,6 +111,8 @@ def install(app, db, current):
             suite = s.get(EvaluationSuite, body.suite_id)
             if not suite or suite.owner_id != user.id:
                 raise HTTPException(404, 'suite not found')
+            if suite.status != 'published' or suite.archived:
+                raise HTTPException(409, 'suite must be published and not archived')
             if body.cases or body.client.template_id != suite.template_id:
                 raise HTTPException(400, 'suite run must use saved cases and client template')
             body.cases = [Case.model_validate(c) for c in suite.cases]

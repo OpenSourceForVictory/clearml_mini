@@ -11,9 +11,11 @@ async function openWorkbench(page:Page, role='admin') {
     let body:any=[];
     if(path==='auth/me') body={id:'user-1',username:'tester',role};
     else if(path==='client-templates') body=[template];
+    else if(path==='suites/manage') body={items:[],total:0};
+    else if(path==='suites/preview') {const doc=JSON.parse(route.request().postDataJSON().content);body={valid:true,errors:[],document:doc,task_count:doc.cases.length,total_episodes:3};}
     else if(path==='pools') body=[{id:'pool-1',name:'gpu-pool'}];
     else if(path==='suites') {
-      if(route.request().method()==='POST') {body={id:'suite-1',...route.request().postDataJSON()};suites.push(body);}
+      if(route.request().method()==='POST') {body={id:'suite-1',revision:0,archived:false,...route.request().postDataJSON()};suites.push(body);}
       else body=suites;
     } else if(path==='batches') {
       if(route.request().method()==='POST') {
@@ -31,18 +33,20 @@ async function openWorkbench(page:Page, role='admin') {
 test('suite registration hands off to run; tabs preserve drafts and send selected suite',async({page})=>{
   const submitted=await openWorkbench(page);
   const runs=page.getByRole('tabpanel',{name:'评测集合运行',exact:true});
-  const registration=page.getByRole('tabpanel',{name:'评测集合注册',exact:true});
+  const registration=page.getByRole('tabpanel',{name:'评测集合管理',exact:true});
   await expect(runs).toBeVisible();
   await runs.getByLabel('批次名称',{exact:true}).fill('RoboTwin batch');
-  await page.getByRole('tab',{name:'评测集合注册',exact:true}).click();
+  await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
   await expect(runs).toBeHidden();
   await registration.getByLabel('集合名称',{exact:true}).fill('RoboTwin full');
-  await registration.getByLabel('客户端模板',{exact:true}).selectOption('client-1');
+  await registration.getByLabel('集合客户端模板',{exact:true}).selectOption('client-1');
   await page.getByRole('tab',{name:'客户端注册',exact:true}).click();
   await expect(page.getByRole('button',{name:'登记客户端模板',exact:true})).toBeVisible();
-  await page.getByRole('tab',{name:'评测集合注册',exact:true}).click();
+  await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
   await expect(registration.getByLabel('集合名称',{exact:true})).toHaveValue('RoboTwin full');
-  await registration.getByRole('button',{name:'保存集合版本',exact:true}).click();
+  await registration.getByRole('button',{name:'添加任务',exact:true}).click();
+  await registration.getByLabel('任务名称 0',{exact:true}).fill('demo');
+  await registration.getByRole('button',{name:'发布并运行',exact:true}).click();
   await expect(runs).toBeVisible();
   await expect(runs.getByLabel('批次名称',{exact:true})).toHaveValue('RoboTwin batch');
   await expect(runs.getByLabel('选择已保存集合')).toHaveValue('suite-1');
@@ -66,6 +70,6 @@ test('member can register source without admin controls; keyboard switches tabs'
   await expect(page.getByRole('button',{name:'登记客户端模板',exact:true})).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'可用客户端模板'})).toBeVisible();
   await page.keyboard.press('Home');
-  await expect(page.getByRole('tab',{name:'评测集合注册',exact:true})).toBeFocused();
-  await expect(page.getByRole('tabpanel',{name:'评测集合注册',exact:true})).toBeVisible();
+  await expect(page.getByRole('tab',{name:'评测集合管理',exact:true})).toBeFocused();
+  await expect(page.getByRole('tabpanel',{name:'评测集合管理',exact:true})).toBeVisible();
 });
