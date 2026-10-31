@@ -1,0 +1,1860 @@
+{
+  "date": "2026-10-31",
+  "change": "batch-controls",
+  "backend_full": {
+    "tests": "136",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "142.098"
+  },
+  "controls_supplement": {
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "16.926"
+  },
+  "backend_distinct_passed": 137,
+  "postgresql": {
+    "tests": "15",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "19.102"
+  },
+  "migration": {
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "2.547"
+  },
+  "schema_check": "No new upgrade operations detected.",
+  "browser": {
+    "passed": 24,
+    "failed": 0
+  },
+  "docker": {
+    "suite_id": "68eff41e-3b61-43b9-8f4a-fbfb336dbe1c",
+    "batch_id": "325e7f40-f597-443b-85de-378b6b35c160",
+    "production": false,
+    "pause": {
+      "action": "pause",
+      "scheduling_paused": true,
+      "control_revision": 1,
+      "control_updated_at": "2026-10-31T07:19:56.582408+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "paused": {
+      "scheduling_paused": true,
+      "control_revision": 1,
+      "control_updated_at": "2026-10-31T07:19:56.582408+00:00",
+      "id": "325e7f40-f597-443b-85de-378b6b35c160",
+      "suite_id": "68eff41e-3b61-43b9-8f4a-fbfb336dbe1c",
+      "max_concurrent": 1,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "f59b45b2-23d8-4e53-b7f3-a7ac8f67c784",
+      "created_at": "2026-10-31T07:19:54.008440+00:00",
+      "status": "PENDING",
+      "total": 6,
+      "succeeded": 1,
+      "finished": 1,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "7dc6b479-47ed-4451-af3d-b43491e24bc1",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "d9f7e8b6-9cc2-4486-995e-460b56cdbe9c",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "batch-controls-cs",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "afc62795-2453-4867-9bf9-8c540551877e",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "03331191-8d7e-4cc2-a540-237d0bb2e133",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:20:02.675262+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "d0d50a74-c8e2-479e-ab78-618c4d81c4cc",
+                "node_name": "batch-controls-cs",
+                "gpu_index": 0,
+                "gpu_model": "virtual",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "07e4af15-f98e-48bc-ac93-41560569265a",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "a191f225-fb86-4bfb-8678-5fb021ef63ea",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:20:02.675262+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "d0d50a74-c8e2-479e-ab78-618c4d81c4cc",
+                "node_name": "batch-controls-cs",
+                "gpu_index": 0,
+                "gpu_model": "virtual",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "3dcdfe03-1e11-478a-a620-22a41e58be87",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "1f3b0b7d-80c9-49fe-bf36-f4b240619491",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:20:02.675262+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "d0d50a74-c8e2-479e-ab78-618c4d81c4cc",
+                "node_name": "batch-controls-cs",
+                "gpu_index": 0,
+                "gpu_model": "virtual",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "aeaabf50-dbdd-4210-9059-f566aeef288d",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "55191dc1-3ffa-410c-803c-69bd41e41641",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:20:02.675262+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "d0d50a74-c8e2-479e-ab78-618c4d81c4cc",
+                "node_name": "batch-controls-cs",
+                "gpu_index": 0,
+                "gpu_model": "virtual",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "25feb225-f8ed-4153-8cba-231de41f48ee",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "ba58de71-8e74-4460-889b-84a73e44ba73",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:20:02.675262+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "d0d50a74-c8e2-479e-ab78-618c4d81c4cc",
+                "node_name": "batch-controls-cs",
+                "gpu_index": 0,
+                "gpu_model": "virtual",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:20:02.675262+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 1,
+          "PENDING": 5
+        },
+        "cancel_requested_tasks": 0,
+        "cleanup_pending_tasks": 0,
+        "completed_episodes": 1,
+        "successes": 1,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "resume": {
+      "action": "resume",
+      "scheduling_paused": false,
+      "control_revision": 2,
+      "control_updated_at": "2026-10-31T07:20:08.697116+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "cancel": {
+      "action": "cancel",
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:20:12.759362+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 4,
+        "cancel_requested": 1,
+        "already_cancelling": 0,
+        "terminal_unchanged": 1
+      }
+    },
+    "after_cancel": {
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:20:12.759362+00:00",
+      "id": "325e7f40-f597-443b-85de-378b6b35c160",
+      "suite_id": "68eff41e-3b61-43b9-8f4a-fbfb336dbe1c",
+      "max_concurrent": 1,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "f59b45b2-23d8-4e53-b7f3-a7ac8f67c784",
+      "created_at": "2026-10-31T07:19:54.008440+00:00",
+      "status": "RUNNING",
+      "total": 6,
+      "succeeded": 1,
+      "finished": 5,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "7dc6b479-47ed-4451-af3d-b43491e24bc1",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "d9f7e8b6-9cc2-4486-995e-460b56cdbe9c",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "batch-controls-cs",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "afc62795-2453-4867-9bf9-8c540551877e",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "CANCEL_REQUESTED",
+          "attempt": 1,
+          "run_id": "03331191-8d7e-4cc2-a540-237d0bb2e133",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [
+              1
+            ],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": false,
+          "node_name": "batch-controls-cs",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "07e4af15-f98e-48bc-ac93-41560569265a",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "a191f225-fb86-4bfb-8678-5fb021ef63ea",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "3dcdfe03-1e11-478a-a620-22a41e58be87",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "1f3b0b7d-80c9-49fe-bf36-f4b240619491",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "aeaabf50-dbdd-4210-9059-f566aeef288d",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "55191dc1-3ffa-410c-803c-69bd41e41641",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "25feb225-f8ed-4153-8cba-231de41f48ee",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "ba58de71-8e74-4460-889b-84a73e44ba73",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:20:12.772693+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 1,
+          "CANCEL_REQUESTED": 1,
+          "CANCELLED": 4
+        },
+        "cancel_requested_tasks": 1,
+        "cleanup_pending_tasks": 1,
+        "completed_episodes": 1,
+        "successes": 1,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "final_resume": {
+      "action": "resume",
+      "scheduling_paused": false,
+      "control_revision": 4,
+      "control_updated_at": "2026-10-31T07:20:15.312677+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "final": {
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:20:12.759362+00:00",
+      "id": "325e7f40-f597-443b-85de-378b6b35c160",
+      "suite_id": "68eff41e-3b61-43b9-8f4a-fbfb336dbe1c",
+      "max_concurrent": 1,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "f59b45b2-23d8-4e53-b7f3-a7ac8f67c784",
+      "created_at": "2026-10-31T07:19:54.008440+00:00",
+      "status": "CANCELLED",
+      "total": 6,
+      "succeeded": 1,
+      "finished": 6,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "7dc6b479-47ed-4451-af3d-b43491e24bc1",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "d9f7e8b6-9cc2-4486-995e-460b56cdbe9c",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "batch-controls-cs",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "afc62795-2453-4867-9bf9-8c540551877e",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "03331191-8d7e-4cc2-a540-237d0bb2e133",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [
+              1
+            ],
+            "success_rate": null
+          },
+          "error": "runner exited with code 137",
+          "cleanup_confirmed": true,
+          "node_name": "batch-controls-cs",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "07e4af15-f98e-48bc-ac93-41560569265a",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "a191f225-fb86-4bfb-8678-5fb021ef63ea",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "3dcdfe03-1e11-478a-a620-22a41e58be87",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "1f3b0b7d-80c9-49fe-bf36-f4b240619491",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "aeaabf50-dbdd-4210-9059-f566aeef288d",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "55191dc1-3ffa-410c-803c-69bd41e41641",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "25feb225-f8ed-4153-8cba-231de41f48ee",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "ba58de71-8e74-4460-889b-84a73e44ba73",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "f86c5eaf-a88b-4e39-af8d-7018bcd3a158",
+            "pool_name": "batch-controls-cs",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "control-sdk-1793431193975798882",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:20:15.307993+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 1,
+          "CANCELLED": 5
+        },
+        "cancel_requested_tasks": 0,
+        "cleanup_pending_tasks": 0,
+        "completed_episodes": 1,
+        "successes": 1,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "nodes": [
+      "batch-controls-cs"
+    ],
+    "suite_archived": true
+  },
+  "production": {
+    "suite_id": "25f961a0-ea06-452b-813f-c0764b7fa171",
+    "batch_id": "3bcdcefe-8596-4778-9928-e6937aa5ff11",
+    "production": true,
+    "pause": {
+      "action": "pause",
+      "scheduling_paused": true,
+      "control_revision": 1,
+      "control_updated_at": "2026-10-31T07:22:50.309438+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "paused": {
+      "scheduling_paused": true,
+      "control_revision": 1,
+      "control_updated_at": "2026-10-31T07:22:50.309438+00:00",
+      "id": "3bcdcefe-8596-4778-9928-e6937aa5ff11",
+      "suite_id": "25f961a0-ea06-452b-813f-c0764b7fa171",
+      "max_concurrent": 2,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "efe14d0c-83ac-4087-b458-ce861685fab5",
+      "created_at": "2026-10-31T07:22:46.937105+00:00",
+      "status": "PENDING",
+      "total": 6,
+      "succeeded": 2,
+      "finished": 2,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "24aae14d-d4e1-4531-b002-866ba0e40b23",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "06f31aa2-a3b2-4ec2-baac-65a6accc49d8",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "local-4090",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "5bd8c0ab-a417-4910-a293-d0682d270f74",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "4e3d98f9-a478-4fe7-a7c7-142d33ae10bb",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "r8000",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "190b067b-5e90-448a-a9ac-dca6a41478a3",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "ca8ea043-6d85-44be-8366-9aeb932b2ed4",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:23:01.160371+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+                "node_name": "local-4090",
+                "gpu_index": 0,
+                "gpu_model": "NVIDIA GeForce RTX 4090",
+                "ready": false,
+                "reasons": []
+              },
+              {
+                "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+                "node_name": "r8000",
+                "gpu_index": 0,
+                "gpu_model": "Quadro RTX 8000",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "06bddf61-7181-4a46-9223-fe3fc474fa5c",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "d5d33053-bc63-4ed1-b7d4-f4aa6da5ea59",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:23:01.160371+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+                "node_name": "local-4090",
+                "gpu_index": 0,
+                "gpu_model": "NVIDIA GeForce RTX 4090",
+                "ready": false,
+                "reasons": []
+              },
+              {
+                "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+                "node_name": "r8000",
+                "gpu_index": 0,
+                "gpu_model": "Quadro RTX 8000",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "f80d8a5b-0e08-4a5b-ae79-1f46b11b1839",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "20640df5-22d1-479f-a16f-f9f20b345f13",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:23:01.160371+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+                "node_name": "local-4090",
+                "gpu_index": 0,
+                "gpu_model": "NVIDIA GeForce RTX 4090",
+                "ready": false,
+                "reasons": []
+              },
+              {
+                "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+                "node_name": "r8000",
+                "gpu_index": 0,
+                "gpu_model": "Quadro RTX 8000",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "c2be428c-ca9e-461c-b22a-6e06ba92396f",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "PENDING",
+          "attempt": 1,
+          "run_id": "4bde728b-a6b0-415d-a9d0-038c0b5e61ef",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": {
+            "checked_at": "2026-10-31T07:23:01.160371+00:00",
+            "status": "waiting_resources",
+            "nodes": [
+              {
+                "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+                "node_name": "local-4090",
+                "gpu_index": 0,
+                "gpu_model": "NVIDIA GeForce RTX 4090",
+                "ready": false,
+                "reasons": []
+              },
+              {
+                "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+                "node_name": "r8000",
+                "gpu_index": 0,
+                "gpu_model": "Quadro RTX 8000",
+                "ready": false,
+                "reasons": []
+              }
+            ],
+            "reasons": [
+              {
+                "code": "batch_paused",
+                "category": "resource",
+                "message": "本批次已暂停后续调度",
+                "action": "恢复批次调度后参与资源分配"
+              }
+            ]
+          },
+          "reason_codes": [
+            "batch_paused"
+          ],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:23:01.160371+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 2,
+          "PENDING": 4
+        },
+        "cancel_requested_tasks": 0,
+        "cleanup_pending_tasks": 0,
+        "completed_episodes": 2,
+        "successes": 2,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "resume": {
+      "action": "resume",
+      "scheduling_paused": false,
+      "control_revision": 2,
+      "control_updated_at": "2026-10-31T07:23:07.714826+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "cancel": {
+      "action": "cancel",
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:23:11.191308+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 2,
+        "cancel_requested": 2,
+        "already_cancelling": 0,
+        "terminal_unchanged": 2
+      }
+    },
+    "after_cancel": {
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:23:11.191308+00:00",
+      "id": "3bcdcefe-8596-4778-9928-e6937aa5ff11",
+      "suite_id": "25f961a0-ea06-452b-813f-c0764b7fa171",
+      "max_concurrent": 2,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "efe14d0c-83ac-4087-b458-ce861685fab5",
+      "created_at": "2026-10-31T07:22:46.937105+00:00",
+      "status": "RUNNING",
+      "total": 6,
+      "succeeded": 2,
+      "finished": 4,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "24aae14d-d4e1-4531-b002-866ba0e40b23",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "06f31aa2-a3b2-4ec2-baac-65a6accc49d8",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "local-4090",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "5bd8c0ab-a417-4910-a293-d0682d270f74",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "4e3d98f9-a478-4fe7-a7c7-142d33ae10bb",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "r8000",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "190b067b-5e90-448a-a9ac-dca6a41478a3",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "CANCEL_REQUESTED",
+          "attempt": 1,
+          "run_id": "ca8ea043-6d85-44be-8366-9aeb932b2ed4",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": false,
+          "node_name": "local-4090",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "06bddf61-7181-4a46-9223-fe3fc474fa5c",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "CANCEL_REQUESTED",
+          "attempt": 1,
+          "run_id": "d5d33053-bc63-4ed1-b7d4-f4aa6da5ea59",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": false,
+          "node_name": "r8000",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "f80d8a5b-0e08-4a5b-ae79-1f46b11b1839",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "20640df5-22d1-479f-a16f-f9f20b345f13",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "c2be428c-ca9e-461c-b22a-6e06ba92396f",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "4bde728b-a6b0-415d-a9d0-038c0b5e61ef",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:23:11.291679+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 2,
+          "CANCEL_REQUESTED": 2,
+          "CANCELLED": 2
+        },
+        "cancel_requested_tasks": 2,
+        "cleanup_pending_tasks": 2,
+        "completed_episodes": 2,
+        "successes": 2,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "final_resume": {
+      "action": "resume",
+      "scheduling_paused": false,
+      "control_revision": 4,
+      "control_updated_at": "2026-10-31T07:23:14.053839+00:00",
+      "counts": {
+        "withdrawn": 0,
+        "cancelled": 0,
+        "cancel_requested": 0,
+        "already_cancelling": 0,
+        "terminal_unchanged": 0
+      }
+    },
+    "final": {
+      "scheduling_paused": true,
+      "control_revision": 3,
+      "control_updated_at": "2026-10-31T07:23:11.191308+00:00",
+      "id": "3bcdcefe-8596-4778-9928-e6937aa5ff11",
+      "suite_id": "25f961a0-ea06-452b-813f-c0764b7fa171",
+      "max_concurrent": 2,
+      "title": "[验收] 暂停恢复取消",
+      "owner_id": "efe14d0c-83ac-4087-b458-ce861685fab5",
+      "created_at": "2026-10-31T07:22:46.937105+00:00",
+      "status": "CANCELLED",
+      "total": 6,
+      "succeeded": 2,
+      "finished": 6,
+      "total_episodes": 6,
+      "cases": [
+        {
+          "job_id": "24aae14d-d4e1-4531-b002-866ba0e40b23",
+          "case_id": "0",
+          "task_name": "slow",
+          "seed": 0,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "06f31aa2-a3b2-4ec2-baac-65a6accc49d8",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "local-4090",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "5bd8c0ab-a417-4910-a293-d0682d270f74",
+          "case_id": "1",
+          "task_name": "slow",
+          "seed": 1,
+          "episodes": 1,
+          "status": "SUCCEEDED",
+          "attempt": 1,
+          "run_id": "4e3d98f9-a478-4fe7-a7c7-142d33ae10bb",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 1,
+            "successes": 1,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": "r8000",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "190b067b-5e90-448a-a9ac-dca6a41478a3",
+          "case_id": "2",
+          "task_name": "slow",
+          "seed": 2,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "ca8ea043-6d85-44be-8366-9aeb932b2ed4",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [
+              1
+            ],
+            "success_rate": null
+          },
+          "error": "runner exited with code 137",
+          "cleanup_confirmed": true,
+          "node_name": "local-4090",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "06bddf61-7181-4a46-9223-fe3fc474fa5c",
+          "case_id": "3",
+          "task_name": "slow",
+          "seed": 3,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "d5d33053-bc63-4ed1-b7d4-f4aa6da5ea59",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [
+              1
+            ],
+            "success_rate": null
+          },
+          "error": "runner exited with code 137",
+          "cleanup_confirmed": true,
+          "node_name": "r8000",
+          "gpu_index": 0,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "f80d8a5b-0e08-4a5b-ae79-1f46b11b1839",
+          "case_id": "4",
+          "task_name": "slow",
+          "seed": 4,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "20640df5-22d1-479f-a16f-f9f20b345f13",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        },
+        {
+          "job_id": "c2be428c-ca9e-461c-b22a-6e06ba92396f",
+          "case_id": "5",
+          "task_name": "slow",
+          "seed": 5,
+          "episodes": 1,
+          "status": "CANCELLED",
+          "attempt": 1,
+          "run_id": "4bde728b-a6b0-415d-a9d0-038c0b5e61ef",
+          "episode_reporting": true,
+          "progress": {
+            "completed": 0,
+            "successes": 0,
+            "errors": 0,
+            "running": [],
+            "success_rate": null
+          },
+          "error": null,
+          "cleanup_confirmed": true,
+          "node_name": null,
+          "gpu_index": null,
+          "waiting": null,
+          "reason_codes": [],
+          "config": {
+            "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+            "pool_name": "gpu-pool",
+            "gpu_mode": "exclusive",
+            "requested_vram_gb": 0,
+            "required_gpu_model": null,
+            "endpoint": "http://192.168.137.71:19091/infer",
+            "client_name": "平台 SDK HTTP 协议自检",
+            "client_version": "1"
+          }
+        }
+      ],
+      "checked_at": "2026-10-31T07:23:13.962368+00:00",
+      "summary": {
+        "states": {
+          "SUCCEEDED": 2,
+          "CANCELLED": 4
+        },
+        "cancel_requested_tasks": 0,
+        "cleanup_pending_tasks": 0,
+        "completed_episodes": 2,
+        "successes": 2,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "execution_failures": 0,
+        "reporting_tasks": 6,
+        "unreported_tasks": 0,
+        "success_rate": 1.0
+      }
+    },
+    "nodes": [
+      "local-4090",
+      "r8000"
+    ],
+    "suite_archived": true
+  },
+  "deployment": {
+    "release": "batch-controls-release-20261031-152122",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/batch-controls-release-20261031-152122",
+    "backup_image": "mini-eval-api:before-batch-controls-release-20261031-152122",
+    "status": "api-deployed"
+  },
+  "limits": [
+    "SDK HTTP 协议自检，不是真实 RoboTwin 或模型推理成绩",
+    "暂停以 Worker 领取执行权为边界，STARTING 任务继续执行"
+  ],
+  "cleanup": {
+    "temporary_services_stopped": true,
+    "isolated_database_removed": true,
+    "production_suite_archived": true
+  },
+  "production_browser": "controls, confirmation dismissal, inspection and refresh passed"
+}

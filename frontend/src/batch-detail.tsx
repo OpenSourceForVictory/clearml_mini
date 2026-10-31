@@ -6,7 +6,7 @@ import {ArtifactList,EpisodeList} from './cs';
 export const statusLabels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 type Reason={code:string;message:string};
 type Case={job_id:string;case_id:string;task_name:string;status:string;attempt:number;run_id:string;episodes:number;seed:number;episode_reporting:boolean;progress:{completed:number;successes:number};node_name:string|null;gpu_index:number|null;reason_codes:string[];waiting:null|{reasons:Reason[];nodes:{node_name:string;gpu_index:number;reasons:Reason[]}[]};config:{pool_name:string;endpoint:string;client_name:string;client_version:string;gpu_mode:string;requested_vram_gb:number};error:string|null};
-type Monitor={checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
+type Monitor={scheduling_paused:boolean;control_revision:number;checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{cancel_requested_tasks:number;cleanup_pending_tasks:number;states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
 type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:string;message?:string;attempt:number}[]};
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
@@ -15,6 +15,18 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
   const [status,setStatus]=useState(savedFilters.current[id]?.status||''),[reason,setReason]=useState(savedFilters.current[id]?.reason||''),[query,setQuery]=useState(savedFilters.current[id]?.query||''),[job,setJob]=useState('');
   useEffect(()=>{savedFilters.current[id]={status,reason,query};},[id,status,reason,query,savedFilters]);
   const [selected,setSelected]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[retryError,setRetryError]=useState(''),[result,setResult]=useState<RetryResult|null>(null);
+  const [command,setCommand]=useState<{action:'pause'|'resume'|'cancel';expected_revision:number}|null>(null);
+  const [controlError,setControlError]=useState(''),[controlMessage,setControlMessage]=useState('');
+  const [latestControl,setLatestControl]=useState<{scheduling_paused:boolean;control_revision:number}|null>(null);
+  const control=latestControl&&latestControl.control_revision>(b?.control_revision??-1)?latestControl:b;
+  async function changeControl(request:NonNullable<typeof command>){
+    setCommand(request);setBusy(true);setControlError('');setControlMessage('');
+    try{
+      const result=await api<{scheduling_paused:boolean;control_revision:number;counts:{withdrawn:number;cancelled:number;cancel_requested:number;already_cancelling:number;terminal_unchanged:number}}>('batches/'+id+'/control','POST',request);
+      setLatestControl(result);setCommand(null);
+      setControlMessage(request.action==='pause'?`已暂停后续调度，撤回 ${result.counts.withdrawn} 项预留。已领取的任务继续执行。`:request.action==='resume'?'已恢复调度；已取消的任务不会自动重试。':`取消请求已接受：直接取消 ${result.counts.cancelled} 项，请求停止 ${result.counts.cancel_requested} 项，已有 ${result.counts.already_cancelling} 项取消中，保留 ${result.counts.terminal_unchanged} 项终态结果。请等待停止和清理确认。`);
+    }catch(e){setControlError(String(e)+'。请核对最新状态；重试仍使用原控制版本，关闭后可重新发起。');}finally{setBusy(false);}
+  }
   const cases=b?.cases.filter(c=>(!status||c.status===status)&&(!reason||c.reason_codes.includes(reason))&&(`${c.case_id} ${c.task_name}`).includes(query))||[];
   const reasons=new Map<string,string>();b?.cases.forEach(c=>[...(c.waiting?.reasons||[]),...(c.waiting?.nodes.flatMap(n=>n.reasons)||[])].forEach(r=>reasons.set(r.code,r.message)));
   async function retry(){setBusy(true);setRetryError('');try{
@@ -25,6 +37,15 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
     {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>
+      <section aria-label="批次运行控制">
+        <p>{control?.scheduling_paused?'调度已暂停':'调度已开启'} · 取消中 {b.summary.cancel_requested_tasks||0} 项 · 待清理 {b.summary.cleanup_pending_tasks||0} 项（数量可能重叠）</p>
+        <p className="hint">暂停只阻止后续任务领取，已领取的任务继续执行。恢复不会自动补跑已取消任务。</p>
+        <button disabled={busy||!!command} onClick={()=>void changeControl({action:control?.scheduling_paused?'resume':'pause',expected_revision:control!.control_revision})}>{control?.scheduling_paused?'恢复调度':'暂停后续调度'}</button>
+        <button disabled={busy||!!command} onClick={()=>{setControlError('');setControlMessage('');setCommand({action:'cancel',expected_revision:control!.control_revision});}}>取消整批</button>
+        {command&&<div aria-label="确认批次操作"><p>{command.action==='cancel'?'将取消等待任务并停止运行任务，保留已有结果。资源在停止确认后释放。':'请核对批次当前调度状态后再操作。'}</p>
+          <button disabled={busy} onClick={()=>void changeControl(command)}>{controlError?'重试原控制请求':command.action==='cancel'?'确认取消整批':'提交控制请求'}</button><button disabled={busy} onClick={()=>{setCommand(null);setControlError('');}}>关闭操作确认</button></div>}
+        {controlError&&<p role="alert" className="error">{controlError}</p>}{controlMessage&&<p role="status">{controlMessage}</p>}
+      </section>
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>
       <p>已完成回合 {b.summary.completed_episodes}/{b.total_episodes} · 目标成功 {b.summary.successes} · 目标失败 {b.summary.goal_failures} · 回合异常 {b.summary.episode_errors} · 执行失败/超时 {b.summary.execution_failures}</p>
       <p>目标成功率 {b.summary.success_rate===null?'暂无数据':(b.summary.success_rate*100).toFixed(1)+'%'} · 未上报任务 {b.summary.unreported_tasks}</p>

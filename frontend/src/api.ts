@@ -1,4 +1,5 @@
 const errors: Record<string, string> = {
+  "batch control changed; refresh before retrying": "批次控制已变化，本次操作未执行，请核对最新状态",
   "suite not found": "评测集合不存在或无权访问",
   "suite must be published and not archived": "请选择已发布且未归档的集合",
   "suite run must use saved cases and client template": "集合运行必须使用其已保存清单和关联客户端",

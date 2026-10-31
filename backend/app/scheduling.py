@@ -207,6 +207,8 @@ def tick(factory, at=None):
                 order = {g: i for i, g in enumerate(groups)}
                 candidates.sort(key=lambda j: order[j.batch_id or 'standalone'])
                 for job in candidates:
+                    if job.batch_id and batches[job.batch_id].scheduling_paused:
+                        continue
                     if endpoint_conflict(job, held_jobs):
                         continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:

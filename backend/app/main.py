@@ -243,10 +243,8 @@ def cancel(job_id: str, user: User = Depends(current), s: Session = Depends(db))
     if not job:
         raise HTTPException(404, 'job not found')
     visible(job, user)
-    if job.status in ('SUCCEEDED','FAILED','CANCELLED','TIMED_OUT'):
-        raise HTTPException(409, 'terminal job')
-    if job.status != 'CANCEL_REQUESTED':
-        transition(s, job.runs[-1], 'CANCELLED' if job.status in ('PENDING', 'RESERVED') else 'CANCEL_REQUESTED')
+    from .batch_controls import cancel_job
+    cancel_job(s, job)
     s.commit()
     return {'status': job.status}
 

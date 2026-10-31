@@ -6,7 +6,7 @@ import {SuiteManager} from './suites';
 import {ImageClients} from './image-runtime';
 import {RunWizard, type Template, type Suite} from './run-wizard';
 
-type Batch = {id:string;title:string;status:string;total:number;succeeded:number;finished:number;total_episodes:number;
+type Batch = {scheduling_paused?:boolean;id:string;title:string;status:string;total:number;succeeded:number;finished:number;total_episodes:number;
   cases:{job_id:string;case_id:string;task_name:string;episodes:number;seed:number;status:string;attempt:number;error:string|null;run_id:string;episode_reporting:boolean;progress:{completed:number;successes:number;errors:number;success_rate:number|null}}[]};
 const labels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 function Field({label,children}:{label:string;children:React.ReactNode}) {
@@ -67,7 +67,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
     <div hidden={!!batchId}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/>
     <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
-      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
+      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]}{b.scheduling_paused?' · 调度已暂停':''} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
       <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
     </section>
     </div>

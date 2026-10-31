@@ -78,7 +78,7 @@ def batch_view(s, batch, jobs=None, progresses=None):
         status = 'FAILED'
     else:
         status = 'CANCELLED'
-    return {'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
+    return {'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs),
             'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
@@ -131,6 +131,8 @@ def install(app, db, current):
     suite_management.install(app, db, current)
     from .monitoring import install as install_monitoring
     install_monitoring(app, db, current)
+    from .batch_controls import install as install_controls
+    install_controls(app, db, current)
     @app.get('/api/v1/suites')
     def suites(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
         q = select(EvaluationSuite).where(EvaluationSuite.owner_id == user.id, EvaluationSuite.status == 'published', EvaluationSuite.archived.is_(False)).order_by(EvaluationSuite.created_at.desc())

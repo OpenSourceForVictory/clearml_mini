@@ -7,6 +7,7 @@ from . import scheduling as admission, image_runtime
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
+    'batch_paused': ('resource', '本批次已暂停后续调度', '恢复批次调度后参与资源分配'),
     'batch_concurrency': ('resource', '本批次已达到最大并发数', '等待本批次运行任务完成'),
     'pool_disabled': ('environment', '资源池已停用或不存在', '请管理员检查资源池状态'),
     'owner_disabled': ('environment', '任务所属用户已停用', '请管理员检查用户状态'),
@@ -61,6 +62,7 @@ class DiagnosticContext:
 
     def inspect(self, job, owner, pool, batch=None):
         codes = []
+        if batch and batch.scheduling_paused: codes.append('batch_paused')
         if not owner.active: codes.append('owner_disabled')
         if not pool or not pool.enabled: codes.append('pool_disabled')
         if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')

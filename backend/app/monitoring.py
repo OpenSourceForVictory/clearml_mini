@@ -63,6 +63,8 @@ def monitor(s, batch):
     completed = sum(c['progress']['completed'] for c in reporting)
     successes = sum(c['progress']['successes'] for c in reporting)
     result.update(checked_at=context.at, summary=dict(states=dict(Counter(j.status for j in jobs)),
+        cancel_requested_tasks=sum(j.status == 'CANCEL_REQUESTED' for j in jobs),
+        cleanup_pending_tasks=sum(not j.runs[-1].cleanup_confirmed and j.status in ('CANCEL_REQUESTED', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT') for j in jobs),
         completed_episodes=completed, successes=successes, goal_failures=completed-successes,
         episode_errors=sum(c['progress']['errors'] for c in reporting),
         execution_failures=sum(j.status in ('FAILED', 'TIMED_OUT') for j in jobs),

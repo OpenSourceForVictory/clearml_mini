@@ -14,7 +14,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
 from . import memberships, image_runtime
-from .core import Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
+from .core import EvaluationBatch, Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
 
@@ -328,6 +328,9 @@ def install(app, db, current):
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
+            job = s.get(Job, run.job_id)
+            if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
+                return {'task': None, 'cleanup': []}
             s.refresh(worker)
             if image_runtime.blockers(worker, slot, s.get(Job, run.job_id).client_spec, now()):
                 return {'task': None, 'cleanup': []}
