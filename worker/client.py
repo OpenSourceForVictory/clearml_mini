@@ -426,6 +426,19 @@ class Worker:
             self.stop_container(execution)
             if exc.status in (404, 409):
                 self.cleanup(execution)
+            elif exc.status in (400, 413, 422):
+                # Replaying an invalid event/result cannot succeed. Release capacity
+                # through a failed completion, while retaining the journal on outages.
+                try:
+                    self.api.post(f'worker/executions/{execution}/complete',
+                        {'status': 'FAILED', 'error': ('execution data rejected: '+str(exc))[:1000]})
+                except APIError as failure:
+                    if failure.status not in (404, 409):
+                        raise
+                    self.api.post(f'worker/executions/{execution}/cleanup')
+                self.remove(execution)
+                self.state = None
+                self.save()
             else:
                 raise
         except (urllib.error.URLError, TimeoutError, OSError):

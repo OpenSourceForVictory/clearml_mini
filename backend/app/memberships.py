@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, or_
 from .core import Slot, Pool, Worker, Run, Job, MembershipAudit, now
 from .scheduling import lock, online, transition, utc, ACTIVE
-from . import storage
+from . import storage, image_runtime
 
 
 class Member(BaseModel):
@@ -65,6 +65,8 @@ def view(s, slot):
         reasons.append('cleanup_pending')
     if worker and not storage.ready(worker, slot, now()):
         reasons.append('storage_pending')
+    if worker and not image_runtime.ready(worker, slot, now()):
+        reasons.append('runtime_pending')
     if slot.disk_min_free_mb is not None:
         if slot.disk_at is None or not 0 <= (now()-utc(slot.disk_at)).total_seconds() < 15:
             reasons.append('disk_unknown')

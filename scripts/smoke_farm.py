@@ -37,7 +37,7 @@ def main():
                 for index in range(count):
                     path = Path(directory) / f'{label}-{index}.json'
                     config = {'api_url': smoke.BASE, 'token': node['token'], 'node_name': node['node_name'], 'pool_id': pool,
-                              'mock': True, 'gpu_index': index, 'runner_image': 'mini-eval-runner:dev', 'mock_episode_sleep': .2}
+                              'mock': True, 'gpu_index': index, 'runner_image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'), 'mock_episode_sleep': .2}
                     path.write_text(json.dumps(config))
                     path.chmod(0o600)
                     states.append((path, config))

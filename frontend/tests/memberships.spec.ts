@@ -10,7 +10,7 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
     if(path==='admin/health')data={runner_image:'runner:1'};
     if(path==='admin/nodes')data=[{id:'n',node_name:'host',enabled:true,max_concurrent:2,cpu_capacity:4,ram_gb_capacity:8}];
     if(path==='admin/worker-credentials')data={node_name:'newhost',token:'test-worker'};
-    if(path==='workers')data=[0,1].map(i=>({id:'s'+i,node_name:'host',gpu_index:i,gpu_model:'GPU',vram_mb:24000,pool_id:i?'pool':null,desired_pool_id:i?'pool':null,membership_revision:revision,membership_applied_revision:revision,membership_state:i?'assigned':'unassigned',admission_reasons:i?[]:['unassigned'],online:true,active_tasks:0}));
+    if(path==='workers')data=[0,1].map(i=>({id:'s'+i,node_name:'host',gpu_index:i,gpu_model:'GPU',vram_mb:24000,pool_id:i?'pool':null,desired_pool_id:i?'pool':null,membership_revision:revision,membership_applied_revision:revision,membership_state:i?'assigned':'unassigned',admission_reasons:i?['runtime_pending']:['unassigned'],online:true,active_tasks:0}));
     if(path==='pools')data=[{id:'pool',name:'Mixed',gpu_model:'*',member_count:1,online_count:1,ready_count:1,incoming_count:0,models:{GPU:{count:1,vram_mb:24000}},pending_jobs:0,active_jobs:0}];
     if(path==='admin/resource-memberships'){submitted=route.request().postDataJSON();data=submitted.members.map((x:any)=>({slot_id:x.slot_id,membership_revision:revision+1}));}
     await route.fulfill({json:data});
@@ -28,6 +28,7 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
   const d=await download;const stream=await d.createReadStream();let text='';for await(const chunk of stream!)text+=chunk;
   expect(JSON.parse(text)).toMatchObject({pool_id:null,mock:false,api_url:'http://192.168.137.223:18000'});
   await page.getByRole('tab',{name:'资源池管理'}).click();
+  await expect(page.getByText('运行环境未确认',{exact:true})).toBeVisible();
   await page.getByLabel('成员来源',{exact:true}).selectOption('unassigned');
   await page.getByLabel('host 全选当前显示 GPU').check();
   await expect(page.getByText(/已选择 1 卡/)).toBeVisible();

@@ -155,3 +155,16 @@ def test_runtime_probe_refresh_and_expiry(tmp_path):
     runtime.probed_at=time.monotonic()-31
     assert runtime.report()['images']=={}
     runtime.close()
+
+
+def test_pool_readiness_matches_runtime_admission(env):
+    main,c,auth=env
+    _,token,slot,route,report=runtime_setup(env)
+    def card():return next(x for x in c.get('/api/v1/workers',headers=auth['admin']).json() if x['id']==slot)
+    def pool():return next(x for x in c.get('/api/v1/pools',headers=auth['admin']).json() if x['id']=='mock')
+    assert 'runtime_pending' in card()['admission_reasons']
+    assert not card()['basic_ready'] and pool()['ready_count']==0
+    assert c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':slot,'runtime':report}).status_code==200
+    assert card()['basic_ready'] and pool()['ready_count']==1
+    c.put(route,headers=auth['admin'],json={'expected_revision':1,'config':report['effective']})
+    assert 'runtime_pending' in card()['admission_reasons'] and pool()['ready_count']==0

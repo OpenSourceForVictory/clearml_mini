@@ -136,3 +136,32 @@ def test_parallel_tasks_keep_original_execution_after_restart(tmp_path, monkeypa
         assert not thread.is_alive()
     assert set(completed) == set(executions)
     assert all(c.state is None for c in parent.children.values())
+
+
+@pytest.mark.parametrize('status', [400, 413, 422, 503])
+def test_rejected_completion_fails_permanently_but_outages_keep_journal(tmp_path, monkeypatch, status):
+    w=Worker({},tmp_path/'state');w.slot_id='slot'
+    execution=str(uuid.uuid4());task={'execution_id':execution,'lease_seconds':30,'status':'RUNNING'}
+    w.state={'task':task,'offset':0,'sequence':0,'created':True,'pending':None};w.save()
+    completions=[];removed=[]
+    class API:
+        def post(self,path,data=None):
+            if path.endswith('/heartbeat'):return {'lease_seconds':30,'cancel':False}
+            if path.endswith('/complete'):
+                completions.append(data)
+                if data['status']=='SUCCEEDED':raise APIError(status,'episode results missing')
+            return {}
+    w.api=API()
+    monkeypatch.setattr(w,'inspect',lambda _: {'State':{'Running':False,'Status':'exited','ExitCode':0}})
+    monkeypatch.setattr(w,'stop_container',lambda _: None)
+    monkeypatch.setattr(w,'remove',lambda ex:removed.append(ex))
+    from types import SimpleNamespace
+    monkeypatch.setattr('worker.client.docker',lambda *a,**kw:SimpleNamespace(stdout='{"final":{"success_rate":1,"episode_count":2,"runtime":0.1}}\n',stderr=''))
+    if status==503:
+        with pytest.raises(APIError):w.execute(task)
+        assert w.state is not None and removed==[] and len(completions)==1
+    else:
+        w.execute(task)
+        assert [c['status'] for c in completions]==['SUCCEEDED','FAILED']
+        assert 'episode results missing' in completions[-1]['error']
+        assert removed==[execution] and w.state is None

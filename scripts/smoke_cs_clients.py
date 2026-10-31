@@ -51,6 +51,17 @@ def main():
                 p = request(f'jobs/{good}/attempts/{run}/episodes', token=token)
                 assert p['progress']['completed'] == p['progress']['successes'] == 2
                 assert request(f'jobs/{good}/attempts/{run}/artifacts', token=token)
+                # A client that declares episode reporting but only prints a final
+                # result must fail promptly, rather than hold the slot in a replay loop.
+                invalid_template = request('admin/client-templates', {'name':'missing-events-'+suffix,
+                    'version':'1','image':image,'episode_reporting':True,
+                    'command':['python','-c','print(\'{"final":{"success_rate":1,"episode_count":2,"runtime":0.1}}\')']}, token)['id']
+                invalid = request('batches', {'title':'missing-events-'+suffix,'pool_id':pool,
+                    'cases':[{'case_id':'invalid','task_name':'demo','episodes':2}],
+                    'client':{'template_id':invalid_template,'endpoint':f'http://{host}:19090/infer','timeout_seconds':60}}, token)['cases'][0]['job_id']
+                rejected = wait(lambda: done(invalid), timeout=25)
+                assert rejected['status']=='FAILED' and rejected['attempts'][0]['cleanup_confirmed'], rejected
+                assert 'execution data rejected' in rejected['error'], rejected
                 failed = submit('fail')
                 assert wait(lambda: done(failed))['status'] == 'FAILED'
                 slow = submit('slow', request_timeout=1)
@@ -63,13 +74,19 @@ def main():
                 assert wait(lambda: done(cancel))['status'] == 'CANCELLED'
                 recovery = submit('slow', episodes=2)
                 wait(lambda: detail(recovery)['status'] == 'RUNNING')
-                before = subprocess.check_output(['docker','ps','--filter','label=mini-eval.job='+recovery,'--format','{{.ID}}'],text=True).strip()
+                slot=detail(recovery)['attempts'][-1]['slot_id']
+                def container_id():
+                    return subprocess.check_output(['docker','ps','--filter','label=mini-eval.slot='+slot,'--format','{{.ID}}'],text=True).strip()
+                before=wait(container_id)
+                assert len(before.splitlines())==1
                 process.kill(); process.wait(timeout=10); process = start()
+                wait(lambda: detail(recovery)['status']=='RUNNING')
+                assert container_id()==before, 'restart recreated the client container'
                 recovered = wait(lambda: done(recovery), timeout=100)
                 assert recovered['status'] == 'SUCCEEDED', recovered
                 assert len(recovered['attempts']) == 1
                 print(json.dumps({'normal':d['status'], 'episodes':p['progress'], 'artifact':True,
-                    'failure':True,'request_timeout':True,'total_timeout':True,'cancel':True,'worker_recovery':True}))
+                    'invalid_report_released_capacity':True,'failure':True,'request_timeout':True,'total_timeout':True,'cancel':True,'worker_recovery':True}))
             except Exception:
                 log.flush(); log.seek(0); print(log.read()[-12000:], file=sys.stderr); raise
             finally:

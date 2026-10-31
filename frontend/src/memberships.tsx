@@ -4,7 +4,7 @@ import {api} from './api';
 export const admissionLabels:Record<string,string> = {
   offline:'离线', disabled:'已禁用', unassigned:'未分配', draining:'排空中', blocked:'目标不可用',
   pool_unavailable:'资源池不可用', cleanup_pending:'等待清理', storage_pending:'存储未确认',
-  disk_unknown:'磁盘报告过期', disk_full:'磁盘空间不足',
+  runtime_pending:'运行环境未确认', disk_unknown:'磁盘报告过期', disk_full:'磁盘空间不足',
 };
 type Card = {id:string;node_name:string;gpu_index:number;gpu_model:string;vram_mb:number;
   pool_id:string|null;desired_pool_id:string|null;membership_revision:number;membership_applied_revision:number;

@@ -1,0 +1,160 @@
+{
+  "date": "2026-10-31",
+  "baseline_commit": "3a99558",
+  "backend": {
+    "tests": 115,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "frontend": {
+    "passed": 13,
+    "skipped": 0
+  },
+  "migration_checks": {
+    "membership": "passed",
+    "suite": "passed",
+    "runtime": "passed"
+  },
+  "farm": {
+    "users": 3,
+    "jobs": 15,
+    "virtual_slots": 3,
+    "peak_concurrent": 2,
+    "one_attempt_per_job": true
+  },
+  "cs_faults": {
+    "normal": "SUCCEEDED",
+    "episodes": {
+      "completed": 2,
+      "successes": 2,
+      "errors": 0,
+      "running": [],
+      "success_rate": 1.0
+    },
+    "artifact": true,
+    "invalid_report_released_capacity": true,
+    "failure": true,
+    "request_timeout": true,
+    "total_timeout": true,
+    "cancel": true,
+    "worker_recovery": true
+  },
+  "source_build": {
+    "status": "passed",
+    "build_id": "bd976fb1-96dc-4064-b252-3839cf0f2329",
+    "template_id": "7d654f25-f0ac-4386-ace4-77122894cb0a",
+    "job_id": "48e14cf8-a096-4274-9087-e7d688512e3a",
+    "episodes": 2,
+    "image": "mini-eval-full-build:bd976fb1-96dc-4064-b252-3839cf0f2329",
+    "kind": "trusted source build and protocol check, not model evaluation"
+  },
+  "shared_gpu": {
+    "status": "passed",
+    "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+    "peak_concurrent": 2,
+    "restart_preserved_container_ids": true,
+    "jobs": [
+      "f098974e-7b7f-4f1d-a036-7f6830fc1884",
+      "c3782eed-a8aa-4732-bda1-4088471a377c",
+      "251d9bb4-21a2-4341-bf87-57bc2c14f409"
+    ],
+    "render_job": "ce678a46-4196-4d72-a646-56f9c652c025"
+  },
+  "production": {
+    "workers": [
+      {
+        "node_name": "r8000",
+        "protocol_version": 5,
+        "online": true,
+        "basic_ready": true,
+        "admission_reasons": []
+      },
+      {
+        "node_name": "local-4090",
+        "protocol_version": 5,
+        "online": true,
+        "basic_ready": true,
+        "admission_reasons": []
+      }
+    ],
+    "suites_unchanged": true,
+    "nodes_unchanged": true,
+    "health": {
+      "scheduler": {
+        "at": "2026-10-31T00:55:32.715655+00:00"
+      },
+      "runner_image": "mini-eval-runner:robotwin-render",
+      "quarantined_slots": 0
+    }
+  },
+  "release": {
+    "release": "full-validation-release-20261031-085252",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/full-validation-release-20261031-085252",
+    "backup_image": "mini-eval-api:before-full-validation-release-20261031-085252",
+    "status": "api-deployed"
+  },
+  "image-runtime": {
+    "kind": "image-runtime-contract-not-model-evaluation",
+    "batches": [
+      "10b4d145-372e-4997-afda-090af0cc013a",
+      "01898a10-2cfe-40b2-b6d0-07e507fad6c4",
+      "dc6b9421-f622-4921-8a9c-662340934ce7",
+      "059a4115-1fa3-41a1-a70e-46b4a245be3e"
+    ],
+    "hosts": {
+      "local": {
+        "worker_id": "c45f2c47-3be0-4f43-8f0e-9299b265f5f8",
+        "root": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-c9eface2b8"
+      },
+      "r8000": {
+        "worker_id": "4ee3d648-9586-4d44-9be9-baf46753424c",
+        "root": "/home/huawei/mini-eval-image-runtime-c9eface2b8"
+      }
+    }
+  },
+  "memberships": {
+    "kind": "membership-contract-not-model-evaluation",
+    "batches": [
+      "36a1c37e-b2b6-47ad-a59f-081eab575c2d",
+      "dac9fe93-643f-4697-ba6a-2139e776a8de"
+    ],
+    "hosts": {
+      "local": {
+        "worker_id": "8fd47fcb-654a-4c71-82c3-5308c1a1c843",
+        "root": "/home/dgh/Code/clearml_mini/.runtime/membership-f349c5dfb1"
+      },
+      "r8000": {
+        "worker_id": "b1cf3e93-63ac-485b-a552-3751bb160aa4",
+        "root": "/home/huawei/mini-eval-membership-f349c5dfb1"
+      }
+    }
+  },
+  "storage": {
+    "kind": "storage-contract-not-model-evaluation",
+    "batches": [
+      "c335d559-1062-4090-a13c-115597e0325b",
+      "f23b812a-5a1d-4118-a343-d1d86212c0ea",
+      "461fa4d8-bd63-4846-b8c5-bfe9aa45d9f4"
+    ],
+    "hosts": {
+      "local": {
+        "worker_id": "6cbb38e1-8c88-4ff8-a5f0-99d3875e2d1a",
+        "root": "/home/dgh/Code/clearml_mini/.runtime/storage-50699c5627"
+      },
+      "r8000": {
+        "worker_id": "6b7f3f01-085b-449f-a5e4-83a08f4aa757",
+        "root": "/home/huawei/mini-eval-storage-50699c5627"
+      }
+    }
+  },
+  "fixes": [
+    "Pool basic readiness now includes runtime revision/freshness",
+    "Permanent execution-report rejection fails and releases capacity; transient outages retain journal"
+  ],
+  "limitations": [
+    "No real Cosmos inference endpoint/checkpoint evaluation",
+    "Bounded acceptance runs, not a 24/7 soak test",
+    "Only one physical GPU per current host; multi-GPU node isolation tested using virtual slots"
+  ]
+}

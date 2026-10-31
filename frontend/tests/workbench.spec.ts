@@ -88,7 +88,7 @@ test("login, submit, cancel, retry, resources and administration", async ({
   await expect(
     page.getByRole("dialog").getByText("成功率", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("dialog").locator(".logs")).toContainText(
+  await expect(page.getByRole("dialog").locator(".logs").last()).toContainText(
     "episode",
   );
   await page.getByRole("button", { name: "关闭详情" }).click();
@@ -106,6 +106,7 @@ test('configure heterogeneous shared pool and submit GPU requirements', async ({
   await page.getByLabel('密码', {exact: true}).fill(process.env.ADMIN_PASSWORD!);
   await page.getByRole('button', {name: '登录', exact: true}).click();
   await page.getByRole('button', {name: '管理设置', exact: true}).click();
+  await page.getByRole('tab', {name: '资源池管理', exact: true}).click();
   const name = 'mixed-browser-' + Date.now();
   const form = page.locator('form').filter({has: page.getByRole('button', {name: '创建资源池', exact: true})});
   await form.getByLabel('名称', {exact: true}).fill(name);
