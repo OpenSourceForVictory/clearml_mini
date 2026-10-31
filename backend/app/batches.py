@@ -131,6 +131,8 @@ def install(app, db, current):
     suite_management.install(app, db, current)
     from .monitoring import install as install_monitoring
     install_monitoring(app, db, current)
+    from .reports import install as install_reports
+    install_reports(app, db, current)
     from .batch_controls import install as install_controls
     install_controls(app, db, current)
     @app.get('/api/v1/suites')

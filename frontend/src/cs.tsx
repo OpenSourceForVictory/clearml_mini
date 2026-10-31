@@ -1,3 +1,4 @@
+import {BatchComparison} from './batch-reports';
 import React, {useEffect, useState, useRef} from 'react';
 import {api} from './api';
 import {BatchDetail} from './batch-detail';
@@ -18,9 +19,11 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(null);
+  const [compareIds,setCompareIds]=useState<string[]>([]);
+  const [compareRoute,setCompareRoute]=useState(()=>location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);
   const batchFilters=useRef<Record<string,{status:string;reason:string;query:string}>>({});
   const [batchId,setBatchId]=useState(()=>location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');
-  useEffect(()=>{const change=()=>{setBatchId(location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');setTab('runs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
+  useEffect(()=>{const change=()=>{setCompareRoute(location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);setBatchId(location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');setTab('runs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   const openBatch=(id:string)=>{location.hash='/cs/batches/'+id;};
   const [tab,setTab]=useState<'suites'|'runs'|'clients'>('runs');
   const tabs=[{id:'suites',label:'评测集合管理'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
@@ -34,8 +37,8 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
       const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
       if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
     }catch(e){if(active)setError(String(e));}finally{if(active)timer=setTimeout(load,2000);}}
-    if(!batchId)void load();return()=>{active=false;clearTimeout(timer);};
-  },[page,launch,batchId]);
+    if(!batchId&&!compareRoute.length)void load();return()=>{active=false;clearTimeout(timer);};
+  },[page,launch,batchId,compareRoute.join()]);
   function useSuite(suite:Suite) {
     setSuites(old=>[suite,...old.filter(x=>x.id!==suite.id)]);
     setLaunch({suite});setTab('runs');
@@ -64,13 +67,14 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
         </section>}
     </div>
     <div role="tabpanel" id="cs-panel-runs" aria-labelledby="cs-tab-runs" hidden={tab!=='runs'}>
-    <div hidden={!!batchId}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
+    <div hidden={!!batchId||!!compareRoute.length}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/>
-    <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
-      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]}{b.scheduling_paused?' · 调度已暂停':''} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
+    <section className="panel"><h2>批次进度</h2><p>选择两个批次比较结果（已选 {compareIds.length}/2，可跨页选择）。</p><button disabled={compareIds.length!==2} onClick={()=>{location.hash="/cs/compare/"+compareIds.join("/");}}>比较所选批次</button><button disabled={!compareIds.length} onClick={()=>setCompareIds([])}>清空比较选择</button>{!batches.length&&<p>尚无评测批次。</p>}
+      {batches.map(b=><div key={b.id}><label><input type="checkbox" aria-label={"比较选择 "+b.title} checked={compareIds.includes(b.id)} disabled={compareIds.length>=2&&!compareIds.includes(b.id)} onChange={e=>setCompareIds(old=>e.target.checked?[...old,b.id]:old.filter(x=>x!==b.id))}/>加入比较</label><h3>{b.title} · {labels[b.status]}{b.scheduling_paused?' · 调度已暂停':''} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
       <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
     </section>
     </div>
+    {compareRoute.length===2&&tab==='runs'&&<BatchComparison left={compareRoute[0]} right={compareRoute[1]} onBack={()=>{location.hash='/cs';}}/>}
     {batchId&&tab==='runs'&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onBack={()=>{location.hash='/cs';}} onJob={setSelected}/>}
     {selected&&renderJob(selected,()=>setSelected(''))}
     </div>

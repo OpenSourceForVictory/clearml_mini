@@ -1,0 +1,317 @@
+{
+  "date": "2026-10-31",
+  "change": "batch-reports",
+  "backend_full": {
+    "tests": "149",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "182.015"
+  },
+  "reports_supplement": {
+    "tests": "14",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "19.216"
+  },
+  "backend_distinct_passed": 151,
+  "postgresql": {
+    "tests": "18",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "1",
+    "time": "32.233"
+  },
+  "migration": {
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "3.190"
+  },
+  "browser": {
+    "full_passed": 28,
+    "final_report_tests_passed": 4
+  },
+  "docker": {
+    "complete": {
+      "batch": {
+        "id": "bdf1e676-9964-4043-a36d-8e1b349016cd",
+        "title": "[验收] 完整报告",
+        "suite_id": null,
+        "status": "SUCCEEDED",
+        "scheduling_paused": false,
+        "model_version_verified": false
+      },
+      "summary": {
+        "total_tasks": 3,
+        "planned_episodes": 3,
+        "completed_episodes": 3,
+        "successes": 3,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "reporting_tasks": 3,
+        "unreported_tasks": 0,
+        "partial": false,
+        "success_rate": 1.0
+      },
+      "generated_at": "2026-10-31T07:58:23.440079+00:00",
+      "runs": [
+        {
+          "case_id": "0",
+          "run_id": "048bc22c-06a3-4ea7-9910-2fe72108a5ad",
+          "attempt": 1,
+          "status": "SUCCEEDED"
+        },
+        {
+          "case_id": "1",
+          "run_id": "e850de07-f72d-417b-bdb6-5a7640019bb4",
+          "attempt": 1,
+          "status": "SUCCEEDED"
+        },
+        {
+          "case_id": "2",
+          "run_id": "32883ae0-b2e4-4113-b3c0-956922626933",
+          "attempt": 1,
+          "status": "SUCCEEDED"
+        }
+      ]
+    },
+    "partial": {
+      "batch": {
+        "id": "22462cf4-e539-40d4-85da-9aab461fb9fe",
+        "title": "[验收] 部分报告",
+        "suite_id": null,
+        "status": "CANCELLED",
+        "scheduling_paused": true,
+        "model_version_verified": false
+      },
+      "summary": {
+        "total_tasks": 3,
+        "planned_episodes": 3,
+        "completed_episodes": 1,
+        "successes": 1,
+        "goal_failures": 0,
+        "episode_errors": 0,
+        "reporting_tasks": 3,
+        "unreported_tasks": 0,
+        "partial": true,
+        "success_rate": 1.0
+      },
+      "generated_at": "2026-10-31T07:58:23.448991+00:00",
+      "runs": [
+        {
+          "case_id": "0",
+          "run_id": "b239d526-058f-4248-b536-5ef03d97e0f5",
+          "attempt": 1,
+          "status": "SUCCEEDED"
+        },
+        {
+          "case_id": "1",
+          "run_id": "a89e8f4a-55d0-4e96-9c23-7bb4cef01cb6",
+          "attempt": 1,
+          "status": "CANCELLED"
+        },
+        {
+          "case_id": "2",
+          "run_id": "77a40f36-b0c4-4cc6-b41e-462c059e32ba",
+          "attempt": 1,
+          "status": "CANCELLED"
+        }
+      ]
+    },
+    "overall_comparable": false,
+    "csv_bytes": 1282,
+    "cleanup_confirmed": true
+  },
+  "production": {
+    "read_only": true,
+    "reports": [
+      {
+        "batch": {
+          "id": "7a2d71fc-c4a8-4653-8519-7b413505e917",
+          "title": "[验收] 批次监控双机",
+          "suite_id": "5cc5986a-8a50-43fb-a601-08ba49ea2eee",
+          "status": "SUCCEEDED",
+          "scheduling_paused": false,
+          "model_version_verified": false
+        },
+        "summary": {
+          "total_tasks": 3,
+          "planned_episodes": 3,
+          "completed_episodes": 3,
+          "successes": 3,
+          "goal_failures": 0,
+          "episode_errors": 0,
+          "reporting_tasks": 3,
+          "unreported_tasks": 0,
+          "partial": false,
+          "success_rate": 1.0
+        },
+        "generated_at": "2026-10-31T08:01:30.152593+00:00",
+        "runs": [
+          {
+            "case_id": "case-1",
+            "run_id": "8126aa96-58f4-4fea-ab97-c3674e7f3a8b",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "case-2",
+            "run_id": "890bd64d-9910-48e8-b1a7-40051ad819d9",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "case-3",
+            "run_id": "f16b77cf-fd3b-405f-9dd9-a5e8f813dda7",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          }
+        ]
+      },
+      {
+        "batch": {
+          "id": "6c6b77a9-054c-44f6-8e89-fcec93e09e03",
+          "title": "[验收] 批次监控双机",
+          "suite_id": "5cc5986a-8a50-43fb-a601-08ba49ea2eee",
+          "status": "SUCCEEDED",
+          "scheduling_paused": false,
+          "model_version_verified": false
+        },
+        "summary": {
+          "total_tasks": 3,
+          "planned_episodes": 3,
+          "completed_episodes": 3,
+          "successes": 3,
+          "goal_failures": 0,
+          "episode_errors": 0,
+          "reporting_tasks": 3,
+          "unreported_tasks": 0,
+          "partial": false,
+          "success_rate": 1.0
+        },
+        "generated_at": "2026-10-31T08:01:30.348095+00:00",
+        "runs": [
+          {
+            "case_id": "case-1",
+            "run_id": "82ef29c5-50ae-4221-b549-63df884a5288",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "case-2",
+            "run_id": "173a5e10-ca2d-4fd6-9618-201b2a7abb91",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "case-3",
+            "run_id": "316e8a71-22f7-4b4f-bd5a-36888b34fc6a",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          }
+        ]
+      },
+      {
+        "batch": {
+          "id": "3bcdcefe-8596-4778-9928-e6937aa5ff11",
+          "title": "[验收] 暂停恢复取消",
+          "suite_id": "25f961a0-ea06-452b-813f-c0764b7fa171",
+          "status": "CANCELLED",
+          "scheduling_paused": false,
+          "model_version_verified": false
+        },
+        "summary": {
+          "total_tasks": 6,
+          "planned_episodes": 6,
+          "completed_episodes": 2,
+          "successes": 2,
+          "goal_failures": 0,
+          "episode_errors": 0,
+          "reporting_tasks": 6,
+          "unreported_tasks": 0,
+          "partial": true,
+          "success_rate": 1.0
+        },
+        "generated_at": "2026-10-31T08:01:30.550119+00:00",
+        "runs": [
+          {
+            "case_id": "0",
+            "run_id": "06f31aa2-a3b2-4ec2-baac-65a6accc49d8",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "1",
+            "run_id": "4e3d98f9-a478-4fe7-a7c7-142d33ae10bb",
+            "attempt": 1,
+            "status": "SUCCEEDED"
+          },
+          {
+            "case_id": "2",
+            "run_id": "ca8ea043-6d85-44be-8366-9aeb932b2ed4",
+            "attempt": 1,
+            "status": "CANCELLED"
+          },
+          {
+            "case_id": "3",
+            "run_id": "d5d33053-bc63-4ed1-b7d4-f4aa6da5ea59",
+            "attempt": 1,
+            "status": "CANCELLED"
+          },
+          {
+            "case_id": "4",
+            "run_id": "20640df5-22d1-479f-a16f-f9f20b345f13",
+            "attempt": 1,
+            "status": "CANCELLED"
+          },
+          {
+            "case_id": "5",
+            "run_id": "4bde728b-a6b0-415d-a9d0-038c0b5e61ef",
+            "attempt": 1,
+            "status": "CANCELLED"
+          }
+        ]
+      }
+    ],
+    "complete_comparable": true,
+    "complete_delta": 0.0,
+    "mixed_comparable": false,
+    "csv_bytes": 1315,
+    "browser": {
+      "direct_refresh": true,
+      "complete_comparison": true,
+      "partial_comparison": true,
+      "csv_download": true,
+      "page_errors": []
+    }
+  },
+  "deployment": {
+    "release": "batch-reports-release-20261031-160037",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/batch-reports-release-20261031-160037",
+    "backup_image": "mini-eval-api:before-batch-reports-release-20261031-160037",
+    "status": "api-deployed"
+  },
+  "feature_rollback": {
+    "release": "batch-reports-release-20261031-155838",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/batch-reports-release-20261031-155838",
+    "backup_image": "mini-eval-api:before-batch-reports-release-20261031-155838",
+    "status": "api-deployed"
+  },
+  "cleanup": {
+    "isolated_processes_stopped": 4,
+    "postgres_removed": true,
+    "database_backed_up": true,
+    "browser_auth_removed": true
+  },
+  "limitations": [
+    "外部 checkpoint 未验证",
+    "协议自检客户端验收，不代表真实模型评测"
+  ],
+  "test_notes": [
+    "PostgreSQL 首轮测试夹具 endpoint 误用对象导致调度回归失败；修正为合法字符串并重建专用数据库后全量通过。",
+    "PostgreSQL 全量跳过的迁移测试在独立 migration 库单独补跑通过。"
+  ]
+}

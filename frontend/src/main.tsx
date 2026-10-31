@@ -120,7 +120,8 @@ function App() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [tab, setTab] = useState(location.hash.startsWith('#/cs')?'cs':'jobs');
-  useEffect(()=>{const change=()=>{if(location.hash.startsWith('#/cs'))setTab('cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
+  const [comparisonView,setComparisonView]=useState(location.hash.startsWith('#/cs/compare/'));
+  useEffect(()=>{const change=()=>{setComparisonView(location.hash.startsWith('#/cs/compare/'));if(location.hash.startsWith('#/cs'))setTab('cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   useEffect(() => {
     const logout = () => {
       sessionStorage.removeItem("eval-token");
@@ -235,7 +236,7 @@ function App() {
                 ? "管理设置"
                 : "评测任务"}
           </span>
-          <span className="live-dot">每 2 秒更新</span>
+          <span className="live-dot">{tab==='cs'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
         </header>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />

@@ -1,3 +1,4 @@
+import {ReportDownloads} from './batch-reports';
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
 import {usePoll} from './poll';
@@ -33,7 +34,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
     const r=await api<RetryResult>('batches/'+id+'/retry-failed','POST',{items:Object.entries(selected).map(([job_id,expected_run_id])=>({job_id,expected_run_id}))});
     setResult(r);setSelected({});
   }catch(e){setRetryError(String(e)+'；保留原尝试选择，可安全再次提交。');}finally{setBusy(false);}}
-  return <section className="panel" aria-label="批次详情"><button onClick={onBack}>返回批次列表</button>
+  return <section className="panel" aria-label="批次详情"><button onClick={onBack}>返回批次列表</button><ReportDownloads id={id}/>
     {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>
