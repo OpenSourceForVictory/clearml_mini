@@ -88,12 +88,55 @@ def install(assets_root, cache, base_url):
         print(f'Assets ready: {target}', flush=True)
 
 
+def verify_published(root, cache):
+    """Explicit delivery audit, never a scheduler or client startup prerequisite."""
+    validate(root)
+    files = 0
+    generated = 0
+    for filename, checksum in ASSETS.items():
+        archive = cache / filename
+        if digest(archive) != checksum:
+            raise RuntimeError(f'asset checksum mismatch: {filename}')
+        with zipfile.ZipFile(archive) as z:
+            for entry in z.infolist():
+                path = root / entry.filename
+                if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+                    raise RuntimeError(f'unsafe published asset path: {entry.filename}')
+                if entry.is_dir():
+                    if not path.is_dir():
+                        raise RuntimeError(f'published asset directory is missing: {entry.filename}')
+                    continue
+                if not path.is_file() or path.stat().st_size != entry.file_size:
+                    raise RuntimeError(f'published asset missing or wrong size: {entry.filename}')
+                expected = hashlib.sha256()
+                with z.open(entry) as source:
+                    for block in iter(lambda: source.read(8 * 1024 * 1024), b''):
+                        expected.update(block)
+                if digest(path) != expected.hexdigest():
+                    raise RuntimeError(f'published asset content mismatch: {entry.filename}')
+                files += 1
+                if entry.filename.startswith('embodiments/') and path.name.endswith('_tmp.yml'):
+                    config = path.with_name(path.name.replace('_tmp.yml', '.yml'))
+                    content = path.read_text().replace('${ASSETS_PATH}', '/opt/RoboTwin').replace('$ASSETS_PATH', '/opt/RoboTwin')
+                    if config.is_symlink() or not config.is_file() or config.read_text() != content:
+                        raise RuntimeError(f'generated embodiment config mismatch: {config.name}')
+                    generated += 1
+    if not generated:
+        raise RuntimeError('official embodiment config templates are missing')
+    return {'revision': ASSET_REVISION, 'archives': len(ASSETS), 'files_verified': files,
+            'generated_configs_verified': generated, 'model_evaluation': False}
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--assets-root', required=True, type=Path)
     p.add_argument('--cache-dir', required=True, type=Path)
     p.add_argument('--base-url', default=f'https://huggingface.co/datasets/TianxingChen/RoboTwin2.0/resolve/{ASSET_REVISION}')
+    p.add_argument('--verify-only', action='store_true', help='Read-only audit of published files against the pinned cached archives')
     a = p.parse_args()
+    if a.verify_only:
+        print(json.dumps(verify_published(a.assets_root.resolve() / 'robotwin' / ASSET_REVISION, a.cache_dir.resolve())))
+        return
     install(a.assets_root.resolve(), a.cache_dir.resolve(), a.base_url)
 
 

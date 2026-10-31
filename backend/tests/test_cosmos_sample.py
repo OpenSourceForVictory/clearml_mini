@@ -197,3 +197,32 @@ def test_documented_task_matrix(filename, count, modes):
     actual = {(c.task_name, c.parameters['task_config'], c.parameters['control_mode']) for c in cases}
     assert actual == set(product({'adjust_bottle', 'beat_block_hammer'}, {'demo_clean', 'demo_randomized'}, modes))
     assert all(c.episodes == 3 and c.seed == 100000 and 'max_steps' not in c.parameters for c in cases)
+
+
+def test_published_asset_audit_detects_damage_without_changing_files(tmp_path, monkeypatch):
+    import hashlib
+    import zipfile
+    from examples.cosmos_robotwin import assets
+    cache=tmp_path/'cache';cache.mkdir();root=tmp_path/'assets';checksums={}
+    for name in assets.ASSETS:
+        path=cache/name
+        with zipfile.ZipFile(path,'w') as z:
+            z.writestr(path.stem+'/data.bin',b'payload')
+            if path.stem=='embodiments':z.writestr('embodiments/robot/config_tmp.yml','root: ${ASSETS_PATH}/assets')
+        checksums[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+    monkeypatch.setattr(assets,'ASSETS',checksums)
+    assets.install(root,cache,'https://unused.example')
+    published=root/'robotwin'/assets.ASSET_REVISION
+    result=assets.verify_published(published,cache)
+    assert result['files_verified']==4 and result['generated_configs_verified']==1
+    target=published/'objects/data.bin';target.write_bytes(b'PAYLOAD')
+    with pytest.raises(RuntimeError,match='content mismatch'):assets.verify_published(published,cache)
+    assert target.read_bytes()==b'PAYLOAD'  # Audit never silently repairs a running version.
+    target.write_bytes(b'payload');target.unlink()
+    with pytest.raises(RuntimeError,match='missing or wrong size'):assets.verify_published(published,cache)
+    target.write_bytes(b'payload')
+    config=published/'embodiments/robot/config.yml';config.write_text('wrong container path')
+    with pytest.raises(RuntimeError,match='config mismatch'):assets.verify_published(published,cache)
+    config.write_text('root: /opt/RoboTwin/assets')
+    target.unlink();target.symlink_to(published/'embodiments/data.bin')
+    with pytest.raises(RuntimeError,match='unsafe published'):assets.verify_published(published,cache)

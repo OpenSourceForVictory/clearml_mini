@@ -137,3 +137,26 @@ R8000 构建使用 `http://127.0.0.1:18089/pytorch3d-75ebeea.tar.gz` 本机缓�
 - 自检使用分别校验过 SHA256 的机器人、物体归档副本：`/home/huawei/mini-eval-build-cache/smoke-assets`，只读挂载到 `/opt/mini-eval/assets`。此目录没有全量 manifest，背景纹理继续下载。该快照用于验证 `demo_clean`，没有替换 Worker 的标准 assets 挂载。
 - 日志：`/home/huawei/cosmos-render-check.log`、`/home/huawei/cosmos-task-check.log`（不稳定 seed）、`/home/huawei/cosmos-task-check-seed100001.log`（成功）。
 - R8000 Worker 已重启，上报镜像名单包含此镜像，平台数据库读回确认。样本 11 项回归测试通过。全量资产尚未发布，真实模型闭环未执行。
+
+## 交付复核（2026-10-31，替代上述旧状态）
+
+- 两机已有相同镜像 `mini-eval-cosmos-robotwin:2ba852c-platform1`，镜像 ID 为 `sha256:fdcee491d11f33dff8175a2a206e187a7193fb24e8d889ed0ca4fdd787c40240`；平台 Worker 均报告该镜像可用。此前“本机尚未部署镜像”已过时。
+- R8000 的全部三个资产归档已下载并发布至标准 `workspace_root/assets/robotwin/3dc3b798668feb99ac61cc9086d84cbcc3d79186`。复核 SHA256、20,841 个原始文件及 6 个容器路径配置通过；此前 `image-verified-assets-pending` 是历史构建状态，不代表当前资产状态。
+- 两机固定版本镜像内均包含官方完整 50 项任务及集合所用配置，平台注册清单与仓库清单一致。此检查只验证任务定义和文件存在，不声称逐项跑过全部 50 个仿真场景。
+- 本机当前另有 `assets/robotwin-queue-smoke` 的部分资产，完整归档正从 R8000 后台同步；下载、校验、解压完成后原子发布标准版本目录。未完成前不能把本机标为全量资产就绪；不要把部分资产改名或补写完整 manifest。
+- 本轮仿真初始化自检只验证环境与相机输出，没有连接真实推理服务。真实模型评测仍需服务地址与匹配的 EEF 配置，即使 joint 模式也不应伪造坐标变换。
+
+下载器现在支持主动复核已发布内容（只读，不作为任务准入条件）：
+
+```bash
+python -m examples.cosmos_robotwin.assets \
+  --assets-root /absolute/worker/assets \
+  --cache-dir /absolute/worker/cache/robotwin \
+  --verify-only
+```
+
+它先验证固定归档 SHA256，再逐文件比较解压内容的 SHA256，并核对生成的机器人配置。缺失、损坏或符号链接替换均报错，不修复运行中的版本。这个命令会读取大文件，需要单独安排执行；客户端启动和调度不调用它。
+
+本次本机一次性同步任务由本轮交付启动，不是定时任务，不会周期性执行。进度在项目 `.runtime/robotwin-delivery/local-sync-status.json`，日志在同目录 `local-sync.log`；阶段依次为 `transferring`、`verifying-and-publishing`、`auditing-published-files`、`complete`，失败为 `failed`。只有 `complete` 且 `local-assets.json` 验证通过，才代表本机完整资产交付完成。
+
+详细验收和后台同步边界见 [交付复核记录](../../docs/robotwin-delivery-validation.md)。

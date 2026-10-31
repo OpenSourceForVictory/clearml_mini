@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-31",
+  "change": "cosmos-robotwin-sample",
+  "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+  "image_id": "sha256:fdcee491d11f33dff8175a2a206e187a7193fb24e8d889ed0ca4fdd787c40240",
+  "r8000_assets": {
+    "revision": "3dc3b798668feb99ac61cc9086d84cbcc3d79186",
+    "archives": 3,
+    "files_verified": 20841,
+    "generated_configs_verified": 6,
+    "model_evaluation": false
+  },
+  "suite_checks": {
+    "local": {
+      "official_task_list_matches": true,
+      "tasks": 50,
+      "unique_tasks": 50,
+      "robotwin_commit": "ea8b21121ebb3cd201ff5b3fe361944ac94eda3f",
+      "cosmos_commit": "2ba852c1ff3ce923405bd47a65074488a3358781",
+      "model_evaluation": false
+    },
+    "r8000": {
+      "official_task_list_matches": true,
+      "tasks": 50,
+      "unique_tasks": 50,
+      "robotwin_commit": "ea8b21121ebb3cd201ff5b3fe361944ac94eda3f",
+      "cosmos_commit": "2ba852c1ff3ce923405bd47a65074488a3358781",
+      "model_evaluation": false
+    }
+  },
+  "platform_suite": {
+    "id": "6bc93f01-08f0-44f0-99a3-bad73370e631",
+    "cases": 50,
+    "matches_repository": true
+  },
+  "tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "18",
+    "time": "2.269",
+    "timestamp": "2026-10-31T16:24:15.140003+08:00",
+    "hostname": "Huawei"
+  },
+  "gpu_checks": [
+    {
+      "kind": "environment-check",
+      "task": "adjust_bottle",
+      "seed": 100001,
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "local",
+      "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+      "asset_scope": "partial-snapshot"
+    },
+    {
+      "kind": "environment-check",
+      "task": "beat_block_hammer",
+      "seed": 100001,
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "local",
+      "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+      "asset_scope": "partial-snapshot"
+    },
+    {
+      "kind": "environment-check",
+      "task": "click_bell",
+      "seed": 100001,
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "local",
+      "image": "mini-eval-robotwin-queue-check:1",
+      "asset_scope": "partial-snapshot"
+    },
+    {
+      "kind": "environment-check",
+      "task": "adjust_bottle",
+      "seed": 100001,
+      "gpu": "Quadro RTX 8000",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "r8000",
+      "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+      "asset_scope": "full-published-version"
+    },
+    {
+      "kind": "environment-check",
+      "task": "beat_block_hammer",
+      "seed": 100001,
+      "gpu": "Quadro RTX 8000",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "r8000",
+      "image": "mini-eval-cosmos-robotwin:2ba852c-platform1",
+      "asset_scope": "full-published-version"
+    },
+    {
+      "kind": "environment-check",
+      "task": "click_bell",
+      "seed": 100001,
+      "gpu": "Quadro RTX 8000",
+      "cameras": {
+        "head_camera": [
+          240,
+          320,
+          3
+        ],
+        "left_camera": [
+          240,
+          320,
+          3
+        ],
+        "right_camera": [
+          240,
+          320,
+          3
+        ]
+      },
+      "model_evaluation": false,
+      "node": "r8000",
+      "image": "mini-eval-robotwin-queue-check:1",
+      "asset_scope": "full-published-version"
+    }
+  ],
+  "local_full_assets": {
+    "complete": false,
+    "phase": "transferring",
+    "delivery": "one-shot background copy, verify, atomic publish and content audit",
+    "uses_partial_assets_for_smoke": true
+  },
+  "limitations": [
+    "No real inference endpoint or EEF transform supplied; no model evaluation",
+    "50-case definition/file verification is not full 50-scene execution",
+    "Cosmos image smoke CLI only supports two tasks; click_bell checked with existing derived queue-check image"
+  ]
+}
