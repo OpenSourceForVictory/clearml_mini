@@ -1,12 +1,9 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {api} from './api';
 import {SuiteManager} from './suites';
 import {ImageClients} from './image-runtime';
+import {RunWizard, type Template, type Suite} from './run-wizard';
 
-type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;runtime?:{overridable_env:string[]}|null};
-type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[]};
-type Pool = {id:string;name:string};
-type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>};
 type Batch = {id:string;title:string;status:string;total:number;succeeded:number;finished:number;total_episodes:number;
   cases:{job_id:string;case_id:string;task_name:string;episodes:number;seed:number;status:string;attempt:number;error:string|null;run_id:string;episode_reporting:boolean;progress:{completed:number;successes:number;errors:number;success_rate:number|null}}[]};
 const labels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
@@ -14,52 +11,22 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
-function parseCases(value:unknown):Case[] {
-  if(!Array.isArray(value)||!value.length||value.length>100) throw new Error('清单需要包含 1–100 项任务');
-  const ids=new Set<string>();
-  return value.map((raw,i)=>{
-    if(!raw || typeof raw !== 'object') throw new Error(`第 ${i+1} 项格式错误`);
-    const c=raw as Case;
-    if(typeof c.case_id!=='string'||!/^[A-Za-z0-9_.-]{1,100}$/.test(c.case_id)||ids.has(c.case_id)) throw new Error(`第 ${i+1} 项标识无效或重复`);
-    if(typeof c.task_name!=='string'||!c.task_name.trim()||c.task_name.length>200) throw new Error(`第 ${i+1} 项缺少有效任务名`);
-    if(!Number.isInteger(c.episodes)||c.episodes<1||c.episodes>10000) throw new Error(`第 ${i+1} 项回合数应为 1–10000`);
-    const seed=c.seed??0;
-    if(!Number.isInteger(seed)||seed<0||seed>2147483647) throw new Error(`第 ${i+1} 项种子无效`);
-    if(c.parameters && (typeof c.parameters!=='object'||Array.isArray(c.parameters))) throw new Error(`第 ${i+1} 项参数必须是 JSON 对象`);
-    ids.add(c.case_id); return {case_id:c.case_id,task_name:c.task_name,episodes:c.episodes,seed,parameters:c.parameters||{}};
-  });
-}
 
 export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
-  const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<Pool[]>([]),[batches,setBatches]=useState<Batch[]>([]);
-  const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
-  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
-  const [suites,setSuites]=useState<Suite[]>([]),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
+  const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
+  const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
+  const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(null);
   const [episodeView,setEpisodeView]=useState<{jobId:string;runId:string}|null>(null);
   const [tab,setTab]=useState<'suites'|'runs'|'clients'>('runs');
   const tabs=[{id:'suites',label:'评测集合管理'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
-  const key=useRef({body:'',value:''});
   const refresh=async()=>{
-    const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<Pool[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-    setSuites(old=>{const selected=old.find(x=>x.id===suiteId);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
+    const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
+    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
   };
-  useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page,suiteId]);
-  async function submit(e:React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();setError('');setBusy(true);
-    try {
-      const f=new FormData(e.currentTarget);
-      const body={title:f.get('title'),pool_id:f.get('pool_id'),gpu_mode:f.get('gpu_mode'),requested_vram_gb:Number(f.get('requested_vram_gb')),
-        required_gpu_model:String(f.get('required_gpu_model')||'').trim()||null,
-        client:{environment:JSON.parse(String(f.get('environment')||'{}')),template_id:f.get('template_id'),endpoint:f.get('endpoint'),request_timeout_seconds:Number(f.get('request_timeout_seconds')),timeout_seconds:Number(f.get('timeout_seconds'))},
-        cases:suiteId?[]:parseCases(cases),suite_id:suiteId||null,max_concurrent:Number(f.get('max_concurrent'))};
-      const serialized=JSON.stringify(body);
-      if(key.current.body!==serialized) key.current={body:serialized,value:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()};
-      await api<Batch>('batches','POST',body,{'Idempotency-Key':key.current.value});key.current={body:'',value:''};await refresh();
-    } catch(e){setError(String(e));} finally{setBusy(false);}
-  }
+  useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page,launch]);
   function useSuite(suite:Suite) {
     setSuites(old=>[suite,...old.filter(x=>x.id!==suite.id)]);
-    setSuiteId(suite.id);setTemplateId(suite.template_id);setCases(suite.cases);setTab('runs');
+    setLaunch({suite});setTab('runs');
   }
   return <>
     <div className="page-title"><div><p className="eyebrow">CLIENT / SERVER</p><h1>CS 评测集合与运行</h1><p className="muted">提交完整清单，逐项调度、查看结果并补跑失败任务。</p></div></div>
@@ -85,30 +52,8 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
         </section>}
     </div>
     <div role="tabpanel" id="cs-panel-runs" aria-labelledby="cs-tab-runs" hidden={tab!=='runs'}>
-    <section className="panel"><h2>发起集合运行</h2>
-      <p className="hint">模型由外部推理服务管理。客户端模板定义可执行任务；“协议自检”模板仅验证通信和任务链路。</p>
-      <form onSubmit={submit}>
-        <div className="submit-grid">
-          <Field label="选择已保存集合"><select value={suiteId} onChange={e=>{setSuiteId(e.target.value);const s=suites.find(x=>x.id===e.target.value);if(s){setCases(s.cases);setTemplateId(s.template_id);}}}><option value="">自定义清单</option>{suites.map(s=><option key={s.id} value={s.id}>{s.name} / {s.version}</option>)}</select></Field>
-          <Field label="最大并发任务数"><input name="max_concurrent" type="number" min={1} max={100} defaultValue={1} required/></Field>
-          <Field label="批次名称"><input name="title" required maxLength={200}/></Field>
-          <Field label="客户端模板"><select name="template_id" required value={templateId} onChange={e=>{setTemplateId(e.target.value);setSuiteId('');}}><option value="" disabled>选择客户端及版本</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
-          <Field label="推理服务地址"><input name="endpoint" required maxLength={2000} placeholder="http://推理机器:端口/infer"/></Field>
-          <Field label="客户端资源池"><select name="pool_id" required defaultValue=""><option value="" disabled>选择资源池</option>{pools.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
-          <Field label="客户端 GPU 模式"><select name="gpu_mode"><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
-          <Field label="每项所需显存 GiB"><input name="requested_vram_gb" type="number" min={0} max={10000} defaultValue={0} required/></Field>
-          <Field label="指定 GPU 型号（可选）"><input name="required_gpu_model" maxLength={100}/></Field>
-          <Field label="请求超时秒"><input name="request_timeout_seconds" type="number" min={1} max={120} defaultValue={10} required/></Field>
-          <Field label="每项总超时秒"><input name="timeout_seconds" type="number" min={1} max={3600} defaultValue={300} required/></Field>
-        </div>
-        <Field label="启动变量覆盖 JSON"><textarea name="environment" defaultValue="{}" rows={3}/></Field>
-        <p className="hint">仅可覆盖模板允许的变量：{templates.find(t=>t.id===templateId)?.runtime?.overridable_env.join(', ')||'无'}。请勿填写密码或令牌。</p>
-        <h3>评测清单</h3>
-        {suiteId&&<p>使用已保存版本。临时调整请先选择“自定义清单”；保存新集合请到“评测集合管理”页。</p>}
-        <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId}/>
-        <button className="primary" disabled={busy||!templates.length}>{busy?'提交中…':'提交评测批次'}</button>
-      </form>
-    </section>
+    <RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
+      onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected}/>
     <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
       {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。失败和取消不计为成功。</p>
         <table><thead><tr><th>标识 / 任务</th><th>回合 / 种子</th><th>状态</th><th>尝试</th><th></th></tr></thead><tbody>{b.cases.map(c=><tr key={c.job_id}><td>{c.case_id}<small>{c.task_name}</small></td><td>{c.episode_reporting?`${c.progress.completed} / ${c.episodes} 回合，目标成功 ${c.progress.successes}`:`计划 ${c.episodes} 回合（客户端未上报回合）`}<small>种子 {c.seed}</small></td><td>{labels[c.status]}</td><td>{c.attempt}</td><td><button onClick={()=>setEpisodeView({jobId:c.job_id,runId:c.run_id})}>回合结果</button><button onClick={()=>setSelected(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table>
@@ -122,26 +67,6 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
 }
 
 
-function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCases:React.Dispatch<React.SetStateAction<Case[]>>;setError:(error:string)=>void;disabled?:boolean}) {
-  function change(i:number,k:keyof Case,value:unknown) {setCases(old=>old.map((c,n)=>n===i?{...c,[k]:value}:c));}
-  return <>
-        <fieldset disabled={disabled}>
-        <Field label="导入 JSON 清单"><input type="file" accept="application/json,.json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>1048576)throw new Error('清单文件不能超过 1 MiB');setCases(parseCases(JSON.parse(await file.text())));setError('');}catch(error){setError(String(error));}e.target.value='';}}/></Field>
-        <div className="table-scroll"><table><thead><tr><th>唯一标识</th><th>仿真任务名</th><th>回合数</th><th>种子</th><th>参数 JSON</th><th></th></tr></thead><tbody>
-          {cases.map((c,i)=><tr key={i}>
-            <td><input aria-label={`第 ${i+1} 项标识`} value={c.case_id} maxLength={100} required onChange={e=>change(i,'case_id',e.target.value)}/></td>
-            <td><input aria-label={`第 ${i+1} 项任务名`} value={c.task_name} maxLength={200} required onChange={e=>change(i,'task_name',e.target.value)}/></td>
-            <td><input aria-label={`第 ${i+1} 项回合数`} type="number" min={1} max={10000} required value={c.episodes} onChange={e=>change(i,'episodes',Number(e.target.value))}/></td>
-            <td><input aria-label={`第 ${i+1} 项种子`} type="number" min={0} max={2147483647} required value={c.seed} onChange={e=>change(i,'seed',Number(e.target.value))}/></td>
-            <td><textarea aria-label={`第 ${i+1} 项参数`} key={JSON.stringify(c.parameters)} defaultValue={JSON.stringify(c.parameters||{})} onBlur={e=>{try{const v=JSON.parse(e.target.value);if(!v||typeof v!=='object'||Array.isArray(v))throw new Error();change(i,'parameters',v);e.target.setCustomValidity('');}catch{e.target.setCustomValidity('参数必须是 JSON 对象');e.target.reportValidity();}}}/></td>
-            <td><button type="button" disabled={cases.length===1} onClick={()=>setCases(old=>old.filter((_,n)=>n!==i))}>移除</button></td>
-          </tr>)}
-        </tbody></table></div>
-        <button type="button" disabled={cases.length>=100} onClick={()=>setCases(old=>[...old,{case_id:'case-'+(old.length+1)+'-'+Date.now().toString(36),task_name:'',episodes:3,seed:0,parameters:{}}])}>添加任务</button>
-        </fieldset>
-        <p>共 {cases.length} 项、{cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合。每项独立调度；资源不足时保留排队；最大并发是上限。</p>
-  </>;
-}
 
 export function ClientTemplates({onChange}:{onChange?:()=>void}={}) {
   const [templates,setTemplates]=useState<Template[]>([]),[error,setError]=useState('');

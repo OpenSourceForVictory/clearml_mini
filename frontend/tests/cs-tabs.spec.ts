@@ -17,6 +17,7 @@ async function openWorkbench(page:Page, role='admin') {
     else if(path==='suites') {
       if(route.request().method()==='POST') {body={id:'suite-1',revision:0,archived:false,...route.request().postDataJSON()};suites.push(body);}
       else body=suites;
+    } else if(path==='batches/preflight') {const b=route.request().postDataJSON();body={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:suites.find(s=>s.id===b.suite_id)?.cases||b.cases,nodes:[],reasons:[]};
     } else if(path==='batches') {
       if(route.request().method()==='POST') {
         submitted=route.request().postDataJSON();
@@ -51,9 +52,12 @@ test('suite registration hands off to run; tabs preserve drafts and send selecte
   await expect(runs.getByLabel('批次名称',{exact:true})).toHaveValue('RoboTwin batch');
   await expect(runs.getByLabel('选择已保存集合')).toHaveValue('suite-1');
   await expect(runs.getByLabel('第 1 项任务名',{exact:true})).toBeDisabled();
+  await runs.getByRole('button',{name:'下一步',exact:true}).click();
   await runs.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
+  await runs.getByRole('button',{name:'下一步',exact:true}).click();
   await runs.getByLabel('客户端资源池',{exact:true}).selectOption('pool-1');
   await runs.getByLabel('最大并发任务数').fill('2');
+  await runs.getByRole('button',{name:'检查并确认',exact:true}).click();
   await runs.getByRole('button',{name:'提交评测批次',exact:true}).click();
   await expect(runs.getByRole('heading',{name:/RoboTwin batch/})).toBeVisible();
   expect(submitted()).toMatchObject({suite_id:'suite-1',cases:[],max_concurrent:2,client:{template_id:'client-1',endpoint:'ws://inference:8000'}});

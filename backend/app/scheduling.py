@@ -84,37 +84,62 @@ def endpoint_conflict(job, held_jobs):
                (exclusive or other.client_spec['template'].get('endpoint_exclusive', False)) for other in held_jobs)
 
 
-def eligible(slot, pool, job, held, at):
-    """Both physical capacity and observed headroom must fit; utilization is advisory."""
+def eligibility_codes(slot, pool, job, held, at):
+    """Ordered admission failures shared by scheduler and read-only preflight."""
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
             or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
-        return False
+        return ['disk_capacity']
     if job.client_spec and (slot.protocol_version < 3 or
                             job.client_spec['template']['image'] not in (slot.client_images or [])):
-        return False
+        return ['client_image']
     if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:
-        return False
+        return ['gpu_model']
     requested = job.requested_vram_gb * 1024
     if job.gpu_mode == 'exclusive':
         if held:
-            return False
+            return ['gpu_busy']
         if not requested:
-            return True  # Backward-compatible exclusive protocol.
+            return []  # Backward-compatible exclusive protocol.
     else:
         if not pool.allow_shared or slot.protocol_version < 2 or requested <= 0:
-            return False
+            return ['shared_unsupported']
         if len(held) >= pool.max_tasks_per_gpu or any(r.exclusive for r in held):
-            return False
+            return ['gpu_busy']
     if slot.protocol_version < 2 or not telemetry_fresh(slot, at):
-        return False
+        return ['telemetry_stale']
     margin = pool.vram_reserve_gb * 1024
+    if requested > slot.vram_mb - margin:
+        return ['vram_capacity']
     if requested + sum(r.reserved_vram_mb for r in held) > slot.vram_mb - margin:
-        return False
+        return ['vram_busy']
     # RUNNING telemetry already includes actual usage. Unstarted reservations do not.
     starting = sum(r.reserved_vram_mb for r in held if r.started_at is None)
     if requested + starting > slot.free_vram_mb - margin:
-        return False
-    return job.gpu_mode == 'exclusive' or slot.gpu_utilization < pool.max_gpu_utilization
+        return ['vram_busy']
+    return [] if job.gpu_mode == 'exclusive' or slot.gpu_utilization < pool.max_gpu_utilization else ['gpu_utilization']
+
+
+def eligible(slot, pool, job, held, at):
+    return not eligibility_codes(slot, pool, job, held, at)
+
+
+def slot_codes(worker, slot, at):
+    from . import storage, memberships, image_runtime
+    result = []
+    if not worker.enabled or not online(slot, at): result.append('offline')
+    if slot.quarantined: result.append('quarantined')
+    if not memberships.ready(slot): result.append('membership_pending')
+    if not storage.ready(worker, slot, at): result.append('storage_pending')
+    if not image_runtime.ready(worker, slot, at): result.append('runtime_pending')
+    return result
+
+
+def node_codes(worker, pool, count, cpu, ram):
+    result = []
+    if count >= worker.max_concurrent: result.append('node_concurrency')
+    if cpu + pool.cpu_per_job > worker.cpu_capacity: result.append('node_cpu')
+    if ram + pool.ram_gb_per_job > worker.ram_gb_capacity: result.append('node_ram')
+    return result
 
 
 def tick(factory, at=None):
@@ -152,10 +177,8 @@ def tick(factory, at=None):
                 node_counts[n] = node_counts.get(n, 0) + 1
                 node_cpu[n] = node_cpu.get(n, 0) + r.reserved_cpu
                 node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
-        free = [x for x in slots.values() if not x.quarantined
-                and x.worker_id in workers and x.pool_id in pools and online(x, at)
-                and memberships.ready(x) and ready(workers[x.worker_id], x, at)
-                and image_runtime.ready(workers[x.worker_id], x, at)]
+        free = [x for x in slots.values() if x.worker_id in workers and x.pool_id in pools
+                and not slot_codes(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
             Job.status == 'PENDING', User.active).order_by(Job.created_at, Job.id)).all()
         cursor = s.get(SchedulerState, 'rotation')
@@ -196,9 +219,8 @@ def tick(factory, at=None):
                     slot = next((x for x in free if x.pool_id == job.pool_id
                         and eligible(x, pool, job, by_slot[x.id], at)
                         and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
-                        and node_counts.get(x.worker_id, 0) < workers[x.worker_id].max_concurrent
-                        and node_cpu.get(x.worker_id, 0) + pool.cpu_per_job <= workers[x.worker_id].cpu_capacity
-                        and node_ram.get(x.worker_id, 0) + pool.ram_gb_per_job <= workers[x.worker_id].ram_gb_capacity), None)
+                        and not node_codes(workers[x.worker_id], pool, node_counts.get(x.worker_id, 0),
+                                           node_cpu.get(x.worker_id, 0), node_ram.get(x.worker_id, 0))), None)
                     if not slot:
                         continue
                     run = s.scalar(select(Run).where(Run.job_id == job.id).order_by(Run.attempt.desc()))

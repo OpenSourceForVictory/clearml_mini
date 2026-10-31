@@ -1,0 +1,34 @@
+import {test,expect} from '@playwright/test';
+
+test('real trial, three-case formal execution and empty-pool queue through wizard',async({page,request})=>{
+  test.setTimeout(120000);
+  const name='wizard-live-'+Date.now();
+  const credentials={username:process.env.ADMIN_USERNAME!,password:process.env.ADMIN_PASSWORD!};
+  const login=await request.post('/api/v1/auth/login',{data:credentials});expect(login.ok()).toBeTruthy();
+  const token=(await login.json()).access_token,headers={Authorization:'Bearer '+token};
+  const template=await request.post('/api/v1/admin/client-templates',{headers,data:{name,version:'1',image:'mini-eval-cs-test:1',command:['python','-m','runner.sdk','runner.sdk_demo:DemoClient'],episode_reporting:true}});
+  expect(template.status()).toBe(201);const t=await template.json();
+  const cases=[1,2,3].map(i=>({case_id:'case-'+i,task_name:'demo',episodes:2,seed:40+i,parameters:{}}));
+  const saved=await request.post('/api/v1/suites',{headers,data:{name,version:'1',template_id:t.id,cases}});expect(saved.status()).toBe(201);const suite=await saved.json();
+  const empty=await request.post('/api/v1/admin/pools',{headers,data:{name:name+'-empty',gpu_model:'virtual'}});expect(empty.status()).toBe(201);const pool=await empty.json();
+  await page.goto('/');await page.getByLabel('用户名',{exact:true}).fill(credentials.username);await page.getByLabel('密码',{exact:true}).fill(credentials.password);await page.getByRole('button',{name:'登录',exact:true}).click();
+  await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();const wizard=page.getByRole('region',{name:'集合运行向导'});
+  await wizard.getByLabel('选择已保存集合').selectOption(suite.id);await wizard.getByLabel('批次名称',{exact:true}).fill(name);
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('推理服务地址').fill(process.env.CS_TEST_ENDPOINT!);
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端资源池').selectOption({label:process.env.CS_POOL_NAME!});await wizard.getByLabel('最大并发任务数').fill('2');
+  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(wizard.getByText('3 项任务，6 个回合',{exact:true})).toBeVisible();
+  await wizard.getByText('可选：先试跑一个任务、一个回合',{exact:true}).click();await wizard.getByLabel('试跑任务').selectOption('case-2');
+  const trialResponse=page.waitForResponse(r=>r.url().endsWith('/batches')&&r.request().method()==='POST');await wizard.getByRole('button',{name:'提交单回合试跑',exact:true}).click();const trial=await (await trialResponse).json();
+  expect(trial.total).toBe(1);expect(trial.total_episodes).toBe(1);expect(trial.max_concurrent).toBe(1);
+  await expect(wizard.getByRole('region',{name:'试跑进度'})).toContainText('已完成 1/1 回合',{timeout:60000});
+  const formalResponse=page.waitForResponse(r=>r.url().endsWith('/batches')&&r.request().method()==='POST');await wizard.getByRole('button',{name:/^(提交评测批次|提交排队)$/}).click();const full=await (await formalResponse).json();
+  expect(full.id).not.toBe(trial.id);expect(full.total).toBe(3);expect(full.total_episodes).toBe(6);expect(full.suite_id).toBe(suite.id);
+  await expect.poll(async()=>{const r=await request.get('/api/v1/batches/'+full.id,{headers});return (await r.json()).cases.map((c:any)=>({status:c.status,completed:c.progress.completed}));},{timeout:60000}).toEqual(cases.map(()=>({status:'SUCCEEDED',completed:2})));
+  const unchanged=await request.get('/api/v1/suites/'+suite.id,{headers});expect((await unchanged.json()).cases).toEqual(cases);
+  await wizard.getByRole('button',{name:'上一步',exact:true}).click();await wizard.getByLabel('客户端资源池').selectOption(pool.id);await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+  await expect(wizard.getByText(/资源池中尚无 GPU 节点/)).toBeVisible();
+  const queuedResponse=page.waitForResponse(r=>r.url().endsWith('/batches')&&r.request().method()==='POST');await wizard.getByRole('button',{name:'提交排队',exact:true}).click();const queued=await (await queuedResponse).json();
+  expect(queued.cases.map((c:any)=>c.status)).toEqual(['PENDING','PENDING','PENDING']);
+  await page.screenshot({path:'test-results/wizard-live-queue.png',fullPage:true});
+  for(const c of queued.cases)expect((await request.post('/api/v1/jobs/'+c.job_id+'/cancel',{headers})).ok()).toBeTruthy();
+});

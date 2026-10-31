@@ -44,6 +44,10 @@ bearer = HTTPBearer(auto_error=False)
 
 @app.exception_handler(RequestValidationError)
 def validation_error(request, exc):
+    if request.url.path in ('/api/v1/batches/preflight', '/api/v1/batches'):
+        return JSONResponse(status_code=400, content={"detail": [
+            {"reason": '.'.join(str(x) for x in err['loc'] if x != 'body') + ': ' + err['msg']}
+            for err in exc.errors()]})
     return JSONResponse(status_code=400, content={"detail": "invalid request parameters"})
 ph = PasswordHasher()
 SECRET = os.getenv('JWT_SECRET')

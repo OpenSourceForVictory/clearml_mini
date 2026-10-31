@@ -88,6 +88,44 @@ def batch_view(s, batch):
                        'progress': progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
 
 
+def resolve_batch(s, body, user):
+    """Resolve and validate without mutating the request or persisting records."""
+    cases = list(body.cases)
+    if body.suite_id:
+        suite = s.get(EvaluationSuite, body.suite_id)
+        if not suite or suite.owner_id != user.id:
+            raise HTTPException(404, 'suite not found')
+        if suite.status != 'published' or suite.archived:
+            raise HTTPException(409, 'suite must be published and not archived')
+        if body.cases or body.client.template_id != suite.template_id:
+            raise HTTPException(400, 'suite run must use saved cases and client template')
+        cases = [Case.model_validate(c) for c in suite.cases]
+    if not cases:
+        raise HTTPException(400, 'evaluation manifest is empty')
+    pool = s.get(Pool, body.pool_id)
+    if not pool or not pool.enabled:
+        raise HTTPException(400, 'unknown or disabled pool')
+    if body.gpu_mode == 'shared' and (not pool.allow_shared or body.requested_vram_gb < 1):
+        raise HTTPException(400, 'shared jobs require an enabled pool and positive VRAM request')
+    if pool.gpu_model == 'virtual' and (body.gpu_mode == 'shared' or body.requested_vram_gb):
+        raise HTTPException(400, 'virtual pools do not allocate GPU memory')
+    pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status.not_in(TERMINAL)))
+    if pending + len(cases) > int(os.getenv('MAX_BATCH_BACKLOG_PER_USER', '10000')):
+        raise HTTPException(429, 'manifest exceeds remaining pending quota')
+    # Validate the entire manifest before persisting any of it.
+    configs = []
+    for case in cases:
+        values = body.client.model_dump()
+        values.update(task_name=case.task_name, seed=case.seed,
+                      parameters={**values['parameters'], **case.parameters})
+        try:
+            config = ClientRequest.model_validate(values)
+        except ValueError:
+            raise HTTPException(400, f'cases.{case.case_id}: invalid case configuration')
+        configs.append(snapshot(s, config, user.id))
+    return pool, cases, configs
+
+
 def install(app, db, current):
     from . import suites as suite_management
     suite_management.install(app, db, current)
@@ -95,6 +133,12 @@ def install(app, db, current):
     def suites(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
         q = select(EvaluationSuite).where(EvaluationSuite.owner_id == user.id, EvaluationSuite.status == 'published', EvaluationSuite.archived.is_(False)).order_by(EvaluationSuite.created_at.desc())
         return [suite_view(x) for x in s.scalars(q.offset((page-1)*100).limit(100))]
+
+    @app.post('/api/v1/batches/preflight')
+    def preflight(body: BatchSubmit, user=Depends(current), s: Session = Depends(db)):
+        from .preflight import inspect_batch
+        pool, cases, configs = resolve_batch(s, body, user)
+        return inspect_batch(s, body, user, pool, cases, configs)
 
     @app.post('/api/v1/batches', status_code=201)
     def create(body: BatchSubmit, idempotency_key: Optional[str] = Header(None), user=Depends(current), s: Session = Depends(db)):
@@ -107,42 +151,11 @@ def install(app, db, current):
                                                         EvaluationBatch.idempotency_key == idempotency_key))
             if old:
                 return batch_view(s, old)
-        if body.suite_id:
-            suite = s.get(EvaluationSuite, body.suite_id)
-            if not suite or suite.owner_id != user.id:
-                raise HTTPException(404, 'suite not found')
-            if suite.status != 'published' or suite.archived:
-                raise HTTPException(409, 'suite must be published and not archived')
-            if body.cases or body.client.template_id != suite.template_id:
-                raise HTTPException(400, 'suite run must use saved cases and client template')
-            body.cases = [Case.model_validate(c) for c in suite.cases]
-        if not body.cases:
-            raise HTTPException(400, 'evaluation manifest is empty')
-        pool = s.get(Pool, body.pool_id)
-        if not pool or not pool.enabled:
-            raise HTTPException(400, 'unknown or disabled pool')
-        if body.gpu_mode == 'shared' and (not pool.allow_shared or body.requested_vram_gb < 1):
-            raise HTTPException(400, 'shared jobs require an enabled pool and positive VRAM request')
-        if pool.gpu_model == 'virtual' and (body.gpu_mode == 'shared' or body.requested_vram_gb):
-            raise HTTPException(400, 'virtual pools do not allocate GPU memory')
-        pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status.not_in(TERMINAL)))
-        if pending + len(body.cases) > int(os.getenv('MAX_BATCH_BACKLOG_PER_USER', '10000')):
-            raise HTTPException(429, 'manifest exceeds remaining pending quota')
-        # Validate the entire manifest before persisting any of it.
-        configs = []
-        for case in body.cases:
-            values = body.client.model_dump()
-            values.update(task_name=case.task_name, seed=case.seed,
-                          parameters={**values['parameters'], **case.parameters})
-            try:
-                config = ClientRequest.model_validate(values)
-            except ValueError:
-                raise HTTPException(400, 'invalid case configuration')
-            configs.append(snapshot(s, config, user.id))
+        pool, cases, configs = resolve_batch(s, body, user)
         batch = EvaluationBatch(owner_id=user.id, title=body.title, idempotency_key=idempotency_key,
                                 suite_id=body.suite_id, max_concurrent=body.max_concurrent)
         s.add(batch); s.flush()
-        for case, spec in zip(body.cases, configs):
+        for case, spec in zip(cases, configs):
             j = Job(owner_id=user.id, pool_id=pool.id, title=f'{body.title[:95]} / {case.case_id}',
                     benchmark='cs-client', model_ref=spec['template']['name']+':'+spec['template']['version'],
                     episodes=case.episodes, client_spec=spec, batch_id=batch.id, case_id=case.case_id,

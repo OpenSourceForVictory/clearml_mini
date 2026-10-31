@@ -1,0 +1,45 @@
+{
+  "records": [
+    {
+      "batch_id": "ed6affde-ab52-46df-a626-9779b8f91701",
+      "job_id": "d223365d-0d54-4479-bff5-1121a519dec3",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "episodes": 1
+    },
+    {
+      "batch_id": "5fa2573c-c29e-4c17-b21a-7312e21414b7",
+      "job_id": "b1ed1386-7249-4b92-9ad2-49ffdc635240",
+      "node": "local-4090",
+      "status": "SUCCEEDED",
+      "episodes": 2
+    },
+    {
+      "batch_id": "5fa2573c-c29e-4c17-b21a-7312e21414b7",
+      "job_id": "9dbf625a-388f-4f7f-a4e4-bddf6f55879e",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "episodes": 2
+    },
+    {
+      "batch_id": "5fa2573c-c29e-4c17-b21a-7312e21414b7",
+      "job_id": "185ac798-c7bc-4c6d-bcf1-2d083cfe2fb8",
+      "node": "r8000",
+      "status": "SUCCEEDED",
+      "episodes": 2
+    }
+  ],
+  "existing_suites_unchanged": true,
+  "test_suite_archived": true,
+  "date": "2026-10-31",
+  "backend_tests_passed": 126,
+  "postgres_concurrency_tests_passed": 2,
+  "browser_tests_passed": 19,
+  "deployment": {
+    "release": "suite-preflight-release-20261031-092407",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/suite-preflight-release-20261031-092407",
+    "backup_image": "mini-eval-api:before-suite-preflight-release-20261031-092407",
+    "status": "api-deployed"
+  },
+  "scope": "CS SDK protocol validation; not real Cosmos model evaluation"
+}
