@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, create_engine, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -77,6 +77,11 @@ class Worker(Base):
     storage_config: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     runtime_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     runtime_config: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    retention_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    retention_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    retention_days: Mapped[int] = mapped_column(Integer, default=30, server_default='30')
+    data_scan_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    retention_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -310,3 +315,56 @@ class ClientBuild(Base):
     image: Mapped[Optional[str]] = mapped_column(String(500))
     template_id: Mapped[Optional[str]] = mapped_column(ForeignKey('client_templates.id'))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ExecutionData(Base):
+    __tablename__ = 'execution_data'
+    __table_args__ = (UniqueConstraint('slot_id', 'root_id', 'entry_name'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id'), index=True)
+    slot_id: Mapped[str] = mapped_column(ForeignKey('gpu_slots.id'), index=True)
+    run_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_runs.id'), index=True)
+    execution_id: Mapped[Optional[str]] = mapped_column(String(36))
+    root_id: Mapped[str] = mapped_column(String(64))
+    root_path: Mapped[str] = mapped_column(String(4096))
+    entry_name: Mapped[str] = mapped_column(String(255))
+    generation: Mapped[str] = mapped_column(String(36))
+    scan_status: Mapped[str] = mapped_column(String(20))
+    reason: Mapped[Optional[str]] = mapped_column(String(1000))
+    identity: Mapped[dict] = mapped_column(JSON_TYPE, default=dict)
+    logical_bytes: Mapped[Optional[int]] = mapped_column(BigInteger)
+    allocated_bytes: Mapped[Optional[int]] = mapped_column(BigInteger)
+    scanned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_complete_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_cleanup_status: Mapped[Optional[str]] = mapped_column(String(20))
+
+
+class DataCleanup(Base):
+    __tablename__ = 'data_cleanups'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id'), index=True)
+    actor_id: Mapped[Optional[str]] = mapped_column(ForeignKey('users.id'))
+    source: Mapped[str] = mapped_column(String(20), default='manual')
+    policy_revision: Mapped[Optional[int]] = mapped_column(Integer)
+    policy: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    storage_revision: Mapped[int] = mapped_column(Integer)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class DataCleanupItem(Base):
+    __tablename__ = 'data_cleanup_items'
+    __table_args__ = (UniqueConstraint('operation_id', 'data_id'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    operation_id: Mapped[str] = mapped_column(ForeignKey('data_cleanups.id'), index=True)
+    data_id: Mapped[str] = mapped_column(ForeignKey('execution_data.id'), index=True)
+    slot_id: Mapped[str] = mapped_column(ForeignKey('gpu_slots.id'), index=True)
+    snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
+    status: Mapped[str] = mapped_column(String(20), default='preview', index=True)
+    reason: Mapped[Optional[str]] = mapped_column(String(1000))
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    authorized_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    receipt: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)

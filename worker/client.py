@@ -20,6 +20,7 @@ from runner.cs_contract import INPUT_PATH, VERSION, endpoint_parts
 from .artifacts import read_artifacts
 from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
 from .storage import Storage
+from .retention import Retention
 from .image_runtime import Runtime
 from runner.image_runtime import validate as validate_runtime, ADAPTER, WORK, OUTPUT
 
@@ -105,6 +106,7 @@ class Worker:
         self.start_lock = threading.Lock()
         self.children = {}
         self.threads = {}
+        self.retention = None
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -507,6 +509,8 @@ class Worker:
         thread.start()
 
     def shutdown(self):
+        if self.retention:
+            self.retention.close()
         if self.runtime:
             self.runtime.stopping.set()
         for child in self.children.values():
@@ -525,11 +529,13 @@ class Worker:
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': 5, 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': 6, 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         self.recover_journals()
+        self.retention = Retention(self, docker)
+        self.retention.start()
         had_task = bool(self.children)
         while True:
             try:
@@ -539,6 +545,8 @@ class Worker:
                     if child.state:
                         self.launch(child, child.state['task'])
                     else:
+                        self.retention.remember(child.storage_snapshot['config']['workspace_root'])
+                        self.retention.mark_ready(execution)
                         self.children.pop(execution)
                         self.threads.pop(execution, None)
                         child.path.unlink(missing_ok=True)
@@ -556,11 +564,13 @@ class Worker:
                     LOG.warning('GPU telemetry unavailable; shared admission will wait')
                 reply = self.api.post('worker/heartbeat', body)
                 if 'storage' in reply:
+                    self.retention.remember(self.storage_snapshot['config']['workspace_root'])
                     self.storage.update(reply['storage'], self.slot_id,
                         bool(self.children) or reply.get('storage_busy', True), docker)
                     self.storage_snapshot = self.storage.snapshot()
                     self.config.update(self.storage_snapshot['config'])
                     self.workspace = Path(self.config['workspace_root'])
+                    self.retention.remember(str(self.workspace))
                 if 'runtime' in reply:
                     self.runtime.update(reply['runtime'], bool(self.children) or reply.get('storage_busy', True), dict(self.config), docker)
                     self.runtime_snapshot = self.runtime.snapshot()

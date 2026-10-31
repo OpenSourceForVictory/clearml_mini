@@ -111,7 +111,7 @@ def view(s, worker):
 
 def install(app, db, admin):
     def machine(s, worker_id):
-        w = s.get(Worker, worker_id)
+        w = s.scalar(select(Worker).where(Worker.id == worker_id).with_for_update().execution_options(populate_existing=True))
         if not w:
             raise HTTPException(404, 'node not found')
         return w

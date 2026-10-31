@@ -104,3 +104,7 @@ Worker 主动通过 HTTP API 注册、心跳和领取任务；平台不需要保
 配置可以省略 pool_id，接入后从管理设置选卡分配。多卡安装、API 地址确认、排空迁移与回退见 [资源池成员管理](resource-pool-membership.md)。默认真实 GPU，模拟设备须显式设置 mock=true。
 
 自带客户端镜像、启动变量、跨节点逻辑资产映射与 Worker v5 配置见 [镜像客户端指南](image-client-runtime.md)。
+
+## 执行数据管理（v6）
+
+升级后的 Worker 可后台盘点执行目录；管理员在机器的“执行数据”入口预览并提交清理。自动保留默认关闭，空间不足不会自行删除数据。范围、协议和回退见 [执行数据保留文档](worker-retention.md)。

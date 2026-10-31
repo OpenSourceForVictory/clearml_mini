@@ -28,7 +28,7 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
-    protocol_version: Literal[1, 2, 3, 4, 5] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
 
 
@@ -138,10 +138,12 @@ def install(app, db, current):
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
+    from .retention import install as install_retention
+    install_retention(app, db, admin, current, worker_auth)
 
     @app.get("/api/v1/worker/self")
     def worker_self(worker=Depends(worker_auth)):
-        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4", "runtime_v5"]}
+        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4", "runtime_v5", "retention_v6"]}
 
     def slot_for(s, slot_id, worker):
         slot = s.get(Slot, slot_id)

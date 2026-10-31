@@ -72,6 +72,7 @@ cd frontend && npm ci && npm run build
 - [批次暂停、恢复与整批取消](docs/batch-controls.md)
 - [批次报告导出与结果比较](docs/batch-reports.md)
 - [Worker 安装](docs/worker-setup.md)
+- [执行数据盘点、清理与保留策略](docs/worker-retention.md)
 - [机器接入与资源池成员管理](docs/resource-pool-membership.md)
 - [部署、备份和监控](docs/operations.md)
 - [API 示例](docs/api-examples.md)

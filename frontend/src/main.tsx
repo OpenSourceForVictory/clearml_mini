@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./style.css";
 import { api } from "./api";
 import { Memberships, admissionLabels } from "./memberships";
+import { ExecutionDataSettings, JobExecutionData } from "./retention";
 import { StorageSettings } from "./storage";
 import { RuntimeSettings, RuntimeReadiness } from "./image-runtime";
 import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
@@ -599,7 +600,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
         {job && (
           <>
             <div className="section-title">
-              <Badge status={job.status} />
+              <Badge status={job.status} /><JobExecutionData key={id} id={id}/>
               <div className="actions">
                 {!terminal.includes(job.status) && (
                   <button
@@ -1130,7 +1131,7 @@ function Admin() {
             ))}
           </tbody>
         </table>
-        {nodes.map(n => <React.Fragment key={n.id}><StorageSettings id={n.id} name={n.node_name} /><RuntimeSettings id={n.id} name={n.node_name} /></React.Fragment>)}
+        {nodes.map(n => <React.Fragment key={n.id}><StorageSettings id={n.id} name={n.node_name} /><RuntimeSettings id={n.id} name={n.node_name} /><ExecutionDataSettings id={n.id} name={n.node_name} /></React.Fragment>)}
       </section>
     </>
   );
