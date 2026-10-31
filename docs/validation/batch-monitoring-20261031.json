@@ -1,0 +1,500 @@
+{
+  "date": "2026-10-31",
+  "change": "batch-monitoring",
+  "backend": {
+    "tests": "132",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "135.682"
+  },
+  "postgresql": {
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "19.769"
+  },
+  "browser": {
+    "distinct_tests_passed": 22,
+    "notes": "全量首轮 21/22；修正新增测试的 option 定位后，相关 10 项通过；进一步加强旧响应测试后单项通过。 最终筛选返回保留、更新时间和日志显示修正后，相关 10 项再次通过。"
+  },
+  "docker": {
+    "batch_id": "a8ab998d-ef85-44cd-b64f-72ae94798ced",
+    "before_retry": {
+      "states": {
+        "FAILED": 1,
+        "SUCCEEDED": 2
+      },
+      "completed_episodes": 5,
+      "successes": 3,
+      "goal_failures": 2,
+      "episode_errors": 1,
+      "execution_failures": 1,
+      "reporting_tasks": 3,
+      "unreported_tasks": 0,
+      "success_rate": 0.6
+    },
+    "after_retry": {
+      "states": {
+        "SUCCEEDED": 3
+      },
+      "completed_episodes": 6,
+      "successes": 4,
+      "goal_failures": 2,
+      "episode_errors": 0,
+      "execution_failures": 0,
+      "reporting_tasks": 3,
+      "unreported_tasks": 0,
+      "success_rate": 0.6666666666666666
+    },
+    "retry": {
+      "items": [
+        {
+          "job_id": "f3c49f83-ea4d-4ebd-9ce7-c7a227c743d2",
+          "outcome": "retried",
+          "run_id": "08239c1e-ea7b-4cd3-9197-19c29a689f83",
+          "attempt": 2
+        }
+      ],
+      "retried": 1,
+      "skipped": 0
+    },
+    "replay": {
+      "items": [
+        {
+          "job_id": "f3c49f83-ea4d-4ebd-9ce7-c7a227c743d2",
+          "outcome": "skipped",
+          "code": "attempt_changed",
+          "message": "尝试已变化，请刷新后重新选择",
+          "run_id": "08239c1e-ea7b-4cd3-9197-19c29a689f83",
+          "attempt": 2
+        }
+      ],
+      "retried": 0,
+      "skipped": 1
+    },
+    "seen_reasons": [
+      "awaiting_scheduler",
+      "batch_concurrency",
+      "client_image",
+      "client_runtime",
+      "global_concurrency",
+      "gpu_busy",
+      "node_concurrency",
+      "runtime_pending",
+      "user_concurrency"
+    ],
+    "historical_artifacts_preserved": true
+  },
+  "production": {
+    "suite_id": "5cc5986a-8a50-43fb-a601-08ba49ea2eee",
+    "batch_ids": [
+      "7a2d71fc-c4a8-4653-8519-7b413505e917",
+      "6c6b77a9-054c-44f6-8e89-fcec93e09e03"
+    ],
+    "nodes": [
+      "local-4090",
+      "r8000"
+    ],
+    "max_active": 2,
+    "reasons": [
+      "awaiting_scheduler",
+      "global_concurrency",
+      "gpu_busy",
+      "user_concurrency"
+    ],
+    "samples": [
+      {
+        "active": 0,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 2,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 2,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 2,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 2,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 2,
+        "finished": 0,
+        "completed": 0
+      },
+      {
+        "active": 0,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 2,
+        "finished": 2,
+        "completed": 2
+      },
+      {
+        "active": 0,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 2,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 2,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 2,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 2,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 2,
+        "finished": 4,
+        "completed": 4
+      },
+      {
+        "active": 0,
+        "finished": 6,
+        "completed": 6
+      }
+    ],
+    "final": [
+      {
+        "id": "7a2d71fc-c4a8-4653-8519-7b413505e917",
+        "suite_id": "5cc5986a-8a50-43fb-a601-08ba49ea2eee",
+        "max_concurrent": 2,
+        "title": "[验收] 批次监控双机",
+        "owner_id": "efe14d0c-83ac-4087-b458-ce861685fab5",
+        "created_at": "2026-10-31T07:00:09.744996+00:00",
+        "status": "SUCCEEDED",
+        "total": 3,
+        "succeeded": 3,
+        "finished": 3,
+        "total_episodes": 3,
+        "cases": [
+          {
+            "job_id": "889b3145-6c1b-4446-9857-1f31503ca9a4",
+            "case_id": "case-1",
+            "task_name": "slow",
+            "seed": 1,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "8126aa96-58f4-4fea-ab97-c3674e7f3a8b",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "r8000",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          },
+          {
+            "job_id": "7aabc301-2b60-4a09-921c-41785a4269ca",
+            "case_id": "case-2",
+            "task_name": "slow",
+            "seed": 2,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "890bd64d-9910-48e8-b1a7-40051ad819d9",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "r8000",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          },
+          {
+            "job_id": "c1ed727f-2965-4991-b518-ffd54e8a648c",
+            "case_id": "case-3",
+            "task_name": "slow",
+            "seed": 3,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "f16b77cf-fd3b-405f-9dd9-a5e8f813dda7",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "r8000",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          }
+        ],
+        "checked_at": "2026-10-31T07:00:57.186984+00:00",
+        "summary": {
+          "states": {
+            "SUCCEEDED": 3
+          },
+          "completed_episodes": 3,
+          "successes": 3,
+          "goal_failures": 0,
+          "episode_errors": 0,
+          "execution_failures": 0,
+          "reporting_tasks": 3,
+          "unreported_tasks": 0,
+          "success_rate": 1.0
+        }
+      },
+      {
+        "id": "6c6b77a9-054c-44f6-8e89-fcec93e09e03",
+        "suite_id": "5cc5986a-8a50-43fb-a601-08ba49ea2eee",
+        "max_concurrent": 2,
+        "title": "[验收] 批次监控双机",
+        "owner_id": "efe14d0c-83ac-4087-b458-ce861685fab5",
+        "created_at": "2026-10-31T07:00:09.840807+00:00",
+        "status": "SUCCEEDED",
+        "total": 3,
+        "succeeded": 3,
+        "finished": 3,
+        "total_episodes": 3,
+        "cases": [
+          {
+            "job_id": "956d904f-209f-4026-9e74-92199ea17097",
+            "case_id": "case-1",
+            "task_name": "slow",
+            "seed": 1,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "82ef29c5-50ae-4221-b549-63df884a5288",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "local-4090",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          },
+          {
+            "job_id": "2765e54c-708b-4e2f-8fd0-e91c26aa960e",
+            "case_id": "case-2",
+            "task_name": "slow",
+            "seed": 2,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "173a5e10-ca2d-4fd6-9618-201b2a7abb91",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "local-4090",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          },
+          {
+            "job_id": "35adaa3a-16c3-4ce0-8bac-51506bfbd4fd",
+            "case_id": "case-3",
+            "task_name": "slow",
+            "seed": 3,
+            "episodes": 1,
+            "status": "SUCCEEDED",
+            "attempt": 1,
+            "run_id": "316e8a71-22f7-4b4f-bd5a-36888b34fc6a",
+            "episode_reporting": true,
+            "progress": {
+              "completed": 1,
+              "successes": 1,
+              "errors": 0,
+              "running": [],
+              "success_rate": 1.0
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "node_name": "local-4090",
+            "gpu_index": 0,
+            "waiting": null,
+            "reason_codes": [],
+            "config": {
+              "pool_id": "8af54597-aa7a-4316-a614-326c13ebd2d1",
+              "pool_name": "gpu-pool",
+              "gpu_mode": "exclusive",
+              "requested_vram_gb": 0,
+              "required_gpu_model": null,
+              "endpoint": "http://192.168.137.71:19091/infer",
+              "client_name": "平台 SDK HTTP 协议自检",
+              "client_version": "1"
+            }
+          }
+        ],
+        "checked_at": "2026-10-31T07:00:57.348102+00:00",
+        "summary": {
+          "states": {
+            "SUCCEEDED": 3
+          },
+          "completed_episodes": 3,
+          "successes": 3,
+          "goal_failures": 0,
+          "episode_errors": 0,
+          "execution_failures": 0,
+          "reporting_tasks": 3,
+          "unreported_tasks": 0,
+          "success_rate": 1.0
+        }
+      }
+    ],
+    "suite_archived": true
+  },
+  "deployment": {
+    "release": "batch-monitoring-release-20261031-145917",
+    "remote_stage": "/home/huawei/clearml_mini/.runtime/batch-monitoring-release-20261031-145917",
+    "backup_image": "mini-eval-api:before-batch-monitoring-release-20261031-145917",
+    "status": "api-deployed"
+  },
+  "limits": [
+    "协议自检服务，不是真实模型或 RoboTwin 闭环评测",
+    "本次无数据库结构或 Worker 协议变更"
+  ],
+  "cleanup": {
+    "temporary_services_stopped": true,
+    "isolated_database_removed": true,
+    "production_suite_archived": true
+  }
+}

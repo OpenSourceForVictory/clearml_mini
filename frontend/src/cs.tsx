@@ -1,5 +1,7 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {api} from './api';
+import {BatchDetail} from './batch-detail';
+import {usePoll} from './poll';
 import {SuiteManager} from './suites';
 import {ImageClients} from './image-runtime';
 import {RunWizard, type Template, type Suite} from './run-wizard';
@@ -16,14 +18,24 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(null);
-  const [episodeView,setEpisodeView]=useState<{jobId:string;runId:string}|null>(null);
+  const batchFilters=useRef<Record<string,{status:string;reason:string;query:string}>>({});
+  const [batchId,setBatchId]=useState(()=>location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');
+  useEffect(()=>{const change=()=>{setBatchId(location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');setTab('runs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
+  const openBatch=(id:string)=>{location.hash='/cs/batches/'+id;};
   const [tab,setTab]=useState<'suites'|'runs'|'clients'>('runs');
   const tabs=[{id:'suites',label:'评测集合管理'},{id:'runs',label:'评测集合运行'},{id:'clients',label:'客户端注册'}] as const;
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
     setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
   };
-  useEffect(()=>{let active=true;const load=()=>{if(active) void refresh().catch(e=>setError(String(e)));};load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[page,launch]);
+  useEffect(()=>{
+    let active=true,timer:ReturnType<typeof setTimeout>;
+    async function load(){try{
+      const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
+      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
+    }catch(e){if(active)setError(String(e));}finally{if(active)timer=setTimeout(load,2000);}}
+    if(!batchId)void load();return()=>{active=false;clearTimeout(timer);};
+  },[page,launch,batchId]);
   function useSuite(suite:Suite) {
     setSuites(old=>[suite,...old.filter(x=>x.id!==suite.id)]);
     setLaunch({suite});setTab('runs');
@@ -52,15 +64,14 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
         </section>}
     </div>
     <div role="tabpanel" id="cs-panel-runs" aria-labelledby="cs-tab-runs" hidden={tab!=='runs'}>
-    <RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
-      onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected}/>
+    <div hidden={!!batchId}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
+      onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/>
     <section className="panel"><h2>批次进度</h2>{!batches.length&&<p>尚无评测批次。</p>}
-      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。失败和取消不计为成功。</p>
-        <table><thead><tr><th>标识 / 任务</th><th>回合 / 种子</th><th>状态</th><th>尝试</th><th></th></tr></thead><tbody>{b.cases.map(c=><tr key={c.job_id}><td>{c.case_id}<small>{c.task_name}</small></td><td>{c.episode_reporting?`${c.progress.completed} / ${c.episodes} 回合，目标成功 ${c.progress.successes}`:`计划 ${c.episodes} 回合（客户端未上报回合）`}<small>种子 {c.seed}</small></td><td>{labels[c.status]}</td><td>{c.attempt}</td><td><button onClick={()=>setEpisodeView({jobId:c.job_id,runId:c.run_id})}>回合结果</button><button onClick={()=>setSelected(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table>
-      </div>)}
+      {batches.map(b=><div key={b.id}><h3>{b.title} · {labels[b.status]} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
       <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
     </section>
-    {episodeView&&<section className="panel"><button onClick={()=>setEpisodeView(null)}>关闭回合结果</button><EpisodeList {...episodeView}/></section>}
+    </div>
+    {batchId&&tab==='runs'&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onBack={()=>{location.hash='/cs';}} onJob={setSelected}/>}
     {selected&&renderJob(selected,()=>setSelected(''))}
     </div>
   </>;
@@ -82,16 +93,17 @@ export function ClientTemplates({onChange}:{onChange?:()=>void}={}) {
 }
 
 export function ArtifactList({jobId,runId}:{jobId:string;runId:string}) {
-  const [files,setFiles]=useState<{id:string;name:string;size_bytes:number}[]>([]),[error,setError]=useState('');
+  const [downloadError,setError]=useState('');
   const base=`jobs/${jobId}/attempts/${runId}/artifacts`;
-  useEffect(()=>{let active=true;setFiles([]);const load=()=>api<typeof files>(base).then(v=>{if(active)setFiles(v);}).catch(e=>{if(active)setError(String(e));});void load();const t=setInterval(load,2000);return()=>{active=false;clearInterval(t);};},[base]);
+  const {data,error:pollError}=usePoll<{id:string;name:string;size_bytes:number}[]>(base);
+  const files=data||[],error=downloadError||pollError;
   return <><h3>评测产物</h3>{error&&<p className="error">{error}</p>}{!files.length&&<p className="hint">尚无产物。每项最多 8 个文件，单文件 8 MiB，总计 32 MiB。</p>}{files.map(f=><p key={f.id}><button onClick={async()=>{try{const response=await fetch('/api/v1/'+base+'/'+f.id,{headers:{Authorization:'Bearer '+sessionStorage.getItem('eval-token')}});if(!response.ok)throw new Error('下载失败或登录已过期');const url=URL.createObjectURL(await response.blob());const a=document.createElement('a');a.href=url;a.download=f.name.split('/').at(-1)!;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError(String(e));}}}>下载 {f.name}</button> · {(f.size_bytes/1024).toFixed(1)} KiB</p>)}</>;
 }
 
 
 export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
-  const [page,setPage]=useState(1),[data,setData]=useState<any>(null),[error,setError]=useState('');
-  useEffect(()=>{let active=true;setData(null);const load=()=>api<any>(`jobs/${jobId}/attempts/${runId}/episodes?page=${page}`).then(v=>{if(active)setData(v);}).catch(e=>{if(active)setError(String(e));});void load();const timer=setInterval(load,2000);return()=>{active=false;clearInterval(timer);};},[jobId,runId,page]);
+  const [page,setPage]=useState(1);
+  const {data,error}=usePoll<any>(`jobs/${jobId}/attempts/${runId}/episodes?page=${page}`);
   return <><h3>回合进度与部分结果</h3>{error&&<p role="alert">{error}</p>}{data&&<>
     <p>已完成 {data.progress.completed}/{data.planned}，目标成功 {data.progress.successes}，执行异常 {data.progress.errors}。成功率仅统计已完成回合。</p>
     <table><thead><tr><th>回合</th><th>种子</th><th>执行状态</th><th>目标结果</th><th>指标 / 异常</th></tr></thead><tbody>{data.items.map((r:any)=><tr key={r.episode_id}><td>{r.episode_id}</td><td>{r.seed}</td><td>{r.result?(r.result.status==='COMPLETED'?'已完成':'执行异常'):'已开始'}</td><td>{r.result?.status==='COMPLETED'?(r.result.success?'成功':'失败'):'—'}</td><td>{JSON.stringify(r.result?.metrics||r.result?.error||{})}</td></tr>)}</tbody></table>

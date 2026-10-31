@@ -13,10 +13,11 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
 const initial={title:'',endpoint:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
-export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onJob:(id:string)=>void}) {
+export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
   const [step,setStep]=useState(0),[preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [submittedId,setSubmittedId]=useState('');
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
   const selectedSuite=suites.find(s=>s.id===suiteId),template=templates.find(t=>t.id===templateId);
@@ -60,7 +61,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob}:{tem
       if(keys.current[kind]?.body!==serialized)keys.current[kind]={body:serialized,value:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()};
       // The POST revalidates under the existing transaction; inspection reserves nothing.
       const b=await api<Trial>('batches','POST',payload,{'Idempotency-Key':keys.current[kind].value});
-      if(isTrial){setTrial(b);setTrialError('');}else if(seq===sequence.current)setSubmitted('已提交：'+b.title+'。可在下方批次进度查看。');
+      if(isTrial){setTrial(b);setTrialError('');}else if(seq===sequence.current){setSubmitted('已提交：'+b.title+'。可在下方批次进度查看。');setSubmittedId(b.id);}
       onSubmitted();
     }catch(e){setError(String(e));}finally{pending.current=false;setBusy(false);}
   }
@@ -131,8 +132,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob}:{tem
     </>}
     <div className="wizard-actions">{step>0&&<button type="button" onClick={()=>{setStep(s=>s-1);setError('');}}>上一步</button>}{step<3&&<button type="submit" className="primary">{step===2?'检查并确认':'下一步'}</button>}</div>
     </fieldset></form>
-    {submitted&&<p role="status">{submitted}</p>}
-    {trial&&<section aria-label="试跑进度"><h3>{trial.title} · {statuses[trial.status]||trial.status}</h3>
+    {submitted&&<p role="status">{submitted}{onBatch&&<button onClick={()=>onBatch(submittedId)}>查看已提交批次</button>}</p>}
+    {trial&&<section aria-label="试跑进度"><button onClick={()=>onBatch?.(trial.id)}>查看试跑批次</button><h3>{trial.title} · {statuses[trial.status]||trial.status}</h3>
       {trialError&&<p role="alert">试跑状态更新失败：{trialError}，将自动重试。</p>}
       {trial.cases.map(c=><div key={c.job_id}><p>{statuses[c.status]||c.status} · {c.episode_reporting?`已完成 ${c.progress.completed}/1 回合，目标成功 ${c.progress.successes}`:'客户端未声明回合上报，无法验证回合报告'}</p>{c.error&&<p>{c.error}</p>}<button onClick={()=>onJob(c.job_id)}>试跑详情 / 取消</button></div>)}
       <p className="hint">试跑只代表所选任务的一个回合，不代表完整集合评测结果。</p>

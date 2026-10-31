@@ -63,8 +63,8 @@ def suite_view(suite):
     return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source')}
 
 
-def batch_view(s, batch):
-    jobs = s.scalars(select(Job).options(selectinload(Job.runs)).where(Job.batch_id == batch.id)
+def batch_view(s, batch, jobs=None, progresses=None):
+    jobs = jobs if jobs is not None else s.scalars(select(Job).options(selectinload(Job.runs)).where(Job.batch_id == batch.id)
                      .order_by(Job.created_at, Job.id)).all()
     succeeded = sum(j.status == 'SUCCEEDED' for j in jobs)
     finished = sum(j.status in TERMINAL for j in jobs)
@@ -85,7 +85,7 @@ def batch_view(s, batch):
                        'seed': j.client_spec['seed'], 'episodes': j.episodes, 'status': j.status,
                        'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
                        'episode_reporting': j.client_spec['template'].get('episode_reporting', False),
-                       'progress': progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
+                       'progress': progresses[j.runs[-1].id] if progresses is not None else progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
 
 
 def resolve_batch(s, body, user):
@@ -129,6 +129,8 @@ def resolve_batch(s, body, user):
 def install(app, db, current):
     from . import suites as suite_management
     suite_management.install(app, db, current)
+    from .monitoring import install as install_monitoring
+    install_monitoring(app, db, current)
     @app.get('/api/v1/suites')
     def suites(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
         q = select(EvaluationSuite).where(EvaluationSuite.owner_id == user.id, EvaluationSuite.status == 'published', EvaluationSuite.archived.is_(False)).order_by(EvaluationSuite.created_at.desc())

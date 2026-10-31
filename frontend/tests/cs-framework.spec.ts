@@ -40,7 +40,8 @@ test('save reusable suite and run with concurrency; view partial episode results
     return (await response.json()).cases.map((c:any)=>({status:c.status,completed:c.progress.completed}));
   },{timeout:60000}).toEqual([{status:'SUCCEEDED',completed:2},{status:'SUCCEEDED',completed:2}]);
   await expect(page.getByRole('heading',{name:new RegExp(runTitle)})).toBeVisible();
-  await page.getByRole('heading',{name:new RegExp(runTitle)}).last().locator('..').getByRole('button',{name:'回合结果',exact:true}).first().click();
+  await page.getByRole('heading',{name:new RegExp(runTitle)}).last().locator('..').getByRole('button',{name:'查看批次',exact:true}).click();
+  await page.getByRole('button',{name:'排查任务',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'回合进度与部分结果'})).toBeVisible();
   await page.screenshot({path:'test-results/cs-framework.png',fullPage:true});
 });

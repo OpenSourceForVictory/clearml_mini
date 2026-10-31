@@ -68,6 +68,7 @@ cd frontend && npm ci && npm run build
 - [架构和恢复协议](docs/architecture.md)
 - [评测集合导入与管理](docs/suite-management.md)
 - [集合运行向导、预检与单回合试跑](docs/suite-run-preflight.md)
+- [批次监控、等待诊断与安全补跑](docs/batch-monitoring.md)
 - [Worker 安装](docs/worker-setup.md)
 - [机器接入与资源池成员管理](docs/resource-pool-membership.md)
 - [部署、备份和监控](docs/operations.md)

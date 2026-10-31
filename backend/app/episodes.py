@@ -33,6 +33,10 @@ def record(s, run, event):
 
 def progress(s, run):
     rows = s.scalars(select(EpisodeRecord).where(EpisodeRecord.run_id == run.id)).all()
+    return summarize(rows)
+
+
+def summarize(rows):
     completed = sum(bool(r.result and r.result['status'] == 'COMPLETED') for r in rows)
     successes = sum(bool(r.result and r.result.get('success')) for r in rows)
     errors = sum(bool(r.result and r.result['status'] == 'ERROR') for r in rows)

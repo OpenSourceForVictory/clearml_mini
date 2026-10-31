@@ -119,7 +119,8 @@ function App() {
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [tab, setTab] = useState("jobs");
+    [tab, setTab] = useState(location.hash.startsWith('#/cs')?'cs':'jobs');
+  useEffect(()=>{const change=()=>{if(location.hash.startsWith('#/cs'))setTab('cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   useEffect(() => {
     const logout = () => {
       sessionStorage.removeItem("eval-token");

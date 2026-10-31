@@ -1,11 +1,16 @@
 """Read-only inspection. No probes, reservations, reconciliation or persistence."""
 from types import SimpleNamespace
+from collections import Counter, defaultdict
 from sqlalchemy import select, or_
 from .core import Run, Job, Slot, Worker, now
 from . import scheduling as admission, image_runtime
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
+    'batch_concurrency': ('resource', '本批次已达到最大并发数', '等待本批次运行任务完成'),
+    'pool_disabled': ('environment', '资源池已停用或不存在', '请管理员检查资源池状态'),
+    'owner_disabled': ('environment', '任务所属用户已停用', '请管理员检查用户状态'),
+    'awaiting_scheduler': ('resource', '当前未发现资源阻塞，等待调度', '等待调度器按公平策略分配资源'),
     'offline': ('environment', '节点离线或已停用', '请管理员检查 Worker 在线状态'),
     'quarantined': ('environment', '节点正在等待旧执行清理', '等待 Worker 确认清理完成'),
     'membership_pending': ('environment', '资源池变更尚未生效', '等待旧任务清理及资源池变更生效'),
@@ -36,40 +41,59 @@ def reason(code, message=None):
     return dict(code=code, category=category, message=message or text, action=action)
 
 
+class DiagnosticContext:
+    """One bounded query set per inspection, shared across all cases."""
+    def __init__(self, s):
+        self.at = now()
+        self.active = s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
+        self.jobs = {j.id: j for j in s.scalars(select(Job).where(Job.id.in_({r.job_id for r in self.active})))}
+        self.slots = {x.id: x for x in s.scalars(select(Slot))}
+        self.workers = {w.id: w for w in s.scalars(select(Worker))}
+        self.by_slot, self.by_node = defaultdict(list), defaultdict(list)
+        self.owners, self.batches = Counter(), Counter()
+        for run in self.active:
+            job = self.jobs[run.job_id]
+            self.owners[job.owner_id] += 1
+            self.batches[job.batch_id] += 1
+            self.by_slot[run.slot_id].append(run)
+            if run.slot_id in self.slots:
+                self.by_node[self.slots[run.slot_id].worker_id].append(run)
+
+    def inspect(self, job, owner, pool, batch=None):
+        codes = []
+        if not owner.active: codes.append('owner_disabled')
+        if not pool or not pool.enabled: codes.append('pool_disabled')
+        if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')
+        if self.owners[owner.id] >= admission.seconds('MAX_ACTIVE_PER_USER', 2): codes.append('user_concurrency')
+        if batch and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
+        if admission.endpoint_conflict(job, list(self.jobs.values())): codes.append('endpoint_busy')
+        nodes = []
+        for slot in sorted(self.slots.values(), key=lambda x: (x.node_name, x.gpu_index)):
+            if not pool or slot.pool_id != pool.id: continue
+            worker = self.workers[slot.worker_id]
+            held, node_held = self.by_slot[slot.id], self.by_node[worker.id]
+            local = admission.slot_codes(worker, slot, self.at)
+            local += admission.eligibility_codes(slot, pool, job, held, self.at)
+            local += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held))
+            reasons = [reason(code) for code in dict.fromkeys(local)]
+            for message in image_runtime.blockers(worker, slot, job.client_spec, self.at):
+                if message not in [r['message'] for r in reasons]: reasons.append(reason('client_runtime', message))
+            nodes.append(dict(slot_id=slot.id, node_name=slot.node_name, gpu_index=slot.gpu_index,
+                              gpu_model=slot.gpu_model, ready=not reasons and not codes, reasons=reasons))
+        if not nodes: codes.append('no_nodes')
+        reasons = [reason(code) for code in codes]
+        ready = any(n['ready'] for n in nodes)
+        resource_only = (all(r['category'] == 'resource' for r in reasons) and
+                         any(all(r['category'] == 'resource' for r in n['reasons']) for n in nodes))
+        return dict(checked_at=self.at, status='ready' if ready else 'waiting_resources' if resource_only else 'needs_environment',
+                    nodes=nodes, reasons=reasons)
+
+
 def inspect_batch(s, body, user, pool, cases, configs):
-    at = now()
-    active = s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
-    jobs = {r.job_id: s.get(Job, r.job_id) for r in active}
-    slots = {x.id: x for x in s.scalars(select(Slot))}
-    # Every case shares its template, endpoint and resource request.
+    context = DiagnosticContext(s)
     job = SimpleNamespace(client_spec=configs[0], required_gpu_model=body.required_gpu_model,
                           requested_vram_gb=body.requested_vram_gb, gpu_mode=body.gpu_mode)
-    global_codes = []
-    if len(active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): global_codes.append('global_concurrency')
-    if sum(jobs[r.job_id].owner_id == user.id for r in active) >= admission.seconds('MAX_ACTIVE_PER_USER', 2):
-        global_codes.append('user_concurrency')
-    if admission.endpoint_conflict(job, list(jobs.values())): global_codes.append('endpoint_busy')
-    nodes = []
-    for slot in sorted(slots.values(), key=lambda x: (x.node_name, x.gpu_index)):
-        if slot.pool_id != pool.id: continue
-        worker = s.get(Worker, slot.worker_id)
-        held = [r for r in active if r.slot_id == slot.id]
-        node_held = [r for r in active if r.slot_id in slots and slots[r.slot_id].worker_id == worker.id]
-        codes = admission.slot_codes(worker, slot, at)
-        codes += admission.eligibility_codes(slot, pool, job, held, at)
-        codes += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held))
-        reasons = [reason(code) for code in dict.fromkeys(codes)]
-        for message in image_runtime.blockers(worker, slot, job.client_spec, at):
-            if message not in [r['message'] for r in reasons]:
-                reasons.append(reason('client_runtime', message))
-        nodes.append(dict(slot_id=slot.id, node_name=slot.node_name, gpu_index=slot.gpu_index,
-                          gpu_model=slot.gpu_model, ready=not reasons and not global_codes, reasons=reasons))
-    if not nodes: global_codes.append('no_nodes')
-    reasons = [reason(code) for code in global_codes]
-    ready = any(n['ready'] for n in nodes)
-    # A resource wait is useful when at least one node needs no environment repair.
-    resource_only = any(all(r['category'] == 'resource' for r in n['reasons']) for n in nodes)
-    return dict(checked_at=at, can_submit=True, status='ready' if ready else 'waiting_resources' if resource_only else 'needs_environment',
+    return dict(**context.inspect(job, user, pool), can_submit=True,
                 task_count=len(cases), total_episodes=sum(c.episodes for c in cases), max_concurrent=body.max_concurrent,
-                cases=[c.model_dump() for c in cases], nodes=nodes, reasons=reasons,
+                cases=[c.model_dump() for c in cases],
                 note='检查不预留资源；服务连通和客户端执行需要实际试跑验证。')
