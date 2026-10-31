@@ -44,7 +44,12 @@ def main():
         preflight(config['endpoint'], config['request_timeout_seconds'])
         print(json.dumps({'stage': 'connected'}), flush=True)
         env = {**os.environ, 'MINI_EVAL_INPUT': INPUT_PATH, 'MINI_EVAL_OUTPUT_DIR': OUTPUT_DIR}
-        code = subprocess.call(config['template']['command'], env=env)
+        command, cwd = config['template']['command'], None
+        if config['template'].get('runtime') is not None:
+            from .image_runtime import resolve
+            command, additions, cwd = resolve(config)
+            env.update(additions)
+        code = subprocess.call(command, env=env, cwd=cwd)
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:
         # Never print response payloads or authentication data from the remote service.

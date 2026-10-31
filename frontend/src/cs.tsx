@@ -1,8 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {api} from './api';
 import {SuiteManager} from './suites';
+import {ImageClients} from './image-runtime';
 
-type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean};
+type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;runtime?:{overridable_env:string[]}|null};
 type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[]};
 type Pool = {id:string;name:string};
 type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>};
@@ -49,7 +50,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
       const f=new FormData(e.currentTarget);
       const body={title:f.get('title'),pool_id:f.get('pool_id'),gpu_mode:f.get('gpu_mode'),requested_vram_gb:Number(f.get('requested_vram_gb')),
         required_gpu_model:String(f.get('required_gpu_model')||'').trim()||null,
-        client:{template_id:f.get('template_id'),endpoint:f.get('endpoint'),request_timeout_seconds:Number(f.get('request_timeout_seconds')),timeout_seconds:Number(f.get('timeout_seconds'))},
+        client:{environment:JSON.parse(String(f.get('environment')||'{}')),template_id:f.get('template_id'),endpoint:f.get('endpoint'),request_timeout_seconds:Number(f.get('request_timeout_seconds')),timeout_seconds:Number(f.get('timeout_seconds'))},
         cases:suiteId?[]:parseCases(cases),suite_id:suiteId||null,max_concurrent:Number(f.get('max_concurrent'))};
       const serialized=JSON.stringify(body);
       if(key.current.body!==serialized) key.current={body:serialized,value:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()};
@@ -75,6 +76,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
       <SuiteManager templates={templates} onRun={useSuite} onJob={id=>{setSelected(id);setTab('runs');}} onSaved={()=>{void refresh().catch(e=>setError(String(e)));}}/>
     </div>
     <div role="tabpanel" id="cs-panel-clients" aria-labelledby="cs-tab-clients" hidden={tab!=='clients'}>
+      <ImageClients onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>
       <ClientSources/>
       {admin?<ClientTemplates onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>:
         <section className="panel"><h2>可用客户端模板</h2><p className="hint">选择已有模板注册集合，或提交自己的客户端代码。</p>
@@ -99,6 +101,8 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
           <Field label="请求超时秒"><input name="request_timeout_seconds" type="number" min={1} max={120} defaultValue={10} required/></Field>
           <Field label="每项总超时秒"><input name="timeout_seconds" type="number" min={1} max={3600} defaultValue={300} required/></Field>
         </div>
+        <Field label="启动变量覆盖 JSON"><textarea name="environment" defaultValue="{}" rows={3}/></Field>
+        <p className="hint">仅可覆盖模板允许的变量：{templates.find(t=>t.id===templateId)?.runtime?.overridable_env.join(', ')||'无'}。请勿填写密码或令牌。</p>
         <h3>评测清单</h3>
         {suiteId&&<p>使用已保存版本。临时调整请先选择“自定义清单”；保存新集合请到“评测集合管理”页。</p>}
         <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId}/>

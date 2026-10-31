@@ -119,7 +119,7 @@ def eligible(slot, pool, job, held, at):
 
 def tick(factory, at=None):
     from .storage import ready
-    from . import memberships
+    from . import memberships, image_runtime
     at = at or now()
     with factory() as s:
         if not lock(s, wait=False):
@@ -154,7 +154,8 @@ def tick(factory, at=None):
                 node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
         free = [x for x in slots.values() if not x.quarantined
                 and x.worker_id in workers and x.pool_id in pools and online(x, at)
-                and memberships.ready(x) and ready(workers[x.worker_id], x, at)]
+                and memberships.ready(x) and ready(workers[x.worker_id], x, at)
+                and image_runtime.ready(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
             Job.status == 'PENDING', User.active).order_by(Job.created_at, Job.id)).all()
         cursor = s.get(SchedulerState, 'rotation')
@@ -194,6 +195,7 @@ def tick(factory, at=None):
                                              len(by_slot[x.id]), x.node_name, x.gpu_index))
                     slot = next((x for x in free if x.pool_id == job.pool_id
                         and eligible(x, pool, job, by_slot[x.id], at)
+                        and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
                         and node_counts.get(x.worker_id, 0) < workers[x.worker_id].max_concurrent
                         and node_cpu.get(x.worker_id, 0) + pool.cpu_per_job <= workers[x.worker_id].cpu_capacity
                         and node_ram.get(x.worker_id, 0) + pool.ram_gb_per_job <= workers[x.worker_id].ram_gb_capacity), None)

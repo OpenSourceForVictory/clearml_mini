@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from .core import ClientTemplate, Job, Run, RunArtifact
 from .scheduling import lock, seconds
 from runner.cs_contract import VERSION, endpoint_parts
+from runner import image_runtime
+from pydantic import model_validator
 
 
 class TemplateCreate(BaseModel):
@@ -16,10 +18,17 @@ class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
     image: str = Field(min_length=1, max_length=500, pattern=r'^[A-Za-z0-9][A-Za-z0-9_./:@-]*$')
+    runtime: dict | None = None
     episode_reporting: bool = False
     endpoint_exclusive: bool = False
     command: list[str] = Field(min_length=1, max_length=64)
     protocols: list[Literal['http', 'https', 'ws', 'wss']] = Field(default=['http'], min_length=1, max_length=4)
+
+    @model_validator(mode="after")
+    def valid_runtime(self):
+        if self.runtime is not None:
+            self.runtime = image_runtime.validate(self.runtime, self.command)
+        return self
 
     @field_validator('command')
     @classmethod
@@ -42,6 +51,12 @@ class ClientRequest(BaseModel):
     request_timeout_seconds: int = Field(default=10, ge=1, le=120)
     timeout_seconds: int = Field(default=300, ge=1, le=3600)
     parameters: dict = Field(default_factory=dict)
+    environment: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("environment")
+    @classmethod
+    def valid_environment(cls, value):
+        return image_runtime.environment(value)
 
     @field_validator('endpoint')
     @classmethod
@@ -58,7 +73,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id')}
 
 
 def snapshot(s, body, owner_id=None):
@@ -72,6 +87,14 @@ def snapshot(s, body, owner_id=None):
         raise HTTPException(400, 'endpoint protocol does not match client template')
     if body.timeout_seconds > seconds('EXECUTION_TIMEOUT_SECONDS', 3600):
         raise HTTPException(400, 'client timeout exceeds platform execution limit')
+    try:
+        if body.environment:
+            if t.runtime is None or set(body.environment) - set(t.runtime['overridable_env']):
+                raise ValueError('environment override is not allowed by this template')
+            for value in body.environment.values():
+                image_runtime.placeholders(value, t.runtime['assets'])
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}), 'template': template_view(t)}
 
 
@@ -94,6 +117,17 @@ def install(app, db, current):
         if s.scalar(select(ClientTemplate.id).where(ClientTemplate.name == body.name, ClientTemplate.version == body.version)):
             raise HTTPException(409, 'client template version already exists')
         t = ClientTemplate(**body.model_dump())
+        s.add(t); s.commit()
+        return template_view(t)
+
+    @app.post('/api/v1/client-templates', status_code=201)
+    def create_private(body: TemplateCreate, user=Depends(current), s: Session = Depends(db)):
+        if body.runtime is None:
+            raise HTTPException(400, 'user image templates require runtime configuration')
+        lock(s)
+        if s.scalar(select(ClientTemplate.id).where(ClientTemplate.name == body.name, ClientTemplate.version == body.version)):
+            raise HTTPException(409, 'client template version already exists')
+        t = ClientTemplate(owner_id=user.id, **body.model_dump())
         s.add(t); s.commit()
         return template_view(t)
 

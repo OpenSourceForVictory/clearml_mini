@@ -1,0 +1,906 @@
+{
+  "date": "2026-10-30",
+  "kind": "image-runtime-contract-not-model-evaluation",
+  "acceptance": {
+    "kind": "image-runtime-contract-not-model-evaluation",
+    "hosts": {
+      "local": {
+        "worker_id": "d695334f-e984-4af3-95af-5cb508083445",
+        "root": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490"
+      },
+      "r8000": {
+        "worker_id": "3a045c14-efc3-4f69-8992-f11f7f2aff33",
+        "root": "/home/huawei/mini-eval-image-runtime-8b81136490"
+      }
+    },
+    "batches": [
+      "b6d1532b-f626-4c60-8771-7085e92a4ae3",
+      "b06a18a9-a78c-4da3-8468-5d66afde2b73",
+      "40fbe486-e38a-436c-a45c-20321d120712",
+      "e805818a-be6c-4e50-a940-0927158c0cd6"
+    ],
+    "missing_asset_readiness": [
+      [
+        {
+          "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+          "node_name": "storage-local-8b81136490",
+          "gpu_index": 0,
+          "runtime_ready": false,
+          "reasons": [
+            "逻辑资产未就绪: robotwin"
+          ]
+        },
+        {
+          "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+          "node_name": "storage-r8000-8b81136490",
+          "gpu_index": 0,
+          "runtime_ready": false,
+          "reasons": [
+            "逻辑资产未就绪: robotwin"
+          ]
+        }
+      ],
+      [
+        {
+          "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+          "node_name": "storage-local-8b81136490",
+          "gpu_index": 0,
+          "runtime_ready": false,
+          "reasons": [
+            "逻辑资产未就绪: robotwin"
+          ]
+        },
+        {
+          "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+          "node_name": "storage-r8000-8b81136490",
+          "gpu_index": 0,
+          "runtime_ready": false,
+          "reasons": [
+            "逻辑资产未就绪: robotwin"
+          ]
+        }
+      ]
+    ],
+    "resumed_jobs": [
+      {
+        "job_id": "5b589c30-197f-49dc-8ed8-ae34fc792138",
+        "run_id": "3bd66fe8-d463-4eaf-b857-aacaee3fd9c0",
+        "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 2.0545827070018277,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      },
+      {
+        "job_id": "aced3b02-aa25-4575-b3dd-2e960e332925",
+        "run_id": "1e5bd29d-11fb-48ee-9fe3-13d0fbbc5a59",
+        "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 2.0089168359991163,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      }
+    ],
+    "original_run_ids": [
+      "064120bc-f1ae-4fb4-b002-6e9cda7791ce",
+      "e409ec41-9016-4765-bc30-687b9e431d44"
+    ],
+    "waiting": [
+      {
+        "worker_id": "d695334f-e984-4af3-95af-5cb508083445",
+        "revision": 3,
+        "config": {
+          "assets": {
+            "robotwin": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/new-assets"
+          },
+          "images": [
+            "mini-eval-image-check:1"
+          ]
+        },
+        "slots": [
+          {
+            "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+            "gpu_index": 0,
+            "ready": false,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 3,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 2
+            },
+            "reported_at": "2026-10-30T14:56:53.834785+00:00"
+          }
+        ],
+        "all_applied": false
+      },
+      {
+        "worker_id": "3a045c14-efc3-4f69-8992-f11f7f2aff33",
+        "revision": 3,
+        "config": {
+          "assets": {
+            "robotwin": "/home/huawei/mini-eval-image-runtime-8b81136490/new-assets"
+          },
+          "images": [
+            "mini-eval-image-check:1"
+          ]
+        },
+        "slots": [
+          {
+            "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+            "gpu_index": 0,
+            "ready": false,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 3,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/huawei/mini-eval-image-runtime-8b81136490/original/assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 2
+            },
+            "reported_at": "2026-10-30T14:56:54.369337+00:00"
+          }
+        ],
+        "all_applied": false
+      }
+    ],
+    "old_jobs": [
+      {
+        "job_id": "32030c23-3f89-4ae8-abef-ef733e3b94af",
+        "run_id": "064120bc-f1ae-4fb4-b002-6e9cda7791ce",
+        "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 20.0534704310121,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      },
+      {
+        "job_id": "8ca64bb2-7ae8-409f-a352-3a07cc989806",
+        "run_id": "e409ec41-9016-4765-bc30-687b9e431d44",
+        "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 20.009485200978816,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      }
+    ],
+    "managed": [
+      {
+        "worker_id": "d695334f-e984-4af3-95af-5cb508083445",
+        "revision": 3,
+        "config": {
+          "assets": {
+            "robotwin": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/new-assets"
+          },
+          "images": [
+            "mini-eval-image-check:1"
+          ]
+        },
+        "slots": [
+          {
+            "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 3,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/new-assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 3
+            },
+            "reported_at": "2026-10-30T14:57:14.961249+00:00"
+          }
+        ],
+        "all_applied": true
+      },
+      {
+        "worker_id": "3a045c14-efc3-4f69-8992-f11f7f2aff33",
+        "revision": 3,
+        "config": {
+          "assets": {
+            "robotwin": "/home/huawei/mini-eval-image-runtime-8b81136490/new-assets"
+          },
+          "images": [
+            "mini-eval-image-check:1"
+          ]
+        },
+        "slots": [
+          {
+            "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 3,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/huawei/mini-eval-image-runtime-8b81136490/new-assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 3
+            },
+            "reported_at": "2026-10-30T14:57:15.038776+00:00"
+          }
+        ],
+        "all_applied": true
+      }
+    ],
+    "local_mounts": [
+      {
+        "name": "/mini-eval-25c5a3ac-e55f-4501-b862-8b9c9a5e63e6",
+        "mounts": [
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/runs/25c5a3ac-e55f-4501-b862-8b9c9a5e63e6/output",
+            "Destination": "/tmp/mini-eval-output",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/runs/25c5a3ac-e55f-4501-b862-8b9c9a5e63e6/work",
+            "Destination": "/workspace/eval",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/runs/25c5a3ac-e55f-4501-b862-8b9c9a5e63e6/output",
+            "Destination": "/results",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/new-assets",
+            "Destination": "/data/robotwin",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/assets",
+            "Destination": "/opt/mini-eval/assets",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/cache",
+            "Destination": "/opt/mini-eval/cache",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/runs/25c5a3ac-e55f-4501-b862-8b9c9a5e63e6/work",
+            "Destination": "/tmp/mini-eval-work",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          }
+        ],
+        "execution_id": "25c5a3ac-e55f-4501-b862-8b9c9a5e63e6"
+      }
+    ],
+    "remote_mounts": [
+      {
+        "name": "/mini-eval-dd89ece2-8b04-495d-ac6e-9c3bb38b294a",
+        "mounts": [
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/new-assets",
+            "Destination": "/data/robotwin",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/assets",
+            "Destination": "/opt/mini-eval/assets",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/cache",
+            "Destination": "/opt/mini-eval/cache",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/runs/dd89ece2-8b04-495d-ac6e-9c3bb38b294a/work",
+            "Destination": "/tmp/mini-eval-work",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/runs/dd89ece2-8b04-495d-ac6e-9c3bb38b294a/output",
+            "Destination": "/tmp/mini-eval-output",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/runs/dd89ece2-8b04-495d-ac6e-9c3bb38b294a/work",
+            "Destination": "/workspace/eval",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          },
+          {
+            "Type": "bind",
+            "Source": "/home/huawei/mini-eval-image-runtime-8b81136490/original/runs/dd89ece2-8b04-495d-ac6e-9c3bb38b294a/output",
+            "Destination": "/results",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+          }
+        ],
+        "execution_id": "dd89ece2-8b04-495d-ac6e-9c3bb38b294a"
+      }
+    ],
+    "new_jobs": [
+      {
+        "job_id": "7779f3c0-d2d4-4537-976a-560269842c08",
+        "run_id": "dd74daed-668f-48a3-bcf3-7928588c06be",
+        "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 8.045106427001883,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "new-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "new-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      },
+      {
+        "job_id": "0ef84a21-3142-4b28-9a84-6db1af3e419d",
+        "run_id": "e441cac4-fba4-49f4-a7d6-f2687cf5e673",
+        "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 8.008104101987556,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "new-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "new-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      }
+    ],
+    "restored": [
+      {
+        "worker_id": "d695334f-e984-4af3-95af-5cb508083445",
+        "revision": 4,
+        "config": null,
+        "slots": [
+          {
+            "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 4,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/dgh/Code/clearml_mini/.runtime/image-runtime-8b81136490/original/assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 4
+            },
+            "reported_at": "2026-10-30T14:57:29.071493+00:00"
+          }
+        ],
+        "all_applied": true
+      },
+      {
+        "worker_id": "3a045c14-efc3-4f69-8992-f11f7f2aff33",
+        "revision": 4,
+        "config": null,
+        "slots": [
+          {
+            "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {
+                "robotwin": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "images": {
+                "mini-eval-image-check:1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 4,
+              "effective": {
+                "assets": {
+                  "robotwin": "/home/huawei/mini-eval-image-runtime-8b81136490/original/assets"
+                },
+                "images": [
+                  "mini-eval-image-check:1"
+                ]
+              },
+              "applied_revision": 4
+            },
+            "reported_at": "2026-10-30T14:57:29.787547+00:00"
+          }
+        ],
+        "all_applied": true
+      }
+    ],
+    "restored_jobs": [
+      {
+        "job_id": "4dde8df6-dfd2-4639-90d9-ff744d5de1b6",
+        "run_id": "a7c51c25-59ea-460b-b5cb-c88e2092ddf1",
+        "slot_id": "469f0734-d20e-4743-8aff-54cb911222f5",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 12.055102307000197,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-local-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      },
+      {
+        "job_id": "61a9ad91-9613-47ac-9cd3-0c46389c60ba",
+        "run_id": "cfa4552e-560e-496e-b78f-30b451e180c5",
+        "slot_id": "eb274e63-9c97-4ce6-9637-240b2ae88e76",
+        "status": "SUCCEEDED",
+        "metrics": {
+          "runtime": 12.010234538000077,
+          "success_rate": 1.0,
+          "episode_count": 2
+        },
+        "progress": {
+          "completed": 2,
+          "successes": 2,
+          "errors": 0,
+          "running": [],
+          "success_rate": 1.0
+        },
+        "artifacts": [
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 1,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          },
+          {
+            "marker": "old-storage-r8000-8b81136490",
+            "assets": "/data/robotwin",
+            "work": "/workspace/eval",
+            "output": "/results",
+            "task": "mount-check",
+            "episode": 2,
+            "runtime": "/tmp/mini-eval-runtime/runner/sdk.py",
+            "log_level": "acceptance"
+          }
+        ]
+      }
+    ]
+  },
+  "production": {
+    "migration": "f629a11",
+    "suites_unchanged": true,
+    "nodes_unchanged": true,
+    "workers": [
+      {
+        "node_name": "local-4090",
+        "protocol_version": 5,
+        "online": true
+      },
+      {
+        "node_name": "r8000",
+        "protocol_version": 5,
+        "online": true
+      }
+    ],
+    "runtime": [
+      {
+        "worker_id": "03d9d778-4ce2-4fe1-8a0c-cb61cb47bea8",
+        "revision": 0,
+        "config": null,
+        "slots": [
+          {
+            "slot_id": "49318310-d096-4125-a2b3-76ff182f3b39",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {},
+              "images": {
+                "mini-eval-client-base:1": {
+                  "error": null,
+                  "ready": true
+                },
+                "mini-eval-robotwin-queue-check:1": {
+                  "error": null,
+                  "ready": true
+                },
+                "mini-eval-cosmos-robotwin:2ba852c-platform1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 0,
+              "effective": {
+                "assets": {},
+                "images": [
+                  "mini-eval-client-base:1",
+                  "mini-eval-cosmos-robotwin:2ba852c-platform1",
+                  "mini-eval-robotwin-queue-check:1"
+                ]
+              },
+              "applied_revision": 0
+            },
+            "reported_at": "2026-10-30T14:59:28.030154+00:00"
+          }
+        ]
+      },
+      {
+        "worker_id": "e47fd92d-234a-4e8e-a8bf-f293992bfebb",
+        "revision": 0,
+        "config": null,
+        "slots": [
+          {
+            "slot_id": "a1845f9d-5b68-4d10-a32c-1de53321e07f",
+            "gpu_index": 0,
+            "ready": true,
+            "report": {
+              "assets": {},
+              "images": {
+                "mini-eval-client-base:1": {
+                  "error": null,
+                  "ready": true
+                },
+                "mini-eval-robotwin-queue-check:1": {
+                  "error": null,
+                  "ready": true
+                },
+                "mini-eval-cosmos-robotwin:2ba852c-platform1": {
+                  "error": null,
+                  "ready": true
+                }
+              },
+              "revision": 0,
+              "effective": {
+                "assets": {},
+                "images": [
+                  "mini-eval-client-base:1",
+                  "mini-eval-cosmos-robotwin:2ba852c-platform1",
+                  "mini-eval-robotwin-queue-check:1"
+                ]
+              },
+              "applied_revision": 0
+            },
+            "reported_at": "2026-10-30T14:59:27.583407+00:00"
+          }
+        ]
+      }
+    ],
+    "release": {
+      "release": "runtime-release-20261030-225549",
+      "remote_stage": "/home/huawei/clearml_mini/.runtime/runtime-release-20261030-225549",
+      "backup_image": "mini-eval-api:before-runtime-release-20261030-225549",
+      "status": "api-deployed"
+    },
+    "ui": {
+      "production_ui": "passed",
+      "nodes": [
+        "local-4090",
+        "r8000"
+      ],
+      "image_form": true,
+      "run_overrides": true,
+      "draft_preserved": true,
+      "node_reports": true,
+      "page_errors": [],
+      "production_mutations": false
+    },
+    "test_services_cleaned": true
+  }
+}

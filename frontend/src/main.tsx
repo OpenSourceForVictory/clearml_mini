@@ -4,6 +4,7 @@ import "./style.css";
 import { api } from "./api";
 import { Memberships, admissionLabels } from "./memberships";
 import { StorageSettings } from "./storage";
+import { RuntimeSettings, RuntimeReadiness } from "./image-runtime";
 import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
 
 type User = { id: string; username: string; role: string };
@@ -664,6 +665,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
             {run && !run.cleanup_confirmed && terminal.includes(run.status) && (
               <p className="hint">等待 Worker 确认旧容器已停止后，才可重试。</p>
             )}
+            {job.benchmark === "cs-client" && <RuntimeReadiness id={id} />}
             {run && <ArtifactList jobId={id} runId={run.id} />}
             <h3>执行日志</h3>
             <p className="hint">每次尝试最多保存 256 KiB 日志。</p>
@@ -1126,7 +1128,7 @@ function Admin() {
             ))}
           </tbody>
         </table>
-        {nodes.map(n => <StorageSettings key={n.id} id={n.id} name={n.node_name} />)}
+        {nodes.map(n => <React.Fragment key={n.id}><StorageSettings id={n.id} name={n.node_name} /><RuntimeSettings id={n.id} name={n.node_name} /></React.Fragment>)}
       </section>
     </>
   );

@@ -13,7 +13,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
-from . import memberships
+from . import memberships, image_runtime
 from .core import Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -28,7 +28,7 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
-    protocol_version: Literal[1, 2, 3, 4] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
 
 
@@ -54,6 +54,7 @@ class Heartbeat(BaseModel):
     telemetry_failed: bool = False
     disk: Optional[DiskTelemetry] = None
     storage: Optional[storage_protocol.StorageReport] = None
+    runtime: Optional[image_runtime.Report] = None
 
 
 class Metrics(BaseModel):
@@ -135,11 +136,12 @@ def install(app, db, current):
         return user
 
     storage_protocol.install(app, db, admin)
+    image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
 
     @app.get("/api/v1/worker/self")
     def worker_self(worker=Depends(worker_auth)):
-        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4"]}
+        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4", "runtime_v5"]}
 
     def slot_for(s, slot_id, worker):
         slot = s.get(Slot, slot_id)
@@ -270,6 +272,7 @@ def install(app, db, current):
         slot.protocol_version = body.protocol_version
         slot.client_images = body.client_images if body.protocol_version >= 3 else []
         slot.storage_reported_at = None
+        slot.runtime_reported_at = None
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
@@ -293,6 +296,8 @@ def install(app, db, current):
             cancel = run.status == 'CANCEL_REQUESTED'
         if not body.execution_id and body.storage is not None:
             storage_protocol.acknowledge(s, worker, slot, body.storage)
+        if not body.execution_id and body.runtime is not None:
+            image_runtime.acknowledge(s, worker, slot, body.runtime)
         if body.disk is not None and not body.execution_id:
             slot.disk_free_mb = body.disk.free_mb
             slot.disk_min_free_mb = body.disk.min_free_mb
@@ -308,7 +313,7 @@ def install(app, db, current):
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
         return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
-                'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
+                'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -324,6 +329,8 @@ def install(app, db, current):
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
             s.refresh(worker)
+            if image_runtime.blockers(worker, slot, s.get(Job, run.job_id).client_spec, now()):
+                return {'task': None, 'cleanup': []}
             if not memberships.ready(slot) or not storage_protocol.ready(worker, slot, now()):
                 return {'task': None, 'cleanup': []}
             if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
@@ -339,7 +346,7 @@ def install(app, db, current):
             live(run)
         job = s.get(Job, run.job_id)
         pool = s.get(Pool, job.pool_id)
-        task = {'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
+        task = {'runtime_revision': (slot.runtime_report or {}).get('applied_revision', 0), 'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
                 'gpu_uuid': None if pool.gpu_model == 'virtual' else slot.gpu_uuid,

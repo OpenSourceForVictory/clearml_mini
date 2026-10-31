@@ -75,6 +75,8 @@ class Worker(Base):
     ram_gb_capacity: Mapped[int] = mapped_column(Integer, default=8)
     storage_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     storage_config: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    runtime_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    runtime_config: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -109,6 +111,8 @@ class Slot(Base):
     disk_min_free_mb: Mapped[Optional[int]] = mapped_column(Integer)
     disk_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     storage_applied_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    runtime_report: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    runtime_reported_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     storage_report: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     storage_reported_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     telemetry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -253,6 +257,7 @@ class ClientTemplate(Base):
     name: Mapped[str] = mapped_column(String(100))
     version: Mapped[str] = mapped_column(String(100))
     image: Mapped[str] = mapped_column(String(500))
+    runtime: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     command: Mapped[list] = mapped_column(JSON_TYPE)
     protocols: Mapped[list] = mapped_column(JSON_TYPE)
     episode_reporting: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')

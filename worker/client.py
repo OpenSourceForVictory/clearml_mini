@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import signal
+import shutil
 from pathlib import Path
 import subprocess
 import threading
@@ -19,6 +20,8 @@ from runner.cs_contract import INPUT_PATH, VERSION, endpoint_parts
 from .artifacts import read_artifacts
 from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
 from .storage import Storage
+from .image_runtime import Runtime
+from runner.image_runtime import validate as validate_runtime, ADAPTER, WORK, OUTPUT
 
 LOG = logging.getLogger('mini-eval-worker')
 MAX_LOG_BYTES = 262144
@@ -73,7 +76,7 @@ def telemetry(config):
 
 
 class Worker:
-    def __init__(self, config, state_path, snapshot=None):
+    def __init__(self, config, state_path, snapshot=None, runtime_snapshot=None):
         self.config = dict(config)
         self.api = Client(self.config)
         self.path = Path(state_path)
@@ -88,6 +91,9 @@ class Worker:
             self.storage = None
         if self.state and self.state.get('storage'):
             snapshot = self.state['storage']
+        self.runtime = Runtime(self.config, self.path) if self.storage is not None else None
+        self.runtime_snapshot = (self.state or {}).get("runtime") or runtime_snapshot or (self.runtime.snapshot() if self.runtime else {"revision": 0, "config": {"images": self.config.get("client_images", []), "assets": self.config.get("asset_mappings", {})}})
+        self.config["client_images"] = self.runtime_snapshot["config"]["images"]
         self.storage_snapshot = snapshot
         self.config.update(snapshot['config'])
         self.workspace = Path(self.config['workspace_root'])
@@ -166,6 +172,9 @@ class Worker:
             if spec['contract_version'] != VERSION or spec['template']['image'] != task['image']:
                 raise RuntimeError('invalid CS client contract')
             endpoint_parts(spec['endpoint'])
+        runtime = validate_runtime(spec['template']['runtime'], spec['template']['command']) if cs and spec['template'].get('runtime') is not None else None
+        if runtime and task.get('runtime_revision', 0) != self.runtime_snapshot['revision']:
+            raise RuntimeError('task runtime revision differs from execution snapshot')
         requested = task.get('requested_vram_mb', 0)
         if requested:
             observed = telemetry(self.config)
@@ -187,6 +196,18 @@ class Worker:
             args.extend(['--env', 'MINI_EVAL_WORK_DIR=/tmp/mini-eval-work',
                          '--env', 'MINI_EVAL_ASSETS_DIR=/opt/mini-eval/assets',
                          '--env', 'MINI_EVAL_CACHE_DIR=/opt/mini-eval/cache'])
+        if runtime:
+            aliases = [(directory/'work', runtime['work_dir'], False), (directory/'output', runtime['output_dir'], False)]
+            for name, target in runtime['assets'].items():
+                host = self.runtime_snapshot['config']['assets'].get(name)
+                if host is None:
+                    raise RuntimeError('logical asset is not configured: '+name)
+                validate_storage({**self.config, 'assets_root': host, 'cache_root': host}, self.config.get('_supervisor_state', self.path), self.config.get('_config_path'))
+                aliases.append((host, target, True))
+            for source, target, readonly in aliases:
+                if target not in (WORK, OUTPUT):
+                    args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
+            args.extend(['--pull', 'never', '--entrypoint', runtime['interpreter'], '--env', 'PYTHONPATH='+ADAPTER])
         if task['gpu_uuid']:
             if self.config.get('gpu_runtime') == 'nvidia':
                 args.extend(['--runtime', 'nvidia', '--env', 'NVIDIA_VISIBLE_DEVICES=' + task['gpu_uuid'],
@@ -203,8 +224,17 @@ class Worker:
         if not cs:
             command += ['--job-id='+task['job_id'], '--model-ref='+task['model_ref'],
                         '--benchmark='+task['benchmark'], '--episodes='+str(task['episodes'])]
-        args.extend([task['image'], 'python', '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']), *command])
+        if runtime:
+            command[0] = runtime['interpreter']
+        args.extend([task['image'], *([] if runtime else ['python']), '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']), *command])
         docker(*args, timeout=20)
+        if runtime:
+            with tempfile.TemporaryDirectory(prefix='eval-adapter-') as temporary:
+                root = Path(temporary)/'mini-eval-runtime'
+                shutil.copytree(Path(__file__).resolve().parent.parent/'runner', root/'runner', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+                for path in [root, *root.rglob('*')]:
+                    path.chmod(0o755 if path.is_dir() else 0o644)
+                docker('cp', str(root), self.name(task['execution_id']) + ':/tmp/')
         if cs:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
@@ -297,7 +327,7 @@ class Worker:
     def execute(self, task):
         execution = task['execution_id']
         if self.state is None:
-            self.state = {'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
+            self.state = {'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
             self.save()
         deadline = [time.monotonic() + task['lease_seconds'] - 2]
         done, lease_lost = threading.Event(), threading.Event()
@@ -427,7 +457,7 @@ class Worker:
         if path.exists() and json.loads(path.read_text()):
             # Pre-v4 journals must retain their original bootstrap paths.
             snapshot = {'config': self.storage.record['bootstrap'], 'revision': 0} if self.storage else snapshot
-        child = Worker(config, path, snapshot=snapshot)
+        child = Worker(config, path, snapshot=snapshot, runtime_snapshot=self.runtime_snapshot)
         child.slot_id = self.slot_id
         child.start_lock = self.start_lock
         return child
@@ -464,6 +494,8 @@ class Worker:
         thread.start()
 
     def shutdown(self):
+        if self.runtime:
+            self.runtime.stopping.set()
         for child in self.children.values():
             child.stop_event.set()
         # Stop each container independently even if its API or execution thread is blocked.
@@ -474,11 +506,13 @@ class Worker:
                 LOG.exception('shutdown could not stop container; journal retained')
         for thread in self.threads.values():
             thread.join(timeout=20)
+        if self.runtime:
+            self.runtime.close()
 
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': 4, 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': 5, 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -497,7 +531,7 @@ class Worker:
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
                     return
-                body = {'slot_id': self.slot_id, 'storage': self.storage.report()}
+                body = {'slot_id': self.slot_id, 'storage': self.storage.report(), 'runtime': self.runtime.report()}
                 try:
                     body['disk'] = disk_status(self.workspace, self.config)
                 except (OSError, ValueError):
@@ -514,6 +548,10 @@ class Worker:
                     self.storage_snapshot = self.storage.snapshot()
                     self.config.update(self.storage_snapshot['config'])
                     self.workspace = Path(self.config['workspace_root'])
+                if 'runtime' in reply:
+                    self.runtime.update(reply['runtime'], bool(self.children) or reply.get('storage_busy', True), dict(self.config), docker)
+                    self.runtime_snapshot = self.runtime.snapshot()
+                    self.config['client_images'] = self.runtime_snapshot['config']['images']
                 if once and had_task:
                     time.sleep(2)
                     continue
