@@ -1,4 +1,5 @@
 from __future__ import annotations
+from . import endpoints
 import os
 import threading
 from pathlib import Path
@@ -106,7 +107,7 @@ def detail(job: Job):
             'finished_at': job.finished_at, 'error': job.error,
             'attempts': [{'id': r.id, 'attempt': r.attempt, 'status': r.status,
             'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
-            'log_bytes': r.log_bytes} for r in job.runs]}
+            'log_bytes': r.log_bytes, **endpoints.view(r, job.client_spec)} for r in job.runs]}
 
 
 @app.get('/healthz')

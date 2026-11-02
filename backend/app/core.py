@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, create_engine, text
+from sqlalchemy import CheckConstraint, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -166,6 +166,7 @@ class Job(Base):
 class Run(Base):
     __tablename__ = 'evaluation_runs'
     __table_args__ = (UniqueConstraint('job_id', 'attempt'),
+        CheckConstraint("(assigned_endpoint IS NULL AND assigned_endpoint_mode IS NULL) OR (assigned_endpoint IS NOT NULL AND assigned_endpoint_mode IS NOT NULL AND assigned_endpoint_mode IN ('exclusive','shared'))", name='ck_run_endpoint_pair'),
         Index('uq_held_run_share', 'slot_id', 'allocation_index', unique=True,
               postgresql_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED') OR cleanup_confirmed = false"),
               sqlite_where=text("status IN ('RESERVED','ENQUEUED','STARTING','RUNNING','CANCEL_REQUESTED') OR cleanup_confirmed = false")),)
@@ -174,6 +175,8 @@ class Run(Base):
     attempt: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(30), default=Status.PENDING.value, index=True)
     slot_id: Mapped[Optional[str]] = mapped_column(ForeignKey('gpu_slots.id'), index=True)
+    assigned_endpoint: Mapped[Optional[str]] = mapped_column(String(2000))
+    assigned_endpoint_mode: Mapped[Optional[str]] = mapped_column(String(10))
     queue_name: Mapped[Optional[str]] = mapped_column(String(150))
     clearml_task_id: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     reserved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

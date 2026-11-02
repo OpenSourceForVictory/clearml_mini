@@ -60,7 +60,7 @@ test('suite registration hands off to run; tabs preserve drafts and send selecte
   await runs.getByRole('button',{name:'检查并确认',exact:true}).click();
   await runs.getByRole('button',{name:'提交评测批次',exact:true}).click();
   await expect(runs.getByRole('heading',{name:/RoboTwin batch/})).toBeVisible();
-  expect(submitted()).toMatchObject({suite_id:'suite-1',cases:[],max_concurrent:2,client:{template_id:'client-1',endpoint:'ws://inference:8000'}});
+  expect(submitted()).toMatchObject({suite_id:'suite-1',cases:[],max_concurrent:2,client:{template_id:'client-1',endpoints:[{url:'ws://inference:8000',mode:'shared'}]}});
   await page.screenshot({path:'test-results/cs-tabs-runs.png',fullPage:true});
 });
 

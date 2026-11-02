@@ -1,4 +1,5 @@
 """Batch observability and explicit, attempt-guarded recovery."""
+from . import endpoints
 from collections import Counter, defaultdict
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -87,7 +88,7 @@ def monitor(s, batch):
         spec = job.client_spec
         case['config'] = dict(pool_id=job.pool_id, pool_name=pools[job.pool_id].name if job.pool_id in pools else job.pool_id,
                               gpu_mode=job.gpu_mode, requested_vram_gb=job.requested_vram_gb,
-                              required_gpu_model=job.required_gpu_model, endpoint=spec['endpoint'],
+                              required_gpu_model=job.required_gpu_model, **endpoints.view(run, spec),
                               client_name=spec['template']['name'], client_version=spec['template']['version'])
     return result
 

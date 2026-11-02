@@ -1,29 +1,32 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {api} from './api';
 
-export type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;runtime?:{overridable_env:string[]}|null};
+export type Template = {id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
 export type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>};
 export type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[]};
 type Reason = {code:string;category:string;message:string;action:string};
-type Preview = {checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
+type Preview = {endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
 type Trial = {id:string;title:string;status:string;cases:{job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
 const statuses:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'执行完成',FAILED:'执行失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
-const initial={title:'',endpoint:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
+const initial={title:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
 export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
+  const [addresses,setAddresses]=useState<{url:string;mode:'exclusive'|'shared'}[]>([{url:'',mode:'shared'}]);
+  const addressDirty=useRef(false);
   const [cases,setCases]=useState<Case[]>([{case_id:'case-001',task_name:'demo',episodes:3,seed:0,parameters:{}}]);
   const [step,setStep]=useState(0),[preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [submittedId,setSubmittedId]=useState('');
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
   const selectedSuite=suites.find(s=>s.id===suiteId),template=templates.find(t=>t.id===templateId);
+  useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   useEffect(()=>{if(launch){setSuiteId(launch.suite.id);setTemplateId(launch.suite.template_id);setCases(launch.suite.cases);setStep(0);}},[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
-  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[draft,cases,suiteId,templateId]);
+  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[draft,addresses,cases,suiteId,templateId]);
   useEffect(()=>{
     if(!trial?.id)return;
     let active=true;const id=trial.id;
@@ -32,16 +35,28 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   },[trial?.id]);
   const update=(key:keyof typeof initial,value:string|number)=>setDraft(d=>({...d,[key]:value}));
   function chooseSuite(id:string){setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setCases(s.cases);setTemplateId(s.template_id);}}
+  function validateAddresses(){
+    const keys=new Set<string>();
+    for(const [i,e] of addresses.entries()){
+      let parsed:URL;
+      try{parsed=new URL(e.url);}catch{throw Error(`第 ${i+1} 个推理服务地址无效`);}
+      if(!template?.protocols.includes(parsed.protocol.slice(0,-1)))throw Error(`第 ${i+1} 个推理服务地址协议不符合客户端要求`);
+      const key=parsed.hostname.toLowerCase().replace(/\.$/,'')+':'+(parsed.port||(['https:','wss:'].includes(parsed.protocol)?'443':'80'));
+      if(keys.has(key))throw Error(`第 ${i+1} 个推理服务地址主机和端口重复`);
+      keys.add(key);
+    }
+  }
+  function editAddress(index:number,change:Partial<{url:string;mode:'exclusive'|'shared'}>){addressDirty.current=true;setAddresses(old=>old.map((e,i)=>i===index?{...e,...change}:e));}
   function body(){
     const environment=JSON.parse(draft.environment);
     if(!environment||Array.isArray(environment)||typeof environment!=='object'||Object.values(environment).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
     if(!draft.title.trim())throw Error('请填写批次名称');
     if(!templateId||!template)throw Error('请选择可用的客户端模板');
     if(!draft.pool_id)throw Error('请选择客户端资源池');
-    if(!draft.endpoint.trim())throw Error('请填写推理服务地址');
+    validateAddresses();
     return {title:draft.title,pool_id:draft.pool_id,gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,
       required_gpu_model:draft.required_gpu_model.trim()||null,max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId?[]:parseCases(cases),
-      client:{template_id:templateId,endpoint:draft.endpoint,environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
+      client:{template_id:templateId,endpoints:addresses,environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
   }
   async function inspect(){
     if(pending.current)return;
@@ -71,7 +86,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       if(step===0)parseCases(cases);
       if(step===1){
         if(!template)throw Error('请选择可用的客户端模板');
-        const scheme=draft.endpoint.split(':')[0];if(!template.protocols.includes(scheme))throw Error('推理服务地址协议不符合客户端要求');
+        validateAddresses();
         const env=JSON.parse(draft.environment);if(!env||Array.isArray(env)||typeof env!=='object'||Object.values(env).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
         if(Object.keys(env).some(k=>!template.runtime?.overridable_env.includes(k)))throw Error('启动变量包含模板未允许覆盖的键');
       }
@@ -92,7 +107,12 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     </>}
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} disabled={!!suiteId} onChange={e=>setTemplateId(e.target.value)}><option value="" disabled>选择客户端及版本</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
-      <Field label="推理服务地址"><input required value={draft.endpoint} maxLength={2000} placeholder="ws://推理机器:端口" onChange={e=>update('endpoint',e.target.value)}/></Field>
+      <div aria-label="候选地址列表">{addresses.map((address,i)=><div key={i}>
+        <Field label={i===0?'推理服务地址':`推理服务地址 ${i+1}`}><input required value={address.url} maxLength={2000} placeholder="ws://推理机器:端口" onChange={e=>editAddress(i,{url:e.target.value})}/></Field>
+        <Field label={`服务地址 ${i+1} 使用模式`}><select value={address.mode} onChange={e=>editAddress(i,{mode:e.target.value as 'exclusive'|'shared'})}><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
+        <button type="button" disabled={addresses.length===1} onClick={()=>{addressDirty.current=true;setAddresses(old=>old.filter((_,n)=>n!==i));}}>移除地址 {i+1}</button>
+      </div>)}<button type="button" disabled={addresses.length>=100} onClick={()=>{addressDirty.current=true;setAddresses(old=>[...old,{url:'',mode:template?.endpoint_exclusive?'exclusive':'shared'}]);}}>添加推理地址</button>
+      <p className="hint">独占地址同时只分配一个任务；共享需要服务端支持多会话。平台自动分配，资源或地址不足时排队。</p></div>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <Field label="每项总超时秒"><input type="number" required min={1} max={3600} value={draft.timeout_seconds} onChange={e=>update('timeout_seconds',Number(e.target.value))}/></Field></div>
       <Field label="启动变量覆盖 JSON"><textarea rows={3} value={draft.environment} onChange={e=>update('environment',e.target.value)}/></Field>
@@ -109,7 +129,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <h3>确认运行配置</h3><dl className="run-summary">
         <dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:'自定义清单'}</dd>
         <dt>任务与回合</dt><dd>{cases.length} 项任务，{cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
-        <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{draft.endpoint}</dd>
+        <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{addresses.map((e,i)=><p key={i}>{e.url} · {e.mode==='exclusive'?'独占':'共享'}</p>)}</dd>
         <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {draft.gpu_mode==='shared'?'共享':'独占'} · 每项 {draft.requested_vram_gb} GiB · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
         <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项 {draft.timeout_seconds} 秒</dd>
         <dt>启动变量</dt><dd><code>{draft.environment}</code></dd>
@@ -119,7 +139,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       {preview&&<div className="preflight-result" aria-label="预检结果">
         <h3>{preview.status==='ready'?'当前有节点可接纳单项任务':preview.status==='waiting_resources'?'需要等待资源':'需要准备运行环境'}</h3>
         <p className="hint">检查时间：{new Date(preview.checked_at).toLocaleTimeString()}。{preview.note} 最大并发为上限，不保证同时启动。</p>
-        <Reasons reasons={preview.reasons}/>
+        <Reasons reasons={preview.reasons}/><ul>{preview.endpoints?.map(e=><li key={e.url}>{e.url} · {e.mode==='exclusive'?'独占':'共享'} · {e.available?'当前可分配':'等待互斥占用释放'} · 当前占用 {e.occupancy}</li>)}</ul>
         <div className="table-scroll"><table><thead><tr><th>节点 / GPU</th><th>当前状态与操作建议</th></tr></thead><tbody>{preview.nodes.map(n=><tr key={n.slot_id}><td>{n.node_name} / GPU {n.gpu_index}<small>{n.gpu_model}</small></td><td>{n.ready?'当前可接纳单项任务':<><Reasons reasons={n.reasons}/>{!n.reasons.length&&'等待上方平台或用户配额释放'}</>}</td></tr>)}</tbody></table></div>
         <p>环境缺失和资源占用不会阻止合法任务提交排队；环境问题需要管理员处理。</p>
         <button type="button" className="primary" disabled={!preview.can_submit||!!submitted} onClick={()=>void submit()}>{preview.status==='ready'?'提交评测批次':'提交排队'}</button>

@@ -3,7 +3,7 @@ import json
 from typing import Literal
 from fastapi import Depends, HTTPException
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 from .core import ClientTemplate, Job, Run, RunArtifact
@@ -42,10 +42,23 @@ class TemplateState(BaseModel):
     enabled: bool
 
 
+class Endpoint(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    url: str = Field(min_length=1, max_length=2000)
+    mode: Literal['exclusive', 'shared']
+
+    @field_validator('url')
+    @classmethod
+    def valid_url(cls, value):
+        endpoint_parts(value)
+        return value
+
+
 class ClientRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     template_id: str
-    endpoint: str = Field(min_length=1, max_length=2000)
+    endpoint: str | None = Field(default=None, min_length=1, max_length=2000)
+    endpoints: list[Endpoint] | None = Field(default=None, min_length=1, max_length=100)
     task_name: str = Field(min_length=1, max_length=200)
     seed: int = Field(default=0, ge=0, le=2147483647)
     request_timeout_seconds: int = Field(default=10, ge=1, le=120)
@@ -58,10 +71,20 @@ class ClientRequest(BaseModel):
     def valid_environment(cls, value):
         return image_runtime.environment(value)
 
+    @model_validator(mode='after')
+    def endpoint_selection(self):
+        from .endpoints import resource_key
+        if (self.endpoint is None) == (self.endpoints is None):
+            raise ValueError('provide exactly one of endpoint or endpoints')
+        if self.endpoints and len({resource_key(e.url) for e in self.endpoints}) != len(self.endpoints):
+            raise ValueError('duplicate inference host and port in endpoints')
+        return self
+
     @field_validator('endpoint')
     @classmethod
     def valid_endpoint(cls, value):
-        endpoint_parts(value)
+        if value is not None:
+            endpoint_parts(value)
         return value
 
     @field_validator('parameters')
@@ -82,8 +105,8 @@ def snapshot(s, body, owner_id=None):
     t = s.get(ClientTemplate, body.template_id)
     if not t or not t.enabled or (t.owner_id is not None and t.owner_id != owner_id):
         raise HTTPException(400, 'unknown or disabled client template')
-    parts, _ = endpoint_parts(body.endpoint)
-    if parts.scheme not in t.protocols:
+    urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint]
+    if any(endpoint_parts(url)[0].scheme not in t.protocols for url in urls):
         raise HTTPException(400, 'endpoint protocol does not match client template')
     if body.timeout_seconds > seconds('EXECUTION_TIMEOUT_SECONDS', 3600):
         raise HTTPException(400, 'client timeout exceeds platform execution limit')
@@ -95,7 +118,7 @@ def snapshot(s, body, owner_id=None):
                 image_runtime.placeholders(value, t.runtime['assets'])
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}), 'template': template_view(t)}
+    return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}, exclude_none=True), 'template': template_view(t)}
 
 
 def install(app, db, current):

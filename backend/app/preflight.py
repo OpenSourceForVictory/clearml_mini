@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from collections import Counter, defaultdict
 from sqlalchemy import select, or_
 from .core import Run, Job, Slot, Worker, now
-from . import scheduling as admission, image_runtime
+from . import scheduling as admission, image_runtime, endpoints
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
@@ -68,7 +68,8 @@ class DiagnosticContext:
         if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')
         if self.owners[owner.id] >= admission.seconds('MAX_ACTIVE_PER_USER', 2): codes.append('user_concurrency')
         if batch and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
-        if admission.endpoint_conflict(job, list(self.jobs.values())): codes.append('endpoint_busy')
+        endpoint_states = endpoints.inspect(job.client_spec, endpoints.holdings(self.active))
+        if endpoint_states and not any(e['available'] for e in endpoint_states): codes.append('endpoint_busy')
         nodes = []
         for slot in sorted(self.slots.values(), key=lambda x: (x.node_name, x.gpu_index)):
             if not pool or slot.pool_id != pool.id: continue
@@ -88,7 +89,7 @@ class DiagnosticContext:
         resource_only = (all(r['category'] == 'resource' for r in reasons) and
                          any(all(r['category'] == 'resource' for r in n['reasons']) for n in nodes))
         return dict(checked_at=self.at, status='ready' if ready else 'waiting_resources' if resource_only else 'needs_environment',
-                    nodes=nodes, reasons=reasons)
+                    nodes=nodes, reasons=reasons, endpoints=endpoint_states)
 
 
 def inspect_batch(s, body, user, pool, cases, configs):

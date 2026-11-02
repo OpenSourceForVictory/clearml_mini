@@ -4,6 +4,7 @@ import os
 import threading
 from datetime import timedelta, timezone
 from sqlalchemy import or_, select, text
+from . import endpoints
 from .core import EvaluationBatch, Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
 
 ACTIVE = ('RESERVED', 'STARTING', 'RUNNING', 'CANCEL_REQUESTED')
@@ -36,6 +37,8 @@ def lock(s, wait=True):
 def transition(s, run, status, message=None):
     job = s.get(Job, run.job_id)
     old = run.status
+    if old == 'RESERVED' and status in ('PENDING', 'CANCELLED'):
+        run.assigned_endpoint = run.assigned_endpoint_mode = None
     run.status = job.status = status
     if status in TERMINAL:
         run.finished_at = job.finished_at = now()
@@ -70,18 +73,6 @@ def telemetry_fresh(slot, at):
             and slot.gpu_utilization is not None
             and timedelta(0) <= at - utc(slot.telemetry_at) < timedelta(seconds=15))
 
-
-def endpoint_conflict(job, held_jobs):
-    from runner.cs_contract import endpoint_parts
-    if not job.client_spec:
-        return False
-    def key(spec):
-        parts, port = endpoint_parts(spec['endpoint'])
-        return parts.hostname.lower().rstrip('.'), port
-    wanted = key(job.client_spec)
-    exclusive = job.client_spec['template'].get('endpoint_exclusive', False)
-    return any(other.client_spec and key(other.client_spec) == wanted and
-               (exclusive or other.client_spec['template'].get('endpoint_exclusive', False)) for other in held_jobs)
 
 
 def eligibility_codes(slot, pool, job, held, at):
@@ -162,7 +153,7 @@ def tick(factory, at=None):
         for r in active:
             if r.slot_id in by_slot:
                 by_slot[r.slot_id].append(r)
-        held_jobs = [s.get(Job, r.job_id) for r in active]
+        endpoint_held = endpoints.holdings(active)
         batch_counts = {}
         batches = {b.id: b for b in s.scalars(select(EvaluationBatch))}
         counts, node_counts, node_cpu, node_ram = {}, {}, {}, {}
@@ -209,7 +200,8 @@ def tick(factory, at=None):
                 for job in candidates:
                     if job.batch_id and batches[job.batch_id].scheduling_paused:
                         continue
-                    if endpoint_conflict(job, held_jobs):
+                    selected_endpoint = endpoints.choose(job.client_spec, endpoint_held)
+                    if job.client_spec and selected_endpoint is None:
                         continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
                         continue
@@ -226,6 +218,8 @@ def tick(factory, at=None):
                     if not slot:
                         continue
                     run = s.scalar(select(Run).where(Run.job_id == job.id).order_by(Run.attempt.desc()))
+                    if selected_endpoint:
+                        run.assigned_endpoint, run.assigned_endpoint_mode = selected_endpoint['url'], selected_endpoint['mode']
                     run.slot_id, run.queue_name, run.execution_id = slot.id, slot.queue_name, uid()
                     used = {r.allocation_index for r in by_slot[slot.id]}
                     run.allocation_index = next(i for i in range(len(used)+1) if i not in used)
@@ -244,7 +238,8 @@ def tick(factory, at=None):
                     cursor.value = {'owner': owner}
                     rotation.value = {'group': job.batch_id or 'standalone'}
                     batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
-                    held_jobs.append(job)
+                    if selected_endpoint:
+                        endpoint_held.append(selected_endpoint)
                     by_slot[slot.id].append(run)
                     pending.remove(job)
                     admitted += 1

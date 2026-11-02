@@ -1,4 +1,5 @@
 """Read-only, bounded batch reports; no scheduler lock or event payload export."""
+from . import endpoints
 import csv
 import hashlib
 import io
@@ -60,7 +61,7 @@ def report(s, batch, at):
                           parameters_digest=digest(spec.get('parameters', {})))
         config = dict(pool_id=job.pool_id, gpu_mode=job.gpu_mode,
                       requested_vram_gb=job.requested_vram_gb, required_gpu_model=job.required_gpu_model,
-                      endpoint=spec['endpoint'], client_name=template['name'], client_version=template['version'],
+                      **endpoints.view(run, spec), client_name=template['name'], client_version=template['version'],
                       image=template['image'], environment_digest=digest({
                           'runtime': (template.get('runtime') or {}).get('environment', {}),
                           'overrides': spec.get('environment', {})}))
@@ -122,7 +123,7 @@ def compare(left, right):
 CSV_COLUMNS = ['schema_version', 'generated_at', 'batch_id', 'batch_title', 'case_id', 'job_id', 'run_id',
                'attempt', 'task_name', 'seed', 'episodes', 'status', 'episode_reporting', 'partial',
                'completed_episodes', 'successes', 'goal_failures', 'episode_errors', 'success_rate',
-               'parameters_digest', 'definition_digest']
+               'parameters_digest', 'definition_digest', 'endpoint', 'endpoint_mode', 'endpoint_candidates']
 
 
 def csv_text(value):
@@ -139,6 +140,8 @@ def export_csv(value):
     for item in value['cases']:
         row = dict(item, schema_version=value['schema_version'], generated_at=value['generated_at'],
                    batch_id=value['batch']['id'], batch_title=value['batch']['title'])
+        row.update(item.get('config', {}))
+        row['endpoint_candidates'] = json.dumps(row.get('endpoint_candidates', []), ensure_ascii=False)
         writer.writerow({k: csv_text(row.get(k)) for k in CSV_COLUMNS})
     return ('\ufeff' + stream.getvalue()).encode('utf-8')
 

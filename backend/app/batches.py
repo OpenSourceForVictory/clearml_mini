@@ -1,4 +1,5 @@
 """Explicit evaluation manifests; each case is an independently scheduled Job."""
+from . import endpoints
 import os
 from typing import Literal, Optional
 from fastapi import Depends, Header, HTTPException, Query
@@ -83,7 +84,7 @@ def batch_view(s, batch, jobs=None, progresses=None):
             'total_episodes': sum(j.episodes for j in jobs),
             'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
                        'seed': j.client_spec['seed'], 'episodes': j.episodes, 'status': j.status,
-                       'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
+                       **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
                        'episode_reporting': j.client_spec['template'].get('episode_reporting', False),
                        'progress': progresses[j.runs[-1].id] if progresses is not None else progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
 

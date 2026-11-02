@@ -20,6 +20,8 @@ type Pool = {
   max_gpu_utilization: number;
 };
 type Attempt = {
+  endpoint?: string | null;
+  endpoint_mode?: string | null;
   id: string;
   attempt: number;
   status: string;
@@ -646,6 +648,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
                 ))}
               </select>
             </Field>
+            {job.client_spec && <p>本次尝试推理服务：{run?.endpoint||'未分配'} {run?.endpoint_mode==='exclusive'?'独占':run?.endpoint_mode==='shared'?'共享':''}</p>}
             {run?.metrics && (
               <div className="stats metrics">
                 <div>

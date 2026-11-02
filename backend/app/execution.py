@@ -13,7 +13,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
-from . import memberships, image_runtime
+from . import memberships, image_runtime, endpoints
 from .core import EvaluationBatch, Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -362,7 +362,7 @@ def install(app, db, current):
                 'timeout_seconds': execution_timeout(job),
                 'lease_seconds': seconds('LEASE_SECONDS', 30)}
         if job.client_spec:
-            task['client_spec'] = job.client_spec
+            task['client_spec'] = endpoints.input_spec(run, job.client_spec)
             task['image'] = job.client_spec['template']['image']
         s.commit()
         return {'task': task, 'cleanup': []}

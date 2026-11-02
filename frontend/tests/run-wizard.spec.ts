@@ -43,7 +43,7 @@ test('draft survives navigation and polling; queued submit and independent trial
   await expect(wizard.getByLabel('启动变量覆盖 JSON')).toHaveValue('{"MODE":"test"}');
   // Wait for an actual list refresh, rather than relying on a fixed sleep.
   await page.waitForResponse(r=>r.url().includes('/client-templates'));
-  await expect(wizard.getByLabel('推理服务地址')).toHaveValue('ws://inference:8000');
+  await expect(wizard.getByLabel('推理服务地址',{exact:true})).toHaveValue('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await expect(wizard.getByLabel('最大并发任务数')).toHaveValue('2');
   await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
@@ -112,4 +112,43 @@ test('trial without episode reporting does not claim a completed episode',async(
   const trial=wizard.getByRole('region',{name:'试跑进度'});
   await expect(trial).toContainText('无法验证回合报告');
   await expect(trial).not.toContainText('已完成 1/1');
+});
+
+test('multiple addresses validate duplicates and preserve modes in trial and formal submission',async({page})=>{
+  const {wizard,requests}=await setup(page);
+  await wizard.getByRole('button',{name:'上一步',exact:true}).click();
+  await wizard.getByLabel('服务地址 1 使用模式').selectOption('exclusive');
+  await wizard.getByRole('button',{name:'添加推理地址',exact:true}).click();
+  await wizard.getByLabel('推理服务地址 2',{exact:true}).fill('ws://inference:8000/other');
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+  await expect(wizard.getByRole('alert')).toContainText('重复');
+  await wizard.getByLabel('推理服务地址 2',{exact:true}).fill('ws://second:8000');
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+  await wizard.getByText('可选：先试跑一个任务、一个回合',{exact:true}).click();
+  await wizard.getByRole('button',{name:'提交单回合试跑',exact:true}).click();
+  await expect.poll(()=>requests.length).toBe(1);
+  await wizard.getByRole('button',{name:'提交排队',exact:true}).click();
+  await expect.poll(()=>requests.length).toBe(2);
+  const expected=[{url:'ws://inference:8000',mode:'exclusive'},{url:'ws://second:8000',mode:'shared'}];
+  expect(requests[0].body.client.endpoints).toEqual(expected);
+  expect(requests[1].body.client.endpoints).toEqual(expected);
+});
+
+test('editing address invalidates inspection and removing a row preserves the remaining draft',async({page})=>{
+ const {wizard,requests,checks}=await setup(page);
+ await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(wizard.getByRole('button',{name:'提交排队',exact:true})).toBeEnabled();
+ await wizard.getByRole('button',{name:'上一步',exact:true}).click();
+ await wizard.getByRole('button',{name:'上一步',exact:true}).click();
+ await wizard.getByRole('button',{name:'添加推理地址',exact:true}).click();
+ await wizard.getByLabel('推理服务地址 2',{exact:true}).fill('ws://changed:9000');
+ await wizard.getByRole('button',{name:'移除地址 1',exact:true}).click();
+ await expect(wizard.getByLabel('推理服务地址',{exact:true})).toHaveValue('ws://changed:9000');
+ await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+ await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect.poll(checks).toBe(2);
+ await wizard.getByRole('button',{name:'提交排队',exact:true}).click();
+ await expect.poll(()=>requests.length).toBe(1);
+ expect(requests[0].body.client.endpoints).toEqual([{url:'ws://changed:9000',mode:'shared'}]);
 });
