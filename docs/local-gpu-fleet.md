@@ -36,6 +36,8 @@ ssh -p 10001 -N -L 127.0.0.1:18000:127.0.0.1:18000 用户名@SSH地址
 
 ## Worker 运维
 
+**当前部署已切换到共享 SSD 和系统 Worker 服务**，目录及启停命令以 [共享 NFS 存储](shared-nfs-storage.md) 为准。下面记录初始本地磁盘部署，供回退参考。
+
 本机用户 dgh，远程用户 huawei。用户 systemd 单元 `mini-eval-worker@fleet-gpu0`；启用 linger，可在退出 SSH 后持续运行并随系统启动。程序位于 `~/.local/share/mini-eval-worker/`，配置 `~/.config/mini-eval/fleet-gpu0.json`（0600），恢复状态 `~/.local/state/mini-eval/fleet-gpu0.json` 及相邻目录。每台使用独立 Worker token，平台不保存 sudo 密码。
 
 ```bash
