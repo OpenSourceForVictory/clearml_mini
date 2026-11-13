@@ -24,7 +24,9 @@ class CommandClient(EvaluationClient):
         # Runtime resolver sets per-node asset paths; no shell evaluation is used.
         values.update(task.get('_resolved_assets', {}))
         runtime = task['template'].get('runtime')
-        if runtime: values.update({'assets:'+k:v for k,v in runtime['assets'].items()})
+        if runtime:
+            values.update({'assets:'+k:v for k,v in runtime['assets'].items()})
+            values.update({'mounts:'+k:v['target'] for k,v in runtime.get('mounts',{}).items()})
         def expand(text):
             def replace(match):
                 if match[1] not in values: raise ValueError('unknown command placeholder: '+match[1])

@@ -105,6 +105,9 @@ def install(app,db,admin,worker_auth):
         if set(body.environment)-set(runtime.get('overridable_env',[])):raise HTTPException(400,'environment override is not allowed')
         parameters=body.parameters
         try:
+            from runner.image_runtime import placeholders
+            for value in body.environment.values():
+                placeholders(value,runtime.get('assets',{}),runtime.get('mounts',{}))
             if definition.get('parameter_schema') is not None:
                 from runner.parameter_contract import resolve_values
                 parameters=resolve_values(definition['parameter_schema'],body.parameters,body.parameter_overrides)

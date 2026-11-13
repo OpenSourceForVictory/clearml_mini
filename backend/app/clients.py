@@ -149,7 +149,7 @@ def snapshot(s, body, owner_id=None):
             if runtime is None or set(body.environment) - set(runtime['overridable_env']):
                 raise ValueError('environment override is not allowed by this template')
             for value in body.environment.values():
-                image_runtime.placeholders(value, runtime['assets'])
+                image_runtime.placeholders(value, runtime['assets'], runtime.get('mounts',{}))
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}, exclude_none=True), 'parameters': parameters, 'template': template_view(t)}

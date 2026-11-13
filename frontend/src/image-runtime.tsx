@@ -1,9 +1,11 @@
+import {DirectoryEditor,directoryDraft,directoryValues} from './mount-editor';
 import React, {useEffect, useRef, useState} from 'react';
 import {api} from './api';
 
 const example = {interpreter:'python3', environment:{TASK:'${task_name}', ASSETS:'${assets:robotwin}'}, overridable_env:['LOG_LEVEL'], work_dir:'/workspace/eval', output_dir:'/results', assets:{robotwin:'/data/robotwin'}};
 export function ImageClients({onChange}:{onChange:()=>void}) {
   const [runtime,setRuntime]=useState(JSON.stringify(example,null,2)), [command,setCommand]=useState('["python3", "/app/evaluate.py", "--task", "${task_name}"]');
+  const [directories,setDirectories]=useState(()=>directoryDraft());
   const [error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   async function submit(e:React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError('');setMessage('');setBusy(true);
@@ -32,11 +34,12 @@ export function ImageClients({onChange}:{onChange:()=>void}) {
   </section>;
 }
 
-type RuntimeConfig={images:string[];assets:Record<string,string>};
-type Report={applied_revision:number;effective:RuntimeConfig;images:Record<string,{ready:boolean;error:string|null}>;assets:Record<string,{ready:boolean;error:string|null}>};
+type RuntimeConfig={images:string[];assets:Record<string,string>;directories?:Record<string,{path:string;writable:boolean}>};
+type Report={directories?:Record<string,{ready:boolean;error:string|null}>;applied_revision:number;effective:RuntimeConfig;images:Record<string,{ready:boolean;error:string|null}>;assets:Record<string,{ready:boolean;error:string|null}>};
 type NodeRuntime={revision:number;config:RuntimeConfig|null;slots:{slot_id:string;gpu_index:number;ready:boolean;report:Report|null}[]};
 export function RuntimeSettings({id,name}:{id:string;name:string}) {
   const [data,setData]=useState<NodeRuntime|null>(null),[images,setImages]=useState(''),[assets,setAssets]=useState('{}');
+  const [directories,setDirectories]=useState(()=>directoryDraft());
   const [error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const dirty=useRef(false),base=useRef<number|null>(null);
   const endpoint=`admin/nodes/${id}/runtime`;
@@ -44,12 +47,12 @@ export function RuntimeSettings({id,name}:{id:string;name:string}) {
     if(!Array.isArray(value.slots)) return;
     setData(value);
     if(reset||!dirty.current){const config=value.config||value.slots.find(x=>x.report)?.report?.effective||{images:[],assets:{}};
-      setImages(config.images.join('\n'));setAssets(JSON.stringify(config.assets,null,2));base.current=value.revision;dirty.current=false;}
+      setDirectories(directoryDraft(config.directories));setImages(config.images.join('\n'));setAssets(JSON.stringify(config.assets,null,2));base.current=value.revision;dirty.current=false;}
   }
   useEffect(()=>{let active=true;const load=()=>api<NodeRuntime>(endpoint).then(v=>{if(active)receive(v);}).catch(e=>{if(active)setError(String(e));});void load();const t=setInterval(load,5000);return()=>{active=false;clearInterval(t);};},[endpoint]);
   async function save(restore=false) {
     if(base.current===null)return;setBusy(true);setError('');setMessage('');
-    try{const value=await api<NodeRuntime>(endpoint,'PUT',{expected_revision:base.current,config:restore?null:{images:images.split('\n').map(x=>x.trim()).filter(Boolean),assets:JSON.parse(assets)}});
+    try{const value=await api<NodeRuntime>(endpoint,'PUT',{expected_revision:base.current,config:restore?null:{images:images.split('\n').map(x=>x.trim()).filter(Boolean),assets:JSON.parse(assets),directories:directoryValues(directories)}});
       receive(value,true);setMessage(`版本 ${value.revision} 已保存，等待 Worker 确认和资源探测。`);
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
@@ -59,11 +62,12 @@ export function RuntimeSettings({id,name}:{id:string;name:string}) {
     {data&&<><p>期望版本 {data.revision} · {data.config?'平台配置':'本机初始配置'}</p>
       <label>批准镜像（每行一个）<textarea aria-label={`${name} 批准镜像`} rows={4} value={images} onChange={e=>{dirty.current=true;setImages(e.target.value);}}/></label>
       <label>逻辑资产宿主映射 JSON<textarea aria-label={`${name} 逻辑资产宿主映射`} rows={5} value={assets} onChange={e=>{dirty.current=true;setAssets(e.target.value);}}/></label>
+      <DirectoryEditor rows={directories} onChange={v=>{dirty.current=true;setDirectories(v);}}/>
       <button disabled={busy} onClick={()=>void save()}>保存镜像与资产配置</button>{' '}
       <button disabled={busy} onClick={()=>void save(true)}>恢复本机运行配置</button>{' '}
       <button disabled={busy} onClick={()=>receive(data,true)}>重新载入运行配置（放弃草稿）</button>
       {data.slots.map(s=><article key={s.slot_id}><h4>GPU {s.gpu_index} · {s.ready?'配置已生效':'等待生效 / 需升级 / 报告过期'} · 已确认版本 {s.report?.applied_revision??'未知'}</h4>
-        {(['images','assets'] as const).map(kind=><ul key={kind}>{Object.entries(s.report?.[kind]||{}).map(([key,item])=><li key={key}>{kind==='images'?'镜像':'资产'} {key}：{item.ready?'就绪':'未就绪'}{item.error&&` — ${item.error}`}</li>)}</ul>)}
+        {(['images','assets','directories'] as const).map(kind=><ul key={kind}>{Object.entries(s.report?.[kind]||{}).map(([key,item])=><li key={key}>{kind==='images'?'镜像':kind==='assets'?'资产':'目录'} {key}：{item.ready?'就绪':'未就绪'}{item.error&&` — ${item.error}`}</li>)}</ul>)}
       </article>)}
     </>}
   </details>;

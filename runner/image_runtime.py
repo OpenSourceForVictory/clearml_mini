@@ -40,14 +40,14 @@ def target(value):
     return value
 
 
-def placeholders(text, assets):
-    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host'} | {'assets:'+k for k in assets}
+def placeholders(text, assets, mounts=()):
+    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host'} | {'assets:'+k for k in assets} | {'mounts:'+k for k in mounts}
     if any(key not in allowed for key in TOKEN.findall(text)) or '${' in TOKEN.sub('', text):
         raise ValueError('unknown or malformed runtime placeholder')
 
 
 def validate(value, command=()):
-    if not isinstance(value, dict) or set(value) - {'interpreter', 'environment', 'overridable_env', 'work_dir', 'output_dir', 'assets'}:
+    if not isinstance(value, dict) or set(value) - {'interpreter', 'environment', 'overridable_env', 'work_dir', 'output_dir', 'assets', 'mounts'}:
         raise ValueError('invalid runtime fields')
     result = {'interpreter': 'python3', 'environment': {}, 'overridable_env': [], 'work_dir': WORK, 'output_dir': OUTPUT, 'assets': {}, **value}
     if result['interpreter'] not in ('python', 'python3'):
@@ -60,7 +60,9 @@ def validate(value, command=()):
     assets = result['assets']
     if not isinstance(assets, dict) or len(assets) > 16 or any(not NAME.fullmatch(k) for k in assets):
         raise ValueError('invalid logical asset names')
-    paths = [target(result['work_dir']), target(result['output_dir']), *[target(p) for p in assets.values()]]
+    from .mount_contract import mounts
+    if 'mounts' in result: result['mounts'] = mounts(result['mounts'])
+    paths = [target(result['work_dir']), target(result['output_dir']), *[target(p) for p in assets.values()], *[target(m['target']) for m in result.get('mounts',{}).values()]]
     for i, path in enumerate(paths):
         if any(overlaps(path, other) for other in paths[:i]):
             raise ValueError('container directories must not overlap')
@@ -68,7 +70,7 @@ def validate(value, command=()):
             if overlaps(path, fixed) and not (i == (0 if fixed == WORK else 1) and path == fixed):
                 raise ValueError('container directory overlaps platform execution directory')
     for text in [*command, *result['environment'].values()]:
-        placeholders(text, assets)
+        placeholders(text, assets, result.get('mounts',{}))
     return result
 
 
@@ -81,8 +83,9 @@ def resolve(config):
     values.update({k:str(config[k]) for k in ('port','bind_host') if k in config})
     values.update(input_path='/tmp/mini-eval-job.json', work_dir=runtime['work_dir'], output_dir=runtime['output_dir'])
     values.update({'assets:'+k: v for k, v in runtime['assets'].items()})
+    values.update({'mounts:'+k: m['target'] for k,m in runtime.get('mounts',{}).items()})
     def expand(text):
-        placeholders(text, runtime['assets'])
+        placeholders(text, runtime['assets'], runtime.get('mounts',{}))
         return TOKEN.sub(lambda m: values.get(m[1], m[0]), text)
     env = {k: expand(v) for k, v in {**runtime['environment'], **overrides}.items()}
     env.update(MINI_EVAL_INPUT=values['input_path'], MINI_EVAL_WORK_DIR=runtime['work_dir'], MINI_EVAL_OUTPUT_DIR=runtime['output_dir'],

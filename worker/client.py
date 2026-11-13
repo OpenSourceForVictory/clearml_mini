@@ -221,6 +221,8 @@ class Worker:
                     raise RuntimeError('logical asset is not configured: '+name)
                 validate_storage({**self.config, 'assets_root': host, 'cache_root': host}, self.config.get('_supervisor_state', self.path), self.config.get('_config_path'))
                 aliases.append((host, target, True))
+            from .mounts import resolve as resolve_mounts
+            aliases += resolve_mounts(runtime.get('mounts',{}), self.runtime_snapshot['config'], self.config, self.config.get('_supervisor_state',self.path), directory)
             for source, target, readonly in aliases:
                 if target not in (WORK, OUTPUT):
                     args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
@@ -566,7 +568,7 @@ class Worker:
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': 8, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': 9, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

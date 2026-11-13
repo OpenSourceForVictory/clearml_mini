@@ -64,12 +64,15 @@ test('node runtime preserves drafts, reports missing assets and prevents stale s
   await page.getByText('host 镜像与逻辑资产',{exact:true}).click();
   await expect(page.getByText(/asset directory missing/)).toBeVisible();
   await page.getByLabel('host 逻辑资产宿主映射',{exact:true}).fill('{"robotwin":"/new/assets"}');
+  await page.getByRole('button',{name:'添加批准目录'}).click();
+  await page.getByLabel('目录 1 逻辑名',{exact:true}).fill('shared');await page.getByLabel('目录 1 宿主机路径',{exact:true}).fill('/srv/shared');await page.getByLabel('批准目录 1 写入',{exact:true}).check();
   data={...data,revision:2};
   await expect(page.getByText('期望版本 2 · 平台配置',{exact:true})).toBeVisible({timeout:10000});
   await expect(page.getByLabel('host 逻辑资产宿主映射',{exact:true})).toHaveValue('{"robotwin":"/new/assets"}');
   await page.getByRole('button',{name:'保存镜像与资产配置',exact:true}).click();
   await expect(page.getByRole('alert').filter({hasText:'runtime configuration changed'})).toBeVisible();
   expect(submitted.expected_revision).toBe(1);
+  expect(submitted.config.directories).toEqual({shared:{path:'/srv/shared',writable:true}});
   await page.getByRole('button',{name:'重新载入运行配置（放弃草稿）',exact:true}).click();
   await page.getByRole('button',{name:'恢复本机运行配置',exact:true}).click();
   await expect(page.getByRole('status')).toContainText('版本 3 已保存');

@@ -10,10 +10,27 @@ from .storage import held, StorageConfig
 from runner.image_runtime import NAME
 
 
+class Directory(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    path: str = Field(min_length=2,max_length=4096)
+    writable: bool = Field(default=False,strict=True)
+
+    @field_validator('path')
+    @classmethod
+    def valid_path(cls,value):return StorageConfig.path(value)
+
+
 class Config(BaseModel):
     model_config = ConfigDict(extra='forbid')
     images: list[str] = Field(default_factory=list, max_length=100)
     assets: dict[str, str] = Field(default_factory=dict, max_length=16)
+    directories: dict[str, Directory] = Field(default_factory=dict, max_length=16)
+
+    @field_validator('directories')
+    @classmethod
+    def directory_names(cls,value):
+        if any(not NAME.fullmatch(k) for k in value):raise ValueError('invalid logical directory name')
+        return value
 
     @field_validator('images')
     @classmethod
@@ -49,6 +66,7 @@ class Report(BaseModel):
     effective: Config
     images: dict[str, Resource] = Field(default_factory=dict, max_length=100)
     assets: dict[str, Resource] = Field(default_factory=dict, max_length=16)
+    directories: dict[str, Resource] = Field(default_factory=dict, max_length=16)
 
 
 def desired(worker):
@@ -79,6 +97,8 @@ def blockers(worker, slot, spec, at):
         if spec and (slot.protocol_version < 3 or spec['template']['image'] not in (slot.client_images or [])):
             return ['所需镜像未批准或未就绪']
         return []
+    if runtime.get('mounts') and slot.protocol_version < 9:
+        return ['通用目录挂载需要 Worker v9']
     if slot.protocol_version < 5:
         return ['需要 Worker v5']
     report = slot.runtime_report or {}
@@ -88,6 +108,8 @@ def blockers(worker, slot, spec, at):
     for name in runtime['assets']:
         if not report.get('assets', {}).get(name, {}).get('ready'):
             result.append('逻辑资产未就绪: '+name)
+    from runner.mount_contract import requirements
+    result += requirements(runtime.get('mounts',{}), report.get('effective',{}), report)
     return result
 
 
@@ -101,9 +123,9 @@ def acknowledge(s, worker, slot, report):
     old = (slot.runtime_report or {}).get('applied_revision', 0)
     if old != report.applied_revision and held(s, slot):
         raise HTTPException(409, 'runtime switch must wait for cleanup')
-    if report.applied_revision == report.revision and worker.runtime_config is not None and report.effective.model_dump() != worker.runtime_config:
+    if report.applied_revision == report.revision and worker.runtime_config is not None and report.effective.model_dump() != Config(**worker.runtime_config).model_dump():
         raise HTTPException(409, 'effective runtime differs from desired configuration')
-    if set(report.images) - set(report.effective.images) or set(report.assets) - set(report.effective.assets):
+    if any(set(getattr(report,k))-set(getattr(report.effective,k)) for k in ('images','assets','directories')):
         raise HTTPException(409, 'reported resources not in effective configuration')
     slot.runtime_report = report.model_dump()
     slot.runtime_reported_at = now()

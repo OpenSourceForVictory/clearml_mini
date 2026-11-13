@@ -19,18 +19,18 @@ test('register both template kinds with Docker and host execution',async({page})
 });
 
 test('cloning a typed template preserves its parameter schema',async({page})=>{
- const schema={version:1,fields:{scene:{type:'string',default:'room'}}};let sent:any;
+ const schema={version:1,fields:{scene:{type:'string',default:'room'}}};const mounts={shared:{source:'directories:shared',target:'/shared',read_only:false,required:false}};let sent:any;
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
   if(p==='auth/me')data={username:'admin',role:'admin'};
-  if(p==='client-templates')data=[{id:'typed',name:'typed',version:'1',image:'image:1',command:['python3','business.py'],protocols:['http'],enabled:true,execution_mode:'docker',integration_mode:'direct',episode_reporting:true,runtime:{environment:{},overridable_env:[],assets:{}},parameter_schema:schema}];
+  if(p==='client-templates')data=[{id:'typed',name:'typed',version:'1',image:'image:1',command:['python3','business.py'],protocols:['http'],enabled:true,execution_mode:'docker',integration_mode:'direct',episode_reporting:true,runtime:{environment:{},overridable_env:[],assets:{},mounts},parameter_schema:schema}];
   if(p==='admin/client-templates'&&route.request().method()==='POST'){sent=route.request().postDataJSON();data={id:'copy',...sent};}
   await route.fulfill({json:data});
  });
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'运行模板管理'}).click();
  await page.getByRole('button',{name:'复制新版本'}).click();await page.getByLabel('版本',{exact:true}).fill('2');await page.getByRole('button',{name:'注册此版本'}).click();
- await expect.poll(()=>sent?.parameter_schema).toEqual(schema);
+ await expect.poll(()=>sent?.parameter_schema).toEqual(schema);expect(sent.runtime.mounts).toEqual(mounts);
 });
 
 test('typed editor rejects duplicates and keeps drafts across mode changes',async({page})=>{
@@ -64,4 +64,19 @@ test('typed editor rejects duplicates and keeps drafts across mode changes',asyn
  await expect.poll(()=>submits).toBe(1);
  expect(sent.parameter_schema.fields).toMatchObject({scene:{type:'string',required:true,binding:{target:'argv',name:'--scene'}},difficulty:{type:'integer',default:2,min:1,max:5,overridable:true,binding:{target:'env',name:'DIFFICULTY'}}});
  expect(sent.runtime.work_dir).toBe('/workspace/task');
+});
+
+test('directory mounts keep drafts across modes and submit logical names',async({page})=>{
+ let submitted:any;await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+ if(path==='auth/me')data={username:'admin',role:'admin'};
+ if(path==='admin/client-templates'&&route.request().method()==='POST'){submitted=route.request().postDataJSON();data={id:'t',...submitted}}
+ await route.fulfill({json:data})});
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'运行模板管理'}).click();await page.getByRole('button',{name:'注册模板',exact:true}).click();
+ await page.getByLabel('模板名称',{exact:true}).fill('mounted');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('custom:1');
+ await page.getByRole('button',{name:'添加目录挂载'}).click();await page.getByLabel('挂载 1 名称',{exact:true}).fill('data');await page.getByLabel('挂载 1 来源',{exact:true}).fill('directories:dataset');await page.getByLabel('挂载 1 容器路径',{exact:true}).fill('/datasets');
+ await page.getByLabel('执行方式',{exact:true}).selectOption('host');await expect(page.getByLabel('挂载 1 名称',{exact:true})).toHaveCount(0);
+ await page.getByLabel('执行方式',{exact:true}).selectOption('docker');await expect(page.getByLabel('挂载 1 名称',{exact:true})).toHaveValue('data');await page.getByLabel('Docker 镜像').fill('custom:1');
+ await page.getByText('挂载声明预览',{exact:true}).click();await expect(page.getByText('directories:dataset → /datasets · 只读 · 必需',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>submitted?.runtime.mounts).toEqual({data:{source:'directories:dataset',target:'/datasets',read_only:true,required:true}});
 });
