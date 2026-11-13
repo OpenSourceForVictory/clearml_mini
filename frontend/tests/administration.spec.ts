@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 test('management navigation and machine roles use a selected detail',async({page})=>{
+  await page.setViewportSize({width:1440,height:600});
   let nodes=[{id:'n',node_name:'host',roles:['client','server'],enabled:true,status:'online',management_revision:0,max_concurrent:1,cpu_capacity:4,ram_gb_capacity:8,gpu_count:1,held_executions:0,revoked_at:null}];
   let update:any;
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
@@ -17,7 +18,8 @@ test('management navigation and machine roles use a selected detail',async({page
   await expect(page.getByRole('tab',{name:'运行模板管理'})).toBeVisible();
   await expect(page.getByRole('heading',{name:'host · 配置详情'})).toHaveCount(0);
   await page.getByRole('button',{name:'查看配置'}).click();
-  await expect(page.getByRole('heading',{name:'host · 配置详情'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'host · 配置详情'})).toBeInViewport();
+  await expect(page.getByRole('region',{name:'host · 配置详情'})).toBeFocused();
   await page.getByRole('button',{name:'停用（停止接新任务）'}).click();
   await expect.poll(()=>update).toEqual({enabled:false,expected_revision:0});
   await page.getByRole('tab',{name:'服务端机器'}).click();

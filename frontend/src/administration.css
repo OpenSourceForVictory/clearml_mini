@@ -70,3 +70,6 @@
   .administration .admin-content { padding-left: 16px; }
   .administration .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.administration .machine-configuration { scroll-margin-top: 20px; border-color: #8eb59a; }
+.administration .machine-configuration:focus { outline: 2px solid #8eb59a; outline-offset: 3px; }
