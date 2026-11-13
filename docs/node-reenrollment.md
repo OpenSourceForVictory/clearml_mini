@@ -58,3 +58,6 @@ sudo python3 -B node-package/scripts/install_node.py \
 `scripts/smoke_node_enrollment.py` 使用隔离 API（18093）、两个真实 systemd 用户 Worker（模拟 GPU）和从安装包复制的独立 updater 进程。验证原槽位、工作路径及服务挂载依赖保留，全部摘要回连后完成。此测试不等于真实 GPU 仿真评测，也不等于已在五个生产节点重新纳管。独立 updater 的 systemd 安装由安装器测试覆盖；隔离联调使用独立进程，避免修改本机正式 updater 单元。
 
 本轮验证结果：后端全量 301 通过、41 项环境相关跳过；最终版本补充回归 11 项通过，关联前端 10 项通过（资源池用例更新表单文案后重跑通过），TypeScript/Vite 构建、OpenSpec strict、隔离 PostgreSQL 迁移均通过。
+
+## 本机发布记录（2026-11-13）
+代码 `8ef72d3` 已发布至本机 18000 控制端；保留旧镜像与数据库备份，数据库由 l285a67 迁移至 n407c89。发布前无活动执行，14 条历史执行保持成功；发布后真实登录、完整安装包 SHA-256、管理界面和版本面板检查通过，五台机器/五张 GPU 在线。未解除或更新生产 Worker；原 NFS 单元保持原状。发布证据位于 `.runtime/releases/reenrollment-8ef72d3/`。当前五节点安装新 Worker/升级执行器仍需按上述部署流程执行，不应把控制端上线视为节点已升级。
