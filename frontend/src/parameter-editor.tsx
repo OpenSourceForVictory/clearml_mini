@@ -55,7 +55,7 @@ export function ParameterEditor({value,onChange}:{value:ParameterDraft;onChange:
  function optional(row:ParameterRow,key:string,v:unknown){const d={...row.definition};if(v===undefined)delete d[key];else d[key]=v;update(row.id,{definition:d});}
  return <div className="parameter-editor">
  <label className="check"><input type="checkbox" checked={value.enabled} onChange={e=>onChange({...value,enabled:e.target.checked})}/>启用类型化业务参数</label>
- <p className="muted">模板定义字段，集合填写每个任务的值。运行时只允许覆盖明确开放的字段。任务名、回合数和种子沿用集合中的任务计划。</p>
+ <p className="muted">模板定义字段，集合任务或服务部署填写具体值。运行时只允许覆盖明确开放的字段。评测任务名、回合数和种子沿用集合中的任务计划。</p>
  {value.enabled&&<><p className="hint">需要 Worker v8。未声明的业务参数会被拒绝；关闭此选项将恢复旧版自由 JSON 参数。更改字段类型会重置该字段的默认值、约束和绑定。</p>
  {value.rows.map((row,index)=>{const d=row.definition,b=d.binding||{target:'input'};return <fieldset className="parameter-card" key={row.id}><legend>业务字段 {index+1}{row.name?` · ${row.name}`:''}</legend>
  <div className="row"><Field label="字段名称"><input value={row.name} onChange={e=>update(row.id,{name:e.target.value})}/></Field><Field label="显示名称"><input value={d.label||''} onChange={e=>optional(row,'label',e.target.value||undefined)}/></Field><Field label="参数类型"><select value={d.type} onChange={e=>{const type=e.target.value;update(row.id,{definition:{type,...(d.label?{label:d.label}:{}),...(d.description?{description:d.description}:{}),...(d.required?{required:true}:{}),...(d.overridable?{overridable:true}:{})},defaultText:'',choicesText:'[]',structureText:type==='array'?' {"type":"string"}':'{}'})}}>{types.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></Field></div>

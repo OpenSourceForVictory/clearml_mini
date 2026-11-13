@@ -47,6 +47,7 @@ def transition(s, run, status, message=None):
 
 
 def execution_timeout(job):
+    if getattr(job, 'benchmark', None) == 'inference-service': return 31536000
     limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
     return min(limit, job.client_spec['timeout_seconds']) if job.client_spec else limit
 
@@ -60,7 +61,7 @@ def reconcile(s, at):
                 run.slot_id = run.execution_id = run.reservation_expires_at = None
             continue
         expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
-        overrun = run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
+        overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
         startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
             transition(s, run, 'TIMED_OUT', 'worker lease or execution deadline expired')
@@ -123,13 +124,20 @@ def eligible(slot, pool, job, held, at):
 def slot_codes(worker, slot, at):
     from . import storage, memberships, image_runtime
     result = []
-    if 'client' not in (worker.roles if worker.roles is not None else ['client']): result.append('node_role_mismatch')
     if not worker.enabled or not online(slot, at): result.append('offline')
     if slot.quarantined: result.append('quarantined')
     if not memberships.ready(slot): result.append('membership_pending')
     if not storage.ready(worker, slot, at): result.append('storage_pending')
     if not image_runtime.ready(worker, slot, at): result.append('runtime_pending')
     return result
+
+
+def workload_codes(worker, slot, job):
+    role = 'server' if getattr(job, 'benchmark', None) == 'inference-service' else 'client'
+    if role not in (worker.roles if worker.roles is not None else ['client']): return ['node_role_mismatch']
+    if getattr(job, 'target_slot_id', None) and job.target_slot_id != slot.id: return ['target_slot_mismatch']
+    if role == 'server' and slot.protocol_version < 7: return ['client_runtime']
+    return []
 
 
 def node_codes(worker, pool, count, cpu, ram):
@@ -208,7 +216,7 @@ def tick(factory, at=None):
                     if job.batch_id and batches[job.batch_id].scheduling_paused:
                         continue
                     selected_endpoint = endpoints.choose(job.client_spec, endpoint_held)
-                    if job.client_spec and selected_endpoint is None:
+                    if job.client_spec and job.benchmark != 'inference-service' and selected_endpoint is None:
                         continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
                         continue
@@ -218,6 +226,7 @@ def tick(factory, at=None):
                     free.sort(key=lambda x: (x.gpu_utilization if telemetry_fresh(x, at) else 101,
                                              len(by_slot[x.id]), x.node_name, x.gpu_index))
                     slot = next((x for x in free if x.pool_id == job.pool_id
+                        and not workload_codes(workers[x.worker_id], x, job)
                         and eligible(x, pool, job, by_slot[x.id], at)
                         and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
                         and not node_codes(workers[x.worker_id], pool, node_counts.get(x.worker_id, 0),

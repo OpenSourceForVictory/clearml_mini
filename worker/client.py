@@ -24,6 +24,7 @@ from .retention import Retention
 from .image_runtime import Runtime
 from .host_environments import HostEnvironments
 from .host_backend import HostBackend
+from .services import is_service, check_bind, health as service_health
 from runner.image_runtime import validate as validate_runtime, ADAPTER, WORK, OUTPUT
 
 LOG = logging.getLogger('mini-eval-worker')
@@ -164,6 +165,7 @@ class Worker:
             self.save()
 
     def create(self, task):
+        if is_service(task): check_bind(task['client_spec']['service'])
         if self.host_mode(): return HostBackend(self).create(task)
         if task.get('storage_revision', 0) != self.storage_snapshot['revision']:
             raise RuntimeError('task storage revision differs from execution snapshot')
@@ -171,8 +173,8 @@ class Worker:
         disk = disk_status(self.workspace, self.config)
         if disk['free_mb'] < disk['min_free_mb']:
             raise RuntimeError('insufficient disk space in worker workspace before start')
-        modules = {'mock': 'runner.mock_eval', 'robotwin-render': 'runner.robotwin_render', 'cs-client': 'runner.cs_entry'}
-        cs = task['benchmark'] == 'cs-client'
+        modules = {'mock': 'runner.mock_eval', 'robotwin-render': 'runner.robotwin_render', 'cs-client': 'runner.cs_entry', 'inference-service': 'runner.service_entry'}
+        cs = task['benchmark'] in ('cs-client', 'inference-service')
         approved = task['image'] in self.config.get('client_images', []) if cs else task['image'] == self.config['runner_image']
         if task['benchmark'] not in modules or not approved:
             raise RuntimeError('task benchmark or image is not approved by this worker')
@@ -197,6 +199,9 @@ class Worker:
                 '--network', 'bridge' if cs else 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                 '--pids-limit', '256', '--cpus', str(task['cpus']), '--memory', str(task['ram_gb'])+'g',
                 '--log-driver', 'json-file', '--log-opt', 'max-size=1m', '--log-opt', 'max-file=1']
+        if is_service(task):
+            service = task['client_spec']['service']
+            args.extend(['--publish', f"{service['address']}:{service['port']}:{service['container_port']}"])
         if cs:
             directory = execution_dirs(self.workspace, task['execution_id'])
             for source, target, readonly in [
@@ -251,6 +256,7 @@ class Worker:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
                       'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
+            if is_service(task): config.update(port=task['client_spec']['service']['container_port'], bind_host='0.0.0.0')
             (execution_dirs(self.workspace, task['execution_id'])/'input.json').write_text(json.dumps(config))
             with tempfile.TemporaryDirectory(prefix='eval-input-') as directory:
                 path = Path(directory)/'input.json'
@@ -340,7 +346,7 @@ class Worker:
     def execute(self, task):
         execution = task['execution_id']
         if self.state is None:
-            self.state = {'host_approval': self.config.get('_host_approval', {}), 'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
+            self.state = {'service_started_at': time.time(), 'host_approval': self.config.get('_host_approval', {}), 'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
             self.save()
         deadline = [time.monotonic() + task['lease_seconds'] - 2]
         done, lease_lost = threading.Event(), threading.Event()
@@ -413,6 +419,14 @@ class Worker:
                     logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
                 except (urllib.error.URLError, TimeoutError):
                     continue
+                if is_service(task) and container['State']['Running'] and not reply['cancel']:
+                    probe = service_health(task['client_spec']['service'])
+                    self.api.post(f'worker/executions/{execution}/service-health', probe)
+                    if probe['ready']:
+                        if not self.state.get('service_was_ready'):
+                            self.state['service_was_ready'] = True; self.save()
+                    elif not self.state.get('service_was_ready') and time.time() - self.state.get('service_started_at', time.time()) > task['client_spec']['service']['startup_timeout']:
+                        raise RuntimeError('service startup health deadline exceeded')
                 if not container['State']['Running']:
                     if not logs_done:
                         continue
@@ -426,7 +440,7 @@ class Worker:
                         except (ValueError, KeyError, TypeError):
                             continue
                     code = container['State']['ExitCode']
-                    status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if code == 0 and result else 'FAILED')
+                    status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if not is_service(task) and code == 0 and result else 'FAILED')
                     body = {'status': status, 'metrics': result if status == 'SUCCEEDED' else None,
                             'error': None if status == 'SUCCEEDED' else (err[-900:] or f'runner exited with code {code}')}
                     if task.get('benchmark') == 'cs-client':

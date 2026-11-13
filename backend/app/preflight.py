@@ -7,7 +7,8 @@ from . import scheduling as admission, image_runtime, endpoints
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
-    'node_role_mismatch': ('environment', '节点未启用客户端角色', '请管理员检查机器角色'),
+    'target_slot_mismatch': ('environment', '不是指定服务目标设备', '选择指定服务设备'),
+    'node_role_mismatch': ('environment', '节点未启用任务所需角色', '请管理员检查机器角色'),
     'batch_paused': ('resource', '本批次已暂停后续调度', '恢复批次调度后参与资源分配'),
     'batch_concurrency': ('resource', '本批次已达到最大并发数', '等待本批次运行任务完成'),
     'pool_disabled': ('environment', '资源池已停用或不存在', '请管理员检查资源池状态'),
@@ -76,7 +77,7 @@ class DiagnosticContext:
             if not pool or slot.pool_id != pool.id: continue
             worker = self.workers[slot.worker_id]
             held, node_held = self.by_slot[slot.id], self.by_node[worker.id]
-            local = admission.slot_codes(worker, slot, self.at)
+            local = admission.slot_codes(worker, slot, self.at) + admission.workload_codes(worker, slot, job)
             local += admission.eligibility_codes(slot, pool, job, held, self.at)
             local += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held))
             reasons = [reason(code) for code in dict.fromkeys(local)]

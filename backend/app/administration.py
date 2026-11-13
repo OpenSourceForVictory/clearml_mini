@@ -96,7 +96,8 @@ def install(app, db, admin):
         w.enabled = False
         release_reservations(s, slots)
         w.management_revision += 1
-        if any(held(s, x) for x in slots):
+        pending_services = s.scalar(select(Job.id).where(Job.target_slot_id.in_([x.id for x in slots]), Job.service_instance_id.is_not(None), Job.status == 'PENDING').limit(1))
+        if pending_services or any(held(s, x) for x in slots):
             audit(s, user, 'machine.drain', w.id)
             s.commit()
             raise HTTPException(409, 'machine disabled; wait for execution cleanup before unmanaging')

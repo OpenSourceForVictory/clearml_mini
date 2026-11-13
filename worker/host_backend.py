@@ -66,6 +66,9 @@ class HostBackend:
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
         values={k:str(config[k]) for k in ('task_name','episodes','seed','endpoint')}
+        if config.get('workload') == 'service':
+            config.update(port=config['service']['port'], bind_host=config['service']['address'])
+            values.update(port=str(config['port']), bind_host=config['bind_host'])
         values.update(input_path=str(inp),work_dir=str(directory/'work'),output_dir=str(directory/'output'))
         assets=w.runtime_snapshot['config']['assets']
         for name in host['assets']:
@@ -93,7 +96,8 @@ class HostBackend:
         config['_resolved_command']=argv;config['_resolved_environment']=env;config['_resolved_assets']={k:v for k,v in values.items() if k.startswith('assets:')}
         config['template']={**config['template'],'command':argv}
         atomic_json(inp,config)
-        launch={'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m','runner.cs_entry'],'environment':env,'cwd':values['work_dir']}
+        module='runner.service_entry' if config.get('workload') == 'service' else 'runner.cs_entry'
+        launch={'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
         atomic_json(self.root/'launch.json',launch)
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())

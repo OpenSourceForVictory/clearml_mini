@@ -23,7 +23,7 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  useEffect(()=>{if(error){errorRef.current?.focus({preventScroll:true});errorRef.current?.scrollIntoView({block:'center'});}},[error]);
  async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),environment=JSON.parse(String(f.get('environment'))),assets=JSON.parse(String(f.get('assets'))),overridable_env=String(f.get('overrides')).split(',').map(x=>x.trim()).filter(Boolean);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:f.has('episode_reporting')||integration==='sdk-command',protocols:['http','https','ws','wss']};
-   if(kind==='client')body.parameter_schema=parameterSchema(parameters);
+   body.parameter_schema=parameterSchema(parameters);
    if(mode==='docker'){body.image=f.get('image');body.runtime={interpreter:'python3',environment,overridable_env,assets,work_dir:f.get('work_dir'),output_dir:f.get('output_dir')};}
    else{body.host_runtime={environment_name:f.get('environment_name'),environment,overridable_env,assets};}
    if(kind==='server')Object.assign(body,{port:Number(f.get('port')),protocol:f.get('protocol'),health_type:f.get('health_type'),health_path:f.get('health_path'),startup_timeout:Number(f.get('startup_timeout'))});
@@ -34,7 +34,7 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  <fieldset><legend>平台参数</legend><p className="muted">执行身份、GPU、推理地址和回合身份由平台注入；宿主机目录由机器配置解析。业务程序通过 MINI_EVAL_INPUT 读取任务输入。</p>
  {mode==='docker'?<div className="row"><Field label="容器内工作目录"><input name="work_dir" required value={workDir} onChange={e=>setWorkDir(e.target.value)}/></Field><Field label="容器内输出目录"><input name="output_dir" required value={outputDir} onChange={e=>setOutputDir(e.target.value)}/></Field></div>:<p>工作目录和输出目录使用该节点工作区下的独立执行目录。</p>}
  </fieldset>
- {kind==='client'&&<fieldset><legend>业务参数</legend><ParameterEditor value={parameters} onChange={setParameters}/></fieldset>}
+ <fieldset><legend>业务参数</legend><ParameterEditor value={parameters} onChange={setParameters}/></fieldset>
  <fieldset><legend>运行参数</legend>
  <Field label="执行方式"><select value={mode} onChange={e=>setMode(e.target.value)}><option value="docker">Docker 镜像运行</option><option value="host">宿主机运行</option></select></Field>
  {kind==='client'&&<Field label="协议接入方式"><select value={integration} onChange={e=>setIntegration(e.target.value)}><option value="direct">业务程序直接实现评测协议</option><option value="sdk-command">SDK + 每回合业务命令</option></select></Field>}

@@ -8,6 +8,7 @@ import {RuntimeSettings} from './image-runtime';
 import {ExecutionDataSettings} from './retention';
 import {Templates} from './templates';
 import {HostEnvironments} from './host-environments';
+import {Services} from './services';
 
 type Machine={id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
 type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:boolean;max_tasks_per_gpu:number;vram_reserve_gb:number;max_gpu_utilization:number;min_vram_gb:number;cpu_per_job:number;ram_gb_per_job:number;member_count:number;pending_jobs:number;active_jobs:number};
@@ -44,6 +45,7 @@ export function Machines() {
       <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="机器列表"><table><thead><tr><th>机器</th><th>角色</th><th>GPU 数量</th><th>持有执行</th><th>状态</th><th>管理</th></tr></thead><tbody>{visibleNodes.map(n=><tr key={n.id} className={selected===n.id?'is-selected':''}><td><strong>{n.node_name}</strong></td><td>{n.roles.map(r=>r==='client'?'客户端':'服务端').join('、')}</td><td>{n.gpu_count}</td><td>{n.held_executions}</td><td><span className={'admin-status '+n.status}>{status[n.status]??n.status}</span></td><td><button aria-pressed={selected===n.id} aria-controls="machine-configuration" onClick={()=>openDetails(n.id)}>查看配置</button></td></tr>)}</tbody></table></div>
       {!loaded&&!loadError&&<p className="empty" role="status">正在加载机器…</p>}
       {loaded&&visibleNodes.length===0&&<div className="empty">{roleNodes.length===0?'暂无此类型机器，可注册新机器或在已有机器详情中增加角色。':'没有匹配的机器，请调整名称或状态筛选。'}</div>}</section></>}
+    {role==='server'&&!register&&<Services nodes={nodes} workerId={selected||undefined}/>}
     {node&&!register&&<section key={node.id} ref={detailRef} id="machine-configuration" tabIndex={-1} aria-labelledby="machine-configuration-title" className="panel machine-configuration"><div className="row"><h2 id="machine-configuration-title">{node.node_name} · 配置详情</h2><button onClick={()=>setSelected('')}>关闭详情</button></div>
       <p>{status[node.status]} · 角色变更和解除纳管需要等待执行清理完成。</p>
       {!node.revoked_at&&<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>

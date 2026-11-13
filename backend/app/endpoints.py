@@ -15,7 +15,7 @@ def resource_key(url):
 
 
 def candidates(spec):
-    if not spec:
+    if not spec or spec.get('workload') == 'service':
         return []
     if spec.get('endpoints'):
         return spec['endpoints']
@@ -23,6 +23,7 @@ def candidates(spec):
 
 
 def assigned(run, spec=None):
+    if (spec or run.job.client_spec or {}).get('workload') == 'service': return None
     if run.assigned_endpoint:
         return {'url': run.assigned_endpoint, 'mode': run.assigned_endpoint_mode}
     spec = spec if spec is not None else run.job.client_spec
@@ -52,6 +53,7 @@ def choose(spec, held):
 
 
 def input_spec(run, spec):
+    if spec.get('workload') == 'service': return dict(spec)
     selected = assigned(run, spec)
     if not selected:
         raise ValueError('execution has no assigned inference endpoint')

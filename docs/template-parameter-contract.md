@@ -50,7 +50,7 @@ argv, env = bind_values(schema, values, ['python3', 'simulation.py'])
 
 已实现：客户端模板 parameter_schema 可选持久化（迁移 m285b79）、API 注册和克隆、集合逐项校验、批次全部校验后入队、最终参数快照，以及 Docker/host 客户端入口和 SDK 命令适配器的绑定。旧模板 schema 为 null，继续使用原 parameters 规则。类型化任务只能由 Worker v8 领取；API 同时保留 v1—v7 注册兼容。前端可编辑 schema，复制模板也保留其定义。
 
-服务端模板暂时拒绝 parameter_schema，避免接受配置却无法传递服务参数。服务端支持、资源需求映射、运行参数分层、通用目录/设备挂载及类型化界面仍由 OpenSpec 9.1—9.5 跟踪，不能视为整体完成。
+服务端模板同样支持 parameter_schema。部署时校验 parameters 和 parameter_overrides，保存有效参数及模板快照；重启沿用快照，Worker 8 才能执行类型化服务。资源需求映射、运行参数分层、通用目录/设备挂载仍由 OpenSpec 9.1—9.5 跟踪，不能视为整体完成。
 
 注册客户端模板时将上述 schema 作为 parameter_schema 字段传入；业务取值放在 client.parameters 或集合 cases[].parameters，运行覆盖放在 client.parameter_overrides。类型化模板自动启用平台运行适配器注入，防止用户镜像内旧 SDK 忽略新绑定。模板环境变量/允许覆盖变量不能与业务 env 绑定重名。
 
@@ -64,4 +64,4 @@ argv, env = bind_values(schema, values, ['python3', 'simulation.py'])
 
 支持契约预览、重复名称/保留字段/绑定错误/默认值类型的提交前反馈。容器工作和输出目录可配置，Docker/host 切换保留业务参数和目录草稿。公共 Field 组件独立，避免模板/编辑器反向依赖整个管理模块。
 
-本轮隔离环境验证真实浏览器创建模板 → API 保存 → 两任务批次 → 两份不同参数快照；未写入生产数据，截图在 `.runtime/typed-editor/editor.png`。通用设备挂载、服务端业务参数、资源映射和五节点升级仍未完成。
+本轮隔离环境验证真实浏览器创建模板 → API 保存 → 两任务批次 → 两份不同参数快照；未写入生产数据，截图在 `.runtime/typed-editor/editor.png`。该轮验证时服务端业务参数尚未接入；后续已补服务端参数回归。通用设备挂载、资源映射和五节点升级仍未完成。

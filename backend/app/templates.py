@@ -18,8 +18,10 @@ class ServerCreate(TemplateCreate):
 
     @model_validator(mode='after')
     def service_only(self):
-        if self.parameter_schema is not None: raise ValueError('typed business parameters currently require a client template')
         if self.integration_mode != 'direct': raise ValueError('service templates do not use evaluation SDK loops')
+        if self.execution_mode == 'docker' and self.runtime is None:
+            from runner.image_runtime import validate
+            self.runtime = validate({}, self.command)
         return self
 
 

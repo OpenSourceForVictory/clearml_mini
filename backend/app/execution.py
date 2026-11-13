@@ -146,6 +146,8 @@ def install(app, db, current):
     from . import templates
     templates.install(app, db, admin)
     host_environments.install(app, db, admin)
+    from . import services
+    services.install(app, db, admin, worker_auth)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
@@ -341,6 +343,9 @@ def install(app, db, current):
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
                 return {'task': None, 'cleanup': []}
             s.refresh(worker)
+            from .scheduling import workload_codes
+            if workload_codes(worker, slot, s.get(Job, run.job_id)):
+                return {'task': None, 'cleanup': []}
             if image_runtime.blockers(worker, slot, s.get(Job, run.job_id).client_spec, now()):
                 return {'task': None, 'cleanup': []}
             if not memberships.ready(slot) or not storage_protocol.ready(worker, slot, now()):
