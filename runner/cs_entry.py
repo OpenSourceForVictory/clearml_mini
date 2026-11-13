@@ -55,6 +55,13 @@ def main():
             command = config.get('_resolved_command', command)
             env.update(config.get('_resolved_environment', {}))
             cwd = env.get('MINI_EVAL_WORK_DIR')
+        schema = config['template'].get('parameter_schema')
+        if schema is not None and config['template'].get('integration_mode') != 'sdk-command':
+            from .parameter_contract import bind_values
+            command, additions = bind_values(schema, config.get('parameters', {}), command)
+            if set(additions) & set(config.get('environment', {})):
+                raise ValueError('business environment conflicts with runtime overrides')
+            env.update(additions)
         if config['template'].get('integration_mode') == 'sdk-command':
             command = [sys.executable, '-m', 'runner.command_sdk']
         code = subprocess.call(command, env=env, cwd=cwd)

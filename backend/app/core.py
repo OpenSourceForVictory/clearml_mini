@@ -278,6 +278,7 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    parameter_schema: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     __tablename__ = 'client_templates'
     owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey('users.id'), index=True)
     __table_args__ = (UniqueConstraint('name', 'version'),)

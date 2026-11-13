@@ -65,6 +65,8 @@ def ready(worker, slot, at):
 
 
 def blockers(worker, slot, spec, at):
+    if (spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:
+        return ['类型化业务参数需要 Worker v8']
     if not ready(worker, slot, at):
         return ['节点运行配置尚未生效或报告已过期']
     if (spec or {}).get('template', {}).get('execution_mode') == 'host':

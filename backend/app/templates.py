@@ -18,6 +18,7 @@ class ServerCreate(TemplateCreate):
 
     @model_validator(mode='after')
     def service_only(self):
+        if self.parameter_schema is not None: raise ValueError('typed business parameters currently require a client template')
         if self.integration_mode != 'direct': raise ValueError('service templates do not use evaluation SDK loops')
         return self
 

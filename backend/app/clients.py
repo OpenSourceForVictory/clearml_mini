@@ -20,6 +20,7 @@ class TemplateCreate(BaseModel):
     image: str = Field(default='', min_length=0, max_length=500, pattern=r'^([A-Za-z0-9][A-Za-z0-9_./:@-]*)?$')
     execution_mode: Literal['docker','host'] = 'docker'
     integration_mode: Literal['direct','sdk-command'] = 'direct'
+    parameter_schema: dict | None = None
     host_runtime: dict | None = None
     runtime: dict | None = None
     episode_reporting: bool = False
@@ -30,6 +31,10 @@ class TemplateCreate(BaseModel):
     @model_validator(mode="after")
     def valid_runtime(self):
         from runner.template_contract import host_config
+        if self.parameter_schema is not None:
+            from runner.parameter_contract import validate_schema
+            self.parameter_schema = validate_schema(self.parameter_schema)
+            if self.execution_mode == 'docker' and self.runtime is None: self.runtime = {}
         if self.execution_mode == 'host':
             if self.image or self.runtime is not None:
                 raise ValueError('host templates must not specify Docker image/runtime')
@@ -42,6 +47,13 @@ class TemplateCreate(BaseModel):
             if self.execution_mode == 'docker' and self.runtime is None: self.runtime = {}
         if self.runtime is not None:
             self.runtime = image_runtime.validate(self.runtime, self.command)
+        if self.parameter_schema is not None:
+            settings = self.host_runtime if self.execution_mode == 'host' else self.runtime
+            names = set(settings['environment']) | set(settings['overridable_env'])
+            for field in self.parameter_schema['fields'].values():
+                binding = field.get('binding', {})
+                if binding.get('target') == 'env' and binding['name'] in names:
+                    raise ValueError('business environment binding conflicts with runtime configuration')
         return self
 
     @field_validator('command')
@@ -78,6 +90,7 @@ class ClientRequest(BaseModel):
     request_timeout_seconds: int = Field(default=10, ge=1, le=120)
     timeout_seconds: int = Field(default=300, ge=1, le=3600)
     parameters: dict = Field(default_factory=dict)
+    parameter_overrides: dict = Field(default_factory=dict)
     environment: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("environment")
@@ -101,7 +114,7 @@ class ClientRequest(BaseModel):
             endpoint_parts(value)
         return value
 
-    @field_validator('parameters')
+    @field_validator('parameters', 'parameter_overrides')
     @classmethod
     def bounded_parameters(cls, value):
         if len(json.dumps(value, allow_nan=False).encode()) > 16384:
@@ -110,7 +123,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema')}
 
 
 def snapshot(s, body, owner_id=None):
@@ -124,7 +137,13 @@ def snapshot(s, body, owner_id=None):
         raise HTTPException(400, 'endpoint protocol does not match client template')
     if body.timeout_seconds > seconds('EXECUTION_TIMEOUT_SECONDS', 3600):
         raise HTTPException(400, 'client timeout exceeds platform execution limit')
+    parameters = body.parameters
     try:
+        if t.parameter_schema is not None:
+            from runner.parameter_contract import resolve_values
+            parameters = resolve_values(t.parameter_schema, body.parameters, body.parameter_overrides)
+        elif body.parameter_overrides:
+            raise ValueError('parameter_overrides requires a typed template')
         if body.environment:
             runtime = t.host_runtime if t.execution_mode == 'host' else t.runtime
             if runtime is None or set(body.environment) - set(runtime['overridable_env']):
@@ -133,7 +152,7 @@ def snapshot(s, body, owner_id=None):
                 image_runtime.placeholders(value, runtime['assets'])
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}, exclude_none=True), 'template': template_view(t)}
+    return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}, exclude_none=True), 'parameters': parameters, 'template': template_view(t)}
 
 
 def install(app, db, current):

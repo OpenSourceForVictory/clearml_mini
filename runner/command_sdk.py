@@ -34,6 +34,13 @@ class CommandClient(EvaluationClient):
         env=dict(os.environ)
         settings=task['template'].get('host_runtime') or runtime or {}
         for k,v in {**settings.get('environment',{}),**task.get('environment',{})}.items():env[k]=expand(v)
+        schema = task['template'].get('parameter_schema')
+        if schema is not None:
+            from .parameter_contract import bind_values
+            argv, additions = bind_values(schema, task.get('parameters', {}), argv)
+            if set(additions) & (set(settings.get('environment', {})) | set(task.get('environment', {}))):
+                raise ValueError('business environment conflicts with runtime configuration')
+            env.update(additions)
         env.update(MINI_EVAL_EPISODE_ID=str(episode.id),MINI_EVAL_EPISODE_SEED=str(episode.seed),MINI_EVAL_RESULT=str(result_path))
         subprocess.run(argv,env=env,cwd=context.work_dir,check=True)
         if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size>16384:

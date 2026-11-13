@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {api} from './api';
 import {Field} from './administration';
 
-type Template={id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
+type Template={parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
 export function Templates(){
  const [kind,setKind]=useState('client'),[rows,setRows]=useState<Template[]>([]),[edit,setEdit]=useState<Template|null|undefined>(undefined),[error,setError]=useState('');
  const refresh=()=>api<Template[]>(kind==='client'?'client-templates':'admin/server-templates').then(setRows);
@@ -18,6 +18,7 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  const settings=source?.host_runtime||source?.runtime||{};
  async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),environment=JSON.parse(String(f.get('environment'))),assets=JSON.parse(String(f.get('assets'))),overridable_env=String(f.get('overrides')).split(',').map(x=>x.trim()).filter(Boolean);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:f.has('episode_reporting')||integration==='sdk-command',protocols:['http','https','ws','wss']};
+   if(source?.parameter_schema)body.parameter_schema=source.parameter_schema;
    if(mode==='docker'){body.image=f.get('image');body.runtime={interpreter:'python3',environment,overridable_env,assets};}
    else{body.host_runtime={environment_name:f.get('environment_name'),environment,overridable_env,assets};}
    if(kind==='server')Object.assign(body,{port:Number(f.get('port')),protocol:f.get('protocol'),health_type:f.get('health_type'),health_path:f.get('health_path'),startup_timeout:Number(f.get('startup_timeout'))});

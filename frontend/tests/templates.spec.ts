@@ -17,3 +17,18 @@ test('register both template kinds with Docker and host execution',async({page})
  }
  expect(sent).toHaveLength(4);expect(sent[1]).toMatchObject({execution_mode:'host',integration_mode:'sdk-command',host_runtime:{environment_name:'simulation'}});expect(sent[1].image).toBeUndefined();expect(sent[2]).toMatchObject({path:'admin/server-templates',port:8000,health_type:'http'});
 });
+
+test('cloning a typed template preserves its parameter schema',async({page})=>{
+ const schema={version:1,fields:{scene:{type:'string',default:'room'}}};let sent:any;
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={username:'admin',role:'admin'};
+  if(p==='client-templates')data=[{id:'typed',name:'typed',version:'1',image:'image:1',command:['python3','business.py'],protocols:['http'],enabled:true,execution_mode:'docker',integration_mode:'direct',episode_reporting:true,runtime:{environment:{},overridable_env:[],assets:{}},parameter_schema:schema}];
+  if(p==='admin/client-templates'&&route.request().method()==='POST'){sent=route.request().postDataJSON();data={id:'copy',...sent};}
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'运行模板管理'}).click();
+ await page.getByRole('button',{name:'复制新版本'}).click();await page.getByLabel('版本',{exact:true}).fill('2');await page.getByRole('button',{name:'注册此版本'}).click();
+ await expect.poll(()=>sent?.parameter_schema).toEqual(schema);
+});

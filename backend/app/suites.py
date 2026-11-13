@@ -56,6 +56,11 @@ def install(app, db, current):
             raise HTTPException(409, 'suite version already exists')
         try:
             json_tree([c.model_dump() for c in body.cases])
+            if template.parameter_schema is not None:
+                from runner.parameter_contract import resolve_values
+                for case in body.cases:
+                    try: resolve_values(template.parameter_schema, case.parameters)
+                    except ValueError as exc: raise ValueError(f'case {case.case_id}: {exc}') from exc
         except ValueError as e:
             raise HTTPException(400, str(e))
 

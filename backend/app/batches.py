@@ -123,7 +123,9 @@ def resolve_batch(s, body, user):
             config = ClientRequest.model_validate(values)
         except ValueError:
             raise HTTPException(400, f'cases.{case.case_id}: invalid case configuration')
-        configs.append(snapshot(s, config, user.id))
+        try: configs.append(snapshot(s, config, user.id))
+        except HTTPException as exc:
+            raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
     return pool, cases, configs
 
 

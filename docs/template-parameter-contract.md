@@ -1,6 +1,6 @@
 # 模板业务参数契约：第一阶段
 
-当前交付纯校验/绑定模块 `runner.parameter_contract`。尚未接入模板 API、集合提交、Worker 或管理界面；不能把下例直接提交给现有模板 API。参数契约第 1 版与现有 CS 协议版本独立。
+当前代码已将 `runner.parameter_contract` 接入客户端模板 API、集合提交、任务快照和客户端执行入口。新增模板字段 `parameter_schema`，任务字段 `parameters` 与 `parameter_overrides`；参数契约第 1 版与现有 CS 协议版本独立。此阶段尚未部署，管理界面尚无类型化编辑器。
 
 ## 调用边界
 
@@ -48,4 +48,12 @@ argv, env = bind_values(schema, values, ['python3', 'simulation.py'])
 
 ## 未完成的关联工作
 
-模板数据库/API 持久化、契约版本迁移、旧模板兼容入口、集合的逐项校验与快照、运行时能力门槛、资源需求映射、容器挂载及界面仍由 OpenSpec 9.1—9.5 跟踪。此模块不单独部署或声称新模板已可运行。
+已实现：客户端模板 parameter_schema 可选持久化（迁移 m285b79）、API 注册和克隆、集合逐项校验、批次全部校验后入队、最终参数快照，以及 Docker/host 客户端入口和 SDK 命令适配器的绑定。旧模板 schema 为 null，继续使用原 parameters 规则。类型化任务只能由 Worker v8 领取；API 同时保留 v1—v7 注册兼容。前端复制模板保留 schema，但还不能编辑它。
+
+服务端模板暂时拒绝 parameter_schema，避免接受配置却无法传递服务参数。服务端支持、资源需求映射、运行参数分层、通用目录/设备挂载及类型化界面仍由 OpenSpec 9.1—9.5 跟踪，不能视为整体完成。
+
+注册客户端模板时将上述 schema 作为 parameter_schema 字段传入；业务取值放在 client.parameters 或集合 cases[].parameters，运行覆盖放在 client.parameter_overrides。类型化模板自动启用平台运行适配器注入，防止用户镜像内旧 SDK 忽略新绑定。模板环境变量/允许覆盖变量不能与业务 env 绑定重名。
+
+验证：隔离 PostgreSQL 从 l285a67 升级到 m285b79，历史模板 schema 保持 null，新 schema 正常读写；接口集成和真实业务子进程测试验证批次原子性、快照、版本门槛、SDK 每回合取值、直接协议 argv/env 传递。尚未在五台生产 Worker 部署 v8，不宣称完成真实两节点挂载验收。
+
+本轮验证记录：87 项后端测试通过（参数契约、模板/集合/调度、SDK、预检和执行恢复），2 项模板界面测试通过，TypeScript/Vite 构建及 OpenSpec strict 通过。为避免与工作区尚未提交的服务实例代码混淆，另对暂存区导出的独立代码快照执行模板与参数链路回归。数据库迁移仅在一次性测试库执行，生产未升级。
