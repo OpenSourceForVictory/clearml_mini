@@ -39,6 +39,7 @@ class TemplateCreate(BaseModel):
             raise ValueError('Docker templates require an image and no host runtime')
         if self.integration_mode == 'sdk-command':
             self.episode_reporting = True
+            if self.execution_mode == 'docker' and self.runtime is None: self.runtime = {}
         if self.runtime is not None:
             self.runtime = image_runtime.validate(self.runtime, self.command)
         return self

@@ -88,9 +88,10 @@ def main():
             if not config.get(key):
                 raise ValueError('config is missing '+key)
         identity(config)
-        subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=30)
-        for image in {config['runner_image'], *config.get('client_images', [])}:
-            subprocess.run(['docker', 'image', 'inspect', image], check=True, stdout=subprocess.DEVNULL, timeout=30)
+        if config.get('execution_modes') != ['host']:
+            subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=30)
+            for image in {config['runner_image'], *config.get('client_images', [])}:
+                subprocess.run(['docker', 'image', 'inspect', image], check=True, stdout=subprocess.DEVNULL, timeout=30)
         indices = discover(config, args.gpus)
         home = Path.home()
         planned = plan(config, args.instance, args.gpus, indices, home, args.update)

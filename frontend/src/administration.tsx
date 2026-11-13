@@ -5,6 +5,7 @@ import {StorageSettings} from './storage';
 import {RuntimeSettings} from './image-runtime';
 import {ExecutionDataSettings} from './retention';
 import {Templates} from './templates';
+import {HostEnvironments} from './host-environments';
 
 type Machine={id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
 type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:boolean;max_tasks_per_gpu:number;vram_reserve_gb:number;max_gpu_utilization:number;min_vram_gb:number;cpu_per_job:number;ram_gb_per_job:number;member_count:number;pending_jobs:number;active_jobs:number};
@@ -36,7 +37,7 @@ export function Machines() {
         <div className="row"><Field label="并发上限"><input name="max_concurrent" type="number" min={1} defaultValue={node.max_concurrent} required/></Field><Field label="CPU 核数"><input name="cpu_capacity" type="number" min={1} defaultValue={node.cpu_capacity} required/></Field><Field label="内存 GiB"><input name="ram_gb_capacity" type="number" min={1} defaultValue={node.ram_gb_capacity} required/></Field></div><button disabled={busy}>保存配置</button></form>
         <div className="row"><button disabled={busy} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
         <button disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
-        <StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
+        <HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
     </section>}</>;
 }
 function ManualRegistration({role,onChange}:{role:string;onChange:()=>Promise<unknown>}) {

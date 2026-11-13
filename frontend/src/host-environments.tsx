@@ -1,0 +1,7 @@
+import React,{useEffect,useState} from 'react';
+import {api} from './api';
+export function HostEnvironments({id}:{id:string}){
+ const [text,setText]=useState('{}'),[revision,setRevision]=useState(0),[report,setReport]=useState<any>(null),[error,setError]=useState('');
+ useEffect(()=>{let closed=false;api<any>('admin/nodes/'+id+'/host-environments').then(v=>{if(!closed){setText(JSON.stringify(v.environments,null,2));setRevision(v.revision);setReport(v)}}).catch(e=>setError(String(e)));return()=>{closed=true}},[id]);
+ return <details className="panel"><summary>宿主机批准环境</summary><p>环境名称在模板中引用。配置 python 绝对路径和 code_root 代码目录，业务依赖需预先准备；不会自动安装软件。仅运行可信程序。</p>{error&&<p role="alert">{error}</p>}<form onSubmit={async e=>{e.preventDefault();try{const v=await api<any>('admin/nodes/'+id+'/host-environments','PUT',{expected_revision:revision,environments:JSON.parse(text)});setRevision(v.revision);setReport(v);setError('')}catch(e){setError(String(e))}}}><label>环境配置 JSON<textarea rows={6} value={text} onChange={e=>setText(e.target.value)} placeholder={'{"simulation":{"python":"/opt/venv/bin/python","code_root":"/srv/simulation"}}'}/></label><button>保存批准环境</button></form><button onClick={async()=>{try{setReport(await api('admin/nodes/'+id+'/host-environments'))}catch(e){setError(String(e))}}}>刷新探测状态</button>{report&&<pre>{JSON.stringify(report.slots,null,2)}</pre>}</details>
+}

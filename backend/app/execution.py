@@ -13,7 +13,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
-from . import memberships, image_runtime, endpoints
+from . import memberships, image_runtime, endpoints, host_environments
 from .core import EvaluationBatch, Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -28,8 +28,9 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
-    protocol_version: Literal[1, 2, 3, 4, 5, 6] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
+    execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
 
 class Telemetry(BaseModel):
@@ -55,6 +56,7 @@ class Heartbeat(BaseModel):
     disk: Optional[DiskTelemetry] = None
     storage: Optional[storage_protocol.StorageReport] = None
     runtime: Optional[image_runtime.Report] = None
+    host: Optional[host_environments.Report] = None
 
 
 class Metrics(BaseModel):
@@ -143,6 +145,7 @@ def install(app, db, current):
     administration.install(app, db, admin)
     from . import templates
     templates.install(app, db, admin)
+    host_environments.install(app, db, admin)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
@@ -270,6 +273,7 @@ def install(app, db, current):
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
         slot.protocol_version = body.protocol_version
+        slot.execution_modes = list(set(body.execution_modes)) if body.protocol_version >= 7 else ['docker']
         slot.client_images = body.client_images if body.protocol_version >= 3 else []
         slot.storage_reported_at = None
         slot.runtime_reported_at = None
@@ -298,6 +302,8 @@ def install(app, db, current):
             storage_protocol.acknowledge(s, worker, slot, body.storage)
         if not body.execution_id and body.runtime is not None:
             image_runtime.acknowledge(s, worker, slot, body.runtime)
+        if body.host is not None and not body.execution_id:
+            host_environments.acknowledge(s, worker, slot, body.host)
         if body.disk is not None and not body.execution_id:
             slot.disk_free_mb = body.disk.free_mb
             slot.disk_min_free_mb = body.disk.min_free_mb
@@ -313,7 +319,7 @@ def install(app, db, current):
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
         return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
-                'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
+                'host': host_environments.desired(worker), 'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -365,6 +371,9 @@ def install(app, db, current):
         if job.client_spec:
             task['client_spec'] = endpoints.input_spec(run, job.client_spec)
             task['image'] = job.client_spec['template']['image']
+            if job.client_spec['template'].get('execution_mode') == 'host':
+                task['host_revision'] = worker.host_revision
+                task['host_profile'] = worker.host_environments[job.client_spec['template']['host_runtime']['environment_name']]
         s.commit()
         return {'task': task, 'cleanup': []}
 

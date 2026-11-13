@@ -64,7 +64,8 @@ class Runtime:
                 if self.stopping.is_set(): return
                 try:
                     values = validate_storage({**config, 'assets_root': host, 'cache_root': host}, self.state_path, config.get('_config_path'))
-                    probe_storage(values, config.get('runner_image', 'mini-eval-runner:dev'), docker)
+                    if config.get('execution_modes') != ['host']:
+                        probe_storage(values, config.get('runner_image', 'mini-eval-runner:dev'), docker)
                     results['assets'][name] = {'ready': True, 'error': None}
                 except Exception as exc:
                     results['assets'][name] = {'ready': False, 'error': str(exc)[:1000]}

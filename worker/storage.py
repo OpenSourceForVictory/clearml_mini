@@ -25,6 +25,7 @@ class Storage:
         self.path = Path(str(state_path) + '.storage.json')
         self.state_path = state_path
         self.config_path = config.get('_config_path')
+        self.host_only = config.get('execution_modes') == ['host']
         self.runner_image = config.get('runner_image', 'mini-eval-runner:dev')
         if self.path.exists():
             self.record = json.loads(self.path.read_text())
@@ -75,7 +76,7 @@ class Storage:
             if desired['config']:
                 candidate['workspace_root'] = str(Path(candidate['workspace_root'])/'slots'/slot_id)
             candidate = validate_storage(candidate, self.state_path, self.config_path, create=True)
-            probe_storage(candidate, self.runner_image, docker)
+            if not self.host_only: probe_storage(candidate, self.runner_image, docker)
             record = {**self.record, 'effective': candidate, 'applied_revision': revision, 'validated': True}
             atomic_json(self.path, record)
             self.record = record

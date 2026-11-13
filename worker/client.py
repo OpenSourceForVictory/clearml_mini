@@ -22,6 +22,8 @@ from .workspace import prepare, execution_dirs, read_events, disk_status, valida
 from .storage import Storage
 from .retention import Retention
 from .image_runtime import Runtime
+from .host_environments import HostEnvironments
+from .host_backend import HostBackend
 from runner.image_runtime import validate as validate_runtime, ADAPTER, WORK, OUTPUT
 
 LOG = logging.getLogger('mini-eval-worker')
@@ -101,6 +103,7 @@ class Worker:
         if self.state and 'storage' not in self.state:
             self.state['storage'] = snapshot
             self.save()
+        self.host_environments = HostEnvironments(self.path) if self.storage else None
         self.slot_id = None
         self.stop_event = threading.Event()
         self.start_lock = threading.Lock()
@@ -121,7 +124,11 @@ class Worker:
     def name(self, execution):
         return 'mini-eval-' + str(uuid.UUID(execution))
 
+    def host_mode(self):
+        return bool(self.state and (self.state['task'].get('client_spec') or {}).get('template', {}).get('execution_mode') == 'host')
+
     def inspect(self, execution):
+        if self.host_mode(): return HostBackend(self).inspect(execution)
         name = self.name(execution)
         response = docker('container', 'inspect', name, check=False, timeout=5)
         if response.returncode:
@@ -134,6 +141,7 @@ class Worker:
         return value
 
     def stop_container(self, execution):
+        if self.host_mode(): return HostBackend(self).stop(execution)
         container = self.inspect(execution)
         if container and container['State']['Running']:
             docker('kill', self.name(execution), check=False, timeout=10)
@@ -142,6 +150,7 @@ class Worker:
                 raise RuntimeError('container has not stopped')
 
     def remove(self, execution):
+        if self.host_mode(): return HostBackend(self).remove(execution)
         self.stop_container(execution)
         if self.inspect(execution):
             docker('rm', self.name(execution))
@@ -155,6 +164,7 @@ class Worker:
             self.save()
 
     def create(self, task):
+        if self.host_mode(): return HostBackend(self).create(task)
         if task.get('storage_revision', 0) != self.storage_snapshot['revision']:
             raise RuntimeError('task storage revision differs from execution snapshot')
         validate_storage(self.config, self.config.get('_supervisor_state', self.path), self.config.get('_config_path'))
@@ -209,7 +219,7 @@ class Worker:
             for source, target, readonly in aliases:
                 if target not in (WORK, OUTPUT):
                     args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
-            args.extend(['--pull', 'never', '--entrypoint', runtime['interpreter'], '--env', 'PYTHONPATH='+ADAPTER])
+            args.extend(['--pull', 'never', '--entrypoint', runtime['interpreter'], '--workdir', ADAPTER, '--env', 'PYTHONPATH='+ADAPTER])
         if task['gpu_uuid']:
             if self.config.get('gpu_runtime') == 'nvidia':
                 args.extend(['--runtime', 'nvidia', '--env', 'NVIDIA_VISIBLE_DEVICES=' + task['gpu_uuid'],
@@ -249,7 +259,8 @@ class Worker:
 
     def upload_artifacts(self, task, deadline=None):
         execution = task['execution_id']
-        for name, data in read_artifacts(self.name(execution)):
+        artifacts = HostBackend(self).artifacts(execution) if self.host_mode() else read_artifacts(self.name(execution))
+        for name, data in artifacts:
             requested = time.monotonic()
             reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
             if deadline is not None:
@@ -329,7 +340,7 @@ class Worker:
     def execute(self, task):
         execution = task['execution_id']
         if self.state is None:
-            self.state = {'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
+            self.state = {'host_approval': self.config.get('_host_approval', {}), 'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
             self.save()
         deadline = [time.monotonic() + task['lease_seconds'] - 2]
         done, lease_lost = threading.Event(), threading.Event()
@@ -371,7 +382,8 @@ class Worker:
                 if container['State']['Status'] == 'created':
                     if lease_lost.is_set():
                         raise RuntimeError('lease expired before start')
-                    docker('start', self.name(execution), timeout=10)
+                    if self.host_mode(): HostBackend(self).start(task)
+                    else: docker('start', self.name(execution), timeout=10)
             while True:
                 if self.stop_event.is_set() or lease_lost.is_set():
                     raise RuntimeError('worker stopped or lease expired')
@@ -387,9 +399,10 @@ class Worker:
                 container = self.inspect(execution)
                 if not container:
                     raise RuntimeError('container disappeared')
-                output = docker('logs', self.name(execution), timeout=5).stdout
-                # stderr may contain the only useful failure message.
-                err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
+                if self.host_mode(): output, err = HostBackend(self).logs()
+                else:
+                    output = docker('logs', self.name(execution), timeout=5).stdout
+                    err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
                 try:
                     if task.get('benchmark') == 'cs-client':
                         if task['client_spec']['template'].get('episode_reporting'):
@@ -467,7 +480,7 @@ class Worker:
         directory = Path(str(self.path) + '.runs')
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         path = directory / (identity + '.json')
-        config = {**self.config, '_supervisor_state': str(self.path)}
+        config = {**self.config, '_supervisor_state': str(self.path), '_host_approval': self.host_environments.record if self.host_environments else self.config.get('_host_approval', {})}
         snapshot = self.storage_snapshot
         if path.exists() and json.loads(path.read_text()):
             # Pre-v4 journals must retain their original bootstrap paths.
@@ -529,7 +542,7 @@ class Worker:
     def run(self, once=False):
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': 6, 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': 7, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -552,7 +565,7 @@ class Worker:
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
                     return
-                body = {'slot_id': self.slot_id, 'storage': self.storage.report(), 'runtime': self.runtime.report()}
+                body = {'slot_id': self.slot_id, 'storage': self.storage.report(), 'runtime': self.runtime.report(), 'host': self.host_environments.report()}
                 try:
                     body['disk'] = disk_status(self.workspace, self.config)
                 except (OSError, ValueError):
@@ -571,6 +584,8 @@ class Worker:
                     self.config.update(self.storage_snapshot['config'])
                     self.workspace = Path(self.config['workspace_root'])
                     self.retention.remember(str(self.workspace))
+                if 'host' in reply:
+                    self.host_environments.update(reply['host'], bool(self.children) or reply.get('storage_busy', True))
                 if 'runtime' in reply:
                     self.runtime.update(reply['runtime'], bool(self.children) or reply.get('storage_busy', True), dict(self.config), docker)
                     self.runtime_snapshot = self.runtime.snapshot()

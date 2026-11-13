@@ -67,6 +67,11 @@ def ready(worker, slot, at):
 def blockers(worker, slot, spec, at):
     if not ready(worker, slot, at):
         return ['节点运行配置尚未生效或报告已过期']
+    if (spec or {}).get('template', {}).get('execution_mode') == 'host':
+        from .host_environments import blockers as host_blockers
+        return host_blockers(worker, slot, spec, at)
+    if (spec or {}).get('template', {}).get('integration_mode') == 'sdk-command' and slot.protocol_version < 7:
+        return ['SDK 命令模式需要 Worker v7']
     runtime = (spec or {}).get('template', {}).get('runtime')
     if runtime is None:
         if spec and (slot.protocol_version < 3 or spec['template']['image'] not in (slot.client_images or [])):
