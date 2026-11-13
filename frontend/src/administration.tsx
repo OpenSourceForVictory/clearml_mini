@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {api} from './api';
+import {Field} from './form-fields';
 import './administration.css';
 import {Memberships} from './memberships';
 import {StorageSettings} from './storage';
@@ -11,7 +12,7 @@ import {HostEnvironments} from './host-environments';
 type Machine={id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
 type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:boolean;max_tasks_per_gpu:number;vram_reserve_gb:number;max_gpu_utilization:number;min_vram_gb:number;cpu_per_job:number;ram_gb_per_job:number;member_count:number;pending_jobs:number;active_jobs:number};
 type Account={id:string;username:string;role:string;active:boolean};
-export function Field({label,children}:{label:string;children:React.ReactNode}) {const id=React.useId();return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>}
+export {Field} from './form-fields';
 const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管'};
 export function Admin() {
   const [tab,setTab]=useState('machines');

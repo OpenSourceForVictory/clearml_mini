@@ -73,3 +73,7 @@
 
 .administration .machine-configuration { scroll-margin-top: 20px; border-color: #8eb59a; }
 .administration .machine-configuration:focus { outline: 2px solid #8eb59a; outline-offset: 3px; }
+
+.administration .parameter-card { background: #f8faf7; border-left: 3px solid #8eb59a; }
+.administration .parameter-editor details { margin-top: 18px; }
+.administration .parameter-editor legend { font-weight: 600; }
