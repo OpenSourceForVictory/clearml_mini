@@ -8,8 +8,10 @@ import {RuntimeSettings} from './image-runtime';
 import {ExecutionDataSettings} from './retention';
 import {Templates} from './templates';
 import {HostEnvironments} from './host-environments';
+import {NodeAgent} from './node-agent';
 import {WorkerUpgrades} from './worker-upgrades';
 import {Services} from './services';
+import {SSHOnboarding} from './ssh-onboarding';
 import {ReEnrollment,NodePackage} from './node-enrollment';
 
 type Machine={connection?:{enrollment?:{state:string}};id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
@@ -39,7 +41,7 @@ export function Machines() {
     {error&&<p role="alert" className="error">{error}</p>}{message&&<p role="status">{message}</p>}
     {loadError&&<div role="alert" className="error">机器列表加载失败。{loaded?'当前显示上次获取的数据。':''}<button onClick={()=>void refresh().catch(e=>setLoadError(String(e)))}>重试加载</button><details><summary>错误详情</summary>{loadError}</details></div>}
     <div className="admin-toolbar"><p className="muted">{role==='client'?'运行仿真与评测客户端，按 GPU 分配任务。':'部署推理服务，查看实例状态与运行日志。'}</p><button className="primary" onClick={()=>{setRegister(!register);setSelected('')}}>{register?'返回机器列表':'注册新机器'}</button></div>
-    {register?<ManualRegistration role={role} onChange={refresh}/>:<>
+    {register?<Registration role={role} onChange={refresh}/>:<>
       <div className="admin-metrics" aria-label="当前类型机器概览">{[['已注册机器',roleNodes.length],['在线机器',roleNodes.filter(n=>n.status==='online').length],['GPU 总数',roleNodes.filter(n=>!n.revoked_at).reduce((sum,n)=>sum+n.gpu_count,0)],['持有执行',roleNodes.reduce((sum,n)=>sum+n.held_executions,0)]].map(([label,value])=><div key={label}><span>{label}</span><strong>{loaded?value:'—'}</strong></div>)}</div>
       <section className="panel"><div className="admin-section-heading"><div><h2>已注册{role==='client'?'客户端':'服务端'}机器</h2><p className="muted">同一机器可以兼任两种角色，资源额度按物理机器合计。</p></div><span className="muted">每 5 秒更新</span></div>
       <div className="admin-filters"><Field label="搜索机器"><input type="search" placeholder="输入机器名称" value={query} onChange={e=>setQuery(e.target.value)}/></Field><Field label="机器状态"><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">全部状态</option>{Object.entries(status).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field><button disabled={!query&&filter==='all'} onClick={()=>{setQuery('');setFilter('all')}}>清除筛选</button></div>
@@ -50,14 +52,18 @@ export function Machines() {
     {role==='server'&&!register&&<Services nodes={nodes} workerId={selected||undefined}/>}
     {node&&!register&&<section key={node.id} ref={detailRef} id="machine-configuration" tabIndex={-1} aria-labelledby="machine-configuration-title" className="panel machine-configuration"><div className="row"><h2 id="machine-configuration-title">{node.node_name} · 配置详情</h2><button onClick={()=>setSelected('')}>关闭详情</button></div>
       <p>{status[node.status]} · 角色变更和解除纳管需要等待执行清理完成。</p>
-      {(node.revoked_at||node.connection?.enrollment?.state==='INSTALLING')&&<ReEnrollment id={node.id} revision={node.management_revision} revoked={Boolean(node.revoked_at)} onChange={refresh}/>}
+      {(node.revoked_at||node.connection?.enrollment?.state==='INSTALLING')&&<ReEnrollment name={node.node_name} id={node.id} revision={node.management_revision} revoked={Boolean(node.revoked_at)} onChange={refresh}/>}
       {!node.revoked_at&&<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>
         <fieldset><legend>机器角色</legend>{[['client','客户端'],['server','服务端']].map(([r,label])=><label key={r}><input type="checkbox" name="roles" value={r} defaultChecked={node.roles.includes(r)}/>{label}</label>)}</fieldset>
         <div className="row"><Field label="并发上限"><input name="max_concurrent" type="number" min={1} defaultValue={node.max_concurrent} required/></Field><Field label="CPU 核数"><input name="cpu_capacity" type="number" min={1} defaultValue={node.cpu_capacity} required/></Field><Field label="内存 GiB"><input name="ram_gb_capacity" type="number" min={1} defaultValue={node.ram_gb_capacity} required/></Field></div><button disabled={busy}>保存配置</button></form>
         <div className="row"><button disabled={busy||node.connection?.enrollment?.state==='INSTALLING'} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
         <button className="danger" disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
-        <WorkerUpgrades id={node.id}/><HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
+        <NodeAgent id={node.id}/><WorkerUpgrades id={node.id}/><HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
     </section>}</>;
+}
+function Registration({role,onChange}:{role:string;onChange:()=>Promise<unknown>}) {
+  const [method,setMethod]=useState('ssh');
+  return <><div className="tabs" role="tablist" aria-label="机器接入方式"><button role="tab" aria-selected={method==='ssh'} onClick={()=>setMethod('ssh')}>SSH 纳管</button><button role="tab" aria-selected={method==='manual'} onClick={()=>setMethod('manual')}>手动接入</button></div>{method==='ssh'?<SSHOnboarding role={role} onChange={onChange}/>:<ManualRegistration role={role} onChange={onChange}/>}</>;
 }
 function ManualRegistration({role,onChange}:{role:string;onChange:()=>Promise<unknown>}) {
   const [credential,setCredential]=useState<{token:string;node_name:string}|null>(null),[error,setError]=useState('');

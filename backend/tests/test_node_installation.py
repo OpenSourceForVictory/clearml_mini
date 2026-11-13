@@ -20,6 +20,7 @@ def setup(tmp_path,monkeypatch):
     monkeypatch.setattr(install_node,'identity',lambda c:None)
     monkeypatch.setattr(install_node.API,'request',lambda *a,**kw:{'enrollment_state':'INSTALLING','enabled':False,'gpu_indices':[value.get('gpu_index',0)],'release_id':release.id})
     monkeypatch.setattr(install_node,'control_updater',lambda *a,**kw:None)
+    monkeypatch.setattr(install_node.subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=0))
     monkeypatch.setattr(install_node,'install_updater',lambda *a,**kw:None)
     monkeypatch.setattr(install_node.Updater,'control',lambda *a,**kw:None)
     updater.config['services']=[{'scope':'system','name':'mini-eval-worker-nfs.service'}]

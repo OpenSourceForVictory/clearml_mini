@@ -19,6 +19,7 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
   await page.getByRole('button',{name:'管理设置',exact:true}).click();
   await expect(page.getByRole('heading',{name:'创建账号'})).toBeHidden();
   await page.getByRole('button',{name:'注册新机器'}).click();
+  await page.getByRole('tab',{name:'手动接入',exact:true}).click();
   await page.getByLabel('机器名称',{exact:true}).fill('newhost');
   await page.getByRole('button',{name:'生成 Worker 凭据'}).click();
   await expect(page.getByText(/SSH 转发访问页面时，此处仍需填写节点能够访问的地址/)).toBeVisible();

@@ -13,6 +13,7 @@ test('unmanaged machine re-enrolls in place and requires all components',async({
  if(p==='admin/nodes/n/enrollment/complete'){expect(ready).toBe(true);expect(route.request().postDataJSON()).toEqual({expected_revision:2});complete=true;revision=3;data={state:'COMPLETE',slots:[]};}
  await route.fulfill({json:data});});
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();
+ await page.getByText('手动重新纳管',{exact:true}).click();
  await page.getByRole('button',{name:'开始重新纳管',exact:true}).click();
  await expect(page.getByRole('button',{name:'完成纳管并启用'})).toBeDisabled();
  await expect(page.getByText('GPU 1：等待目标版本回连',{exact:true})).toBeVisible();

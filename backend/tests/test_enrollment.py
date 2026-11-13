@@ -29,6 +29,14 @@ def connect(env,credential,indices):
     return token
 
 
+def connect_agent(c,token,digest):
+    import uuid
+    r=c.post('/api/v1/agent/register',headers=token,json={'boot_id':uuid.uuid4().hex,'version':'1.0.0','digest':digest})
+    assert r.status_code==200,r.text
+    r=c.post('/api/v1/agent/heartbeat',headers=token,json={'session':r.json()['session'],'sequence':1,'applied_revision':0,'config_status':'applied'})
+    assert r.status_code==200,r.text
+
+
 def test_reenrollment_identity_all_gpu_and_agent_gate(env):
     main,c,a=env;path,cred,old,ids=request(env)
     assert c.get('/api/v1/worker/self',headers=old).status_code==401
@@ -39,6 +47,8 @@ def test_reenrollment_identity_all_gpu_and_agent_gate(env):
     assert c.post('/api/v1/worker/upgrades/poll',headers=token,json={'agent_digest':package['agent_digest']}).status_code==200
     assert not c.get(path+'/enrollment',headers=a['admin']).json()['ready']
     connect(env,cred,[1])
+    assert not c.get(path+'/enrollment',headers=a['admin']).json()['ready']
+    connect_agent(c,token,cred['release_id'])
     status=c.get(path+'/enrollment',headers=a['admin']).json()
     assert status['ready'] and {x['id'] for x in status['slots']}==set(ids)
     assert c.post(path+'/enrollment/complete',headers=a['admin'],json={'expected_revision':1}).status_code==409

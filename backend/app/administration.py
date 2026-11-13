@@ -15,9 +15,13 @@ def audit(s, user, action, target, details=None):
 
 
 def node_view(s, w):
+    from .node_agents import view as agent_view
+    connection = dict(w.connection or {})
+    if 'agent' in connection: connection['agent'] = agent_view(w)
     slots = list(s.scalars(select(Slot).where(Slot.worker_id == w.id)))
     return {**{k: getattr(w, k) for k in ('id', 'node_name', 'enabled', 'max_concurrent', 'cpu_capacity', 'ram_gb_capacity', 'roles', 'management_revision', 'revoked_at', 'connection')},
             'status': 'unmanaged' if w.revoked_at else 'enrolling' if (w.connection or {}).get('enrollment',{}).get('state')=='INSTALLING' else 'disabled' if not w.enabled else 'online' if any(online(x) for x in slots) else 'offline' if slots else 'waiting',
+            'connection': connection or None,
             'held_executions': s.scalar(select(func.count()).select_from(Run).where(Run.slot_id.in_([x.id for x in slots]), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))), 'gpu_count': len(slots)}
 
 

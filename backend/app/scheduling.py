@@ -125,6 +125,8 @@ def slot_codes(worker, slot, at):
     from . import storage, memberships, image_runtime
     result = []
     if getattr(worker,'upgrade_state',None) in ('DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'):result.append('worker_upgrade')
+    from .node_agents import admission
+    if not admission(worker): result.append('node_agent_not_ready')
     if not worker.enabled or not online(slot, at): result.append('offline')
     if slot.quarantined: result.append('quarantined')
     if not memberships.ready(slot): result.append('membership_pending')

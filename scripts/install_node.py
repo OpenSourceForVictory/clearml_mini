@@ -38,6 +38,8 @@ def control_updater(system, action, check=True):
 
 
 def install_updater(layout, system):
+    from scripts.install_node_agent import install
+    install(layout, start=True)
     with tempfile.TemporaryDirectory(prefix='mini-eval-updater-') as directory:
         config = Path(directory)/'config.json'; atomic(config, layout)
         command = [sys.executable,str(ROOT/'scripts/install_worker_updater.py'),'--config',str(config),'--update','--start']
@@ -64,6 +66,7 @@ def replace_existing(layout, credential):
     if not system and os.geteuid() == 0: raise ValueError('run user-service installation as its owning user')
     # A separate updater lock prevents replacing a running updater, even without systemd.
     control_updater(system, 'stop', check=False)
+    subprocess.run(['systemctl']+([] if system else ['--user'])+['stop','mini-eval-agent.service'],capture_output=True,timeout=30)
     backup = updater.app.with_name(updater.app.name+'.before-enrollment-'+uuid.uuid4().hex)
     stage = Path(tempfile.mkdtemp(prefix='.node-install-', dir=updater.app.parent)); stage.chmod(0o755)
     originals = {p:p.read_bytes() for p in updater.configs}
@@ -133,7 +136,7 @@ def main():
             install_updater(layout,False)
             Updater(layout).control('enable')
             Updater(layout).control('start')
-        print('Installed Worker, runner/SDK and independent updater. Verify all GPU instances and updater in the platform before completing enrollment.')
+        print('Installed node Agent, Worker, runner/SDK and independent updater. Verify all GPU instances and updater in the platform before completing enrollment.')
     except ValueError as error:
         p.exit(1,'Node installation stopped: '+str(error)+'\n')
     except (OSError,subprocess.SubprocessError,KeyError):

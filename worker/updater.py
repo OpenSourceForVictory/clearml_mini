@@ -37,7 +37,7 @@ def unpack(payload,digest,target):
         seen=set()
         for info in files:
             p=PurePosixPath(info.filename)
-            if p.is_absolute() or '..' in p.parts or len(p.parts)<2 or p.parts[0] not in ('worker','runner') or p.suffix!='.py' or str(p)!=info.filename or info.filename in seen or (info.external_attr>>16)&0o170000==0o120000:
+            if p.is_absolute() or '..' in p.parts or len(p.parts)<2 or p.parts[0] not in ('worker','runner','node_agent') or p.suffix!='.py' or str(p)!=info.filename or info.filename in seen or (info.external_attr>>16)&0o170000==0o120000:
                 raise ValueError('invalid release member')
             seen.add(info.filename)
             data=archive.read(info);compile(data,info.filename,'exec')
@@ -80,11 +80,17 @@ class Updater:
         for unit in config['services']:
             if unit.get('scope') not in ('user','system') or not re.fullmatch(r'mini-eval-worker[\w@.\-]*\.service',unit['name']):raise ValueError('invalid Worker service unit')
         if not .01<=config.get('verify_timeout',120)<=600:raise ValueError('verify_timeout must be bounded')
+        agent=config.get('agent')
+        if agent and (agent.get('name')!='mini-eval-agent.service' or agent.get('scope') not in ('user','system') or not Path(agent.get('state_dir','')).is_absolute() or not Path(agent.get('config_path','')).is_absolute()):
+            raise ValueError('invalid node Agent configuration')
         self.api=API(self.values[0])
         self.control_timeout=30
 
     def control(self,action):
-        for unit in self.config['services']:
+        units=list(self.config['services'])
+        if self.config.get('agent'):units.append(self.config['agent'])
+        if action=='stop':units=list(reversed(units))
+        for unit in units:
             args=['systemctl']+(['--user'] if unit['scope']=='user' else [])+[action,unit['name']]
             env=dict(os.environ)
             if unit['scope']=='user':
@@ -93,6 +99,9 @@ class Updater:
             subprocess.run(args,check=True,capture_output=True,timeout=self.control_timeout,env=env)
 
     def idle_locks(self,stack,indices):
+        if self.config.get('agent'):
+            handle=stack.enter_context((Path(self.config['agent']['state_dir'])/'control.lock').open('a'))
+            fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)
         if sorted(v.get('gpu_index',0) for v in self.values)!=sorted(indices):raise ValueError('configured GPU instances differ from platform')
         # Catch omitted local instances sharing this installation.
         for parent in {p.parent for p in self.configs}:
@@ -123,6 +132,8 @@ class Updater:
         backup=self.app.parent/('.mini-eval-backup-'+identity)
         try:
             unpack(payload,job['release']['id'],stage)
+            if self.config.get('agent') and not (stage/'node_agent/client.py').is_file():
+                raise ValueError('release does not contain node Agent')
             owner=self.app.stat();os.chown(stage,owner.st_uid,owner.st_gid)
             record={'id':identity,'phase':'prepared','stage':str(stage),'backup':str(backup),'status':None}
             atomic(self.journal,record)

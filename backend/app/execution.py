@@ -146,12 +146,16 @@ def install(app, db, current):
     administration.install(app, db, admin)
     from . import enrollment
     enrollment.install(app, db, admin)
+    from . import ssh_onboarding
+    ssh_onboarding.install(app, db, admin)
     from . import templates
     templates.install(app, db, admin)
     host_environments.install(app, db, admin)
     from . import services
     services.install(app, db, admin, worker_auth)
     worker_upgrades.install(app, db, admin, worker_auth)
+    from . import node_agents
+    node_agents.install(app, db, admin, worker_auth)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
@@ -269,7 +273,7 @@ def install(app, db, current):
                 slot.membership_revision = slot.membership_applied_revision = 1
         if not slot and worker.upgrade_state in worker_upgrades.BLOCKING:
             raise HTTPException(409,'cannot add a GPU during a node upgrade')
-        if not slot and not worker.enabled:
+        if not slot and not worker.enabled and not enrollment.accepts_new_gpu(worker,body.gpu_index,body.gpu_uuid):
             raise HTTPException(409, 'disabled node cannot register new GPUs')
         if not slot:
             revision = 1 if body.pool_id is None else 0
@@ -344,7 +348,7 @@ def install(app, db, current):
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
             s.refresh(worker)
-            if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING:
+            if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING or not node_agents.admission(worker):
                 return {'task': None, 'cleanup': []}
             job = s.get(Job, run.job_id)
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:

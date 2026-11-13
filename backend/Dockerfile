@@ -15,7 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ /workspace/backend/
 COPY runner/ /workspace/runner/
 COPY worker/ /workspace/worker/
+COPY node_agent/ /workspace/node_agent/
 COPY scripts/ /workspace/scripts/
+COPY onboarding/ /workspace/onboarding/
 COPY --from=frontend /app/dist /workspace/frontend/dist
 ENV PYTHONPATH=/workspace
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

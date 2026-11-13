@@ -1,0 +1,45 @@
+import React,{useEffect,useState} from 'react';
+import {api} from './api';
+import {Field} from './form-fields';
+
+type Operation={id:string;state:string;stage:string;error?:string;node_id?:string;form:{node_name:string;node_id?:string;host:string};host_key?:{fingerprint:string;algorithm:string};plan?:{python_version:string;home:string;free_disk_gb:number;gpus:{index:number;name:string}[];selected_gpus:number[];existing:boolean;services:{scope:string;name:string}[];issues:string[]};reconnect?:{slots:{id:string;gpu_index:number;ready:boolean}[];updater_ready:boolean;node_agent_ready?:boolean};cleanup_warning?:boolean};
+const states:Record<string,string>={CHECKING:'检查中',NEEDS_HOST_KEY:'等待确认主机身份',READY:'检查通过，等待安装',CHECK_FAILED:'环境检查未通过',INSTALLING:'正在安装',VERIFYING:'等待组件回连',SUCCEEDED:'纳管完成',FAILED:'操作失败',INTERRUPTED:'执行器重启，需重新检查',EXPIRED:'凭据已过期，请重新检查',CANCELLED:'已取消'};
+const steps:Record<string,string>={SSH:'SSH 连接',HOST_KEY:'主机身份',ENVIRONMENT:'环境检查',RECHECK:'安装前复查',IDENTITY:'机器身份',TRANSFER:'传输完整安装包',INSTALL:'安装节点组件',RECONNECT:'回连验收',COMPLETE:'完成'};
+const reasons:Record<string,string>={host_key_changed:'主机指纹与确认值不同，请核对目标机器',ssh_authentication_failed:'SSH 认证失败，请核对用户名和凭据',ssh_connection_failed:'SSH 连接失败，请检查地址、端口和网络',invalid_private_key:'私钥格式或解密口令不正确',ssh_credential_required:'请提供 SSH 密码或私钥',docker_unavailable:'Docker 未安装或当前用户无权访问',runner_image_missing:'缺少平台 runner 镜像',systemd_user_session_unavailable:'用户 systemd 会话不可用，请配置用户会话或 linger',sudo_permission_required:'原系统服务需要 sudo 权限，请填写 sudo 密码或配置免密权限',python_3_10_required:'Python 至少需要 3.10',nvidia_driver_unavailable:'无法读取 NVIDIA GPU',node_cannot_reach_API:'节点无法访问填写的 API 地址',execution_journal_pending:'存在未完成执行的恢复记录，请先完成清理',original_services_ambiguous:'无法唯一确定原 Worker 服务，请检查服务配置',existing_installation_requires_reenrollment:'节点已有安装，请从原机器详情重新纳管',installed_node_identity_conflict:'节点配置的机器身份与所选机器不同',all_installed_GPUs_required:'重新纳管必须包含全部已安装 GPU',GPU_selection_unavailable:'所选 GPU 在节点上不存在',environment_changed_repeat_check:'检查后环境发生变化，请重新检查',component_reconnect_timeout:'等待组件回连超时；机器保持停用，请检查原服务日志',target_has_active_operation:'此目标或机器已有接入操作，请查看进度',onboarding_queue_full:'接入队列已满，请稍后再试',control_api_rejected_409:'机器配置或安装计划已变化，请刷新后重新检查',onboarding_step_failed:'当前步骤未完成，请核对环境后重新检查',remote_command_failed:'远程命令执行失败，请检查节点依赖、原服务和安装日志',remote_command_timeout:'远程执行超时；请检查节点状态后重新检查',credentials_expired:'等待确认超过 15 分钟，凭据已释放',executor_restarted_credentials_expired:'执行器已重启，临时凭据已失效，请重新检查',node_already_managed:'机器已纳管，请使用原机器详情管理',insufficient_installation_disk:'安装目录剩余空间不足',incomplete_installation_requires_recovery:'发现不完整的旧安装，请先恢复原配置'};
+const active=new Set(['CHECKING','NEEDS_HOST_KEY','READY','INSTALLING','VERIFYING']);
+export function SSHOnboarding({nodeId,nodeName,revision=0,role='client',onChange}:{nodeId?:string;nodeName?:string;revision?:number;role?:string;onChange:()=>Promise<unknown>}){
+ const [form,setForm]=useState({host:'',port:'22',username:'',node_name:nodeName||'',api_url:'',mode:'docker',gpus:'all',python:'python3',password:'',private_key:'',passphrase:'',sudo_password:''});
+ const [auth,setAuth]=useState('password'),[operations,setOperations]=useState<Operation[]>([]),[selected,setSelected]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[available,setAvailable]=useState(false);
+ const visible=operations.filter(x=>!nodeId||x.form.node_id===nodeId||x.node_id===nodeId);
+ const current=visible.find(x=>x.id===selected)||visible.find(x=>active.has(x.state))||visible[0];
+ async function refresh(){const value=await api<{available:boolean;operations:Operation[]}>('admin/ssh-onboarding');if(Array.isArray(value.operations)){setOperations(value.operations);setAvailable(value.available)}}
+ useEffect(()=>{void refresh().catch(e=>setError(String(e)));const timer=setInterval(()=>void refresh().catch(e=>setError(String(e))),3000);return()=>clearInterval(timer)},[nodeId]);
+ async function act(action:string,body?:unknown){if(!current)return;setBusy(true);setError('');try{const op=await api<Operation>('admin/ssh-onboarding/'+current.id+'/'+action,'POST',body);setSelected(op.id);await refresh();await onChange()}catch(e){setError(String(e))}finally{setBusy(false)}}
+ useEffect(()=>{if(current?.state==='SUCCEEDED')void onChange()},[current?.state]);
+ function field(key:keyof typeof form,label:string,type='text',required=true){return <Field label={label}><input type={type} required={required} value={form[key]} autoComplete={type==='password'?'off':undefined} onChange={e=>setForm({...form,[key]:e.target.value})}/></Field>}
+ return <section aria-label="SSH 自动纳管"><h3>SSH 自动纳管</h3><p>检查环境 → 确认主机与安装计划 → 自动部署节点 Agent、Worker、SDK 和升级执行器 → 验证回连。</p>
+ {error&&<p role="alert" className="error">{error}</p>}{!available&&<p>SSH 执行器尚未就绪，可使用手动接入；配置后此处会自动更新。</p>}
+ <form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{const op=await api<Operation>('admin/ssh-onboarding/check','POST',{...form,password:auth==='password'?form.password:'',private_key:auth==='key'?form.private_key:'',port:Number(form.port),...(nodeId?{node_id:nodeId}:{}),expected_revision:revision,roles:[role],request_id:crypto.randomUUID()});setSelected(op.id);setForm({...form,password:'',private_key:'',passphrase:'',sudo_password:''});await refresh()}catch(e){setError(String(e))}finally{setBusy(false)}}}>
+ <fieldset disabled={busy||!!current&&active.has(current.state)}><legend>连接与运行环境</legend>
+ <div className="row">{nodeId?<p>原机器：{nodeName}</p>:field('node_name','SSH 机器名称')}{field('host','SSH 主机地址')}{field('port','SSH 端口','number')}{field('username','SSH 用户名')}</div>
+ <Field label="SSH 认证方式"><select value={auth} onChange={e=>setAuth(e.target.value)}><option value="password">密码</option><option value="key">私钥</option></select></Field>
+ {auth==='password'?field('password','SSH 密码','password'):<>{<Field label="SSH 私钥"><textarea required rows={4} value={form.private_key} onChange={e=>setForm({...form,private_key:e.target.value})}/></Field>}{field('passphrase','私钥解密口令（可选）','password',false)}</>}
+ {field('sudo_password','sudo 密码（原系统服务需要，可选）','password',false)}
+ <div className="row">{field('api_url','节点访问平台的 API 地址','url')}<Field label="执行环境"><select value={form.mode} onChange={e=>setForm({...form,mode:e.target.value})}><option value="docker">Docker</option><option value="host">宿主机</option></select></Field>{field('gpus','GPU 选择（all 或 0,1）')}</div>
+ <details><summary>高级设置</summary>{field('python','节点 Python 可执行文件')}</details>
+ <p>浏览器通过 SSH 转发访问时，这里仍需填写节点可达的 API 地址。凭据提交后会清空页面输入；执行器仅在内存短暂保留。</p>
+ <button className="primary" disabled={!available}>检查连接与环境</button></fieldset></form>
+ {visible.length>0&&<Field label="接入操作记录"><select value={current?.id||selected} onChange={e=>setSelected(e.target.value)}><option value="">选择操作</option>{visible.map(x=><option value={x.id} key={x.id}>{x.form.node_name} · {states[x.state]||x.state}</option>)}</select></Field>}
+ {current&&<div className="panel"><h4>{states[current.state]||current.state}</h4><p role="status">当前步骤：{steps[current.stage]||current.stage}</p>
+ {current.error&&<p role="alert">{reasons[current.error]||current.error}</p>}
+ {current.state==='NEEDS_HOST_KEY'&&<><p>请与目标机器的主机公钥指纹核对，确认后才发送 SSH 认证凭据。</p><code>{current.host_key?.fingerprint}</code><p>{current.host_key?.algorithm}</p><button disabled={busy} onClick={()=>void act('trust',{fingerprint:current.host_key?.fingerprint})}>确认此主机指纹并检查环境</button></>}
+ {current.plan&&<><p>Python {current.plan.python_version} · HOME {current.plan.home} · 可用磁盘 {current.plan.free_disk_gb} GiB</p><p>GPU：{current.plan.gpus.map(g=>`${g.index} (${g.name})`).join('、')}；本次选择 {current.plan.selected_gpus.join(', ')}</p><p>{current.plan.existing?'保留原工作目录、资产和服务挂载依赖':'创建独立 Worker 与升级执行器服务，默认不加入资源池'}</p>{current.plan.services.map(s=><p key={s.scope+s.name}>原服务：{s.scope} / {s.name}</p>)}{current.plan.issues.length>0&&<ul>{current.plan.issues.map(x=><li key={x}>{reasons[x]||x}</li>)}</ul>}</>}
+ {current.state==='READY'&&<button className="primary" disabled={busy} onClick={()=>void act('confirm')}>确认计划并自动纳管</button>}
+ {['NEEDS_HOST_KEY','READY'].includes(current.state)&&<button disabled={busy} onClick={()=>void act('cancel')}>取消本次接入</button>}
+ {current.reconnect&&<ul>{current.reconnect.slots.map(s=><li key={s.id}>GPU {s.gpu_index}：{s.ready?'版本已验证':'等待目标版本'}</li>)}<li>节点 Agent：{current.reconnect.node_agent_ready?'已验证':'等待回连'}</li><li>升级执行器：{current.reconnect.updater_ready?'已验证':'等待回连'}</li></ul>}
+ {current.state==='SUCCEEDED'&&<p>纳管完成。可在资源池管理中分配 GPU。</p>}
+ {current.cleanup_warning&&<p>远程临时目录清理未确认，请检查节点 /tmp/mini-eval-node.*。</p>}
+ {!active.has(current.state)&&current.state!=='SUCCEEDED'&&<p>重新填写凭据并检查即可重试。安装失败的机器保持停用，不会自动接任务。</p>}
+ </div>}
+ </section>;
+}

@@ -7,6 +7,7 @@ from . import scheduling as admission, image_runtime, endpoints
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
+    'node_agent_not_ready': ('environment','节点 Agent 离线、配置未生效或 Worker 正在排空','请管理员查看机器详情中的 Agent 状态与配置回执'),
     'worker_upgrade': ('environment','节点正在升级或等待升级恢复','等待升级完成或管理员处理失败'),
     'target_slot_mismatch': ('environment', '不是指定服务目标设备', '选择指定服务设备'),
     'node_role_mismatch': ('environment', '节点未启用任务所需角色', '请管理员检查机器角色'),

@@ -56,7 +56,7 @@ def build_release():
     from worker.version import SOFTWARE_VERSION,PROTOCOL_VERSION,CAPABILITIES
     root=Path(__file__).resolve().parents[2];buffer=io.BytesIO()
     with zipfile.ZipFile(buffer,'w',compression=zipfile.ZIP_DEFLATED) as archive:
-        for package in ('worker','runner'):
+        for package in ('worker','runner','node_agent'):
             for path in sorted((root/package).rglob('*.py')):
                 if path.is_symlink() or '__pycache__' in path.parts:continue
                 info=zipfile.ZipInfo(path.relative_to(root).as_posix(),date_time=(2020,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED
@@ -149,6 +149,10 @@ def install(app,db,admin,worker_auth):
         if i.status=='ROLLING_BACK' and body.status not in ('ROLLING_BACK','FAILED'):raise HTTPException(409,'upgrade is rolling back')
         if body.status=='SUCCEEDED':
             r=s.get(WorkerRelease,i.release_id);devices=slots(s,worker)
+            from .node_agents import record, fresh
+            agent=record(worker)
+            if agent and (not fresh(agent) or agent.get('digest')!=r.id):
+                raise HTTPException(409,'waiting for node Agent to report target release')
             if {x.id for x in devices}!=set(i.slot_ids) or not all(online(x) and (x.software or {}).get('build_digest')==r.id and x.software.get('version')==r.version and x.protocol_version==r.protocol_version and set(x.software.get('capabilities',[]))==set(r.capabilities) for x in devices):
                 raise HTTPException(409,'waiting for every GPU worker to report target release')
         if body.status=='FAILED' and body.error is None:raise HTTPException(400,'failure reason is required')
