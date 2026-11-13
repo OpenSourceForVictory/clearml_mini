@@ -60,7 +60,7 @@ test('node runtime preserves drafts, reports missing assets and prevents stale s
       }body=data;
     }await route.fulfill({json:body});
   });
-  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();
+  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();
   await page.getByText('host 镜像与逻辑资产',{exact:true}).click();
   await expect(page.getByText(/asset directory missing/)).toBeVisible();
   await page.getByLabel('host 逻辑资产宿主映射',{exact:true}).fill('{"robotwin":"/new/assets"}');

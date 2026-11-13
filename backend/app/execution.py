@@ -8,7 +8,7 @@ from datetime import timedelta
 from typing import Literal, Optional
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
@@ -82,6 +82,7 @@ class ArtifactUpload(BaseModel):
 
 class WorkerCreate(BaseModel):
     node_name: str = Field(min_length=1, max_length=100, pattern=r'^[a-zA-Z0-9_.-]+$')
+    roles: list[Literal['client', 'server']] = Field(default=['client'], min_length=1, max_length=2)
     max_concurrent: int = Field(default=1, ge=1, le=1024)
     cpu_capacity: int = Field(default=4, ge=1, le=10000)
     ram_gb_capacity: int = Field(default=8, ge=1, le=100000)
@@ -103,6 +104,9 @@ class PoolCreate(PoolPolicy):
 
 
 class Enabled(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    roles: list[Literal['client', 'server']] | None = Field(default=None, min_length=1, max_length=2)
+    expected_revision: int | None = Field(default=None, ge=0)
     enabled: Optional[bool] = None
     max_concurrent: Optional[int] = Field(default=None, ge=1, le=1024)
     cpu_capacity: Optional[int] = Field(default=None, ge=1, le=10000)
@@ -125,7 +129,7 @@ def install(app, db, current):
     def worker_auth(token: Optional[HTTPAuthorizationCredentials] = Depends(bearer), s: Session = Depends(db)):
         if not token or not token.credentials.startswith('wk_'):
             raise HTTPException(401, 'worker credential required')
-        w = s.scalar(select(Worker).where(Worker.token_hash == token_hash(token.credentials), Worker.enabled))
+        w = s.scalar(select(Worker).where(Worker.token_hash == token_hash(token.credentials), Worker.revoked_at.is_(None)))
         if not w:
             raise HTTPException(401, 'invalid worker credential')
         return w
@@ -135,6 +139,8 @@ def install(app, db, current):
             raise HTTPException(403, 'admin required')
         return user
 
+    from . import administration
+    administration.install(app, db, admin)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
@@ -185,15 +191,13 @@ def install(app, db, current):
 
     @app.get('/api/v1/admin/nodes')
     def nodes(user=Depends(admin), s: Session = Depends(db)):
-        return [{'id': w.id, 'node_name': w.node_name, 'enabled': w.enabled,
-                 'max_concurrent': w.max_concurrent, 'cpu_capacity': w.cpu_capacity,
-                 'ram_gb_capacity': w.ram_gb_capacity} for w in s.scalars(select(Worker))]
+        return [administration.node_view(s, w) for w in s.scalars(select(Worker).order_by(Worker.node_name))]
 
     @app.post('/api/v1/admin/nodes/{worker_id}/rotate-token')
     def rotate(worker_id: str, user=Depends(admin), s: Session = Depends(db)):
         lock(s)
         w = s.get(Worker, worker_id)
-        if not w:
+        if not w or w.revoked_at:
             raise HTTPException(404, 'node not found')
         token = 'wk_' + secrets.token_urlsafe(32)
         w.token_hash = token_hash(token)
@@ -204,12 +208,9 @@ def install(app, db, current):
     def enable_node(worker_id: str, body: Enabled, user=Depends(admin), s: Session = Depends(db)):
         lock(s)
         w = s.get(Worker, worker_id)
-        if not w:
+        if not w or w.revoked_at:
             raise HTTPException(404, 'node not found')
-        for key, value in body.model_dump(exclude_none=True).items():
-            setattr(w, key, value)
-        s.commit()
-        return {'enabled': w.enabled}
+        return administration.update_node(s, w, body, user)
 
     @app.post('/api/v1/admin/pools', status_code=201)
     def create_pool(body: PoolCreate, user=Depends(admin), s: Session = Depends(db)):
@@ -224,15 +225,8 @@ def install(app, db, current):
         return {'id': p.id, **values}
 
     @app.patch('/api/v1/admin/pools/{pool_id}')
-    def update_pool(pool_id: str, body: PoolPolicy, user=Depends(admin), s: Session = Depends(db)):
-        lock(s)
-        pool = s.get(Pool, pool_id)
-        if not pool:
-            raise HTTPException(404, 'pool not found')
-        for key, value in body.model_dump().items():
-            setattr(pool, key, value)
-        s.commit()
-        return {'id': pool.id, **body.model_dump()}
+    def update_pool(pool_id: str, body: administration.PoolUpdate, user=Depends(admin), s: Session = Depends(db)):
+        return administration.update_pool(s, pool_id, body, user)
 
     @app.post('/api/v1/worker/register')
     def register(body: Register, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -262,6 +256,8 @@ def install(app, db, current):
             slot.pool_id = slot.desired_pool_id = body.pool_id
             if body.pool_id is None:
                 slot.membership_revision = slot.membership_applied_revision = 1
+        if not slot and not worker.enabled:
+            raise HTTPException(409, 'disabled node cannot register new GPUs')
         if not slot:
             revision = 1 if body.pool_id is None else 0
             slot = Slot(node_name=worker.node_name, gpu_index=body.gpu_index, gpu_uuid=body.gpu_uuid,
@@ -330,6 +326,9 @@ def install(app, db, current):
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
+            s.refresh(worker)
+            if not worker.enabled or not slot.enabled:
+                return {'task': None, 'cleanup': []}
             job = s.get(Job, run.job_id)
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
                 return {'task': None, 'cleanup': []}

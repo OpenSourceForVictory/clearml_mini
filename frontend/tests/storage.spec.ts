@@ -28,7 +28,7 @@ async function setup(page: Page, role='admin') {
 
 test('storage drafts survive polling, conflict is visible, restore is versioned',async({page})=>{
   const state=await setup(page);
-  await page.getByRole('button',{name:'管理设置',exact:true}).click();
+  await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();
   await page.getByText('host 存储配置',{exact:true}).click();
   await expect(page.getByText(/GPU 1 · 等待任务结束/)).toBeVisible();
   await expect(page.getByText(/工作盘空间不足/)).toBeVisible();

@@ -151,4 +151,4 @@ def test_admin_provisioning_and_token_revocation(env):
     fresh = {'Authorization': 'Bearer '+rotated.json()['token']}
     assert c.post('/api/v1/worker/heartbeat', headers=fresh, json={'slot_id': slots[0]}).status_code == 200
     assert c.patch(f'/api/v1/admin/nodes/{node_id}', headers=auth['admin'], json={'enabled': False}).status_code == 200
-    assert c.post('/api/v1/worker/heartbeat', headers=fresh, json={'slot_id': slots[0]}).status_code == 401
+    assert c.post('/api/v1/worker/heartbeat', headers=fresh, json={'slot_id': slots[0]}).status_code == 200  # disabled nodes still drain executions

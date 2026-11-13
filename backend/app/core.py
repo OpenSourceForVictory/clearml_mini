@@ -47,6 +47,16 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class ManagementAudit(Base):
+    __tablename__ = 'management_audits'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    actor_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    action: Mapped[str] = mapped_column(String(80))
+    target_id: Mapped[str] = mapped_column(String(36))
+    details: Mapped[dict] = mapped_column(JSON_TYPE, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class Pool(Base):
     __tablename__ = 'resource_pools'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -55,6 +65,7 @@ class Pool(Base):
     min_vram_gb: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     labels: Mapped[dict] = mapped_column(JSON_TYPE, default=dict)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     cpu_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
     ram_gb_per_job: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
 
@@ -69,6 +80,10 @@ class Worker(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     node_name: Mapped[str] = mapped_column(String(100), unique=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    roles: Mapped[list] = mapped_column(JSON_TYPE, default=lambda: ['client'], server_default='["client"]')
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    management_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    connection: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     max_concurrent: Mapped[int] = mapped_column(Integer, default=1)
     cpu_capacity: Mapped[int] = mapped_column(Integer, default=4)

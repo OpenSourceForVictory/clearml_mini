@@ -1,0 +1,23 @@
+# 通用机器与运行管理
+
+规划与任务跟踪：`openspec/changes/generic-machine-runtime-management/`。此文档随功能落地更新，不把未完成任务标为可用。
+
+## 机器管理
+
+管理设置按机器、资源池、运行模板、账号分开。机器客户端/服务端角色可兼任；旧机器默认客户端。选中机器后才展示容量、存储、镜像/资产配置和执行数据。角色变更需等待已有执行清理。
+
+停用只阻止新任务准入，已领取执行仍可续租、上报和清理；未领取预留退回队列。解除纳管先停用并排空，仍持有执行时返回 409，并提示稍后重试；完成时撤销 token、移出池、保留机器墓碑与历史记录。不会删除宿主机资产或工作目录，解除后原 Agent 不能重连，应在机器上停止对应服务。
+
+`PATCH /api/v1/admin/nodes/{id}` 支持 `roles`、`enabled`、容量及 `expected_revision`。界面提交版本以避免覆盖其他管理员操作。`POST /api/v1/admin/nodes/{id}/unmanage` 必须带 `expected_revision`。`GET /api/v1/admin/nodes` 返回状态、角色、GPU数、持有执行槽位数和修订号。当前 SSH 向导仍在同一 OpenSpec 任务中实现，手动配置接入保留。
+
+## 资源池
+
+`GET /api/v1/admin/pools` 返回启用和停用的池；普通 `GET /pools` 只返回可选择的启用池。PATCH 只修改提交字段，包含名称、启停与已有资源策略。DELETE 有成员、待迁移成员、待处理任务或未清理执行时拒绝；空闲无成员时归档而不删除历史外键。成员操作仍遵循 GPU 单池归属和排空切换。
+
+## 账号
+
+管理员可 GET `/api/v1/admin/users`，PATCH `/api/v1/admin/users/{id}` 的 role、active、password。密码沿用至少12字符规则；最后一个有效管理员不能降级或停用。密码只保存哈希，管理审计只记录是否重置，不包含密码。停用账号后已有令牌不能访问 API。
+
+## 兼容与回退
+
+迁移 `j063e45` 增加机器 roles、revoked_at、management_revision、connection、池 archived 和管理审计表，不修改原机器/槽位 ID。旧模板与任务不变。回退旧版本前需特别注意旧版“停用”会拒绝 Worker 全部认证；不要用旧版本恢复已解除机器，也不要删除新增字段来绕过墓碑状态。

@@ -18,7 +18,7 @@ async function setup(page:Page,role='admin') {
   await route.fulfill({json:body});
  });
  await page.goto('/');
- if(role==='admin'){await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByText('host 执行数据',{exact:true}).click();}
+ if(role==='admin'){await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByText('host 执行数据',{exact:true}).click();}
  return {change:(v:any)=>inventory={...inventory,...v},expire:()=>op={...op,expires_at:new Date(Date.now()-1000).toISOString()},confirms:()=>confirms};
 }
 test('inventory unknown sizes, drafts and selections survive polls, confirmation is asynchronous',async({page})=>{
