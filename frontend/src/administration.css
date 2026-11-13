@@ -1,10 +1,24 @@
 /* Management-only styles: evaluation and result pages keep their own layout. */
 .administration { min-width: 0; }
-.administration > .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; margin-bottom: 24px; background: #e8eee8; border-radius: 12px; }
-.administration .tabs button { background: transparent; border-color: transparent; }
-.administration .tabs button[aria-selected="true"] { background: #fff; color: #174c39; border-color: #d6e1d7; box-shadow: 0 2px 5px #173d310a; font-weight: 650; }
-.administration > .tabs + .tabs { background: transparent; padding: 0 0 12px; border-radius: 0; border-bottom: 1px solid #dce5dc; margin-bottom: 16px; }
-.administration .tabs + .tabs button[aria-selected="true"] { background: #e0eee4; border-color: #bed3c3; box-shadow: none; }
+ .administration .page-title { padding: 22px 0 20px; }
+.administration .page-title h1 { font-size: 26px; }
+.administration .page-title .eyebrow { display: none; }
+.administration .page-title p { margin-bottom: 0; }
+.administration .admin-layout { display: grid; grid-template-columns: 178px minmax(0, 1fr); gap: 26px; align-items: start; }
+.administration .admin-navigation { position: sticky; top: 20px; padding: 10px 0; }
+.administration .admin-nav-caption { margin: 0 14px 16px; color: #7b8b80; font-size: 11px; letter-spacing: 1px; }
+.administration .admin-nav { display: flex; flex-direction: column; gap: 6px; }
+.administration .admin-nav button { position: relative; text-align: left; border: 1px solid transparent; background: transparent; padding: 14px; border-radius: 9px; }
+.administration .admin-nav button span { display: block; font-weight: 600; }
+.administration .admin-nav button small { display: block; margin-top: 6px; font-size: 11px; color: #6d8073; }
+.administration .admin-nav button:hover { background: #eaf0e9; }
+.administration .admin-nav button[aria-selected="true"] { background: #e1ede3; border-color: #d1e0d3; color: #20533b; }
+.administration .admin-nav button[aria-selected="true"]::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: #287453; }
+.administration .admin-content { min-width: 0; border-left: 1px solid #dfe7de; padding-left: 26px; }
+.administration .admin-content > .tabs { display: flex; flex-wrap: wrap; gap: 24px; margin: 0 0 24px; padding: 0; border-bottom: 1px solid #dbe4db; }
+.administration .tabs button { background: transparent; border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 14px 2px; color: #697d6e; }
+.administration .tabs button[aria-selected="true"] { border-bottom-color: #287453; color: #1d593e; font-weight: 650; }
+.administration .admin-content .panel { border-radius: 12px; }
 .administration .admin-toolbar, .administration .admin-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
 .administration .admin-toolbar p, .administration .admin-section-heading p { margin: 0; }
 .administration .admin-section-heading h2 { margin-bottom: 8px; }
@@ -39,8 +53,20 @@
 @media (max-width: 760px) {
   .administration .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .administration .admin-metrics > div { padding: 14px; }
-  .administration > .tabs button { flex: 1 1 40%; }
+  .administration .admin-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .administration .admin-navigation { position: static; padding: 0; }
+  .administration .admin-nav-caption { display: none; }
+  .administration .admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .administration .admin-nav button { padding: 12px; }
+  .administration .admin-content { padding-left: 0; border-left: 0; }
+  .administration .admin-content > .tabs { gap: 18px; }
   .administration .admin-filters { padding: 12px; }
   .administration .admin-filters .field { flex-basis: 100%; }
   .administration .panel { overflow-x: auto; }
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .administration .admin-layout { grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
+  .administration .admin-content { padding-left: 16px; }
+  .administration .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

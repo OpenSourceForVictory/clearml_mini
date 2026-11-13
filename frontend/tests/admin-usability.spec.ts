@@ -25,6 +25,25 @@ for(const mobile of [false,true]) test(`machine filters and management layout ${
   await page.getByRole('button',{name:'清除筛选'}).click();
   await expect(page.getByText('显示 2 / 2 台机器')).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  if(!mobile){
+    const navigation=await page.getByRole('tablist',{name:'管理分类'}).boundingBox();
+    const content=await page.getByRole('tabpanel',{name:'机器管理'}).boundingBox();
+    expect(navigation!.x+navigation!.width).toBeLessThan(content!.x);
+    await page.getByRole('tab',{name:'机器管理',exact:true}).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('tab',{name:'资源池管理'})).toBeFocused();
+    await expect(page.getByRole('tab',{name:'资源池列表'})).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(page.getByRole('tab',{name:'账号管理'})).toBeFocused();
+    await page.getByRole('tab',{name:'创建账号',exact:true}).click();
+    await page.getByLabel('用户名',{exact:true}).fill('draft-user');
+    await page.getByRole('tab',{name:'账号列表'}).click();
+    await expect(page.getByLabel('用户名',{exact:true})).toBeHidden();
+    await page.getByRole('tab',{name:'创建账号',exact:true}).click();
+    await expect(page.getByLabel('用户名',{exact:true})).toHaveValue('draft-user');
+    await page.getByRole('tab',{name:'机器管理',exact:true}).click();
+    await expect(page.getByText('显示 2 / 2 台机器')).toBeVisible();
+  }
   await page.screenshot({path:`test-results/admin-${mobile?'mobile':'desktop'}.png`,fullPage:true});
   await page.getByRole('tab',{name:'服务端机器'}).click();
   await expect(page.getByText('暂无此类型机器，可注册新机器或在已有机器详情中增加角色。')).toBeVisible();

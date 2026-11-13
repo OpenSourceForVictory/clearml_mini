@@ -27,7 +27,7 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
   await page.getByRole('button',{name:'下载接入配置'}).click();
   const d=await download;const stream=await d.createReadStream();let text='';for await(const chunk of stream!)text+=chunk;
   expect(JSON.parse(text)).toMatchObject({pool_id:null,mock:false,api_url:'http://192.168.137.223:18000'});
-  await page.getByRole('tab',{name:'资源池管理'}).click();
+  await page.getByRole('tab',{name:'资源池管理'}).click();await page.getByRole('tab',{name:'成员分配'}).click();
   await expect(page.getByText('运行环境未确认',{exact:true})).toBeVisible();
   await page.getByLabel('成员来源',{exact:true}).selectOption('unassigned');
   await page.getByLabel('host 全选当前显示 GPU').check();
@@ -40,7 +40,7 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
   await page.getByRole('button',{name:'确认变更选中 GPU'}).click();
   expect(submitted).toEqual({pool_id:'pool',members:[{slot_id:'s0',expected_revision:2}]});
   await expect(page.getByRole('status')).toContainText('本批已生效');
-  await page.getByRole('tab',{name:'账号管理'}).click();
+  await page.getByRole('tab',{name:'账号管理'}).click();await page.getByRole('tab',{name:'创建账号',exact:true}).click();
   await expect(page.getByRole('heading',{name:'创建账号'})).toBeVisible();
   await page.getByRole('tab',{name:'运行模板管理',exact:true}).click();
   await expect(page.getByRole('heading',{name:/客户端/}).first()).toBeVisible();

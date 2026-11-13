@@ -23,5 +23,5 @@ test('management navigation and machine roles use a selected detail',async({page
   await page.getByRole('tab',{name:'服务端机器'}).click();
   await expect(page.getByText('host',{exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'host · 配置详情'})).toHaveCount(0);
-  await page.getByRole('tab',{name:'账号管理'}).click();await expect(page.getByRole('heading',{name:'创建账号'})).toBeVisible();
+  await page.getByRole('tab',{name:'账号管理'}).click();await page.getByRole('tab',{name:'创建账号',exact:true}).click();await expect(page.getByRole('heading',{name:'创建账号'})).toBeVisible();
 });
