@@ -1,0 +1,46 @@
+/* Management-only styles: evaluation and result pages keep their own layout. */
+.administration { min-width: 0; }
+.administration > .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; margin-bottom: 24px; background: #e8eee8; border-radius: 12px; }
+.administration .tabs button { background: transparent; border-color: transparent; }
+.administration .tabs button[aria-selected="true"] { background: #fff; color: #174c39; border-color: #d6e1d7; box-shadow: 0 2px 5px #173d310a; font-weight: 650; }
+.administration > .tabs + .tabs { background: transparent; padding: 0 0 12px; border-radius: 0; border-bottom: 1px solid #dce5dc; margin-bottom: 16px; }
+.administration .tabs + .tabs button[aria-selected="true"] { background: #e0eee4; border-color: #bed3c3; box-shadow: none; }
+.administration .admin-toolbar, .administration .admin-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.administration .admin-toolbar p, .administration .admin-section-heading p { margin: 0; }
+.administration .admin-section-heading h2 { margin-bottom: 8px; }
+.administration .admin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+.administration .admin-metrics > div { background: #fff; border: 1px solid #dde6dc; border-radius: 12px; padding: 18px 20px; }
+.administration .admin-metrics span { display: block; color: #617367; font-size: 12px; }
+.administration .admin-metrics strong { display: block; margin-top: 8px; font-size: 28px; font-variant-numeric: tabular-nums; }
+.administration .admin-filters { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; padding: 16px; background: #f6f8f5; border-radius: 8px; }
+.administration .admin-filters .field { margin: 0; flex: 1 1 180px; }
+.administration .admin-filters .field:first-child { flex-grow: 2; }
+.administration .admin-table-scroll { overflow-x: auto; max-width: 100%; }
+.administration .admin-table-scroll table { min-width: 640px; }
+.administration th { color: #586c60; background: #f8faf7; }
+.administration td { vertical-align: middle; }
+.administration td button { margin: 3px 5px 3px 0; }
+.administration tr.is-selected td { background: #edf5ee; }
+.administration .admin-status { display: inline-block; white-space: nowrap; padding: 5px 9px; border-radius: 20px; background: #eef0ed; color: #526157; font-size: 12px; }
+.administration .admin-status.online { background: #e0f1e4; color: #205e38; }
+.administration .admin-status.offline { background: #fff0e8; color: #924d22; }
+.administration .admin-status.waiting { background: #eaf0fc; color: #345780; }
+.administration .row { flex-wrap: wrap; align-items: end; margin: 12px 0; }
+.administration .row .field { flex: 1 1 170px; }
+.administration input[type="checkbox"], .administration input[type="radio"] { width: auto; margin-right: 7px; accent-color: #206b50; }
+.administration fieldset { min-width: 0; border: 1px solid #dce5dc; border-radius: 8px; margin: 16px 0; padding: 16px; }
+.administration fieldset > label { display: inline-flex; align-items: center; margin: 6px 18px 6px 0; }
+.administration textarea { width: 100%; max-width: 100%; min-height: 100px; resize: vertical; border: 1px solid #d5dfd7; border-radius: 7px; padding: 12px; font: 13px/1.6 monospace; color: #26342f; }
+.administration :is(textarea, .admin-table-scroll):focus-visible { outline: 2px solid #409578; outline-offset: 2px; }
+.administration pre { max-width: 100%; overflow: auto; }
+.administration form + form { border-top: 1px solid #e0e6dd; margin-top: 24px; padding-top: 16px; }
+.administration .danger { color: #a13f2c; border-color: #e7bfb5; }
+.administration .panel { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .administration .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .administration .admin-metrics > div { padding: 14px; }
+  .administration > .tabs button { flex: 1 1 40%; }
+  .administration .admin-filters { padding: 12px; }
+  .administration .admin-filters .field { flex-basis: 100%; }
+  .administration .panel { overflow-x: auto; }
+}

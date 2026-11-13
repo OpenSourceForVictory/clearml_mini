@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {api} from './api';
+import './administration.css';
 import {Memberships} from './memberships';
 import {StorageSettings} from './storage';
 import {RuntimeSettings} from './image-runtime';
@@ -14,29 +15,37 @@ export function Field({label,children}:{label:string;children:React.ReactNode}) 
 const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管'};
 export function Admin() {
   const [tab,setTab]=useState('machines');
-  return <><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
+  return <div className="administration"><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
     <div className="tabs" role="tablist" aria-label="管理分类">{[['machines','机器管理'],['pools','资源池管理'],['templates','运行模板管理'],['accounts','账号管理']].map(([id,label])=><button key={id} role="tab" aria-selected={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>
-    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='accounts'&&<Accounts/>}</>;
+    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='accounts'&&<Accounts/>}</div>;
 }
 export function Machines() {
-  const [nodes,setNodes]=useState<Machine[]>([]),[role,setRole]=useState('client'),[selected,setSelected]=useState(''),[register,setRegister]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
-  const refresh=()=>api<Machine[]>('admin/nodes').then(values=>setNodes(values.map(n=>({...n,management_revision:n.management_revision??0,roles:n.roles??['client'],gpu_count:n.gpu_count??0,held_executions:n.held_executions??0,status:n.status??(n.enabled?'waiting':'disabled')}))));
-  useEffect(()=>{void refresh().catch(e=>setError(String(e)));const t=setInterval(()=>void refresh().catch(e=>setError(String(e))),5000);return()=>clearInterval(t)},[]);
+  const [nodes,setNodes]=useState<Machine[]>([]),[role,setRole]=useState('client'),[selected,setSelected]=useState(''),[register,setRegister]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[loaded,setLoaded]=useState(false),[loadError,setLoadError]=useState('');
+  const refresh=()=>api<Machine[]>('admin/nodes').then(values=>{setNodes(values.map(n=>({...n,management_revision:n.management_revision??0,roles:n.roles??['client'],gpu_count:n.gpu_count??0,held_executions:n.held_executions??0,status:n.status??(n.enabled?'waiting':'disabled')})));setLoaded(true);setLoadError('')});
+  useEffect(()=>{void refresh().catch(e=>setLoadError(String(e)));const t=setInterval(()=>void refresh().catch(e=>setLoadError(String(e))),5000);return()=>clearInterval(t)},[]);
   const node=nodes.find(n=>n.id===selected);
+  const roleNodes=nodes.filter(n=>n.roles.includes(role));
+  const visibleNodes=roleNodes.filter(n=>n.node_name.toLowerCase().includes(query.trim().toLowerCase())&&(filter==='all'||n.status===filter));
   async function act(path:string,method:string,body?:unknown) {setBusy(true);setError('');try{await api(path,method,body);setMessage('操作已完成');}catch(e){setError(String(e));}finally{await refresh().catch(e=>setError(String(e)));setBusy(false)}}
-  return <><div className="tabs" role="tablist" aria-label="机器类型">{[['client','客户端机器'],['server','服务端机器']].map(([id,label])=><button role="tab" key={id} aria-selected={role===id} onClick={()=>{setRole(id);setSelected('');setRegister(false)}}>{label}</button>)}</div>
+  return <><div className="tabs" role="tablist" aria-label="机器类型">{[['client','客户端机器'],['server','服务端机器']].map(([id,label])=><button role="tab" key={id} aria-selected={role===id} onClick={()=>{setRole(id);setSelected('');setRegister(false);setQuery('');setFilter('all')}}>{label}</button>)}</div>
     {error&&<p role="alert" className="error">{error}</p>}{message&&<p role="status">{message}</p>}
-    <div className="row"><button onClick={()=>{setRegister(!register);setSelected('')}}>{register?'返回机器列表':'注册新机器'}</button></div>
-    {register?<ManualRegistration role={role} onChange={refresh}/>:<section className="panel"><h2>已注册{role==='client'?'客户端':'服务端'}机器</h2><p>同一机器可以兼任两种角色，资源额度按物理机器合计。</p>
-      <table><thead><tr><th>机器</th><th>角色</th><th>GPU / 持有执行</th><th>状态</th><th>管理</th></tr></thead><tbody>{nodes.filter(n=>n.roles.includes(role)).map(n=><tr key={n.id}><td>{n.node_name}</td><td>{n.roles.map(r=>r==='client'?'客户端':'服务端').join('、')}</td><td>{n.gpu_count} / {n.held_executions}</td><td>{status[n.status]}</td><td><button onClick={()=>setSelected(n.id)}>查看配置</button></td></tr>)}</tbody></table>
-      {!nodes.some(n=>n.roles.includes(role))&&<p>暂无此类型机器，可注册新机器或在已有机器详情中增加角色。</p>}</section>}
+    {loadError&&<div role="alert" className="error">机器列表加载失败。{loaded?'当前显示上次获取的数据。':''}<button onClick={()=>void refresh().catch(e=>setLoadError(String(e)))}>重试加载</button><details><summary>错误详情</summary>{loadError}</details></div>}
+    <div className="admin-toolbar"><p className="muted">{role==='client'?'运行仿真与评测客户端，按 GPU 分配任务。':'部署推理服务，查看实例状态与运行日志。'}</p><button className="primary" onClick={()=>{setRegister(!register);setSelected('')}}>{register?'返回机器列表':'注册新机器'}</button></div>
+    {register?<ManualRegistration role={role} onChange={refresh}/>:<>
+      <div className="admin-metrics" aria-label="当前类型机器概览">{[['已注册机器',roleNodes.length],['在线机器',roleNodes.filter(n=>n.status==='online').length],['GPU 总数',roleNodes.filter(n=>!n.revoked_at).reduce((sum,n)=>sum+n.gpu_count,0)],['持有执行',roleNodes.reduce((sum,n)=>sum+n.held_executions,0)]].map(([label,value])=><div key={label}><span>{label}</span><strong>{loaded?value:'—'}</strong></div>)}</div>
+      <section className="panel"><div className="admin-section-heading"><div><h2>已注册{role==='client'?'客户端':'服务端'}机器</h2><p className="muted">同一机器可以兼任两种角色，资源额度按物理机器合计。</p></div><span className="muted">每 5 秒更新</span></div>
+      <div className="admin-filters"><Field label="搜索机器"><input type="search" placeholder="输入机器名称" value={query} onChange={e=>setQuery(e.target.value)}/></Field><Field label="机器状态"><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">全部状态</option>{Object.entries(status).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field><button disabled={!query&&filter==='all'} onClick={()=>{setQuery('');setFilter('all')}}>清除筛选</button></div>
+      {loaded&&<p className="muted" aria-live="polite">显示 {visibleNodes.length} / {roleNodes.length} 台机器</p>}
+      <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="机器列表"><table><thead><tr><th>机器</th><th>角色</th><th>GPU 数量</th><th>持有执行</th><th>状态</th><th>管理</th></tr></thead><tbody>{visibleNodes.map(n=><tr key={n.id} className={selected===n.id?'is-selected':''}><td><strong>{n.node_name}</strong></td><td>{n.roles.map(r=>r==='client'?'客户端':'服务端').join('、')}</td><td>{n.gpu_count}</td><td>{n.held_executions}</td><td><span className={'admin-status '+n.status}>{status[n.status]??n.status}</span></td><td><button aria-pressed={selected===n.id} onClick={()=>setSelected(n.id)}>查看配置</button></td></tr>)}</tbody></table></div>
+      {!loaded&&!loadError&&<p className="empty" role="status">正在加载机器…</p>}
+      {loaded&&visibleNodes.length===0&&<div className="empty">{roleNodes.length===0?'暂无此类型机器，可注册新机器或在已有机器详情中增加角色。':'没有匹配的机器，请调整名称或状态筛选。'}</div>}</section></>}
     {node&&!register&&<section className="panel"><div className="row"><h2>{node.node_name} · 配置详情</h2><button onClick={()=>setSelected('')}>关闭详情</button></div>
       <p>{status[node.status]} · 角色变更和解除纳管需要等待执行清理完成。</p>
       {!node.revoked_at&&<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>
         <fieldset><legend>机器角色</legend>{[['client','客户端'],['server','服务端']].map(([r,label])=><label key={r}><input type="checkbox" name="roles" value={r} defaultChecked={node.roles.includes(r)}/>{label}</label>)}</fieldset>
         <div className="row"><Field label="并发上限"><input name="max_concurrent" type="number" min={1} defaultValue={node.max_concurrent} required/></Field><Field label="CPU 核数"><input name="cpu_capacity" type="number" min={1} defaultValue={node.cpu_capacity} required/></Field><Field label="内存 GiB"><input name="ram_gb_capacity" type="number" min={1} defaultValue={node.ram_gb_capacity} required/></Field></div><button disabled={busy}>保存配置</button></form>
         <div className="row"><button disabled={busy} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
-        <button disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
+        <button className="danger" disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
         <HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
     </section>}</>;
 }

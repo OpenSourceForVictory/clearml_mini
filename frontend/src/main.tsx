@@ -240,7 +240,7 @@ function App() {
                 ? "管理设置"
                 : "评测任务"}
           </span>
-          <span className="live-dot">{tab==='cs'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
+          <span className="live-dot">{tab==='admin'?'管理工作台':tab==='cs'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
         </header>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />
