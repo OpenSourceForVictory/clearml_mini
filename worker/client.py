@@ -404,7 +404,12 @@ class Worker:
                     self.stop_container(execution)
                 container = self.inspect(execution)
                 if not container:
-                    raise RuntimeError('container disappeared')
+                    if reply['cancel'] and self.host_mode():
+                        # systemd may unload a successfully stopped transient
+                        # unit immediately. stop_container already verified exit.
+                        container = {'State': {'Running': False, 'ExitCode': 0}}
+                    else:
+                        raise RuntimeError('container disappeared')
                 if self.host_mode(): output, err = HostBackend(self).logs()
                 else:
                     output = docker('logs', self.name(execution), timeout=5).stdout
@@ -421,7 +426,12 @@ class Worker:
                     continue
                 if is_service(task) and container['State']['Running'] and not reply['cancel']:
                     probe = service_health(task['client_spec']['service'])
-                    self.api.post(f'worker/executions/{execution}/service-health', probe)
+                    try:
+                        self.api.post(f'worker/executions/{execution}/service-health', probe)
+                    except (urllib.error.URLError, TimeoutError):
+                        # A lost health report must not kill a leased service. The
+                        # watchdog still stops it if heartbeats cannot renew.
+                        time.sleep(.5)
                     if probe['ready']:
                         if not self.state.get('service_was_ready'):
                             self.state['service_was_ready'] = True; self.save()

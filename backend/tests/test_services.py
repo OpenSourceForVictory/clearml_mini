@@ -138,3 +138,25 @@ def test_local_probe_rejects_redirect_and_occupied_port():
     finally:
         server.shutdown();thread.join();server.server_close()
     assert not health(service)['ready']
+
+
+def test_expired_service_keeps_gpu_and_port_until_cleanup(env):
+    from datetime import timedelta
+    main,c,a=env;token,slot,body=setup(env)
+    instance=c.post('/api/v1/admin/services',headers=a['admin'],json=body).json()
+    task=claim(env,token,slot);execution=task['execution_id']
+    assert c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':slot,'execution_id':execution}).status_code==200
+    with main.SessionLocal() as s:
+        run=s.scalar(select(Run).where(Run.execution_id==execution))
+        run.lease_expires_at=now()-timedelta(minutes=5);s.commit()
+    tick(main.SessionLocal)
+    with main.SessionLocal() as s:
+        run=s.scalar(select(Run).where(Run.execution_id==execution))
+        assert run.status=='TIMED_OUT' and not run.cleanup_confirmed
+    assert c.post('/api/v1/admin/services',headers=a['admin'],json={**body,'name':'conflict'}).status_code==409
+    assert c.post('/api/v1/admin/services/'+instance['id']+'/control',headers=a['admin'],json={'action':'start','expected_revision':0}).status_code==409
+    submit(env);assert claim(env,token,slot) is None
+    assert c.post('/api/v1/worker/executions/'+execution+'/service-health',headers=token,json={'ready':True}).status_code==409
+    assert c.post('/api/v1/worker/executions/'+execution+'/cleanup',headers=token).status_code==200
+    assert claim(env,token,slot) is not None
+    assert c.post('/api/v1/admin/services',headers=a['admin'],json={**body,'name':'after cleanup'}).status_code==201

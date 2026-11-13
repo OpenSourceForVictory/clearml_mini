@@ -19,3 +19,16 @@ API：GET/POST `/api/v1/admin/services`；POST `/{id}/control` 带 action=start/
 服务端模板可定义 `parameter_schema`，与客户端使用相同的类型、默认值、覆盖权限及 argv/env/input 绑定。部署提交 `parameters`，可覆盖字段使用 `parameter_overrides`；缺失必填项、错误类型或越权覆盖会拒绝整个部署，不创建实例或任务。最终值和模板版本保存为不可变执行快照，停止后启动新执行仍沿用原参数。类型化服务要求 Worker 8。部署表单目前用 JSON 输入业务值，并展示所选模板定义。
 
 2026-11-13 验证：服务 API/类型参数/健康探测测试、调度与执行关联回归、前端模板/管理/服务操作测试及构建；隔离 PostgreSQL 从 l285a67 升级到 m396b78，验证旧模板兼容和服务参数列。`scripts/smoke_services.py` 再次通过 Docker、host 两模式（模拟 GPU 槽位，真实进程与 HTTP 客户端），涵盖类型化模板、健康、请求、日志、停止及重启。当前尚未部署生产或升级五个 Worker；启动失败/清理恢复专用故障注入、通用挂载仍未完成。
+
+## 故障恢复验收
+
+`backend/tests/test_service_recovery.py` 使用真实 Docker 容器与 systemd 用户单元，在 API 边界注入故障，不占用 GPU。运行前需本地 `mini-eval-runner:dev` 镜像、Docker 和 systemd 用户会话：
+
+```bash
+HOST_EXECUTION_TEST=1 .venv/bin/python -m pytest backend/tests/test_service_recovery.py backend/tests/test_host_backend.py backend/tests/test_worker_recovery.py -q
+.venv/bin/python -m pytest backend/tests/test_services.py backend/tests/test_execution.py backend/tests/test_scheduling.py -q
+```
+
+覆盖非零退出、零退出但伪装评测 final、HTTP 启动健康超时（含报告上传故障）、健康报告短暂丢失、租约到期停止、重建 Worker 后确认清理，以及取消时 systemd 自动卸载临时单元。短暂健康报告上传失败会重试，不主动结束仍持有租约的服务；本地启动健康期限和租约看门狗仍生效。API 测试验证超时执行在清理确认前继续占用 GPU 和端口，清理后才允许排队任务及同端口新实例进入。
+
+故障测试中的 API 为注入夹具；真实 API、数据库及客户端联通另由 `scripts/smoke_services.py` 验证。TCP 探测只表示端口可连接，Docker 端口代理也可能接受连接，因此需要业务就绪语义时应使用 HTTP 健康路径。
