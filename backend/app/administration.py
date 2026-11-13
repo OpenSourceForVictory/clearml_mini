@@ -91,6 +91,7 @@ def install(app, db, admin):
         w = s.get(Worker, worker_id)
         if not w: raise HTTPException(404, 'node not found')
         if w.revoked_at: return node_view(s, w)
+        if w.upgrade_state in ('DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'):raise HTTPException(409,'resolve node upgrade before unmanaging')
         if body.expected_revision != w.management_revision: raise HTTPException(409, 'machine configuration changed; refresh')
         slots = list(s.scalars(select(Slot).where(Slot.worker_id == w.id)))
         w.enabled = False

@@ -78,6 +78,9 @@ class Pool(Base):
 class Worker(Base):
     __tablename__ = 'workers'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    upgrade_state: Mapped[Optional[str]] = mapped_column(String(20))
+    upgrade_revision: Mapped[int] = mapped_column(Integer,default=0,server_default='0')
+    updater_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     node_name: Mapped[str] = mapped_column(String(100), unique=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     roles: Mapped[list] = mapped_column(JSON_TYPE, default=lambda: ['client'], server_default='["client"]')
@@ -126,6 +129,7 @@ class Slot(Base):
     gpu_model: Mapped[Optional[str]] = mapped_column(String(100))
     vram_mb: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     client_images: Mapped[list] = mapped_column(JSON_TYPE, default=list, server_default='[]')
+    software: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     protocol_version: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
     execution_modes: Mapped[list] = mapped_column(JSON_TYPE, default=lambda: ['docker'], server_default='["docker"]')
     free_vram_mb: Mapped[Optional[int]] = mapped_column(Integer)
@@ -432,3 +436,25 @@ class ServiceInstance(Base):
     health_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     health_error: Mapped[Optional[str]] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WorkerRelease(Base):
+    __tablename__='worker_releases'
+    id: Mapped[str] = mapped_column(String(64),primary_key=True)
+    version: Mapped[str] = mapped_column(String(100))
+    protocol_version: Mapped[int] = mapped_column(Integer)
+    capabilities: Mapped[list] = mapped_column(JSON_TYPE)
+    archive: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
+
+
+class WorkerUpgrade(Base):
+    __tablename__='worker_upgrades'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id'),index=True)
+    release_id: Mapped[str] = mapped_column(ForeignKey('worker_releases.id'))
+    status: Mapped[str] = mapped_column(String(20),default='DRAINING')
+    slot_ids: Mapped[list] = mapped_column(JSON_TYPE)
+    error: Mapped[Optional[str]] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)

@@ -13,7 +13,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from . import storage as storage_protocol
-from . import memberships, image_runtime, endpoints, host_environments
+from . import memberships, image_runtime, endpoints, host_environments, worker_upgrades
 from .core import EvaluationBatch, Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
@@ -28,6 +28,7 @@ class Register(BaseModel):
     gpu_model: str = Field(min_length=1, max_length=100)
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
+    software: worker_upgrades.Software | None = None
     protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
@@ -148,6 +149,7 @@ def install(app, db, current):
     host_environments.install(app, db, admin)
     from . import services
     services.install(app, db, admin, worker_auth)
+    worker_upgrades.install(app, db, admin, worker_auth)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)
@@ -263,6 +265,8 @@ def install(app, db, current):
             slot.pool_id = slot.desired_pool_id = body.pool_id
             if body.pool_id is None:
                 slot.membership_revision = slot.membership_applied_revision = 1
+        if not slot and worker.upgrade_state in worker_upgrades.BLOCKING:
+            raise HTTPException(409,'cannot add a GPU during a node upgrade')
         if not slot and not worker.enabled:
             raise HTTPException(409, 'disabled node cannot register new GPUs')
         if not slot:
@@ -274,6 +278,7 @@ def install(app, db, current):
             s.add(slot)
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
+        slot.software = body.software.model_dump() if body.software else None
         slot.protocol_version = body.protocol_version
         slot.execution_modes = list(set(body.execution_modes)) if body.protocol_version >= 7 else ['docker']
         slot.client_images = body.client_images if body.protocol_version >= 3 else []
@@ -337,7 +342,7 @@ def install(app, db, current):
             return {'task': None, 'cleanup': []}
         if run.status == 'RESERVED':
             s.refresh(worker)
-            if not worker.enabled or not slot.enabled:
+            if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING:
                 return {'task': None, 'cleanup': []}
             job = s.get(Job, run.job_id)
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:

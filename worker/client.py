@@ -566,9 +566,10 @@ class Worker:
             self.runtime.close()
 
     def run(self, once=False):
+        from .version import PROTOCOL_VERSION, metadata
         hardware = device(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': 9, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': metadata(), 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
