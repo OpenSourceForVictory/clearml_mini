@@ -36,19 +36,27 @@ def preflight(endpoint, timeout):
 
 def main():
     try:
-        config = json.loads(Path(INPUT_PATH).read_text())
+        input_path = os.environ.get('MINI_EVAL_INPUT', INPUT_PATH)
+        output_dir = os.environ.get('MINI_EVAL_OUTPUT_DIR', OUTPUT_DIR)
+        config = json.loads(Path(input_path).read_text())
         if config['contract_version'] != VERSION:
             raise ValueError('unsupported client contract version')
-        Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
         print(json.dumps({'stage': 'connecting', 'task_name': config['task_name']}), flush=True)
         preflight(config['endpoint'], config['request_timeout_seconds'])
         print(json.dumps({'stage': 'connected'}), flush=True)
-        env = {**os.environ, 'MINI_EVAL_INPUT': INPUT_PATH, 'MINI_EVAL_OUTPUT_DIR': OUTPUT_DIR}
+        env = {**os.environ, 'MINI_EVAL_INPUT': input_path, 'MINI_EVAL_OUTPUT_DIR': output_dir}
         command, cwd = config['template']['command'], None
         if config['template'].get('runtime') is not None:
             from .image_runtime import resolve
             command, additions, cwd = resolve(config)
             env.update(additions)
+        if config['template'].get('execution_mode') == 'host':
+            command = config.get('_resolved_command', command)
+            env.update(config.get('_resolved_environment', {}))
+            cwd = env.get('MINI_EVAL_WORK_DIR')
+        if config['template'].get('integration_mode') == 'sdk-command':
+            command = [sys.executable, '-m', 'runner.command_sdk']
         code = subprocess.call(command, env=env, cwd=cwd)
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:

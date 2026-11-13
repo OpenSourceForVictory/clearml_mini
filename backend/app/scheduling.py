@@ -80,7 +80,9 @@ def eligibility_codes(slot, pool, job, held, at):
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
             or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
         return ['disk_capacity']
-    if job.client_spec and (slot.protocol_version < 3 or
+    if job.client_spec and (job.client_spec['template'].get('execution_mode') == 'host' or job.client_spec['template'].get('integration_mode') == 'sdk-command') and slot.protocol_version < 7:
+        return ['client_runtime']
+    if job.client_spec and job.client_spec['template'].get('execution_mode', 'docker') == 'docker' and (slot.protocol_version < 3 or
                             job.client_spec['template']['image'] not in (slot.client_images or [])):
         return ['client_image']
     if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:

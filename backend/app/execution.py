@@ -141,6 +141,8 @@ def install(app, db, current):
 
     from . import administration
     administration.install(app, db, admin)
+    from . import templates
+    templates.install(app, db, admin)
     storage_protocol.install(app, db, admin)
     image_runtime.install(app, db, admin, current)
     memberships.install(app, db, admin)

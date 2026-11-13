@@ -17,7 +17,10 @@ class TemplateCreate(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
-    image: str = Field(min_length=1, max_length=500, pattern=r'^[A-Za-z0-9][A-Za-z0-9_./:@-]*$')
+    image: str = Field(default='', min_length=0, max_length=500, pattern=r'^([A-Za-z0-9][A-Za-z0-9_./:@-]*)?$')
+    execution_mode: Literal['docker','host'] = 'docker'
+    integration_mode: Literal['direct','sdk-command'] = 'direct'
+    host_runtime: dict | None = None
     runtime: dict | None = None
     episode_reporting: bool = False
     endpoint_exclusive: bool = False
@@ -26,6 +29,16 @@ class TemplateCreate(BaseModel):
 
     @model_validator(mode="after")
     def valid_runtime(self):
+        from runner.template_contract import host_config
+        if self.execution_mode == 'host':
+            if self.image or self.runtime is not None:
+                raise ValueError('host templates must not specify Docker image/runtime')
+            self.host_runtime = host_config(self.host_runtime)
+            for text in self.command: image_runtime.placeholders(text,self.host_runtime['assets'])
+        elif not self.image or self.host_runtime is not None:
+            raise ValueError('Docker templates require an image and no host runtime')
+        if self.integration_mode == 'sdk-command':
+            self.episode_reporting = True
         if self.runtime is not None:
             self.runtime = image_runtime.validate(self.runtime, self.command)
         return self
@@ -96,14 +109,14 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived')}
 
 
 def snapshot(s, body, owner_id=None):
     if body is None:
         raise HTTPException(400, 'CS evaluation requires client configuration')
     t = s.get(ClientTemplate, body.template_id)
-    if not t or not t.enabled or (t.owner_id is not None and t.owner_id != owner_id):
+    if not t or not t.enabled or t.archived or (t.owner_id is not None and t.owner_id != owner_id):
         raise HTTPException(400, 'unknown or disabled client template')
     urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint]
     if any(endpoint_parts(url)[0].scheme not in t.protocols for url in urls):
@@ -112,10 +125,11 @@ def snapshot(s, body, owner_id=None):
         raise HTTPException(400, 'client timeout exceeds platform execution limit')
     try:
         if body.environment:
-            if t.runtime is None or set(body.environment) - set(t.runtime['overridable_env']):
+            runtime = t.host_runtime if t.execution_mode == 'host' else t.runtime
+            if runtime is None or set(body.environment) - set(runtime['overridable_env']):
                 raise ValueError('environment override is not allowed by this template')
             for value in body.environment.values():
-                image_runtime.placeholders(value, t.runtime['assets'])
+                image_runtime.placeholders(value, runtime['assets'])
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return {'contract_version': VERSION, **body.model_dump(exclude={'template_id'}, exclude_none=True), 'template': template_view(t)}
@@ -129,7 +143,7 @@ def install(app, db, current):
 
     @app.get('/api/v1/client-templates')
     def templates(user=Depends(current), s: Session = Depends(db)):
-        q = select(ClientTemplate).order_by(ClientTemplate.name, ClientTemplate.version)
+        q = select(ClientTemplate).where(ClientTemplate.archived.is_(False)).order_by(ClientTemplate.name, ClientTemplate.version)
         if user.role != 'admin':
             q = q.where(ClientTemplate.enabled, or_(ClientTemplate.owner_id.is_(None), ClientTemplate.owner_id == user.id))
         return [template_view(t) for t in s.scalars(q)]
@@ -145,6 +159,8 @@ def install(app, db, current):
 
     @app.post('/api/v1/client-templates', status_code=201)
     def create_private(body: TemplateCreate, user=Depends(current), s: Session = Depends(db)):
+        if body.execution_mode != 'docker':
+            raise HTTPException(403, 'host templates require administrator approval')
         if body.runtime is None:
             raise HTTPException(400, 'user image templates require runtime configuration')
         lock(s)
@@ -158,7 +174,7 @@ def install(app, db, current):
     def enable(template_id: str, body: TemplateState, user=Depends(admin), s: Session = Depends(db)):
         lock(s)
         t = s.get(ClientTemplate, template_id)
-        if not t:
+        if not t or t.archived:
             raise HTTPException(404, 'client template not found')
         t.enabled = body.enabled
         s.commit()

@@ -280,6 +280,10 @@ class ClientTemplate(Base):
     name: Mapped[str] = mapped_column(String(100))
     version: Mapped[str] = mapped_column(String(100))
     image: Mapped[str] = mapped_column(String(500))
+    execution_mode: Mapped[str] = mapped_column(String(20), default='docker', server_default='docker')
+    integration_mode: Mapped[str] = mapped_column(String(20), default='direct', server_default='direct')
+    host_runtime: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     runtime: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     command: Mapped[list] = mapped_column(JSON_TYPE)
     protocols: Mapped[list] = mapped_column(JSON_TYPE)
@@ -386,3 +390,15 @@ class DataCleanupItem(Base):
     authorized_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     receipt: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+
+
+class ServerTemplate(Base):
+    __tablename__ = 'server_templates'
+    __table_args__ = (UniqueConstraint('name', 'version'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    name: Mapped[str] = mapped_column(String(100))
+    version: Mapped[str] = mapped_column(String(100))
+    definition: Mapped[dict] = mapped_column(JSON_TYPE)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

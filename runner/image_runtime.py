@@ -41,7 +41,7 @@ def target(value):
 
 
 def placeholders(text, assets):
-    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir'} | {'assets:'+k for k in assets}
+    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port'} | {'assets:'+k for k in assets}
     if any(key not in allowed for key in TOKEN.findall(text)) or '${' in TOKEN.sub('', text):
         raise ValueError('unknown or malformed runtime placeholder')
 
@@ -82,7 +82,7 @@ def resolve(config):
     values.update({'assets:'+k: v for k, v in runtime['assets'].items()})
     def expand(text):
         placeholders(text, runtime['assets'])
-        return TOKEN.sub(lambda m: values[m[1]], text)
+        return TOKEN.sub(lambda m: values.get(m[1], m[0]), text)
     env = {k: expand(v) for k, v in {**runtime['environment'], **overrides}.items()}
     env.update(MINI_EVAL_INPUT=values['input_path'], MINI_EVAL_WORK_DIR=runtime['work_dir'], MINI_EVAL_OUTPUT_DIR=runtime['output_dir'],
                MINI_EVAL_TASK_NAME=values['task_name'], MINI_EVAL_EPISODES=values['episodes'], MINI_EVAL_SEED=values['seed'], MINI_EVAL_ENDPOINT=values['endpoint'])

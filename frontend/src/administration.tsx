@@ -4,18 +4,18 @@ import {Memberships} from './memberships';
 import {StorageSettings} from './storage';
 import {RuntimeSettings} from './image-runtime';
 import {ExecutionDataSettings} from './retention';
-import {ClientTemplates} from './cs';
+import {Templates} from './templates';
 
 type Machine={id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
 type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:boolean;max_tasks_per_gpu:number;vram_reserve_gb:number;max_gpu_utilization:number;min_vram_gb:number;cpu_per_job:number;ram_gb_per_job:number;member_count:number;pending_jobs:number;active_jobs:number};
 type Account={id:string;username:string;role:string;active:boolean};
-export function Field({label,children}:{label:string;children:React.ReactNode}) {return <label className="field">{label}{children}</label>}
+export function Field({label,children}:{label:string;children:React.ReactNode}) {const id=React.useId();return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>}
 const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管'};
 export function Admin() {
   const [tab,setTab]=useState('machines');
   return <><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
     <div className="tabs" role="tablist" aria-label="管理分类">{[['machines','机器管理'],['pools','资源池管理'],['templates','运行模板管理'],['accounts','账号管理']].map(([id,label])=><button key={id} role="tab" aria-selected={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>
-    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<ClientTemplates/>}{tab==='accounts'&&<Accounts/>}</>;
+    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='accounts'&&<Accounts/>}</>;
 }
 export function Machines() {
   const [nodes,setNodes]=useState<Machine[]>([]),[role,setRole]=useState('client'),[selected,setSelected]=useState(''),[register,setRegister]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
