@@ -138,7 +138,8 @@ def main():
         quote = lambda p: json.dumps(str(p).replace('%', '%%'))
         unit = '[Unit]\nDescription=Mini Eval Worker (%i)\nAfter=network-online.target\n\n[Service]\nType=simple\n'
         config_argument = json.dumps(str(conf).replace('%', '%%')+'/%i.json')
-        unit += f'ExecStart={quote(sys.executable)} -m worker.client --config {config_argument}\nWorkingDirectory={quote(app)}\n'
+        working_directory = str(app).replace('%', '%%')
+        unit += f'ExecStart={quote(sys.executable)} -m worker.client --config {config_argument}\nWorkingDirectory={working_directory}\n'
         unit += 'Restart=always\nRestartSec=5\nTimeoutStopSec=20\n\n[Install]\nWantedBy=default.target\n'
         (units/'mini-eval-worker@.service').write_text(unit)
     except (ValueError, OSError, subprocess.SubprocessError) as e:

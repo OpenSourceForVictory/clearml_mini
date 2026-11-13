@@ -1,0 +1,6 @@
+# Add a specific private interface while preserving the loopback browser listener.
+# Use after deploy/compose.yml; set WORKER_BIND_HOST in the environment file.
+services:
+  api:
+    ports:
+      - "${WORKER_BIND_HOST:?set the private Worker-facing IP}:${API_BIND_PORT:-8000}:8000"

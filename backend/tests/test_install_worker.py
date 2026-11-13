@@ -65,3 +65,24 @@ def test_check_is_readonly_and_install_rejects_live_instances(tmp_path, monkeypa
         with pytest.raises(SystemExit):
             main()
     assert not (conf/'gpu0.json').exists()
+
+
+def test_generated_service_is_accepted_by_systemd(tmp_path, monkeypatch):
+    import shutil
+    import subprocess
+    from scripts.install_worker import main
+    if not shutil.which('systemd-analyze'):
+        pytest.skip('systemd parser not available')
+    real_run = subprocess.run
+    home = tmp_path/'home with spaces % value'
+    home.mkdir()
+    config = tmp_path/'input.json'
+    config.write_text(json.dumps({'api_url':'http://test','token':'private','node_name':'host','runner_image':'runner','mock':True}))
+    monkeypatch.setattr('scripts.install_worker.Path.home', lambda:home)
+    monkeypatch.setattr('scripts.install_worker.identity', lambda c:None)
+    monkeypatch.setattr('scripts.install_worker.subprocess.run', lambda *a,**k:None)
+    monkeypatch.setattr('sys.argv',['installer','--config',str(config)])
+    main()
+    unit = home/'.config/systemd/user/mini-eval-worker@.service'
+    result = real_run(['systemd-analyze','verify',str(unit)],capture_output=True,text=True)
+    assert result.returncode == 0, result.stderr
