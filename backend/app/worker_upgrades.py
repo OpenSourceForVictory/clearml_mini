@@ -33,6 +33,10 @@ class Cancel(BaseModel):
     expected_revision:int=Field(ge=0)
 
 
+class Poll(BaseModel):
+    agent_digest:str|None=Field(default=None,pattern=r"^[a-f0-9]{64}$")
+
+
 class Report(BaseModel):
     model_config=ConfigDict(extra='forbid')
     status:Literal['VERIFYING','ROLLING_BACK','SUCCEEDED','FAILED']
@@ -91,6 +95,8 @@ def install(app,db,admin,worker_auth):
         lock(s);w=machine(s,identity)
         if body.expected_revision!=w.upgrade_revision:raise HTTPException(409,'upgrade changed; refresh')
         if w.upgrade_state in BLOCKING:raise HTTPException(409,'finish or cancel the current upgrade first')
+        from .enrollment import pending
+        if pending(w):raise HTTPException(409,'finish re-enrollment before upgrading')
         r=s.get(WorkerRelease,body.release_id)
         if not r:raise HTTPException(404,'release not found')
         devices=slots(s,w)
@@ -108,9 +114,12 @@ def install(app,db,admin,worker_auth):
         transition(w,i,'CANCELLED');audit(s,user,'worker-upgrade.cancel',w.id,{'upgrade_id':i.id});s.commit();return item_view(i)
 
     @app.post('/api/v1/worker/upgrades/poll')
-    def poll(worker=Depends(worker_auth),s=Depends(db)):
+    def poll(body:Poll=Poll(),worker=Depends(worker_auth),s=Depends(db)):
         lock(s);s.refresh(worker);worker.updater_seen_at=now();i=current(s,worker);devices=slots(s,worker)
         if i and i.status=='DRAINING' and all(online(x) and not held(s,x) for x in devices):transition(worker,i,'APPLYING')
+        record=(worker.connection or {}).get('enrollment',{})
+        if record.get('state')=='INSTALLING' and body.agent_digest:
+            worker.connection={**worker.connection,'enrollment':{**record,'agent_seen_digest':body.agent_digest}}
         result=None
         if i and (i.status in ('APPLYING','VERIFYING','ROLLING_BACK') or (i.status=='FAILED' and i.error=='rollback_failed')):
             result={**item_view(i),'release':release_view(s.get(WorkerRelease,i.release_id)),

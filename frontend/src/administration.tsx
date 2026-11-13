@@ -10,12 +10,13 @@ import {Templates} from './templates';
 import {HostEnvironments} from './host-environments';
 import {WorkerUpgrades} from './worker-upgrades';
 import {Services} from './services';
+import {ReEnrollment,NodePackage} from './node-enrollment';
 
-type Machine={id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
+type Machine={connection?:{enrollment?:{state:string}};id:string;node_name:string;roles:string[];enabled:boolean;status:string;management_revision:number;revoked_at:string|null;max_concurrent:number;cpu_capacity:number;ram_gb_capacity:number;gpu_count:number;held_executions:number};
 type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:boolean;max_tasks_per_gpu:number;vram_reserve_gb:number;max_gpu_utilization:number;min_vram_gb:number;cpu_per_job:number;ram_gb_per_job:number;member_count:number;pending_jobs:number;active_jobs:number};
 type Account={id:string;username:string;role:string;active:boolean};
 export {Field} from './form-fields';
-const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管'};
+const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管',enrolling:'重新纳管中'};
 export function Admin() {
   const [tab,setTab]=useState('machines');
   return <div className="administration"><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
@@ -49,10 +50,11 @@ export function Machines() {
     {role==='server'&&!register&&<Services nodes={nodes} workerId={selected||undefined}/>}
     {node&&!register&&<section key={node.id} ref={detailRef} id="machine-configuration" tabIndex={-1} aria-labelledby="machine-configuration-title" className="panel machine-configuration"><div className="row"><h2 id="machine-configuration-title">{node.node_name} · 配置详情</h2><button onClick={()=>setSelected('')}>关闭详情</button></div>
       <p>{status[node.status]} · 角色变更和解除纳管需要等待执行清理完成。</p>
+      {(node.revoked_at||node.connection?.enrollment?.state==='INSTALLING')&&<ReEnrollment id={node.id} revision={node.management_revision} revoked={Boolean(node.revoked_at)} onChange={refresh}/>}
       {!node.revoked_at&&<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>
         <fieldset><legend>机器角色</legend>{[['client','客户端'],['server','服务端']].map(([r,label])=><label key={r}><input type="checkbox" name="roles" value={r} defaultChecked={node.roles.includes(r)}/>{label}</label>)}</fieldset>
         <div className="row"><Field label="并发上限"><input name="max_concurrent" type="number" min={1} defaultValue={node.max_concurrent} required/></Field><Field label="CPU 核数"><input name="cpu_capacity" type="number" min={1} defaultValue={node.cpu_capacity} required/></Field><Field label="内存 GiB"><input name="ram_gb_capacity" type="number" min={1} defaultValue={node.ram_gb_capacity} required/></Field></div><button disabled={busy}>保存配置</button></form>
-        <div className="row"><button disabled={busy} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
+        <div className="row"><button disabled={busy||node.connection?.enrollment?.state==='INSTALLING'} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
         <button className="danger" disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
         <WorkerUpgrades id={node.id}/><HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
     </section>}</>;
@@ -61,7 +63,8 @@ function ManualRegistration({role,onChange}:{role:string;onChange:()=>Promise<un
   const [credential,setCredential]=useState<{token:string;node_name:string}|null>(null),[error,setError]=useState('');
   return <section className="panel"><h2>手动接入配置</h2><p>生成一次性展示的 Worker 凭据，再通过安装器接入。新机器默认不加入资源池。</p>{error&&<p role="alert">{error}</p>}
     <form onSubmit={async e=>{e.preventDefault();try{const f=new FormData(e.currentTarget);setCredential(await api('admin/worker-credentials','POST',{node_name:f.get('name'),roles:[role]}));await onChange()}catch(e){setError(String(e))}}}><Field label="机器名称"><input name="name" pattern="[a-zA-Z0-9_.-]+" required/></Field><button>生成 Worker 凭据</button></form>
-    {credential&&<form onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const health=await api<{runner_image:string}>('admin/health');const url=URL.createObjectURL(new Blob([JSON.stringify({api_url:f.get('url'),token:credential.token,node_name:credential.node_name,pool_id:null,gpu_index:0,mock:false,runner_image:health.runner_image},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='worker-'+credential.node_name+'.json';a.click();URL.revokeObjectURL(url)}catch(e){setError(String(e))}}}><Field label="Worker 可访问的 API 地址"><input name="url" type="url" required placeholder="http://平台内网IP:18000"/></Field><p>浏览器使用 SSH 转发时，不要填浏览器的 localhost 地址。</p><button>下载接入配置</button></form>}
+    {credential&&<NodePackage credential={credential}/>}
+
   </section>;
 }
 function PoolFields({pool}:{pool?:Pool}) {return <><Field label="名称"><input name="name" defaultValue={pool?.name} required maxLength={100}/></Field>{!pool&&<Field label="设备类型"><select name="gpu_model"><option value="*">物理 GPU（允许不同型号）</option><option value="virtual">模拟设备</option></select></Field>}

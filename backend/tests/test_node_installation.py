@@ -1,0 +1,100 @@
+import hashlib
+import io
+import json
+from pathlib import Path
+from types import SimpleNamespace
+import zipfile
+import pytest
+from backend.tests.test_updater_executor import fixture
+from scripts import install_node, deploy_node
+from backend.app.worker_upgrades import build_release
+
+
+def setup(tmp_path,monkeypatch):
+    updater,_,credential,_,_=fixture(tmp_path)
+    # fixture uses a fake API; installer verifies the actual configured identity.
+    root=tmp_path/'bundle';root.mkdir();release=build_release()
+    (root/'worker-release.zip').write_bytes(release.archive);(root/'release.sha256').write_text(release.id)
+    value=json.loads(credential.read_text());new={**value,'token':'new-private'}
+    monkeypatch.setattr(install_node,'ROOT',root)
+    monkeypatch.setattr(install_node,'identity',lambda c:None)
+    monkeypatch.setattr(install_node.API,'request',lambda *a,**kw:{'enrollment_state':'INSTALLING','enabled':False,'gpu_indices':[value.get('gpu_index',0)],'release_id':release.id})
+    monkeypatch.setattr(install_node,'control_updater',lambda *a,**kw:None)
+    monkeypatch.setattr(install_node,'install_updater',lambda *a,**kw:None)
+    monkeypatch.setattr(install_node.Updater,'control',lambda *a,**kw:None)
+    updater.config['services']=[{'scope':'system','name':'mini-eval-worker-nfs.service'}]
+    monkeypatch.setattr(install_node.os,'geteuid',lambda:0)
+    return updater,credential,new,release
+
+
+def test_complete_replace_preserves_local_settings_and_old_service(tmp_path,monkeypatch):
+    u,path,new,r=setup(tmp_path,monkeypatch)
+    old=json.loads(path.read_text());old['workspace_root']='/mnt/eval-share/work';old['assets']={'robotwin':'/mnt/asset'};path.write_text(json.dumps(old))
+    services=list(u.config['services']);seen=[]
+    monkeypatch.setattr(install_node,'install_updater',lambda layout,system:seen.append((layout,system)))
+    install_node.replace_existing(u.config,new)
+    assert json.loads(path.read_text())=={**old,'token':new['token']}
+    assert seen[0][1] and seen[0][0]['services']==services
+    assert (u.app/'worker/updater.py').exists() and (u.app/'runner/sdk.py').exists()
+    assert json.loads((u.app/'.worker-release.json').read_text())['sha256']==r.id
+
+
+def test_install_failure_restores_code_and_credentials(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch);original=path.read_bytes();code=(u.app/'worker/client.py').read_bytes()
+    monkeypatch.setattr(install_node,'install_updater',lambda *a:(_ for _ in ()).throw(ValueError('failed')))
+    with pytest.raises(ValueError):install_node.replace_existing(u.config,new)
+    assert json.loads(path.read_bytes())==json.loads(original)
+    assert (u.app/'worker/client.py').read_bytes()==code
+
+
+def test_local_journal_blocks_replacement(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch);original=path.read_bytes();code=(u.app/'worker/client.py').read_bytes()
+    state=Path(json.loads(original)['state_path']);state.write_text('{"execution":"unfinished"}')
+    with pytest.raises(ValueError,match='journal'):install_node.replace_existing(u.config,new)
+    assert path.read_bytes()==original and (u.app/'worker/client.py').read_bytes()==code
+    assert json.loads(state.read_text())['execution']=='unfinished'
+
+
+def test_wrong_identity_and_missing_gpu_rejected_before_stopping(tmp_path,monkeypatch):
+    u,_,new,_=setup(tmp_path,monkeypatch)
+    with pytest.raises(ValueError,match='identity'):install_node.replace_existing(u.config,{**new,'node_name':'wrong'})
+    monkeypatch.setattr(install_node.API,'request',lambda *a,**kw:{'enrollment_state':'INSTALLING','enabled':False,'gpu_indices':[999]})
+    with pytest.raises(ValueError,match='GPU'):install_node.replace_existing(u.config,new)
+
+
+def test_ssh_transfer_private_stdin_cleanup_and_host_validation(tmp_path,monkeypatch):
+    from backend.app.enrollment import bundle
+    data,_,_=bundle();archive=tmp_path/'node.zip';archive.write_bytes(data);secret=tmp_path/'credential.json';secret.write_text('{"token":"sensitive"}')
+    calls=[]
+    def run(argv,**kw):
+        calls.append((argv,kw));return SimpleNamespace(stdout=b'/tmp/mini-eval-node.abcdefgh\n')
+    monkeypatch.setattr(deploy_node.subprocess,'run',run)
+    deploy_node.deploy(archive,secret,hashlib.sha256(data).hexdigest(),'user@host',installer_args=['--existing'])
+    assert all('StrictHostKeyChecking=yes' in argv for argv,kw in calls)
+    assert all('sensitive' not in str(argv) for argv,kw in calls)
+    assert any(kw.get('input')==secret.read_bytes() for argv,kw in calls)
+    assert calls[-1][0][-1].startswith('rm -rf -- /tmp/mini-eval-node.')
+    with pytest.raises(ValueError):deploy_node.deploy(archive,secret,'0'*64,'user@host')
+    with pytest.raises(ValueError):deploy_node.deploy(archive,secret,hashlib.sha256(data).hexdigest(),'-oProxyCommand=bad')
+
+
+def test_bundle_traversal_rejected_before_ssh(tmp_path):
+    out=io.BytesIO()
+    with zipfile.ZipFile(out,'w') as z:z.writestr('../escape','x')
+    data=out.getvalue()
+    with pytest.raises(ValueError,match='member'):deploy_node.validate_bundle(data,hashlib.sha256(data).hexdigest())
+
+
+def test_ssh_timeout_still_cleans_remote_private_directory(tmp_path,monkeypatch,capsys):
+    import subprocess
+    from backend.app.enrollment import bundle
+    data,_,_=bundle();archive=tmp_path/'node.zip';archive.write_bytes(data);secret=tmp_path/'credential.json';secret.write_text('{"token":"sensitive"}')
+    calls=[]
+    def run(argv,**kw):
+        calls.append(argv)
+        if 'install_node.py' in argv[-1]: raise subprocess.TimeoutExpired(argv,300)
+        return SimpleNamespace(stdout=b'/tmp/mini-eval-node.abcdefgh\n')
+    monkeypatch.setattr(deploy_node.subprocess,'run',run)
+    with pytest.raises(subprocess.TimeoutExpired):deploy_node.deploy(archive,secret,hashlib.sha256(data).hexdigest(),'user@host')
+    assert calls[-1][-1].startswith('rm -rf -- /tmp/mini-eval-node.')
+    assert 'sensitive' not in capsys.readouterr().out

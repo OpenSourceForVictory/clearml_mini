@@ -179,7 +179,7 @@ class Updater:
         if stage.exists():shutil.rmtree(stage)
 
     def step(self):
-        job=self.api.request('worker/upgrades/poll')['upgrade']
+        job=self.api.request('worker/upgrades/poll',{'agent_digest':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})['upgrade']
         if self.journal.exists():
             record=json.loads(self.journal.read_text())
             if record['phase']=='done' and record.get('error')!='rollback_failed':

@@ -21,10 +21,10 @@ test('poolless onboarding and grouped membership selection survive polling',asyn
   await page.getByRole('button',{name:'注册新机器'}).click();
   await page.getByLabel('机器名称',{exact:true}).fill('newhost');
   await page.getByRole('button',{name:'生成 Worker 凭据'}).click();
-  await expect(page.getByText('浏览器使用 SSH 转发时，不要填浏览器的 localhost 地址。')).toBeVisible();
-  await page.getByLabel('Worker 可访问的 API 地址').fill('http://192.168.137.223:18000');
+  await expect(page.getByText(/SSH 转发访问页面时，此处仍需填写节点能够访问的地址/)).toBeVisible();
+  await page.getByLabel('节点可访问的 API 地址').fill('http://192.168.137.223:18000');
   const download=page.waitForEvent('download');
-  await page.getByRole('button',{name:'下载接入配置'}).click();
+  await page.getByRole('button',{name:'下载本次接入凭据'}).click();
   const d=await download;const stream=await d.createReadStream();let text='';for await(const chunk of stream!)text+=chunk;
   expect(JSON.parse(text)).toMatchObject({pool_id:null,mock:false,api_url:'http://192.168.137.223:18000'});
   await page.getByRole('tab',{name:'资源池管理'}).click();await page.getByRole('tab',{name:'成员分配'}).click();

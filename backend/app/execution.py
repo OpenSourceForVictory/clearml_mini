@@ -144,6 +144,8 @@ def install(app, db, current):
 
     from . import administration
     administration.install(app, db, admin)
+    from . import enrollment
+    enrollment.install(app, db, admin)
     from . import templates
     templates.install(app, db, admin)
     host_environments.install(app, db, admin)
@@ -157,8 +159,8 @@ def install(app, db, current):
     install_retention(app, db, admin, current, worker_auth)
 
     @app.get("/api/v1/worker/self")
-    def worker_self(worker=Depends(worker_auth)):
-        return {"id": worker.id, "node_name": worker.node_name, "capabilities": ["poolless_registration", "managed_membership", "storage_v4", "runtime_v5", "retention_v6"]}
+    def worker_self(worker=Depends(worker_auth), s: Session = Depends(db)):
+        return {"id": worker.id, "node_name": worker.node_name, "enabled":worker.enabled, "enrollment_state":(worker.connection or {}).get("enrollment",{}).get("state"), "release_id":(worker.connection or {}).get("enrollment",{}).get("release_id"), "gpu_indices": [x.gpu_index for x in s.scalars(select(Slot).where(Slot.worker_id==worker.id))], "capabilities": ["poolless_registration", "managed_membership", "storage_v4", "runtime_v5", "retention_v6"]}
 
     def slot_for(s, slot_id, worker):
         slot = s.get(Slot, slot_id)

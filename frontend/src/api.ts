@@ -1,4 +1,7 @@
 const errors: Record<string, string> = {
+  "machine disabled; wait for execution cleanup before unmanaging": "机器已停止接新任务，请等待现有执行与服务清理完成后再次解除纳管",
+  "unmanage the node before re-enrolling": "请先解除原机器纳管，再重新接入",
+  "finish re-enrollment before upgrading": "请先完成重新纳管，再发起在线升级",
   "batch control changed; refresh before retrying": "批次控制已变化，本次操作未执行，请核对最新状态",
   "suite not found": "评测集合不存在或无权访问",
   "suite must be published and not archived": "请选择已发布且未归档的集合",
@@ -16,7 +19,10 @@ const errors: Record<string, string> = {
   "pending limit": "排队任务已达上限，请等待部分任务完成",
   "previous execution cleanup is not confirmed":
     "正在等待 Worker 确认旧容器已停止，暂时无法重试",
-  "node already provisioned": "该机器名称已注册",
+  "node already provisioned": "该机器名称已注册；已解除的机器请从原机器详情进入重新纳管",
+  "finish re-enrollment verification before enabling": "请先完成全部 Worker 和升级执行器的回连验收",
+  "all original GPU workers and the updater must reconnect with the installation bundle": "原机器的全部 GPU 和升级执行器尚未通过安装包版本验证",
+  "machine configuration changed; refresh": "机器状态已变化，请刷新后重试",
   "username already exists": "用户名已存在",
   "pool name already exists": "资源池名称已存在",
 };
