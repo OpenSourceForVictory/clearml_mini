@@ -1,0 +1,938 @@
+[
+  {
+    "mode": "docker",
+    "access": "exclusive",
+    "batches": [
+      "e2af5427-0b51-4d98-97dd-a57cd70dec73",
+      "ff3e3953-dda2-4fb9-9fcc-fd904ffe2add"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "1d86121b-a67c-4b86-bc4f-cd968fb002c4",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "e8e65e0e-05a3-4a26-a88f-9f32c39ffb45",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "cc5638c1-d23d-4af2-bc59-41611869607f",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "dbe3aece-f85f-4afd-a31b-9e002a1665b8",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "a64b7c7a-aa71-4599-880f-b73ba591a8d7",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:53355",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "675d0d01-8b09-4d05-81f4-0ebac205468b",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "docker-host",
+    "access": "exclusive",
+    "batches": [
+      "b1354fcc-95e6-4030-bd93-60b19e2eafc4",
+      "edfc6274-0928-4b62-9a1c-c02baf111f45"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "7d4cb205-020d-4a09-864b-c2e784278f7b",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "6c081ab7-e23d-4ad8-be67-b7713ca91ed0",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "1ce621a3-f9fa-49c6-90ce-d338c82de037",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "b1b74290-cbd3-49a9-a6dd-1c3e39e955f8",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "1e19bd42-c2cb-4c11-bb86-ec1fd2edb7c2",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:35745",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "761381c1-c98e-487a-834c-e95437e9dba0",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "docker-host",
+    "access": "shared",
+    "batches": [
+      "43b0da21-3ca4-44a0-9e9f-694541c4bfeb",
+      "4cf98282-18d1-48fc-ac45-3daf2db053a8"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "89cf8991-ed6d-47d3-a140-d4133b698ace",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "34057415-cf30-408e-95a4-1ce8f6d6a4a7",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "54179b8e-6cde-4e37-bf26-45aef189794e",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "9ad145db-b54f-48d5-ad01-dbd99560917a",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "8385b9a1-c685-405c-90c6-94e555603ed1",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:49745",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "e3764a4f-e717-49d7-af8c-3e6762e37e94",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "docker",
+    "access": "shared",
+    "batches": [
+      "67d7ba49-75e1-4cd9-946a-371fe90c316d",
+      "955e77c6-0dea-451f-ae5d-8fe5144df1ea"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "8aae1ffb-3976-43da-a69e-4e8af661cbb7",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "a6179b1e-d8de-40a5-80a3-5d297bba4ae4",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "54909cd8-25f6-4d61-ad99-d67a23ec6884",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "d74f7faf-e973-4889-a694-2225a2a05ead",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "999e16b6-f086-41e2-af53-81c72d68f30d",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:56059",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "2d42093a-8800-4c16-a579-019e1882824e",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "host-docker",
+    "access": "exclusive",
+    "batches": [
+      "da4ee98d-f783-484c-a7de-6ad16f7478d2",
+      "4ff039ad-6f9b-4c79-92d8-8a8adaf3217c"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "ae70f28d-8089-45a1-831b-d02d128c36cf",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "a616e9fe-a7a6-4bed-bd68-2adc49c4e5dd",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "f159290e-85ab-454c-93bc-f9122805cc4f",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "1ccf0616-a9d8-492b-9757-40d7acf7c04a",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "7ccc3e75-405d-486e-9ae7-872f21df8aae",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:45413",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "558543f5-e26c-48c7-a83e-4b773b30af16",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "host-docker",
+    "access": "shared",
+    "batches": [
+      "4d22e01e-7a1e-4a44-906d-240f6b0b00be",
+      "13911a33-6def-481e-aa8e-3196c0f292da"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "fafd5ba5-7a27-4447-a8a2-21c55fec8b01",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "5ad50903-9698-44e1-897a-1f6c66f4b23d",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "4df609b2-773f-4335-b5c3-019fd8307986",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "f2e7f725-8779-4f3a-bb80-8f5b27810ecd",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "8951aec6-d4ec-4a53-a8e4-11e8e7f30638",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:60715",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "f791982e-9378-4b23-ab45-e39ab0f423e1",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "host",
+    "access": "exclusive",
+    "batches": [
+      "bb559127-22db-40dc-b596-997c2254407a",
+      "76f7dc8a-21ec-4332-96f9-86ced48e0499"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "591166f4-8c22-408b-96b4-51d9a8563a2b",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "ef0dae26-0aee-43ad-8745-488e31bf5814",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "0d2d9658-1ea0-4106-99b5-08cc8b357012",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "69e6945a-20e9-46b2-9742-9f45f6c81977",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "5cb4d772-d546-4178-8e6f-488e133c6395",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:40383",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "056d4553-3afd-4604-91aa-f59f162b35a2",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "mode": "host",
+    "access": "shared",
+    "batches": [
+      "1bf67f80-cebf-4cd1-8acf-fb4381e99377",
+      "2a693441-dba5-4128-8288-bec519bb5d23"
+    ],
+    "clients": 6,
+    "services": 2,
+    "executions": 8,
+    "all_succeeded": true,
+    "cleanup_pending": 0,
+    "echoes": [
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "c2a48e7e-4743-4626-b3ea-863647e17d0d",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "75be5f84-5bf0-4486-8828-ac588ecc29ea",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "47e00e2d-7cd2-4b06-946c-85726b786471",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      },
+      {
+        "case": "0",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 0
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "0",
+            "execution_id": "5f1d4d74-c69b-471e-979f-c48b59e1739c",
+            "parameters": {
+              "variant": 0
+            }
+          }
+        }
+      },
+      {
+        "case": "1",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 1
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "1",
+            "execution_id": "3d86b0de-eca3-4a89-8419-cf54c682f448",
+            "parameters": {
+              "variant": 1
+            }
+          }
+        }
+      },
+      {
+        "case": "2",
+        "endpoint": "http://192.168.8.151:58531",
+        "business": {
+          "variant": 2
+        },
+        "server": {
+          "model": "test-model",
+          "received": {
+            "case_id": "2",
+            "execution_id": "11948dc9-060a-4c87-8649-2613527fce12",
+            "parameters": {
+              "variant": 2
+            }
+          }
+        }
+      }
+    ]
+  }
+]

@@ -42,7 +42,7 @@ time.sleep(0.5)
 print(json.dumps({'verified_input':{'case':config['task']['case_id'],'endpoint':url,'business':config['business'],'server':data}}),flush=True)
 '''
 
-@pytest.mark.parametrize('mode',['host','docker'])
+@pytest.mark.parametrize('mode',['host','docker','host-docker','docker-host'])
 @pytest.mark.parametrize('access',['shared','exclusive'])
 def test_real_two_logical_nodes_three_cases_multiple_batches(env,monkeypatch,tmp_path,mode,access):
     main,c,a=env;st,ss,ct,cs,body=setup(env,monkeypatch)
@@ -52,13 +52,15 @@ def test_real_two_logical_nodes_three_cases_multiple_batches(env,monkeypatch,tmp
     image='mini-eval-orchestration-test:'+tmp_path.name.lower()
     (tmp_path/'server.py').write_text(SERVER);(tmp_path/'client.py').write_text(CLIENT)
     profile={'python':'/usr/bin/python3','code_root':str(tmp_path)}
-    if mode=='docker':
+    if 'docker' in mode:
         (tmp_path/'Dockerfile').write_text('FROM mini-eval-client-base:1\nCOPY server.py client.py /demo/\n')
         subprocess.run(['docker','build','--network=none','-t',image,str(tmp_path)],check=True,capture_output=True)
-    common={'execution_mode':mode,'version':access,'name':mode+'-'+access}
-    runtime={'host_runtime':{'environment_name':'demo'}} if mode=='host' else {'image':image,'runtime':{}}
-    client={**common,**runtime,'name':'client-'+common['name'],'task_type':'command','command':['python3',('' if mode=='host' else '/demo/')+'client.py']}
-    server={**common,**runtime,'name':'server-'+common['name'],'command':['python3',('' if mode=='host' else '/demo/')+'server.py'],'startup_timeout':20}
+    client_mode,server_mode=mode.split('-') if '-' in mode else (mode,mode)
+    def definition(kind,execution_mode):
+        runtime={'host_runtime':{'environment_name':'demo'}} if execution_mode=='host' else {'image':image,'runtime':{}}
+        return {**runtime,'execution_mode':execution_mode,'version':access,'name':kind+'-'+mode+'-'+access,'command':['python3',('' if execution_mode=='host' else '/demo/')+kind+'.py']}
+    client={**definition('client',client_mode),'task_type':'command'}
+    server={**definition('server',server_mode),'startup_timeout':20}
     for kind,definition in [('client',client),('server',server)]:
         response=c.post('/api/v1/admin/'+kind+'-templates',headers=a['admin'],json=definition);assert response.status_code==201,response.text
         if kind=='client':body['client']['template_id']=response.json()['id']
@@ -131,4 +133,4 @@ def test_real_two_logical_nodes_three_cases_multiple_batches(env,monkeypatch,tmp
             thread.join(timeout=20)
             try:worker.remove(task['execution_id'])
             except Exception:pass
-        if mode=='docker':subprocess.run(['docker','image','rm',image],capture_output=True)
+        if 'docker' in mode:subprocess.run(['docker','image','rm',image],capture_output=True)

@@ -7,7 +7,7 @@ from sqlalchemy import select,text
 from sqlalchemy.engine import make_url
 from backend.tests.test_execution import env
 from backend.tests.test_orchestrations import setup
-from backend.app.core import Base,User,Pool,Run,ServiceInstance,EvaluationBatch,Job,session_factory
+from backend.app.core import Base,User,Pool,Run,ServiceInstance,EvaluationBatch,Job,Slot,session_factory
 from backend.app.scheduling import tick
 
 pytestmark=pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'),reason='dedicated PostgreSQL is required')
@@ -26,7 +26,7 @@ def test_joint_reservation_and_submission_race(env,monkeypatch):
             for u in old.scalars(select(User)):s.add(User(id=u.id,username=u.username,role=u.role,password_hash=u.password_hash))
             s.add(Pool(id='mock',name='mock',gpu_model='virtual'));s.commit()
         monkeypatch.setattr(main,'SessionLocal',factory)
-        *_,body=setup(env,monkeypatch)
+        st,ss,ct,cs,body=setup(env,monkeypatch)
         barrier=Barrier(4)
         def submit(_):
             barrier.wait();return c.post('/api/v1/orchestrations',headers={**a['alice'],'Idempotency-Key':'race'},json=body)
@@ -44,6 +44,22 @@ def test_joint_reservation_and_submission_race(env,monkeypatch):
             assert len(runs)==2 and sum(r.waiting_service for r in runs)==1
             assert len({r.execution_id for r in runs})==2
             assert len(list(s.scalars(select(Job))))==4
+        # A second server slot on the same physical node must reserve a new
+        # port, even when multiple schedulers race for another batch.
+        response=c.post('/api/v1/worker/register',headers=st,json={'pool_id':'mock','gpu_index':1,'gpu_uuid':'mock:server:1','gpu_model':'virtual','vram_gb':0})
+        assert response.status_code==200,response.text
+        with factory() as s:
+            old=s.get(Slot,ss);slot=s.get(Slot,response.json()['slot_id'])
+            for key in ('protocol_version','client_images','storage_report','storage_reported_at','runtime_report','runtime_reported_at'):
+                setattr(slot,key,getattr(old,key))
+            s.commit()
+        assert c.post('/api/v1/orchestrations',headers={**a['alice'],'Idempotency-Key':'second'},json=body).status_code==201
+        barrier=Barrier(8)
+        with ThreadPoolExecutor(max_workers=8) as executor:results=list(executor.map(schedule,range(8)))
+        assert sum(results)==2
+        with factory() as s:
+            instances=list(s.scalars(select(ServiceInstance)))
+            assert len(instances)==2 and len({(i.worker_id,i.port) for i in instances})==2
     finally:
         factory.kw['bind'].dispose()
         with admin() as s:s.execute(text('DROP SCHEMA '+schema+' CASCADE'));s.commit()
