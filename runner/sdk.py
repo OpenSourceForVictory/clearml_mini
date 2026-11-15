@@ -40,6 +40,20 @@ class Context:
     output_dir: Path
 
     @property
+    def input(self):
+        from .task_input import build
+        return self.config if self.config.get('input_version') == 1 else build(self.config)
+
+    @property
+    def business(self):
+        return self.input['business']
+
+    @property
+    def service_endpoint(self):
+        service = self.input['platform'].get('service')
+        return service['endpoint'] if service else None
+
+    @property
     def work_dir(self):
         return Path(os.environ.get('MINI_EVAL_WORK_DIR', str(self.output_dir.parent/'work')))
 

@@ -14,8 +14,8 @@ def environment(value):
     if not isinstance(value, dict) or len(value) > 64:
         raise ValueError('environment must contain at most 64 variables')
     for key, text in value.items():
-        if not ENV.fullmatch(key) or key.startswith(('MINI_EVAL_', 'NVIDIA_')) or key in ('CUDA_VISIBLE_DEVICES', 'PYTHONPATH', 'PYTHONHOME'):
-            raise ValueError('invalid or reserved environment variable: ' + key)
+        if not isinstance(key,str) or not ENV.fullmatch(key) or key.startswith(('MINI_EVAL_', 'NVIDIA_', 'ASCEND_')) or key in ('CUDA_VISIBLE_DEVICES', 'ROCR_VISIBLE_DEVICES', 'HIP_VISIBLE_DEVICES', 'PYTHONPATH', 'PYTHONHOME'):
+            raise ValueError('invalid or reserved environment variable: ' + str(key))
         if not isinstance(text, str) or len(text) > 4096 or '\x00' in text:
             raise ValueError('environment values must be strings of at most 4096 characters')
     if sum(len(k)+len(v) for k, v in value.items()) > 16384:

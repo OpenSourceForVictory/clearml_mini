@@ -14,7 +14,8 @@ VERSION = 1
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 TYPES = {'string', 'integer', 'number', 'boolean', 'enum', 'object', 'array'}
 RESERVED = {'task_name', 'episodes', 'seed', 'endpoint', 'execution_id', 'input_path',
-            'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host'}
+            'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host',
+            'platform', 'task', 'business', 'resources', 'job_id', 'input_version'}
 
 
 def encoded(value):
@@ -131,23 +132,41 @@ def validate_schema(schema):
     return deepcopy(schema)
 
 
-def resolve_values(schema, values=None, overrides=None):
+def resolve_layers(schema, layers=(), overrides=None):
+    """Resolve named, partial layers without mutating them; objects replace whole.
+
+    Required fields are checked only after all layers; supplied values are checked
+    at each layer so an invalid value cannot be concealed by a later override.
+    """
     schema=validate_schema(schema)
-    values={} if values is None else values
     overrides={} if overrides is None else overrides
-    if not isinstance(values,dict) or not isinstance(overrides,dict): raise ValueError('parameter values must be objects')
+    if not isinstance(overrides,dict): raise ValueError('parameter overrides must be an object')
     fields=schema['fields']
-    if (set(values)|set(overrides))-set(fields): raise ValueError('unknown business parameter fields')
+    if set(overrides)-set(fields): raise ValueError('unknown business parameter fields')
     for name in overrides:
         if not fields[name].get('overridable',False): fail(name, 'runtime override is not allowed')
     result={k:deepcopy(f['default']) for k,f in fields.items() if 'default' in f}
-    result.update(deepcopy(values)); result.update(deepcopy(overrides))
+    sources={k:'template' for k in result}
+    seen={'template','override'}
+    for source,values,is_override in [(k,v,False) for k,v in layers]+[('override',overrides,True)]:
+        if not isinstance(source,str) or not source or len(source)>100: raise ValueError('invalid parameter source')
+        if not is_override and source in seen: raise ValueError('duplicate or reserved parameter source')
+        seen.add(source)
+        if not isinstance(values,dict): raise ValueError('parameter values must be objects')
+        if set(values)-set(fields): raise ValueError('unknown business parameter fields')
+        for name,value in values.items():
+            check(value,fields[name],source+'.'+name)
+            result[name]=deepcopy(value);sources[name]=source
     for name, field in fields.items():
         if name not in result:
             if field.get('required',False): fail(name,'required')
         else: check(result[name],field,name)
     encoded(result)
-    return result
+    return result,sources
+
+
+def resolve_values(schema, values=None, overrides=None):
+    return resolve_layers(schema,[('values',{} if values is None else values)],overrides)[0]
 
 
 def bind_values(schema, values, command, env=None):
