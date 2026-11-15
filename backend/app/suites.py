@@ -63,9 +63,9 @@ def install(app, db, current):
         try:
             json_tree([c.model_dump() for c in body.cases])
             if template.parameter_schema is not None:
-                from runner.parameter_contract import resolve_values
+                from runner.parameter_contract import resolve_layers
                 for case in body.cases:
-                    try: resolve_values(template.parameter_schema, case.parameters)
+                    try: resolve_layers(template.parameter_schema,[('suite',body.client_defaults),('case',case.parameters)])
                     except ValueError as exc: raise ValueError(f'case {case.case_id}: {exc}') from exc
         except ValueError as e:
             raise HTTPException(400, str(e))
@@ -129,7 +129,7 @@ def install(app, db, current):
     def export(id:str,user=Depends(current),s=Depends(db)):
         x=owned(s,id,user);t=s.get(ClientTemplate,x.template_id)
         return dict(schema_version=1,name=x.name,version=x.version,description=x.description,tags=x.tags,source=x.source,
-                    client={'name':t.name,'version':t.version},cases=x.cases)
+                    client={'name':t.name,'version':t.version},defaults={'parameters':x.client_defaults},cases=x.cases)
 
     @app.post('/api/v1/suites/{id}/clone',status_code=201)
     def clone(id:str,body:Copy,user=Depends(current),s=Depends(db)):

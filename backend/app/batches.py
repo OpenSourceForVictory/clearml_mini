@@ -10,6 +10,7 @@ from .clients import ClientRequest, snapshot
 from .core import ClientTemplate, EvaluationSuite, EvaluationBatch, Event, Job, Pool, Run, User
 from .scheduling import ACTIVE, TERMINAL, lock
 from .episodes import progress
+from .job_resources import Request as ResourceRequest
 
 
 class Case(BaseModel):
@@ -19,6 +20,15 @@ class Case(BaseModel):
     episodes: int = Field(ge=1, le=10000)
     seed: int = Field(default=0, ge=0, le=2147483647)
     parameters: dict = Field(default_factory=dict)
+    service_keys: list[str] = Field(default_factory=list,max_length=100)
+    resources: ResourceRequest = Field(default_factory=ResourceRequest)
+
+    @model_validator(mode='after')
+    def valid_service_keys(self):
+        import re
+        if len(set(self.service_keys))!=len(self.service_keys) or any(not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}',x) for x in self.service_keys):
+            raise ValueError('service keys must be unique logical names')
+        return self
 
 
 class BatchClient(ClientRequest):
@@ -36,6 +46,7 @@ class BatchSubmit(BaseModel):
     max_concurrent: int = Field(default=1, ge=1, le=100)
     suite_id: Optional[str] = None
     cases: list[Case] = Field(default_factory=list, max_length=100)
+    resources: ResourceRequest = Field(default_factory=ResourceRequest)
 
     @model_validator(mode='after')
     def unique_cases(self):
@@ -50,6 +61,7 @@ class SuiteCreate(BaseModel):
     version: str = Field(min_length=1, max_length=100)
     template_id: str
     cases: list[Case] = Field(min_length=1, max_length=100)
+    client_defaults: dict = Field(default_factory=dict)
 
     @model_validator(mode='after')
     def unique_cases(self):
@@ -57,11 +69,12 @@ class SuiteCreate(BaseModel):
             raise ValueError('duplicate case_id in manifest')
         for c in self.cases:
             ClientRequest.bounded_parameters(c.parameters)
+        ClientRequest.bounded_parameters(self.client_defaults)
         return self
 
 
 def suite_view(suite):
-    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source')}
+    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source','client_defaults')}
 
 
 def batch_view(s, batch, jobs=None, progresses=None):
@@ -93,6 +106,7 @@ def batch_view(s, batch, jobs=None, progresses=None):
 def resolve_batch(s, body, user):
     """Resolve and validate without mutating the request or persisting records."""
     cases = list(body.cases)
+    defaults={}
     if body.suite_id:
         suite = s.get(EvaluationSuite, body.suite_id)
         if not suite or suite.owner_id != user.id:
@@ -102,15 +116,12 @@ def resolve_batch(s, body, user):
         if body.cases or body.client.template_id != suite.template_id:
             raise HTTPException(400, 'suite run must use saved cases and client template')
         cases = [Case.model_validate(c) for c in suite.cases]
+        defaults=suite.client_defaults
     if not cases:
         raise HTTPException(400, 'evaluation manifest is empty')
     pool = s.get(Pool, body.pool_id)
     if not pool or not pool.enabled:
         raise HTTPException(400, 'unknown or disabled pool')
-    if body.gpu_mode == 'shared' and (not pool.allow_shared or body.requested_vram_gb < 1):
-        raise HTTPException(400, 'shared jobs require an enabled pool and positive VRAM request')
-    if pool.gpu_model == 'virtual' and (body.gpu_mode == 'shared' or body.requested_vram_gb):
-        raise HTTPException(400, 'virtual pools do not allocate GPU memory')
     pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status.not_in(TERMINAL)))
     if pending + len(cases) > int(os.getenv('MAX_BATCH_BACKLOG_PER_USER', '10000')):
         raise HTTPException(429, 'manifest exceeds remaining pending quota')
@@ -119,7 +130,7 @@ def resolve_batch(s, body, user):
     for case in cases:
         values = body.client.model_dump()
         values.update(task_name=case.task_name, seed=case.seed,
-                      parameters={**values['parameters'], **case.parameters})
+                      parameters={**defaults,**values['parameters'], **case.parameters})
         try:
             config = ClientRequest.model_validate(values)
         except ValueError:
@@ -129,6 +140,19 @@ def resolve_batch(s, body, user):
             raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
         if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1:
             raise HTTPException(400,f'case {case.case_id}: ordinary commands require episodes=1; they do not report episodes')
+        from .job_resources import validate
+        resource={'gpu_mode':body.gpu_mode,'requested_vram_gb':body.requested_vram_gb,'required_gpu_model':body.required_gpu_model,
+                  **body.resources.model_dump(exclude_none=True),**case.resources.model_dump(exclude_none=True)}
+        configs[-1]['resources']=validate(pool,resource)
+        configs[-1]['service_keys']=case.service_keys
+        configs[-1]['case_id']=case.case_id
+        schema=configs[-1]['template'].get('parameter_schema')
+        if schema is not None:
+            from runner.parameter_contract import resolve_layers
+            try:
+                result,sources=resolve_layers(schema,[('suite',defaults),('batch',body.client.parameters),('case',case.parameters)],body.client.parameter_overrides)
+            except ValueError as exc:raise HTTPException(400,f'case {case.case_id}: {exc}') from exc
+            configs[-1]['parameters']=result;configs[-1]['parameter_sources']=sources
     return pool, cases, configs
 
 
@@ -171,8 +195,8 @@ def install(app, db, current):
             j = Job(owner_id=user.id, pool_id=pool.id, title=f'{body.title[:95]} / {case.case_id}',
                     benchmark='cs-client', model_ref=spec['template']['name']+':'+spec['template']['version'],
                     episodes=case.episodes, client_spec=spec, batch_id=batch.id, case_id=case.case_id,
-                    gpu_mode=body.gpu_mode, requested_vram_gb=body.requested_vram_gb,
-                    required_gpu_model=body.required_gpu_model)
+                    gpu_mode=spec['resources']['gpu_mode'], requested_vram_gb=spec['resources']['requested_vram_gb'],
+                    required_gpu_model=spec['resources']['required_gpu_model'],requested_cpu=spec['resources'].get('cpus'),requested_ram_gb=spec['resources'].get('ram_gb'))
             s.add(j); s.flush()
             run = Run(job_id=j.id, attempt=1)
             s.add(run); s.flush()

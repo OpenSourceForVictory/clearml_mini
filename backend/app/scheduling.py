@@ -229,13 +229,15 @@ def tick(factory, at=None):
                     pool = pools.get(job.pool_id)
                     if not pool:
                         continue
+                    from .job_resources import budget
+                    request=budget(pool,job)
                     free.sort(key=lambda x: (x.gpu_utilization if telemetry_fresh(x, at) else 101,
                                              len(by_slot[x.id]), x.node_name, x.gpu_index))
                     slot = next((x for x in free if x.pool_id == job.pool_id
                         and not workload_codes(workers[x.worker_id], x, job)
                         and eligible(x, pool, job, by_slot[x.id], at)
                         and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
-                        and not node_codes(workers[x.worker_id], pool, node_counts.get(x.worker_id, 0),
+                        and not node_codes(workers[x.worker_id], request, node_counts.get(x.worker_id, 0),
                                            node_cpu.get(x.worker_id, 0), node_ram.get(x.worker_id, 0), pending_ram.get(x.worker_id, 0))), None)
                     if not slot:
                         continue
@@ -247,7 +249,7 @@ def tick(factory, at=None):
                     run.allocation_index = next(i for i in range(len(used)+1) if i not in used)
                     run.exclusive = job.gpu_mode == 'exclusive'
                     run.reserved_vram_mb = slot.vram_mb if run.exclusive else job.requested_vram_gb * 1024
-                    run.reserved_cpu, run.reserved_ram_gb = pool.cpu_per_job, pool.ram_gb_per_job
+                    run.reserved_cpu, run.reserved_ram_gb = request.cpu_per_job, request.ram_gb_per_job
                     run.reserved_at = at
                     run.reservation_expires_at = at + timedelta(seconds=seconds('RESERVATION_SECONDS', 30))
                     job.queued_at = at
@@ -255,9 +257,9 @@ def tick(factory, at=None):
                     counts[owner] = counts.get(owner, 0) + 1
                     n = slot.worker_id
                     node_counts[n] = node_counts.get(n, 0) + 1
-                    node_cpu[n] = node_cpu.get(n, 0) + pool.cpu_per_job
-                    node_ram[n] = node_ram.get(n, 0) + pool.ram_gb_per_job
-                    pending_ram[n] = pending_ram.get(n, 0) + pool.ram_gb_per_job
+                    node_cpu[n] = node_cpu.get(n, 0) + request.cpu_per_job
+                    node_ram[n] = node_ram.get(n, 0) + request.ram_gb_per_job
+                    pending_ram[n] = pending_ram.get(n, 0) + request.ram_gb_per_job
                     cursor.value = {'owner': owner}
                     rotation.value = {'group': job.batch_id or 'standalone'}
                     batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1

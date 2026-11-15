@@ -159,6 +159,8 @@ class MembershipAudit(Base):
 
 
 class Job(Base):
+    requested_cpu: Mapped[Optional[int]] = mapped_column(Integer)
+    requested_ram_gb: Mapped[Optional[int]] = mapped_column(Integer)
     __tablename__ = 'evaluation_jobs'
     __table_args__ = (UniqueConstraint('owner_id', 'idempotency_key'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -255,6 +257,7 @@ def session_factory(url=None):
 
 
 class EvaluationSuite(Base):
+    client_defaults: Mapped[dict] = mapped_column(JSON_TYPE, default=dict, server_default='{}')
     __tablename__ = 'evaluation_suites'
     __table_args__ = (UniqueConstraint('owner_id', 'name', 'version'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)

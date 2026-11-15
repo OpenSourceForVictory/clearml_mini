@@ -47,3 +47,5 @@ python -m runner.task_input input.json --dry-run
 服务端公共模板默认不向普通成员开放。管理员使用`PATCH /api/v1/admin/server-templates/{id}/access`提交`expected_revision`和`available_to_members`开放自己的模板。复制不继承公共发布权限。成员可复用已批准的宿主机模板，但不能修改宿主机命令、环境或参数映射来扩大执行权限。
 
 `POST /api/v1/suites/{id}/clone`使用新`name`和`version`复制自己的集合为草稿，之后沿用集合草稿编辑/发布接口。所有编辑带revision检查；冲突时保留本地输入、重新读取后再提交。已有运行始终使用提交时快照。
+
+集合可保存`client_defaults`，每项case可通过`parameters`覆盖。`service_keys`保存逻辑服务引用，具体实例分配由编排模块负责。`resources`接受cpus、ram_gb、gpu_mode、requested_vram_gb和required_gpu_model，case覆盖批次资源默认。CPU/内存不超过资源池的每任务预算；运行参数batch_size等不影响资源申请。任务领取使用实际预留的CPU/内存，预检逐项返回case_checks。

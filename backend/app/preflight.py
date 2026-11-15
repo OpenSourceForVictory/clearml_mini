@@ -82,7 +82,8 @@ class DiagnosticContext:
             held, node_held = self.by_slot[slot.id], self.by_node[worker.id]
             local = admission.slot_codes(worker, slot, self.at) + admission.workload_codes(worker, slot, job)
             local += admission.eligibility_codes(slot, pool, job, held, self.at)
-            local += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held), sum(r.reserved_ram_gb for r in node_held if r.started_at is None))
+            from .job_resources import budget
+            local += admission.node_codes(worker, budget(pool,job), len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held), sum(r.reserved_ram_gb for r in node_held if r.started_at is None))
             reasons = [reason(code) for code in dict.fromkeys(local)]
             for message in image_runtime.blockers(worker, slot, job.client_spec, self.at):
                 if message not in [r['message'] for r in reasons]: reasons.append(reason('client_runtime', message))
@@ -99,9 +100,15 @@ class DiagnosticContext:
 
 def inspect_batch(s, body, user, pool, cases, configs):
     context = DiagnosticContext(s)
-    job = SimpleNamespace(client_spec=configs[0], required_gpu_model=body.required_gpu_model,
-                          requested_vram_gb=body.requested_vram_gb, gpu_mode=body.gpu_mode)
-    return dict(**context.inspect(job, user, pool), can_submit=True,
-                task_count=len(cases), total_episodes=sum(c.episodes for c in cases), max_concurrent=body.max_concurrent,
+    checks=[]
+    for case,spec in zip(cases,configs):
+        request=spec.get('resources',{})
+        job=SimpleNamespace(client_spec=spec,required_gpu_model=request.get('required_gpu_model',body.required_gpu_model),
+                            requested_vram_gb=request.get('requested_vram_gb',body.requested_vram_gb),gpu_mode=request.get('gpu_mode',body.gpu_mode),
+                            requested_cpu=request.get('cpus'),requested_ram_gb=request.get('ram_gb'))
+        checks.append({'case_id':case.case_id,**context.inspect(job,user,pool)})
+    primary={k:v for k,v in checks[0].items() if k!='case_id'}
+    return dict(**primary,case_checks=checks,can_submit=True,
+                task_count=len(cases), total_episodes=sum(c.episodes for c,spec in zip(cases,configs) if spec['template'].get('task_type')!='command'), max_concurrent=body.max_concurrent,
                 cases=[c.model_dump() for c in cases],
                 note='检查不预留资源；服务连通和客户端执行需要实际试跑验证。')
