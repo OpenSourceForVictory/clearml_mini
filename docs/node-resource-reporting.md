@@ -49,3 +49,5 @@ GPU继续使用已有显存预留账本和实时空闲显存双重检查。CPU�
 - 昇腾主机为aarch64、Python3.9.9、Docker27.2.0，检测到CANN8.5.2目录。未安装或升级服务，未停止已有NPU进程，未声明真实NPU任务执行验收。
 - 基础全量回归377 passed / 43 skipped；后续受影响模块回归100 passed / 1 skipped；隔离PostgreSQL并发测试5 passed；真实隔离挂载消失测试1 passed。最终资源上报及NPU解析测试27 passed。
 - 并行测试期间旧的落盘并发用例出现一次5秒等待超时，单独复测及后续模块回归通过，未通过修改测试门槛掩盖该现象。
+- 最终代码提交`470d579`全量后端回归：392 passed / 44 skipped / 1 warning，耗时456.78秒。跳过项需要专用PostgreSQL、真实Docker/systemd或隔离挂载环境；上文单独执行的5项PostgreSQL和1项挂载测试不能代表全部跳过项已覆盖。warning为Starlette引用AnyIO弃用别名。
+- 前端TypeScript检查及生产构建通过；使用静态预览和模拟API的41项Playwright回归全部通过。首次混入真实API用例`cs-framework.spec.ts`，因预览环境没有API而在登录阶段失败；随后明确排除真实API用例重新执行。此次未完成真实API端到端或生产节点升级验收。
