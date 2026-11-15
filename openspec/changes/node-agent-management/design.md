@@ -31,3 +31,6 @@ Non-Goals: 本次不替换现有调度器、不引入推理服务池、不改写
 - https://clear.ml/docs/latest/docs/fundamentals/agents_and_queues/ ：执行环境准备、任务执行。
 - https://developer.hashicorp.com/nomad/docs/architecture ：中心调度和节点客户端分工。
 - https://kubernetes.io/docs/concepts/architecture/nodes/ ：区分节点心跳和就绪条件。
+
+## 生产验收补充（2026-11-15）
+用户授权使用现有机器做生产验证。仅在空闲.182关闭准入后部署，验证真实systemd启停、配置、Agent重启、单实例、正常升级和一次性启动失败回滚；不打断其他节点/NFS。审计发布摘要移至JSON详情以兼容36位目标字段；systemd工作目录使用独立路径转义。验收证据与未覆盖条件见docs/node-agent.md。

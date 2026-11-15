@@ -112,3 +112,13 @@ def test_registration_records_software_without_changing_identity(env):
     r=c.post('/api/v1/worker/register',headers=token,json=body);assert r.status_code==200
     assert r.json()['slot_id']==slots[0]
     with main.SessionLocal() as s:assert s.get(Slot,slots[0]).software==body['software']
+
+
+def test_release_audit_preserves_digest_with_bounded_target(env):
+    from backend.app.core import ManagementAudit
+    main,c,a=env
+    release=c.post('/api/v1/admin/worker-releases',headers=a['admin']).json()
+    with main.SessionLocal() as s:
+        event=s.scalar(select(ManagementAudit).where(ManagementAudit.action=='worker-release.publish'))
+        assert len(event.target_id)<=36
+        assert event.details['release_id']==release['id']

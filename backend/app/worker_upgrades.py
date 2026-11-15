@@ -80,7 +80,7 @@ def install(app,db,admin,worker_auth):
     def publish(user=Depends(admin),s=Depends(db)):
         candidate=build_release();lock(s);r=s.get(WorkerRelease,candidate.id)
         if not r:
-            r=candidate;s.add(r);audit(s,user,'worker-release.publish',r.id);s.commit()
+            r=candidate;s.add(r);audit(s,user,'worker-release.publish','worker-releases',{'release_id':r.id});s.commit()
         return release_view(r)
 
     @app.get('/api/v1/admin/nodes/{identity}/upgrades')

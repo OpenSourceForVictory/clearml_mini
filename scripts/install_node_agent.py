@@ -37,7 +37,8 @@ def install(layout, start=False):
     config.update(state_dir=str(state),services=layout['services'],digest=digest)
     config_path=state/'config.json';atomic_json(config_path,config)
     quote=lambda x:json.dumps(str(x).replace('%','%%'))
-    unit='[Unit]\nDescription=Mini Eval node Agent\nAfter=network-online.target\n\n[Service]\nType=simple\nWorkingDirectory='+quote(app)+'\nExecStart='+quote(sys.executable)+' -m node_agent.client --config '+quote(config_path)+'\nRestart=on-failure\nRestartSec=5\nTimeoutStopSec=20\nUMask=0077\n\n[Install]\nWantedBy='+('multi-user.target' if system else 'default.target')+'\n'
+    directory=''.join('\\x%02x' % ord(c) if c in ' \\\t\n\r' else '%%' if c == '%' else c for c in str(app))
+    unit='[Unit]\nDescription=Mini Eval node Agent\nAfter=network-online.target\n\n[Service]\nType=simple\nWorkingDirectory='+directory+'\nExecStart='+quote(sys.executable)+' -m node_agent.client --config '+quote(config_path)+'\nRestart=on-failure\nRestartSec=5\nTimeoutStopSec=20\nUMask=0077\n\n[Install]\nWantedBy='+('multi-user.target' if system else 'default.target')+'\n'
     (unit_dir/'mini-eval-agent.service').write_text(unit)
     layout['agent']={'scope':'system' if system else 'user','name':'mini-eval-agent.service','state_dir':str(state),'config_path':str(config_path)}
     if start:

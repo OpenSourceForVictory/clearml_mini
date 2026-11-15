@@ -75,3 +75,18 @@ def test_agent_node_rejects_worker_only_archive_before_stopping(tmp_path):
     u.apply(job)
     assert calls==[] and u.api.status=='FAILED'
     assert (u.app/'worker/client.py').read_text()=='# old worker'
+
+@pytest.mark.parametrize('folder', ['ordinary', 'space and % percent'])
+def test_agent_unit_passes_real_systemd_validation(tmp_path, monkeypatch, folder):
+    import shutil
+    import subprocess
+    if not shutil.which('systemd-analyze'):
+        pytest.skip('systemd-analyze unavailable')
+    root=tmp_path/folder;root.mkdir()
+    u,_,_,_,_=fixture(root)
+    home=tmp_path/'home';home.mkdir()
+    monkeypatch.setattr(Path,'home',classmethod(lambda cls:home))
+    install_node_agent.install(u.config)
+    unit=home/'.config/systemd/user/mini-eval-agent.service'
+    result=subprocess.run(['systemd-analyze','verify',str(unit)],capture_output=True,text=True)
+    assert result.returncode==0,result.stderr
