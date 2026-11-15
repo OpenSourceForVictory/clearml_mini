@@ -111,3 +111,5 @@ Agent重启会读取本地状态，再核对服务；不会自行重试业务任
 ## 五节点推广（2026-11-15）
 
 已在用户指定五节点安装Agent与独立升级器，Worker全部升级至协议9。真实忙碌排空、Agent网络隔离与恢复、损坏状态恢复、Worker崩溃恢复、每节点三次Agent重启和SDK排队任务验收见[五节点验收记录](node-agent-validation.md)。本轮还修复配置/事件写盘失败后内存状态提前生效的问题，修复已部署到五台节点；平台镜像为`mini-eval-api:agent-fleet-recovery`。
+
+资源采集、Worker控制循环隔离、GPU/NPU设备模型及1.1.0迁移边界见[节点资源上报](node-resource-reporting.md)。

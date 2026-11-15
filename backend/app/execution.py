@@ -293,7 +293,7 @@ def install(app, db, current):
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'slot_id': slot.id, 'quarantined': slot.quarantined, 'pool_id': slot.pool_id, **memberships.view(s, slot)}
+        return {'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'slot_id': slot.id, 'quarantined': slot.quarantined, 'pool_id': slot.pool_id, **memberships.view(s, slot)}
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -321,7 +321,9 @@ def install(app, db, current):
             slot.disk_free_mb = body.disk.free_mb
             slot.disk_min_free_mb = body.disk.min_free_mb
             slot.disk_at = now()
-        if body.telemetry_failed:
+        if node_agents.resource_source(worker):
+            pass  # Agent is authoritative, including failed/stale samples.
+        elif body.telemetry_failed:
             slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         elif body.telemetry is not None:
             if body.telemetry.free_vram_mb > slot.vram_mb:
@@ -331,7 +333,7 @@ def install(app, db, current):
             slot.telemetry_at = now()
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
+        return {'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
                 'host': host_environments.desired(worker), 'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
@@ -364,6 +366,13 @@ def install(app, db, current):
             if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
                     or slot.disk_at is None or (now()-utc(slot.disk_at)).total_seconds() >= 15):
                 return {'task': None, 'cleanup': []}
+            if node_agents.resource_source(worker):
+                from types import SimpleNamespace
+                from .scheduling import telemetry_fresh
+                requested = SimpleNamespace(cpu_per_job=run.reserved_cpu, ram_gb_per_job=run.reserved_ram_gb)
+                if (node_agents.host_codes(worker, requested, 0, 0)
+                        or (job.requested_vram_gb and not telemetry_fresh(slot, now()))):
+                    return {'task': None, 'cleanup': []}
             if utc(run.reservation_expires_at) <= now():
                 return {'task': None, 'cleanup': []}
             run.enqueued_at = now()

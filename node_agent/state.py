@@ -65,6 +65,8 @@ class State:
 
     def acknowledge(self, sequence):
         with self.mutex:
-            self._commit({**self.value, 'events': [x for x in self.value['events'] if x['sequence'] > sequence]})
+            events = [x for x in self.value['events'] if x['sequence'] > sequence]
+            if events != self.value['events']:
+                self._commit({**self.value, 'events': events})
 
     def close(self): self.lock.close()

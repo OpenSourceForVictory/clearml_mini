@@ -13,7 +13,8 @@ from backend.tests.test_execution import env
 
 
 @pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'),reason='dedicated PostgreSQL required')
-def test_agent_configuration_heartbeat_and_claim_are_serialized(env,monkeypatch):
+@pytest.mark.parametrize("resource_protocol", [0, 1])
+def test_agent_configuration_heartbeat_and_claim_are_serialized(env,monkeypatch,resource_protocol):
     main,_,_=env;factory=session_factory(os.environ['TEST_DATABASE_URL']);monkeypatch.setattr(main,'SessionLocal',factory)
     suffix=uuid.uuid4().hex
     with factory() as s:
@@ -22,8 +23,11 @@ def test_agent_configuration_heartbeat_and_claim_are_serialized(env,monkeypatch)
     p=c.post('/api/v1/admin/pools',headers=auth,json={'name':'agent-'+suffix,'gpu_model':'virtual'}).json()['id']
     w=c.post('/api/v1/admin/worker-credentials',headers=auth,json={'node_name':'agent-'+suffix}).json();token={'Authorization':'Bearer '+w['token']}
     slot=c.post('/api/v1/worker/register',headers=token,json={'pool_id':p,'gpu_index':0,'gpu_uuid':'mock:'+suffix,'gpu_model':'virtual','vram_gb':0}).json()['slot_id']
-    session=c.post('/api/v1/agent/register',headers=token,json={'boot_id':suffix,'version':'1'}).json()['session']
+    session=c.post('/api/v1/agent/register',headers=token,json={'boot_id':suffix,'version':'1','resource_protocol':resource_protocol}).json()['session']
     hb={'session':session,'sequence':1,'applied_revision':0,'config_status':'applied'}
+    if resource_protocol:
+        import time
+        hb['samples']={'host':{'status':'ok','sampled_at':time.time(),'values':{'cpu_count':8,'memory_total_mb':32768,'memory_available_mb':20000}}}
     assert c.post('/api/v1/agent/heartbeat',headers=token,json=hb).status_code==200
     job=c.post('/api/v1/jobs',headers=auth,json={'title':'agent race','benchmark':'mock','model_ref':'test','pool_id':p,'episodes':1}).json()['id']
     assert tick(factory)==1

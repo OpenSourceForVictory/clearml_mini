@@ -34,6 +34,7 @@ REASONS = {
     'node_concurrency': ('resource', '机器已达到并发上限', '等待机器上任务完成'),
     'node_cpu': ('resource', '机器 CPU 配额不足', '等待资源释放或请管理员检查机器配额'),
     'node_ram': ('resource', '机器内存配额不足', '等待资源释放或请管理员检查机器配额'),
+    'node_telemetry_stale': ('resource', '机器资源采样不可用或已过期', '等待 Agent 恢复 CPU 和内存采样'),
     'global_concurrency': ('resource', '平台已达到并发上限', '等待正在执行的任务完成'),
     'user_concurrency': ('resource', '当前用户已达到并发上限', '等待自己的运行任务完成'),
     'endpoint_busy': ('resource', '推理服务正在被互斥任务使用', '等待使用该服务的任务完成'),
@@ -81,7 +82,7 @@ class DiagnosticContext:
             held, node_held = self.by_slot[slot.id], self.by_node[worker.id]
             local = admission.slot_codes(worker, slot, self.at) + admission.workload_codes(worker, slot, job)
             local += admission.eligibility_codes(slot, pool, job, held, self.at)
-            local += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held))
+            local += admission.node_codes(worker, pool, len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held), sum(r.reserved_ram_gb for r in node_held if r.started_at is None))
             reasons = [reason(code) for code in dict.fromkeys(local)]
             for message in image_runtime.blockers(worker, slot, job.client_spec, self.at):
                 if message not in [r['message'] for r in reasons]: reasons.append(reason('client_runtime', message))

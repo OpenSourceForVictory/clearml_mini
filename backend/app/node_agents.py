@@ -9,6 +9,7 @@ from .core import Worker, Slot, now
 from .scheduling import lock, utc
 from .storage import held
 from .administration import audit, release_reservations
+from .node_resources import resource_source, resource_values, apply_resources, host_codes
 
 
 class Strict(BaseModel):
@@ -26,6 +27,7 @@ class Configure(Settings):
 
 
 class Register(Strict):
+    resource_protocol: Literal[0, 1] = 0
     boot_id: str = Field(pattern=r'^[a-f0-9]{32}$')
     version: str = Field(min_length=1, max_length=40)
     digest: str = Field(default='', pattern=r'^([a-f0-9]{64})?$')
@@ -34,7 +36,24 @@ class Register(Strict):
 class Sample(Strict):
     status: Literal['ok', 'failed', 'waiting']
     sampled_at: float = Field(ge=0)
-    values: dict[str, float | str] = Field(default_factory=dict, max_length=256)
+    values: dict[str, float | str] = Field(default_factory=dict, max_length=1024)
+
+
+class DeviceSample(Strict):
+    kind: Literal['gpu', 'npu']
+    vendor: Literal['nvidia', 'huawei']
+    device_id: str = Field(min_length=1, max_length=100)
+    index: int = Field(ge=0, le=1024)
+    model: str = Field(default='', max_length=100)
+    sampled_at: float = Field(ge=0)
+    status: Literal['ok', 'failed', 'waiting']
+    memory_total_mb: int | None = Field(default=None, ge=0, le=10240000)
+    memory_free_mb: int | None = Field(default=None, ge=0, le=10240000)
+    utilization_percent: float | None = Field(default=None, ge=0, le=100)
+    physical_card_id: int | None = Field(default=None, ge=0, le=1024)
+    chip_id: int | None = Field(default=None, ge=0, le=1024)
+    health: str = Field(default='', max_length=40)
+    execution_ready: bool = False
 
 
 class Program(Strict):
@@ -52,7 +71,8 @@ class Heartbeat(Strict):
     sequence: int = Field(ge=1)
     applied_revision: int = Field(ge=0)
     config_status: Literal['applied', 'waiting', 'failed'] = 'waiting'
-    samples: dict[Literal['host', 'gpu', 'disk', 'docker'], Sample] = Field(default_factory=dict, max_length=4)
+    samples: dict[Literal['host', 'gpu', 'npu', 'disk', 'docker'], Sample] = Field(default_factory=dict, max_length=5)
+    devices: list[DeviceSample] = Field(default_factory=list, max_length=128)
     programs: list[Program] = Field(default_factory=list, max_length=64)
     events: list[Event] = Field(default_factory=list, max_length=64)
 
@@ -138,9 +158,13 @@ def install(app, db, admin, worker_auth):
             return {'session': r['session'], **response(s, w, r)}
         r = {**r, 'boot_id': body.boot_id, 'session': secrets.token_hex(16), 'sequence': 0,
              'version': body.version, 'digest': body.digest, 'seen_at': None,
+             'resource_protocol': body.resource_protocol, 'samples': {},
              'revision': r.get('revision', 0), 'desired': r.get('desired', Settings().model_dump()),
              'config_status': 'waiting', 'applied_revision': -1}
-        save(w, r); s.commit()
+        save(w, r)
+        for slot in s.scalars(select(Slot).where(Slot.worker_id == w.id)):
+            slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
+        s.commit()
         return {'session': r['session'], **response(s, w, r)}
 
     @app.post('/api/v1/agent/heartbeat')
@@ -158,7 +182,9 @@ def install(app, db, admin, worker_auth):
                 events.append(e.model_dump()); ack = e.sequence
         r = {**r, **body.model_dump(exclude={'session', 'events'}), 'events': events[-64:],
              'event_ack': ack, 'seen_at': now().isoformat()}
-        save(w, r); s.commit()
+        save(w, r)
+        apply_resources(s, w)
+        s.commit()
         return response(s, w, r)
 
     @app.post('/api/v1/agent/stop-permit')

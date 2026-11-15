@@ -143,8 +143,9 @@ def workload_codes(worker, slot, job):
     return []
 
 
-def node_codes(worker, pool, count, cpu, ram):
-    result = []
+def node_codes(worker, pool, count, cpu, ram, pending_ram=0):
+    from .node_resources import host_codes
+    result = host_codes(worker, pool, cpu, ram, pending_ram=pending_ram)
     if count >= worker.max_concurrent: result.append('node_concurrency')
     if cpu + pool.cpu_per_job > worker.cpu_capacity: result.append('node_cpu')
     if ram + pool.ram_gb_per_job > worker.ram_gb_capacity: result.append('node_ram')
@@ -174,7 +175,7 @@ def tick(factory, at=None):
         endpoint_held = endpoints.holdings(active)
         batch_counts = {}
         batches = {b.id: b for b in s.scalars(select(EvaluationBatch))}
-        counts, node_counts, node_cpu, node_ram = {}, {}, {}, {}
+        counts, node_counts, node_cpu, node_ram, pending_ram = {}, {}, {}, {}, {}
         for r in active:
             job = s.get(Job, r.job_id)
             batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
@@ -186,6 +187,8 @@ def tick(factory, at=None):
                 node_counts[n] = node_counts.get(n, 0) + 1
                 node_cpu[n] = node_cpu.get(n, 0) + r.reserved_cpu
                 node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
+                if r.started_at is None:
+                    pending_ram[n] = pending_ram.get(n, 0) + r.reserved_ram_gb
         free = [x for x in slots.values() if x.worker_id in workers and x.pool_id in pools
                 and not slot_codes(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
@@ -233,7 +236,7 @@ def tick(factory, at=None):
                         and eligible(x, pool, job, by_slot[x.id], at)
                         and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
                         and not node_codes(workers[x.worker_id], pool, node_counts.get(x.worker_id, 0),
-                                           node_cpu.get(x.worker_id, 0), node_ram.get(x.worker_id, 0))), None)
+                                           node_cpu.get(x.worker_id, 0), node_ram.get(x.worker_id, 0), pending_ram.get(x.worker_id, 0))), None)
                     if not slot:
                         continue
                     run = s.scalar(select(Run).where(Run.job_id == job.id).order_by(Run.attempt.desc()))
@@ -254,6 +257,7 @@ def tick(factory, at=None):
                     node_counts[n] = node_counts.get(n, 0) + 1
                     node_cpu[n] = node_cpu.get(n, 0) + pool.cpu_per_job
                     node_ram[n] = node_ram.get(n, 0) + pool.ram_gb_per_job
+                    pending_ram[n] = pending_ram.get(n, 0) + pool.ram_gb_per_job
                     cursor.value = {'owner': owner}
                     rotation.value = {'group': job.batch_id or 'standalone'}
                     batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1

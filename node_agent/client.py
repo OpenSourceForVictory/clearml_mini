@@ -29,14 +29,15 @@ class Agent:
 
     def step(self):
         if not self.session:
-            r=self.api.post('register',{'boot_id':self.boot_id,'version':VERSION,'digest':self.config.get('digest','')})
+            r=self.api.post('register',{'boot_id':self.boot_id,'version':VERSION,'digest':self.config.get('digest',''), 'resource_protocol':1})
             self.session=r['session']
         self.sequence+=1
+        samples=self.monitor.sample(min(5,self.desired['sample_seconds']))
+        from .devices import inventory
         r=self.api.post('heartbeat',{'session':self.session,'sequence':self.sequence,
             'applied_revision':self.state.value['revision'],'config_status':self.status,
-            'samples':self.monitor.sample(self.desired['sample_seconds']),
+            'samples':samples, 'devices':inventory(samples),
             'programs':self.program_status,'events':list(self.state.value['events'])})
-        self.state.acknowledge(r['event_ack'])
         if not self.controller or not self.controller.is_alive():
             self.controller=threading.Thread(target=self.coordinate,args=(r,),daemon=True)
             self.controller.start()
@@ -47,6 +48,7 @@ class Agent:
         except Exception:self.status='failed'
 
     def _coordinate(self,r):
+        self.state.acknowledge(r['event_ack'])
         self.program_status=self.programs.inspect()
         desired=r['desired'];revision=r['revision']
         if self.stop.is_set():return

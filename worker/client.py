@@ -111,6 +111,7 @@ class Worker:
         self.children = {}
         self.threads = {}
         self.retention = None
+        self.control = None
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -548,6 +549,8 @@ class Worker:
         thread.start()
 
     def shutdown(self):
+        if self.control:
+            self.control.stopping = True
         if self.retention:
             self.retention.close()
         if self.runtime:
@@ -571,6 +574,10 @@ class Worker:
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
             **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': metadata(), 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
+        from .control import Control
+        self.control = Control(self, docker, telemetry)
+        self.control.source = registration.get('resource_source', 'worker')
+        self.control.refresh()
         self.slot_lock = open('/tmp/mini-eval-slot-' + self.slot_id + '.lock', 'a')
         fcntl.flock(self.slot_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         self.recover_journals()
@@ -592,32 +599,19 @@ class Worker:
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
                     return
-                body = {'slot_id': self.slot_id, 'storage': self.storage.report(), 'runtime': self.runtime.report(), 'host': self.host_environments.report()}
-                try:
-                    body['disk'] = disk_status(self.workspace, self.config)
-                except (OSError, ValueError):
-                    body['disk'] = {'free_mb': 0, 'min_free_mb': 1}
-                try:
-                    body['telemetry'] = telemetry(self.config)
-                except (subprocess.SubprocessError, OSError, ValueError):
-                    body['telemetry_failed'] = True
-                    LOG.warning('GPU telemetry unavailable; shared admission will wait')
+                self.control.adopt()
+                body = {'slot_id': self.slot_id, **self.control.report()}
                 reply = self.api.post('worker/heartbeat', body)
-                if 'storage' in reply:
-                    self.retention.remember(self.storage_snapshot['config']['workspace_root'])
-                    self.storage.update(reply['storage'], self.slot_id,
-                        bool(self.children) or reply.get('storage_busy', True), docker)
-                    self.storage_snapshot = self.storage.snapshot()
-                    self.config.update(self.storage_snapshot['config'])
-                    self.workspace = Path(self.config['workspace_root'])
-                    self.retention.remember(str(self.workspace))
-                if 'host' in reply:
-                    self.host_environments.update(reply['host'], bool(self.children) or reply.get('storage_busy', True))
-                if 'runtime' in reply:
-                    self.runtime.update(reply['runtime'], bool(self.children) or reply.get('storage_busy', True), dict(self.config), docker)
-                    self.runtime_snapshot = self.runtime.snapshot()
-                    self.config['client_images'] = self.runtime_snapshot['config']['images']
+                self.control.source = reply.get('resource_source', 'worker')
+                # Never claim while background configuration can change paths.
+                # Readiness is checked before scheduling the next control cycle.
+                control_ready = self.control.ready()
                 if once and had_task:
+                    self.control.refresh(reply)
+                    time.sleep(2)
+                    continue
+                if not control_ready:
+                    self.control.refresh(reply)
                     time.sleep(2)
                     continue
                 response = self.api.post(f'worker/slots/{self.slot_id}/claim',
@@ -633,6 +627,7 @@ class Worker:
                     child = self.child(task['execution_id'])
                     self.launch(child, task)
                     had_task = True
+                self.control.refresh(reply)
             except (APIError, urllib.error.URLError, TimeoutError, OSError, RuntimeError):
                 LOG.exception('worker iteration failed; retrying')
             time.sleep(2)
