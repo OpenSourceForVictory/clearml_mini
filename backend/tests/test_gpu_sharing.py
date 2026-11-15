@@ -152,3 +152,26 @@ def test_quarantine_cleanup_and_pool_move(env, monkeypatch):
     assert c.post('/api/v1/worker/register', headers=tokens[0], json=body).status_code == 409
     c.post(f'/api/v1/worker/executions/{task["execution_id"]}/cleanup', headers=tokens[0])
     assert c.post('/api/v1/worker/register', headers=tokens[0], json=body).status_code == 200
+
+
+def test_enabling_pool_sharing_still_obeys_node_concurrency(env, monkeypatch):
+    from backend.app.core import Worker
+    main,c,auth=env
+    monkeypatch.setenv('MAX_ACTIVE_GLOBAL','10')
+    monkeypatch.setenv('MAX_ACTIVE_PER_USER','10')
+    pool,slots,_=setup_gpu(env,count=1)
+    with main.SessionLocal() as s:
+        identity=s.get(Slot,slots[0]).worker_id
+        revision=s.get(Worker,identity).management_revision
+    path='/api/v1/admin/nodes/'+identity
+    response=c.patch(path,headers=auth['admin'],json={'expected_revision':revision,'max_concurrent':1})
+    assert response.status_code==200
+    for _ in range(2):submit_gpu(env,pool,requested_vram_gb=1)
+    assert tick(main.SessionLocal)==1
+    assert tick(main.SessionLocal)==0
+    response=c.patch(path,headers=auth['admin'],json={'expected_revision':response.json()['management_revision'],'max_concurrent':2})
+    assert response.status_code==200
+    assert tick(main.SessionLocal)==1
+    with main.SessionLocal() as s:
+        runs=list(s.scalars(select(Run).where(Run.slot_id==slots[0])))
+        assert len(runs)==2 and len({r.allocation_index for r in runs})==2
