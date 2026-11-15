@@ -7,7 +7,7 @@ export type ParameterDraft={enabled:boolean;rows:ParameterRow[]};
 let nextId=0;
 const id=()=>`parameter-${++nextId}`;
 const types=[['string','字符串'],['integer','整数'],['number','数值'],['boolean','布尔'],['enum','枚举'],['object','对象'],['array','数组']];
-const reserved=new Set(['task_name','episodes','seed','endpoint','execution_id','input_path','work_dir','output_dir','episode_id','episode_seed','result_path','port','bind_host']);
+const reserved=new Set(['task_name','episodes','seed','endpoint','execution_id','input_path','work_dir','output_dir','episode_id','episode_seed','result_path','port','bind_host','platform','task','business','resources','job_id','input_version']);
 
 export function parameterDraft(schema?:Record<string,any>|null):ParameterDraft{
  return {enabled:!!schema,rows:Object.entries(schema?.fields||{}).map(([name,value])=>{

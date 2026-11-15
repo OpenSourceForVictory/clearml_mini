@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+test.skip(!process.env.ADMIN_USERNAME||!process.env.ADMIN_PASSWORD, "requires explicit live deployment credentials");
 
 test('GPU environment check reports real rendering results', async ({ page }) => {
   test.skip(!process.env.RENDER_POOL_NAME, 'Requires an enabled GPU render deployment');

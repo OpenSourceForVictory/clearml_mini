@@ -1,0 +1,9 @@
+import React,{useEffect,useState} from 'react';
+import {api} from './api';
+import {Field} from './form-fields';
+export function ServiceNetwork({id}:{id:string}){
+ const [revision,setRevision]=useState<number|null>(null),[address,setAddress]=useState(''),[start,setStart]=useState(19000),[end,setEnd]=useState(19100),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+ async function load(){try{const r=await api<{revision:number;config:null|{address:string;port_start:number;port_end:number}}>(`admin/nodes/${id}/service-network`);setRevision(r.revision);setAddress(r.config?.address||'');setStart(r.config?.port_start||19000);setEnd(r.config?.port_end||19100);setMessage('')}catch(e){setMessage(String(e))}}
+ useEffect(()=>{void load()},[id]);
+ return <section aria-label="服务自动分配网络"><h3>服务自动分配网络</h3><p>填写客户端可达的本机 IPv4 和可用端口范围。平台在此范围内自动分配服务端口；已有服务保留原地址。</p>{message&&<p role="status">{message}</p>}<form onSubmit={async e=>{e.preventDefault();setBusy(true);try{const r=await api<{revision:number}>(`admin/nodes/${id}/service-network`,'PUT',{expected_revision:revision,config:address?{address,port_start:start,port_end:end}:null});setRevision(r.revision);setMessage('网络配置已保存')}catch(e){setMessage(String(e))}finally{setBusy(false)}}}><fieldset disabled={busy||revision===null}><Field label="服务可达 IPv4"><input value={address} onChange={e=>setAddress(e.target.value)} placeholder="留空停止新的自动分配"/></Field><div className="row"><Field label="起始端口"><input type="number" min={1024} max={65535} required value={start} onChange={e=>setStart(Number(e.target.value))}/></Field><Field label="结束端口"><input type="number" min={start} max={Math.min(65535,start+1000)} required value={end} onChange={e=>setEnd(Number(e.target.value))}/></Field></div><button>保存服务网络</button></fieldset></form><button disabled={busy} onClick={()=>void load()}>重新读取网络配置</button></section>;
+}

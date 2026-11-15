@@ -11,8 +11,8 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
     }
     if(path==='suites/manage')body={items:[],total:0};
     if(path==='pools')body=[{id:'pool',name:'gpu-pool'}];
-    if(path==='batches/preflight')body={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:route.request().postDataJSON().cases,nodes:[],reasons:[]};
-    if(path==='batches'&&route.request().method()==='POST'){batch=route.request().postDataJSON();body={id:'b1',...batch};}
+    if(path==='orchestrations/preflight')body={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:route.request().postDataJSON().cases,nodes:[],reasons:[]};
+    if(path==='orchestrations'&&route.request().method()==='POST'){batch=route.request().postDataJSON();body={id:'b1',...batch};}
     await route.fulfill({json:body});
   });
   await page.goto('/');await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
@@ -33,8 +33,9 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
   await page.getByLabel('批次名称',{exact:true}).fill('run');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('客户端模板',{exact:true}).selectOption('image-1');
-  await page.getByLabel('推理服务地址',{exact:true}).fill('http://inference:9000');
   await page.getByLabel('启动变量覆盖 JSON',{exact:true}).fill('{"LOG_LEVEL":"debug"}');
+  await page.getByRole('button',{name:'下一步',exact:true}).click();
+  await page.getByLabel('推理服务地址',{exact:true}).fill('http://inference:9000');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('客户端资源池',{exact:true}).selectOption('pool');
   await page.getByRole('button',{name:'检查并确认',exact:true}).click();

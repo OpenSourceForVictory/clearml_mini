@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+test.skip(!process.env.ADMIN_USERNAME||!process.env.ADMIN_PASSWORD||!process.env.CS_TEST_ENDPOINT,'requires explicit live API credentials and inference endpoint');
 
 test('save reusable suite and run with concurrency; view partial episode results',async({page,request})=>{
   test.setTimeout(90000);
@@ -26,12 +27,13 @@ test('save reusable suite and run with concurrency; view partial episode results
   await expect(page.getByLabel('选择已保存集合')).not.toHaveValue('');
   await page.getByLabel('批次名称',{exact:true}).fill(runTitle);
   await page.getByRole('button',{name:'下一步',exact:true}).click();
+  await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('推理服务地址',{exact:true}).fill(process.env.CS_TEST_ENDPOINT||'http://192.168.137.71:19090/infer');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByRole('combobox',{name:'客户端资源池',exact:true}).selectOption({label:process.env.CS_POOL_NAME||'mock'});
   await page.getByLabel('最大并发任务数').fill('2');
   await page.getByRole('button',{name:'检查并确认',exact:true}).click();
-  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/v1/batches')&&r.request().method()==='POST');
+  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/v1/orchestrations')&&r.request().method()==='POST');
   await page.getByRole('button',{name:/^(提交评测批次|提交排队)$/}).click();
   const batch=await (await submitted).json();
   expect(batch.total).toBe(2);

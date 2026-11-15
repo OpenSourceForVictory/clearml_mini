@@ -12,14 +12,14 @@ async function setup(page:Page){
     if(path==='suites')data=[suite];
     if(path==='pools')data=[{id:'pool',name:'Mixed GPUs'}];
     if(path==='client-templates')data=[{id:'t',name:'Client',version:'v2',enabled:true,protocols:['ws'],episode_reporting:true,runtime:{overridable_env:['MODE']}}];
-    if(path==='batches/preflight'){
+    if(path==='orchestrations/preflight'){
       checks++;const wait=delay;const bad=fail;const body=route.request().postDataJSON();
       if(wait)await new Promise(r=>setTimeout(r,wait));
       if(bad){await route.fulfill({status:400,json:{detail:[{reason:'client.endpoint: invalid endpoint'}]}});return;}
       data={checked_at:new Date().toISOString(),can_submit:true,status:'needs_environment',task_count:3,total_episodes:12,cases:body.suite_id?suite.cases:body.cases,
         reasons:[],nodes:[{slot_id:'s',node_name:'R8000',gpu_index:0,gpu_model:'RTX 8000',ready:false,reasons:[{code:'client_image',category:'environment',message:'所需镜像未批准或未就绪',action:'请管理员准备镜像'}]}],note:'检查不预留资源'};
     }
-    if(path==='batches'&&route.request().method()==='POST'){
+    if(path==='orchestrations'&&route.request().method()==='POST'){
       const body=route.request().postDataJSON(),key=route.request().headers()['idempotency-key'];requests.push({body,key});if(loseResponse){loseResponse=false;await route.abort();return;}data=batch(body);
     }
     if(path==='batches/batch')data={id:'batch',title:'[试跑] Three tasks',status:'SUCCEEDED',cases:[{job_id:'job',status:'SUCCEEDED',episode_reporting:reporting,progress:{completed:1,successes:0},error:null}]};
@@ -30,8 +30,9 @@ async function setup(page:Page){
   await wizard.getByLabel('选择已保存集合').selectOption('suite');await wizard.getByLabel('批次名称',{exact:true}).fill('Full run');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await expect(wizard.getByLabel('客户端模板',{exact:true})).toBeDisabled();
-  await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByLabel('启动变量覆盖 JSON',{exact:true}).fill('{"MODE":"test"}');
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+  await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');await wizard.getByLabel('最大并发任务数').fill('2');
   return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean)=>{fail=x;},setDelay:(x:number)=>{delay=x;}};
@@ -40,7 +41,9 @@ async function setup(page:Page){
 test('draft survives navigation and polling; queued submit and independent trial preserve full suite',async({page})=>{
   const {wizard,requests}=await setup(page);
   await wizard.getByRole('button',{name:'上一步',exact:true}).click();
+  await wizard.getByRole('button',{name:'上一步',exact:true}).click();
   await expect(wizard.getByLabel('启动变量覆盖 JSON')).toHaveValue('{"MODE":"test"}');
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   // Wait for an actual list refresh, rather than relying on a fixed sleep.
   await page.waitForResponse(r=>r.url().includes('/client-templates'));
   await expect(wizard.getByLabel('推理服务地址',{exact:true})).toHaveValue('ws://inference:8000');
@@ -79,13 +82,14 @@ test('late inspection from a previous suite handoff is discarded',async({page})=
   const {wizard,setDelay,checks}=await setup(page);setDelay(1500);
   await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
   await expect.poll(checks).toBe(1);
-  const response=page.waitForResponse(r=>r.url().endsWith('/batches/preflight'));
+  const response=page.waitForResponse(r=>r.url().endsWith('/orchestrations/preflight'));
   await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
   await page.getByRole('button',{name:'查看 Three tasks / v1',exact:true}).click();
   await page.getByRole('button',{name:'运行此集合',exact:true}).click();
   await response;
   await expect(wizard.getByLabel('批次名称',{exact:true})).toBeEnabled();
   await wizard.getByLabel('批次名称',{exact:true}).fill('New launch');
+  await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   setDelay(0);await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();

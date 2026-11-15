@@ -17,8 +17,8 @@ async function openWorkbench(page:Page, role='admin') {
     else if(path==='suites') {
       if(route.request().method()==='POST') {body={id:'suite-1',revision:0,archived:false,...route.request().postDataJSON()};suites.push(body);}
       else body=suites;
-    } else if(path==='batches/preflight') {const b=route.request().postDataJSON();body={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:suites.find(s=>s.id===b.suite_id)?.cases||b.cases,nodes:[],reasons:[]};
-    } else if(path==='batches') {
+    } else if(path==='orchestrations/preflight') {const b=route.request().postDataJSON();body={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:suites.find(s=>s.id===b.suite_id)?.cases||b.cases,nodes:[],reasons:[]};
+    } else if((path==='batches'||path==='orchestrations')) {
       if(route.request().method()==='POST') {
         submitted=route.request().postDataJSON();
         body={id:'batch-1',title:submitted.title,status:'PENDING',total:1,succeeded:0,finished:0,total_episodes:3,cases:[]};batches.push(body);
@@ -52,6 +52,7 @@ test('suite registration hands off to run; tabs preserve drafts and send selecte
   await expect(runs.getByLabel('批次名称',{exact:true})).toHaveValue('RoboTwin batch');
   await expect(runs.getByLabel('选择已保存集合')).toHaveValue('suite-1');
   await expect(runs.getByLabel('第 1 项任务名',{exact:true})).toBeDisabled();
+  await runs.getByRole('button',{name:'下一步',exact:true}).click();
   await runs.getByRole('button',{name:'下一步',exact:true}).click();
   await runs.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await runs.getByRole('button',{name:'下一步',exact:true}).click();

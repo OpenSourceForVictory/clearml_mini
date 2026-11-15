@@ -1,0 +1,27 @@
+import {test,expect} from '@playwright/test';
+test.skip(!process.env.ORCHESTRATION_LIVE_TEST_API,'requires isolated orchestration API');
+const base=process.env.ORCHESTRATION_LIVE_TEST_API||'';
+test('real API: publish template copy, create suite and queue managed orchestration atomically',async({page,request})=>{
+ const login=await request.post(base+'/api/v1/auth/login',{data:{username:'admin',password:'suite-test-password'}});expect(login.ok()).toBeTruthy();
+ const token=(await login.json()).access_token,headers={Authorization:'Bearer '+token},name='orchestration-ui-'+Date.now();
+ const schema={version:1,fields:{batch_size:{type:'integer',default:2,min:1,max:8,overridable:true}}};
+ const created=await request.post(base+'/api/v1/admin/client-templates',{headers,data:{name,version:'1',image:'test:1',task_type:'command',command:['python3','client.py'],parameter_schema:schema}});expect(created.status()).toBe(201);const client=await created.json();
+ const serverResponse=await request.post(base+'/api/v1/admin/server-templates',{headers,data:{name:name+'-server',version:'1',image:'test:1',command:['python3','server.py']}});expect(serverResponse.status()).toBe(201);const server=await serverResponse.json();
+ await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);await page.goto(base);await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+ const wizard=page.getByRole('region',{name:'集合运行向导'});
+ await wizard.getByLabel('批次名称',{exact:true}).fill(name);await wizard.getByLabel('第 1 项回合数').fill('1');
+ await wizard.getByLabel('同时保存为可复用集合').check();await wizard.getByLabel('新集合名称').fill(name);
+ await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端模板',{exact:true}).selectOption(client.id);
+ await wizard.getByRole('button',{name:'复制修改客户端模板'}).click();await wizard.getByLabel('新版本',{exact:true}).fill('2');await wizard.getByRole('button',{name:'保存并发布此版本'}).click();
+ await expect(wizard.getByLabel('客户端模板',{exact:true})).not.toHaveValue(client.id);const selected=await wizard.getByLabel('客户端模板',{exact:true}).inputValue();
+ await wizard.getByLabel('batch_size',{exact:true}).fill('4');await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('服务来源').selectOption('managed');
+ await wizard.getByLabel('服务 1 模板').selectOption(server.id);await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('mock');
+ await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();await wizard.getByText('有效业务参数与来源',{exact:true}).click();await expect(wizard.getByText(/"batch_size": 4/)).toBeVisible();
+ const response=page.waitForResponse(r=>r.url().endsWith('/api/v1/orchestrations')&&r.request().method()==='POST');await wizard.getByRole('button',{name:'提交排队'}).click();
+ const submitted=await response;expect(submitted.status()).toBe(201);const batch=await submitted.json();expect(batch.suite_id).toBeTruthy();expect(batch.cases[0].status).toBe('PENDING');
+ const suite=await (await request.get(base+'/api/v1/suites/'+batch.suite_id,{headers})).json();expect(suite.template_id).toBe(selected);
+ const detail=await (await request.get(base+'/api/v1/orchestrations/'+batch.id,{headers})).json();expect(detail.orchestration.definitions[0].template.id).toBe(server.id);
+ await wizard.getByRole('button',{name:'查看已提交批次'}).click();await expect(page.getByRole('region',{name:'客户端与服务关系'})).toBeVisible();
+ expect((await request.post(base+'/api/v1/batches/'+batch.id+'/control',{headers,data:{action:'cancel',expected_revision:0}})).ok()).toBeTruthy();
+ await page.screenshot({path:'test-results/orchestration-live.png',fullPage:true});
+});

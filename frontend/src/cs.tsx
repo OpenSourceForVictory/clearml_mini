@@ -1,3 +1,4 @@
+import {TemplateLibrary} from './template-library';
 import {BatchComparison} from './batch-reports';
 import React, {useEffect, useState, useRef} from 'react';
 import {api} from './api';
@@ -60,6 +61,7 @@ export function CSWorkbench({renderJob,admin=false}:{admin?:boolean;renderJob:(i
     <div role="tabpanel" id="cs-panel-clients" aria-labelledby="cs-tab-clients" hidden={tab!=='clients'}>
       <ImageClients onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>
       <ClientSources/>
+      <TemplateLibrary onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>
       {admin?<ClientTemplates onChange={()=>{void refresh().catch(e=>setError(String(e)));}}/>:
         <section className="panel"><h2>可用客户端模板</h2><p className="hint">选择已有模板注册集合，或提交自己的客户端代码。</p>
           {!templates.length&&<p>暂无可用客户端模板。</p>}

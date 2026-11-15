@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {api} from './api';
 type Case={case_id:string;task_name:string;episodes:number;seed:number;parameters:Record<string,unknown>};
 type Template={id:string;name:string;version:string};
-export type ManagedSuite={id:string;name:string;version:string;template_id:string;cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
+export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
   versions?:{id:string;version:string;status:string;archived:boolean}[]};
 type Summary=Omit<ManagedSuite,'cases'> & {task_count:number;total_episodes:number;latest_run:null|{id:string;title:string;status:string}};
 type Doc={schema_version:number;name:string;version:string;description:string;tags:string[];source:string;client?:{name:string;version:string};cases:Case[]};
@@ -22,6 +22,7 @@ function Parameters({value,change,label}:{value:Record<string,unknown>;change:(v
 export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template[];onRun:(s:ManagedSuite)=>void;onSaved:()=>void;onJob:(id:string)=>void}){
   const [list,setList]=useState<Summary[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1);
   const [q,setQ]=useState(''),[tag,setTag]=useState(''),[client,setClient]=useState(''),[state,setState]=useState('active');
+  const [clientDefaults,setClientDefaults]=useState<Record<string,unknown>>({});
   const [doc,setDoc]=useState<Doc>(empty),[template,setTemplate]=useState(''),[editing,setEditing]=useState<ManagedSuite|null>(null);
   const [selected,setSelected]=useState<Set<number>>(new Set()),[taskQuery,setTaskQuery]=useState('');
   const [preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
@@ -36,12 +37,13 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   useEffect(()=>{let live=true;const load=async()=>{try{const r=await api<{items:Summary[];total:number}>('suites/manage?'+new URLSearchParams({page:String(page),q,tag,template_id:client,state}));if(live){setList(r.items);setTotal(r.total);}}catch(e){if(live)setError(String(e));}};
     void load();const t=setInterval(()=>void load(),5000);return()=>{live=false;clearInterval(t);};},[page,q,tag,client,state]);
   useEffect(()=>{let live=true;setRuns([]);if(editing)void api<typeof runs>('suites/'+editing.id+'/runs?page='+runPage).then(r=>{if(live)setRuns(r);}).catch(e=>{if(live)setError(String(e));});return()=>{live=false;};},[editing?.id,runPage]);
-  function reset(value:Doc=empty(),t=''){
+  function reset(value:Doc=empty(),t='',defaults:Record<string,unknown>={}){
+    setClientDefaults(defaults);
     setDoc(value);setTemplate(t);setEditing(null);setSelected(new Set());setPreview(null);setMessage('');setError('');setTaskQuery('');setRunPage(1);
   }
   function setCases(cases:Case[]){setDoc(old=>({...old,cases}));setPreview(null);}
   async function load(id:string){
-    try{const s=await api<ManagedSuite>('suites/'+id);reset({schema_version:1,name:s.name,version:s.version,description:s.description,tags:s.tags,source:s.source,cases:s.cases},s.template_id);setEditing(s);}
+    try{const s=await api<ManagedSuite>('suites/'+id);reset({schema_version:1,name:s.name,version:s.version,description:s.description,tags:s.tags,source:s.source,cases:s.cases},s.template_id,s.client_defaults||{});setEditing(s);}
     catch(e){setError(String(e));}
   }
   async function check(value=doc){
@@ -65,7 +67,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
       const result=await check();if(!result.valid||!result.document)return;
       if(!template)throw Error('请选择当前账号可用的客户端模板');
       const {schema_version,client:hint,...values}=result.document;
-      const body={...values,template_id:template,status:published?'published':'draft',...(editing?{expected_revision:editing.revision}:{})};
+      const body={...values,client_defaults:clientDefaults,template_id:template,status:published?'published':'draft',...(editing?{expected_revision:editing.revision}:{})};
       const saved=await api<ManagedSuite>('suites'+(editing?'/'+editing.id:''),editing?'PUT':'POST',body);
       setEditing(saved);setDoc({...result.document,cases:saved.cases});setMessage(published?'集合版本已发布。':'草稿已保存。');
       await refresh();onSaved();if(run)onRun(saved);
@@ -85,7 +87,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     }catch(e){setError(String(e));}
   }
   function copy(newVersion:boolean){
-    const old=editing;reset({...doc,name:newVersion?doc.name:doc.name+' 副本',version:newVersion?doc.version+'-next':'1'},template);
+    const old=editing;reset({...doc,name:newVersion?doc.name:doc.name+' 副本',version:newVersion?doc.version+'-next':'1'},template,clientDefaults);
     setMessage(newVersion?'已复制为新版本草稿，请确认版本号。':'已复制到新集合草稿，尚未保存。');
     if(old)setSelected(new Set());
   }
@@ -132,6 +134,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
           </div>
           {doc.client&&<p className="hint">导入客户端提示：{doc.client.name} / {doc.client.version}。无法自动匹配时请手动选择。</p>}
           <Field label="集合说明"><textarea maxLength={2000} value={doc.description} onChange={e=>setDoc({...doc,description:e.target.value})}/></Field>
+          <label>集合默认业务参数</label><Parameters value={clientDefaults} change={setClientDefaults} label="集合默认业务参数"/>
           <Field label="来源版本"><input maxLength={1000} value={doc.source} onChange={e=>setDoc({...doc,source:e.target.value})}/></Field>
         </fieldset>
         <Field label="搜索清单任务"><input value={taskQuery} onChange={e=>setTaskQuery(e.target.value)}/></Field>
