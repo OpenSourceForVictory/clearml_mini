@@ -38,6 +38,12 @@ class Preview(BaseModel):
     content: str = Field(max_length=1048576)
 
 
+class Copy(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    name:str=Field(min_length=1,max_length=200)
+    version:str=Field(min_length=1,max_length=100)
+
+
 def install(app, db, current):
     def owned(s, id, user):
         suite = s.get(EvaluationSuite, id)
@@ -47,7 +53,7 @@ def install(app, db, current):
 
     def validate(s, body, user, exclude=None):
         template = s.get(ClientTemplate, body.template_id)
-        if not template or not template.enabled or (template.owner_id is not None and template.owner_id != user.id):
+        if not template or not template.enabled or template.archived or template.status!='published' or (template.owner_id is not None and template.owner_id != user.id):
             raise HTTPException(400, 'unknown or disabled client template')
         q = select(EvaluationSuite.id).where(EvaluationSuite.owner_id==user.id, EvaluationSuite.name==body.name, EvaluationSuite.version==body.version)
         if exclude:
@@ -124,6 +130,15 @@ def install(app, db, current):
         x=owned(s,id,user);t=s.get(ClientTemplate,x.template_id)
         return dict(schema_version=1,name=x.name,version=x.version,description=x.description,tags=x.tags,source=x.source,
                     client={'name':t.name,'version':t.version},cases=x.cases)
+
+    @app.post('/api/v1/suites/{id}/clone',status_code=201)
+    def clone(id:str,body:Copy,user=Depends(current),s=Depends(db)):
+        from copy import deepcopy
+        lock(s);source=owned(s,id,user)
+        fields={k:deepcopy(getattr(source,k)) for k in SuiteWrite.model_fields}
+        fields.update(name=body.name,version=body.version,status='draft')
+        request=SuiteWrite(**fields);validate(s,request,user)
+        item=EvaluationSuite(owner_id=user.id,**request.model_dump());s.add(item);s.commit();return suite_view(item)
 
     @app.get('/api/v1/suites/{id}/runs')
     def runs(id:str,page:int=Query(1,ge=1),user=Depends(current),s=Depends(db)):

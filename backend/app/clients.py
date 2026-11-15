@@ -140,14 +140,14 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision')}
 
 
 def snapshot(s, body, owner_id=None):
     if body is None:
         raise HTTPException(400, 'CS evaluation requires client configuration')
     t = s.get(ClientTemplate, body.template_id)
-    if not t or not t.enabled or t.archived or (t.owner_id is not None and t.owner_id != owner_id):
+    if not t or not t.enabled or t.archived or t.status!='published' or (t.owner_id is not None and t.owner_id != owner_id):
         raise HTTPException(400, 'unknown or disabled client template')
     if body.service_mode=='none' and t.task_type!='command':raise HTTPException(400,'evaluation templates require an inference service')
     urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint] if body.endpoint else []
@@ -183,7 +183,7 @@ def install(app, db, current):
 
     @app.get('/api/v1/client-templates')
     def templates(user=Depends(current), s: Session = Depends(db)):
-        q = select(ClientTemplate).where(ClientTemplate.archived.is_(False)).order_by(ClientTemplate.name, ClientTemplate.version)
+        q = select(ClientTemplate).where(ClientTemplate.archived.is_(False),ClientTemplate.status=='published').order_by(ClientTemplate.name, ClientTemplate.version)
         if user.role != 'admin':
             q = q.where(ClientTemplate.enabled, or_(ClientTemplate.owner_id.is_(None), ClientTemplate.owner_id == user.id))
         return [template_view(t) for t in s.scalars(q)]

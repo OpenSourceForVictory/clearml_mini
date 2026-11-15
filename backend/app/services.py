@@ -99,7 +99,7 @@ def install(app,db,admin,worker_auth):
     @app.post('/api/v1/admin/services',status_code=201)
     def create(body:Deploy,user=Depends(admin),s=Depends(db)):
         lock(s);t=s.get(ServerTemplate,body.template_id);slot=s.get(Slot,body.slot_id)
-        if not t or not t.enabled or t.archived:raise HTTPException(400,'unknown or disabled server template')
+        if not t or not t.enabled or t.archived or t.status!='published':raise HTTPException(400,'unknown or disabled server template')
         if not slot:raise HTTPException(404,'GPU slot not found')
         definition=server_view(t);runtime=definition.get('host_runtime') or definition.get('runtime') or {}
         if set(body.environment)-set(runtime.get('overridable_env',[])):raise HTTPException(400,'environment override is not allowed')

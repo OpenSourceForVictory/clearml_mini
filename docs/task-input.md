@@ -39,3 +39,11 @@ python -m runner.task_input input.json --dry-run
 ```
 
 输入文件可使用现有CS格式，工具会转换为带`input_version=1`的platform/task/business结构。正式执行还要检查模板权限、节点资源和服务健康；本地检查不会预留机器。
+
+## 复制与编辑API
+
+`GET /api/v1/runtime-templates/client`和`server`返回当前用户可见的已发布模板与自有草稿。`POST /api/v1/runtime-templates/{kind}/{id}/clone`使用`name`和`version`创建私有草稿；`PUT /api/v1/runtime-templates/{kind}/{id}`提交`expected_revision`和完整`definition`修改草稿；`POST .../actions`使用`action=publish`发布。草稿不会出现在运行模板候选项中，已发布定义需要另存新版本修改。
+
+服务端公共模板默认不向普通成员开放。管理员使用`PATCH /api/v1/admin/server-templates/{id}/access`提交`expected_revision`和`available_to_members`开放自己的模板。复制不继承公共发布权限。成员可复用已批准的宿主机模板，但不能修改宿主机命令、环境或参数映射来扩大执行权限。
+
+`POST /api/v1/suites/{id}/clone`使用新`name`和`version`复制自己的集合为草稿，之后沿用集合草稿编辑/发布接口。所有编辑带revision检查；冲突时保留本地输入、重新读取后再提交。已有运行始终使用提交时快照。

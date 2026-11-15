@@ -33,7 +33,8 @@ class Clone(BaseModel):
 
 
 def server_view(t):
-    return {**t.definition,'id':t.id,'name':t.name,'version':t.version,'enabled':t.enabled,'archived':t.archived}
+    return {**t.definition,'id':t.id,'name':t.name,'version':t.version,'enabled':t.enabled,'archived':t.archived,
+            'owner_id':t.owner_id,'status':t.status,'revision':t.revision,'available_to_members':t.available_to_members}
 
 
 def install(app,db,admin):

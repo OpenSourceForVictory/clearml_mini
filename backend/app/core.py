@@ -284,6 +284,8 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     task_type: Mapped[str] = mapped_column(String(20), default='evaluation', server_default='evaluation')
     platform_bindings: Mapped[list] = mapped_column(JSON_TYPE, default=list, server_default='[]')
     parameter_schema: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
@@ -407,6 +409,10 @@ class DataCleanupItem(Base):
 
 
 class ServerTemplate(Base):
+    owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey('users.id'), index=True)
+    status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    available_to_members: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     __tablename__ = 'server_templates'
     __table_args__ = (UniqueConstraint('name', 'version'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)

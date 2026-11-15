@@ -150,6 +150,8 @@ def install(app, db, current):
     ssh_onboarding.install(app, db, admin)
     from . import templates
     templates.install(app, db, admin)
+    from . import template_versions
+    template_versions.install(app, db, current, admin)
     host_environments.install(app, db, admin)
     from . import services
     services.install(app, db, admin, worker_auth)
