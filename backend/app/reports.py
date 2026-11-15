@@ -56,8 +56,9 @@ def report(s, batch, at):
         spec = job.client_spec
         template = spec['template']
         reporting = template.get('episode_reporting', False)
+        command=template.get('task_type')=='command'
         done, successes, errors = counts.get(run.id, (0, 0, 0)) if reporting else (0, 0, 0)
-        definition = dict(task_name=spec['task_name'], seed=spec['seed'], episodes=job.episodes,
+        definition = dict(task_name=spec['task_name'], seed=spec['seed'], episodes=0 if command else job.episodes,
                           parameters_digest=digest(spec.get('parameters', {})))
         config = dict(pool_id=job.pool_id, gpu_mode=job.gpu_mode,
                       requested_vram_gb=job.requested_vram_gb, required_gpu_model=job.required_gpu_model,
@@ -70,7 +71,7 @@ def report(s, batch, at):
                           episode_reporting=reporting, completed_episodes=done, successes=successes,
                           goal_failures=done-successes, episode_errors=errors,
                           success_rate=successes/done if done else None,
-                          partial=not reporting or done != job.episodes or errors > 0 or job.status != 'SUCCEEDED'))
+                          partial=(job.status!='SUCCEEDED') if command else (not reporting or done != job.episodes or errors > 0 or job.status != 'SUCCEEDED')))
     done = sum(c['completed_episodes'] for c in cases)
     successes = sum(c['successes'] for c in cases)
     summary = dict(total_tasks=len(cases), planned_episodes=sum(c['episodes'] for c in cases),

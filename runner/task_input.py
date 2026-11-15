@@ -110,3 +110,10 @@ def main():
 
 
 if __name__=='__main__':main()
+
+
+def publication_path(config, original):
+    """Docker copies are root-owned; publish into the writable execution space."""
+    if config['template'].get('execution_mode')=='host':return original
+    runtime=config['template'].get('runtime') or {}
+    return str(Path(runtime.get('work_dir') or os.environ.get('MINI_EVAL_WORK_DIR',str(Path(original).parent)))/'.mini-eval-input.json')

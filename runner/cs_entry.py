@@ -46,11 +46,13 @@ def main():
             print(json.dumps({'stage': 'connecting', 'task_name': config['task_name']}), flush=True)
             preflight(config['endpoint'], config['request_timeout_seconds'])
             print(json.dumps({'stage': 'connected'}), flush=True)
+        from .task_input import publication_path
+        input_path=publication_path(config,input_path)
         env = {**os.environ, 'MINI_EVAL_INPUT': input_path, 'MINI_EVAL_OUTPUT_DIR': output_dir}
         command, cwd = config['template']['command'], None
         if config['template'].get('runtime') is not None:
             from .image_runtime import resolve
-            command, additions, cwd = resolve(config)
+            command, additions, cwd = resolve(config,input_path=input_path)
             env.update(additions)
         if config['template'].get('execution_mode') == 'host':
             command = config.get('_resolved_command', command)

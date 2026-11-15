@@ -96,7 +96,7 @@ class Endpoint(BaseModel):
 class ClientRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     template_id: str
-    service_mode: Literal['external','none'] = 'external'
+    service_mode: Literal['external','none','managed'] = 'external'
     endpoint: str | None = Field(default=None, min_length=1, max_length=2000)
     endpoints: list[Endpoint] | None = Field(default=None, min_length=1, max_length=100)
     task_name: str = Field(min_length=1, max_length=200)
@@ -115,8 +115,8 @@ class ClientRequest(BaseModel):
     @model_validator(mode='after')
     def endpoint_selection(self):
         from .endpoints import resource_key
-        if self.service_mode=='none':
-            if self.endpoint is not None or self.endpoints is not None:raise ValueError('service_mode none cannot include endpoints')
+        if self.service_mode in ('none','managed'):
+            if self.endpoint is not None or self.endpoints is not None:raise ValueError('automatic or absent service cannot include endpoints')
             return self
         if (self.endpoint is None) == (self.endpoints is None):
             raise ValueError('provide exactly one of endpoint or endpoints')
@@ -151,7 +151,7 @@ def snapshot(s, body, owner_id=None):
         raise HTTPException(400, 'unknown or disabled client template')
     if body.service_mode=='none' and t.task_type!='command':raise HTTPException(400,'evaluation templates require an inference service')
     urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint] if body.endpoint else []
-    if not urls and any(b['source'].startswith('platform.service.') for b in t.platform_bindings):
+    if body.service_mode=='none' and any(b['source'].startswith('platform.service.') for b in t.platform_bindings):
         raise HTTPException(400,'template platform bindings require an inference service')
     if any(endpoint_parts(url)[0].scheme not in t.protocols for url in urls):
         raise HTTPException(400, 'endpoint protocol does not match client template')

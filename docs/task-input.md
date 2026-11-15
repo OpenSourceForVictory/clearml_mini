@@ -49,3 +49,48 @@ python -m runner.task_input input.json --dry-run
 `POST /api/v1/suites/{id}/clone`使用新`name`和`version`复制自己的集合为草稿，之后沿用集合草稿编辑/发布接口。所有编辑带revision检查；冲突时保留本地输入、重新读取后再提交。已有运行始终使用提交时快照。
 
 集合可保存`client_defaults`，每项case可通过`parameters`覆盖。`service_keys`保存逻辑服务引用，具体实例分配由编排模块负责。`resources`接受cpus、ram_gb、gpu_mode、requested_vram_gb和required_gpu_model，case覆盖批次资源默认。CPU/内存不超过资源池的每任务预算；运行参数batch_size等不影响资源申请。任务领取使用实际预留的CPU/内存，预检逐项返回case_checks。
+
+## 集合运行向导与两端编排
+
+CS 评测批次 → 评测集合运行提供五步向导：集合、客户端、服务端、资源、确认。
+可使用已有集合、临时清单或同时保存新集合。客户端和服务端分别填写业务参数；
+确认页显示逐项有效值及来源。选择“平台启动服务端模板”后无需手工选择机器、端口或复制地址。
+每个服务定义具有逻辑名称（默认 `default`），任务可通过 `service_keys` 限定候选定义。
+未限定时可选任一兼容服务。服务共享/独占是访问策略，与 GPU 共享/独占分别设置。
+普通命令模板可选择“无需服务”，其完成情况依据退出码，计划回合数显示为零。
+
+客户端注册页的“模板复用与草稿”可复制两端模板、编辑业务 schema 和运行配置、保存草稿及发布。
+向导中也可以复制修改模板；发布成功后切换到新版本，取消保留原选择。复制集合保留任务参数、
+集合默认值和资源覆盖，提交时原子保存新集合与运行。已提交任务继续使用冻结的快照。
+
+### 管理员准备
+
+1. 升级数据库至 `r841a23` 及 API/调度器，使用支持协议 10 的 Worker。
+2. 服务端机器需要 `server` 角色、资源池成员和已批准的运行环境/镜像。
+3. 机器配置 → 服务自动分配网络，填写客户端可达的本机 IPv4 与 1–1001 个端口的范围。
+   API 为 `PUT /api/v1/admin/nodes/{id}/service-network`，提交 `expected_revision` 和
+   `config: {address, port_start, port_end}`。留空配置禁止新的自动分配，已有实例地址不变。
+4. 公共服务模板默认不对成员开放。管理员通过
+   `PATCH /api/v1/admin/server-templates/{id}/access` 提交 `expected_revision` 和 `available_to_members: true`。
+5. 全局及用户活动执行配额至少为 2；服务端执行也消耗配额、CPU、内存、GPU 资源。
+
+### 提交与观察
+
+`POST /api/v1/orchestrations/preflight` 只读检查，不占用端口或启动进程。
+`POST /api/v1/orchestrations` 使用同一请求体并要求 `Idempotency-Key`；同键同内容返回原批次，
+同键不同内容返回 409。`client.service_mode` 为 `external`、`managed` 或 `none`。
+托管模式的 `services` 数组每项包含 `key`、`template_id`、`pool_id`、`mode`、
+可选 `max_instances`、`parameters`、`parameter_overrides`、`environment`、`resources`。
+外部模式使用 `client.endpoints`；无服务模式不填写地址。新集合使用 `new_suite`，与 `suite_id` / `cases` 互斥。
+
+调度器在现有 Run 账本中同时预留一个服务和一个客户端的预算；客户端等待当前服务执行的新鲜健康报告，
+领取时再核对。已有健康共享实例直接复用，独占实例等旧客户端清理后才能再分配。
+服务健康过期或故障阻止新客户端开始；已经运行的客户端保留原绑定，按自身协议失败/超时，平台不会偷偷换址。
+端口占用失败最多尝试三个不同端口，其他错误需要修正后显式恢复。GPU 调度仍遵守已有资源池与机器上限。
+
+批次详情显示任务 → 实际服务地址 → 服务执行代次，可查看本人服务日志并停止/恢复。
+默认在所有客户端结束且清理确认后停止服务；取消也遵守该清理顺序。选择保留时由用户手动停止。
+自动结束批次应先重试客户端再恢复服务；仍有排队客户端时，恢复请求仍须联合分配两端预算。
+保留策略下、无等待客户端时的显式恢复将重新排队服务任务。旧执行尚未清理时拒绝恢复。
+
+回退前必须停止新编排提交并排空两端执行；不能让旧调度器接管仍在等待服务的客户端预留。

@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 from .clients import ClientRequest, snapshot
-from .core import ClientTemplate, EvaluationSuite, EvaluationBatch, Event, Job, Pool, Run, User
+from .core import ClientTemplate, EvaluationSuite, EvaluationBatch, EvaluationOrchestration, Event, Job, Pool, Run, User
 from .scheduling import ACTIVE, TERMINAL, lock
 from .episodes import progress
 from .job_resources import Request as ResourceRequest
@@ -92,7 +92,7 @@ def batch_view(s, batch, jobs=None, progresses=None):
         status = 'FAILED'
     else:
         status = 'CANCELLED'
-    return {'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
+    return {'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command'),
             'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
@@ -103,10 +103,10 @@ def batch_view(s, batch, jobs=None, progresses=None):
                        'progress': progresses[j.runs[-1].id] if progresses is not None else progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
 
 
-def resolve_batch(s, body, user):
+def resolve_batch(s, body, user, initial_defaults=None):
     """Resolve and validate without mutating the request or persisting records."""
     cases = list(body.cases)
-    defaults={}
+    defaults=initial_defaults or {}
     if body.suite_id:
         suite = s.get(EvaluationSuite, body.suite_id)
         if not suite or suite.owner_id != user.id:
@@ -156,7 +156,26 @@ def resolve_batch(s, body, user):
     return pool, cases, configs
 
 
+def persist_batch(s, body, user, pool, cases, configs, idempotency_key=None):
+    batch = EvaluationBatch(owner_id=user.id, title=body.title, idempotency_key=idempotency_key,
+                            suite_id=body.suite_id, max_concurrent=body.max_concurrent)
+    s.add(batch); s.flush()
+    for case, spec in zip(cases, configs):
+        j = Job(owner_id=user.id, pool_id=pool.id, title=f'{body.title[:95]} / {case.case_id}',
+                benchmark='cs-client', model_ref=spec['template']['name']+':'+spec['template']['version'],
+                episodes=case.episodes, client_spec=spec, batch_id=batch.id, case_id=case.case_id,
+                gpu_mode=spec['resources']['gpu_mode'], requested_vram_gb=spec['resources']['requested_vram_gb'],
+                required_gpu_model=spec['resources']['required_gpu_model'],requested_cpu=spec['resources'].get('cpus'),requested_ram_gb=spec['resources'].get('ram_gb'))
+        s.add(j); s.flush()
+        run = Run(job_id=j.id, attempt=1)
+        s.add(run); s.flush()
+        s.add(Event(job_id=j.id, run_id=run.id, new_status='PENDING', message='created from evaluation manifest'))
+    return batch
+
+
 def install(app, db, current):
+    from . import orchestrations
+    orchestrations.install(app,db,current)
     from . import suites as suite_management
     suite_management.install(app, db, current)
     from .monitoring import install as install_monitoring
@@ -172,12 +191,14 @@ def install(app, db, current):
 
     @app.post('/api/v1/batches/preflight')
     def preflight(body: BatchSubmit, user=Depends(current), s: Session = Depends(db)):
+        if body.client.service_mode=='managed':raise HTTPException(400,'managed services require orchestration submission')
         from .preflight import inspect_batch
         pool, cases, configs = resolve_batch(s, body, user)
         return inspect_batch(s, body, user, pool, cases, configs)
 
     @app.post('/api/v1/batches', status_code=201)
     def create(body: BatchSubmit, idempotency_key: Optional[str] = Header(None), user=Depends(current), s: Session = Depends(db)):
+        if body.client.service_mode=='managed':raise HTTPException(400,'managed services require orchestration submission')
         lock(s)
         s.execute(select(User.id).where(User.id == user.id).with_for_update())
         if idempotency_key is not None and (not idempotency_key.strip() or len(idempotency_key) > 200):
@@ -188,19 +209,7 @@ def install(app, db, current):
             if old:
                 return batch_view(s, old)
         pool, cases, configs = resolve_batch(s, body, user)
-        batch = EvaluationBatch(owner_id=user.id, title=body.title, idempotency_key=idempotency_key,
-                                suite_id=body.suite_id, max_concurrent=body.max_concurrent)
-        s.add(batch); s.flush()
-        for case, spec in zip(cases, configs):
-            j = Job(owner_id=user.id, pool_id=pool.id, title=f'{body.title[:95]} / {case.case_id}',
-                    benchmark='cs-client', model_ref=spec['template']['name']+':'+spec['template']['version'],
-                    episodes=case.episodes, client_spec=spec, batch_id=batch.id, case_id=case.case_id,
-                    gpu_mode=spec['resources']['gpu_mode'], requested_vram_gb=spec['resources']['requested_vram_gb'],
-                    required_gpu_model=spec['resources']['required_gpu_model'],requested_cpu=spec['resources'].get('cpus'),requested_ram_gb=spec['resources'].get('ram_gb'))
-            s.add(j); s.flush()
-            run = Run(job_id=j.id, attempt=1)
-            s.add(run); s.flush()
-            s.add(Event(job_id=j.id, run_id=run.id, new_status='PENDING', message='created from evaluation manifest'))
+        batch = persist_batch(s,body,user,pool,cases,configs,idempotency_key)
         s.commit()
         return batch_view(s, batch)
 

@@ -44,31 +44,32 @@ class Copy(BaseModel):
     version:str=Field(min_length=1,max_length=100)
 
 
+def validate(s, body, user, exclude=None):
+    template = s.get(ClientTemplate, body.template_id)
+    if not template or not template.enabled or template.archived or template.status!='published' or (template.owner_id is not None and template.owner_id != user.id):
+        raise HTTPException(400, 'unknown or disabled client template')
+    q = select(EvaluationSuite.id).where(EvaluationSuite.owner_id==user.id, EvaluationSuite.name==body.name, EvaluationSuite.version==body.version)
+    if exclude:
+        q = q.where(EvaluationSuite.id != exclude)
+    if s.scalar(q):
+        raise HTTPException(409, 'suite version already exists')
+    try:
+        json_tree([c.model_dump() for c in body.cases])
+        if template.parameter_schema is not None:
+            from runner.parameter_contract import resolve_layers
+            for case in body.cases:
+                try: resolve_layers(template.parameter_schema,[('suite',body.client_defaults),('case',case.parameters)])
+                except ValueError as exc: raise ValueError(f'case {case.case_id}: {exc}') from exc
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 def install(app, db, current):
     def owned(s, id, user):
         suite = s.get(EvaluationSuite, id)
         if not suite or suite.owner_id != user.id:
             raise HTTPException(404, 'suite not found')
         return suite
-
-    def validate(s, body, user, exclude=None):
-        template = s.get(ClientTemplate, body.template_id)
-        if not template or not template.enabled or template.archived or template.status!='published' or (template.owner_id is not None and template.owner_id != user.id):
-            raise HTTPException(400, 'unknown or disabled client template')
-        q = select(EvaluationSuite.id).where(EvaluationSuite.owner_id==user.id, EvaluationSuite.name==body.name, EvaluationSuite.version==body.version)
-        if exclude:
-            q = q.where(EvaluationSuite.id != exclude)
-        if s.scalar(q):
-            raise HTTPException(409, 'suite version already exists')
-        try:
-            json_tree([c.model_dump() for c in body.cases])
-            if template.parameter_schema is not None:
-                from runner.parameter_contract import resolve_layers
-                for case in body.cases:
-                    try: resolve_layers(template.parameter_schema,[('suite',body.client_defaults),('case',case.parameters)])
-                    except ValueError as exc: raise ValueError(f'case {case.case_id}: {exc}') from exc
-        except ValueError as e:
-            raise HTTPException(400, str(e))
 
     def revision(suite, expected):
         if suite.revision != expected:

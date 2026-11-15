@@ -91,6 +91,31 @@ def view(s,item):
     return {**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'error':job.error if job else None}
 
 
+def resolve_parameters(definition,parameters,environment,overrides):
+    runtime=definition.get('host_runtime') or definition.get('runtime') or {}
+    if set(environment)-set(runtime.get('overridable_env',[])):raise HTTPException(400,'environment override is not allowed')
+    try:
+        from runner.image_runtime import placeholders
+        for value in environment.values():
+            placeholders(value,runtime.get('assets',{}),runtime.get('mounts',{}))
+        if definition.get('parameter_schema') is not None:
+            from runner.parameter_contract import resolve_values
+            parameters=resolve_values(definition['parameter_schema'],parameters,overrides)
+        elif overrides: raise ValueError('parameter_overrides requires a typed template')
+    except ValueError as exc: raise HTTPException(400,str(exc)) from exc
+    return parameters
+
+
+def create_instance(s,body,user):
+    t=s.get(ServerTemplate,body.template_id);slot=s.get(Slot,body.slot_id)
+    if not t or not t.enabled or t.archived or t.status!='published':raise HTTPException(400,'unknown or disabled server template')
+    if not slot:raise HTTPException(404,'GPU slot not found')
+    definition=server_view(t)
+    parameters=resolve_parameters(definition,body.parameters,body.environment,body.parameter_overrides)
+    item=ServiceInstance(parameters=parameters,name=body.name,worker_id=slot.worker_id,slot_id=slot.id,address=body.address,port=body.port,template_snapshot=definition,environment=body.environment,gpu_mode=body.gpu_mode,requested_vram_gb=body.requested_vram_gb)
+    s.add(item);s.flush();enqueue(s,item,user);audit(s,user,'service.deploy',item.id);return item
+
+
 def install(app,db,admin,worker_auth):
     @app.get('/api/v1/admin/services')
     def listing(user=Depends(admin),s=Depends(db)):
@@ -98,23 +123,7 @@ def install(app,db,admin,worker_auth):
 
     @app.post('/api/v1/admin/services',status_code=201)
     def create(body:Deploy,user=Depends(admin),s=Depends(db)):
-        lock(s);t=s.get(ServerTemplate,body.template_id);slot=s.get(Slot,body.slot_id)
-        if not t or not t.enabled or t.archived or t.status!='published':raise HTTPException(400,'unknown or disabled server template')
-        if not slot:raise HTTPException(404,'GPU slot not found')
-        definition=server_view(t);runtime=definition.get('host_runtime') or definition.get('runtime') or {}
-        if set(body.environment)-set(runtime.get('overridable_env',[])):raise HTTPException(400,'environment override is not allowed')
-        parameters=body.parameters
-        try:
-            from runner.image_runtime import placeholders
-            for value in body.environment.values():
-                placeholders(value,runtime.get('assets',{}),runtime.get('mounts',{}))
-            if definition.get('parameter_schema') is not None:
-                from runner.parameter_contract import resolve_values
-                parameters=resolve_values(definition['parameter_schema'],body.parameters,body.parameter_overrides)
-            elif body.parameter_overrides: raise ValueError('parameter_overrides requires a typed template')
-        except ValueError as exc: raise HTTPException(400,str(exc)) from exc
-        item=ServiceInstance(parameters=parameters,name=body.name,worker_id=slot.worker_id,slot_id=slot.id,address=body.address,port=body.port,template_snapshot=definition,environment=body.environment,gpu_mode=body.gpu_mode,requested_vram_gb=body.requested_vram_gb)
-        s.add(item);s.flush();enqueue(s,item,user);audit(s,user,'service.deploy',item.id);s.commit();return view(s,item)
+        lock(s);item=create_instance(s,body,user);s.commit();return view(s,item)
 
     @app.post('/api/v1/admin/services/{identity}/control')
     def control(identity:str,body:Control,user=Depends(admin),s=Depends(db)):

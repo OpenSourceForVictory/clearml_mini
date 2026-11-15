@@ -14,10 +14,13 @@ def resource_key(url):
     return host, port
 
 
-def candidates(spec):
+def candidates(spec,s=None):
     if not spec or spec.get('workload') == 'service':
         return []
     if spec.get('service_mode')=='none':return []
+    if spec.get('service_mode')=='managed':
+        from .service_dependencies import candidates as managed_candidates
+        return managed_candidates(s,spec)
     if spec.get('endpoints'):
         return spec['endpoints']
     return [{'url': spec['endpoint'], 'mode': 'exclusive' if spec['template'].get('endpoint_exclusive', False) else 'shared'}]
@@ -38,9 +41,9 @@ def holdings(runs):
     return [value for run in runs if (value := assigned(run)) is not None]
 
 
-def inspect(spec, held):
+def inspect(spec, held, s=None):
     result = []
-    for candidate in candidates(spec):
+    for candidate in candidates(spec,s):
         matches = [other for other in held if resource_key(other['url']) == resource_key(candidate['url'])]
         blocked = bool(matches) and (candidate['mode'] == 'exclusive' or any(x['mode'] == 'exclusive' for x in matches))
         result.append({**candidate, 'available': not blocked, 'occupancy': len(matches),
@@ -48,8 +51,8 @@ def inspect(spec, held):
     return result
 
 
-def choose(spec, held):
-    available = [item for item in inspect(spec, held) if item['available']]
+def choose(spec, held, s=None):
+    available = [item for item in inspect(spec, held,s) if item['available']]
     return min(available, key=lambda item: item['occupancy']) if available else None
 
 
@@ -58,11 +61,16 @@ def input_spec(run, spec):
     selected = assigned(run, spec)
     if not selected:
         raise ValueError('execution has no assigned inference endpoint')
-    return {**{k: v for k, v in spec.items() if k not in ('endpoint', 'endpoints')}, 'endpoint': selected['url']}
+    return {**{k: v for k, v in spec.items() if k not in ('endpoint', 'endpoints')}, 'endpoint': selected['url'],
+            'service_key':getattr(run,'assigned_service_key',None) or 'default'}
 
 
 def view(run, spec):
     selection = assigned(run, spec)
     return {'endpoint': selection['url'] if selection else None,
+            'service_instance_id':getattr(run,'assigned_service_instance_id',None),
+            'service_execution_id':getattr(run,'assigned_service_execution_id',None),
+            'service_key':getattr(run,'assigned_service_key',None),
+            'waiting_service':getattr(run,'waiting_service',False),
             'endpoint_mode': selection['mode'] if selection else None,
             'endpoint_candidates': candidates(spec)}

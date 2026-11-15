@@ -155,6 +155,8 @@ def install(app, db, current):
     host_environments.install(app, db, admin)
     from . import services
     services.install(app, db, admin, worker_auth)
+    from . import service_network
+    service_network.install(app,db,admin)
     worker_upgrades.install(app, db, admin, worker_auth)
     from . import node_agents
     node_agents.install(app, db, admin, worker_auth)
@@ -347,6 +349,7 @@ def install(app, db, current):
             return {'task': None, 'cleanup': cleanup}
         known = body.known_execution_ids if body else []
         run = s.scalar(select(Run).where(Run.slot_id == slot.id, Run.status.in_(ACTIVE),
+            or_(Run.waiting_service.is_(False),Run.status!='RESERVED'),
             Run.execution_id.not_in(known)).order_by(Run.reserved_at, Run.id).limit(1))
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
@@ -355,6 +358,9 @@ def install(app, db, current):
             if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING or not node_agents.admission(worker):
                 return {'task': None, 'cleanup': []}
             job = s.get(Job, run.job_id)
+            from .service_dependencies import binding_ready
+            if not binding_ready(s,run):return {'task':None,'cleanup':[]}
+            run.waiting_service=False
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
                 return {'task': None, 'cleanup': []}
             s.refresh(worker)

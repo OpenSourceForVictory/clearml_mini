@@ -6,6 +6,8 @@ from .cs_contract import INPUT_PATH,OUTPUT_DIR
 
 def main():
     inp=os.environ.get('MINI_EVAL_INPUT',INPUT_PATH);config=json.loads(Path(inp).read_text())
+    from .task_input import publication_path
+    inp=publication_path(config,inp)
     env={**os.environ,'MINI_EVAL_INPUT':inp,'MINI_EVAL_OUTPUT_DIR':os.environ.get('MINI_EVAL_OUTPUT_DIR',OUTPUT_DIR),
          'MINI_EVAL_PORT':str(config['port']),'MINI_EVAL_BIND_HOST':config['bind_host']}
     command=config['template']['command'];cwd=None
@@ -13,7 +15,7 @@ def main():
         command=config['_resolved_command'];env.update(config['_resolved_environment']);cwd=env['MINI_EVAL_WORK_DIR']
     else:
         from .image_runtime import resolve
-        command,additions,cwd=resolve(config);env.update(additions)
+        command,additions,cwd=resolve(config,input_path=inp);env.update(additions)
     from .task_input import build, bind_platform
     config=build(config,env)
     Path(inp).write_text(json.dumps(config,ensure_ascii=False,allow_nan=False))

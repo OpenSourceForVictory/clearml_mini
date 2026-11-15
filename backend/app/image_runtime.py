@@ -84,8 +84,8 @@ def ready(worker, slot, at):
 
 def blockers(worker, slot, spec, at):
     template=(spec or {}).get('template',{})
-    if (template.get('task_type')=='command' or template.get('platform_bindings')) and slot.protocol_version<10:
-        return ['普通命令和平台参数映射需要 Worker 协议 v10']
+    if (template.get('task_type')=='command' or template.get('platform_bindings') or (spec or {}).get('task_input_version')==1) and slot.protocol_version<10:
+        return ['统一任务输入、普通命令和平台参数映射需要 Worker 协议 v10']
     if (spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:
         return ['类型化业务参数需要 Worker v8']
     if not ready(worker, slot, at):

@@ -205,6 +205,7 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
         raise HTTPException(429, 'pending limit')
     values = body.model_dump(exclude={'client'})
     if body.benchmark == 'cs-client':
+        if body.client and body.client.service_mode=='managed':raise HTTPException(400,'managed services require orchestration submission')
         values['client_spec'] = snapshot(s, body.client, user.id)
         template = values['client_spec']['template']
         if template.get('task_type')=='command' and body.episodes!=1:

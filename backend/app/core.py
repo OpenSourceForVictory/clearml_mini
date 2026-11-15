@@ -76,6 +76,8 @@ class Pool(Base):
 
 
 class Worker(Base):
+    service_network: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    service_network_revision: Mapped[int] = mapped_column(Integer,default=0,server_default='0')
     __tablename__ = 'workers'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     upgrade_state: Mapped[Optional[str]] = mapped_column(String(20))
@@ -192,6 +194,10 @@ class Job(Base):
 
 
 class Run(Base):
+    assigned_service_instance_id: Mapped[Optional[str]] = mapped_column(String(36))
+    assigned_service_execution_id: Mapped[Optional[str]] = mapped_column(String(36))
+    assigned_service_key: Mapped[Optional[str]] = mapped_column(String(64))
+    waiting_service: Mapped[bool] = mapped_column(Boolean,default=False,server_default='false')
     __tablename__ = 'evaluation_runs'
     __table_args__ = (UniqueConstraint('job_id', 'attempt'),
         CheckConstraint("(assigned_endpoint IS NULL AND assigned_endpoint_mode IS NULL) OR (assigned_endpoint IS NOT NULL AND assigned_endpoint_mode IS NOT NULL AND assigned_endpoint_mode IN ('exclusive','shared'))", name='ck_run_endpoint_pair'),
@@ -428,6 +434,9 @@ class ServerTemplate(Base):
 
 
 class ServiceInstance(Base):
+    orchestration_batch_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_batches.id'),index=True)
+    service_key: Mapped[Optional[str]] = mapped_column(String(64))
+    auto_stopped: Mapped[bool] = mapped_column(Boolean,default=False,server_default='false')
     parameters: Mapped[dict] = mapped_column(JSON_TYPE, default=dict, server_default='{}')
     __tablename__ = 'service_instances'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -447,6 +456,15 @@ class ServiceInstance(Base):
     health_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     health_error: Mapped[Optional[str]] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EvaluationOrchestration(Base):
+    __tablename__='evaluation_orchestrations'
+    batch_id: Mapped[str] = mapped_column(ForeignKey('evaluation_batches.id'),primary_key=True)
+    request_digest: Mapped[str] = mapped_column(String(64))
+    definition: Mapped[dict] = mapped_column(JSON_TYPE)
+    stop_after_batch: Mapped[bool] = mapped_column(Boolean,default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
 
 
 class WorkerRelease(Base):

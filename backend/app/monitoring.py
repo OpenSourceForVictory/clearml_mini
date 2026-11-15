@@ -69,7 +69,7 @@ def monitor(s, batch):
         completed_episodes=completed, successes=successes, goal_failures=completed-successes,
         episode_errors=sum(c['progress']['errors'] for c in reporting),
         execution_failures=sum(j.status in ('FAILED', 'TIMED_OUT') for j in jobs),
-        reporting_tasks=len(reporting), unreported_tasks=len(jobs)-len(reporting),
+        reporting_tasks=len(reporting), unreported_tasks=sum(not c['episode_reporting'] and c['task_type']!='command' for c in result['cases']),
         success_rate=successes/completed if completed else None))
     for case, job in zip(result['cases'], jobs):
         run = job.runs[-1]
@@ -85,6 +85,9 @@ def monitor(s, batch):
             case['waiting'] = waiting
             case['reason_codes'] = sorted({r['code'] for r in waiting['reasons']} |
                 {r['code'] for n in waiting['nodes'] for r in n['reasons']})
+        if run.waiting_service and job.status=='RESERVED':
+            case['waiting']={'status':'waiting_service','reasons':[{'code':'service_starting','message':'两端资源已预留，等待关联服务健康'}],'nodes':[]}
+            case['reason_codes']=['service_starting']
         spec = job.client_spec
         case['config'] = dict(pool_id=job.pool_id, pool_name=pools[job.pool_id].name if job.pool_id in pools else job.pool_id,
                               gpu_mode=job.gpu_mode, requested_vram_gb=job.requested_vram_gb,

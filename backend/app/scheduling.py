@@ -39,6 +39,8 @@ def transition(s, run, status, message=None):
     old = run.status
     if old == 'RESERVED' and status in ('PENDING', 'CANCELLED'):
         run.assigned_endpoint = run.assigned_endpoint_mode = None
+        run.assigned_service_instance_id=run.assigned_service_execution_id=run.assigned_service_key=None
+        run.waiting_service=False
     run.status = job.status = status
     if status in TERMINAL:
         run.finished_at = job.finished_at = now()
@@ -160,6 +162,8 @@ def tick(factory, at=None):
         if not lock(s, wait=False):
             return 0
         reconcile(s, at)
+        from . import orchestration_scheduler
+        orchestration_scheduler.reconcile(s,at)
         memberships.reconcile(s)
         s.flush()
         # A timed-out worker may still be running its container. Keep its global,
@@ -221,53 +225,43 @@ def tick(factory, at=None):
                 for job in candidates:
                     if job.batch_id and batches[job.batch_id].scheduling_paused:
                         continue
-                    selected_endpoint = endpoints.choose(job.client_spec, endpoint_held)
-                    if job.client_spec and job.client_spec.get('service_mode')!='none' and job.benchmark != 'inference-service' and selected_endpoint is None:
-                        continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
                         continue
-                    pool = pools.get(job.pool_id)
-                    if not pool:
-                        continue
-                    from .job_resources import budget
-                    request=budget(pool,job)
-                    free.sort(key=lambda x: (x.gpu_utilization if telemetry_fresh(x, at) else 101,
-                                             len(by_slot[x.id]), x.node_name, x.gpu_index))
-                    slot = next((x for x in free if x.pool_id == job.pool_id
-                        and not workload_codes(workers[x.worker_id], x, job)
-                        and eligible(x, pool, job, by_slot[x.id], at)
-                        and not image_runtime.blockers(workers[x.worker_id], x, job.client_spec, at)
-                        and not node_codes(workers[x.worker_id], request, node_counts.get(x.worker_id, 0),
-                                           node_cpu.get(x.worker_id, 0), node_ram.get(x.worker_id, 0), pending_ram.get(x.worker_id, 0))), None)
-                    if not slot:
-                        continue
-                    run = s.scalar(select(Run).where(Run.job_id == job.id).order_by(Run.attempt.desc()))
-                    if selected_endpoint:
-                        run.assigned_endpoint, run.assigned_endpoint_mode = selected_endpoint['url'], selected_endpoint['mode']
-                    run.slot_id, run.queue_name, run.execution_id = slot.id, slot.queue_name, uid()
-                    used = {r.allocation_index for r in by_slot[slot.id]}
-                    run.allocation_index = next(i for i in range(len(used)+1) if i not in used)
-                    run.exclusive = job.gpu_mode == 'exclusive'
-                    run.reserved_vram_mb = slot.vram_mb if run.exclusive else job.requested_vram_gb * 1024
-                    run.reserved_cpu, run.reserved_ram_gb = request.cpu_per_job, request.ram_gb_per_job
-                    run.reserved_at = at
-                    run.reservation_expires_at = at + timedelta(seconds=seconds('RESERVATION_SECONDS', 30))
-                    job.queued_at = at
-                    transition(s, run, 'RESERVED')
-                    counts[owner] = counts.get(owner, 0) + 1
-                    n = slot.worker_id
-                    node_counts[n] = node_counts.get(n, 0) + 1
-                    node_cpu[n] = node_cpu.get(n, 0) + request.cpu_per_job
-                    node_ram[n] = node_ram.get(n, 0) + request.ram_gb_per_job
-                    pending_ram[n] = pending_ram.get(n, 0) + request.ram_gb_per_job
-                    cursor.value = {'owner': owner}
-                    rotation.value = {'group': job.batch_id or 'standalone'}
-                    batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
-                    if selected_endpoint:
-                        endpoint_held.append(selected_endpoint)
-                    by_slot[slot.id].append(run)
-                    pending.remove(job)
-                    admitted += 1
+                    selected_endpoint = endpoints.choose(job.client_spec, endpoint_held,s)
+                    if (job.client_spec or {}).get('service_mode')=='managed' and selected_endpoint is None:
+                        records=orchestration_scheduler.allocate_pair(s,job,at)
+                        if not records:continue
+                    else:
+                        if job.client_spec and job.client_spec.get('service_mode')!='none' and job.benchmark!='inference-service' and selected_endpoint is None:
+                            continue
+                        pool=pools.get(job.pool_id)
+                        if not pool:continue
+                        from .job_resources import budget
+                        request=budget(pool,job)
+                        free.sort(key=lambda x:(x.gpu_utilization if telemetry_fresh(x,at) else 101,len(by_slot[x.id]),x.node_name,x.gpu_index))
+                        slot=next((x for x in free if x.pool_id==job.pool_id
+                            and not workload_codes(workers[x.worker_id],x,job)
+                            and eligible(x,pool,job,by_slot[x.id],at)
+                            and not image_runtime.blockers(workers[x.worker_id],x,job.client_spec,at)
+                            and not node_codes(workers[x.worker_id],request,node_counts.get(x.worker_id,0),
+                                               node_cpu.get(x.worker_id,0),node_ram.get(x.worker_id,0),pending_ram.get(x.worker_id,0))),None)
+                        if not slot:continue
+                        run=orchestration_scheduler.reserve(s,job,slot,at,selected_endpoint)
+                        records=[(job,slot,run,selected_endpoint)]
+                    for allocated,slot,run,selection in records:
+                        counts[owner]=counts.get(owner,0)+1
+                        n=slot.worker_id
+                        node_counts[n]=node_counts.get(n,0)+1
+                        node_cpu[n]=node_cpu.get(n,0)+run.reserved_cpu
+                        node_ram[n]=node_ram.get(n,0)+run.reserved_ram_gb
+                        pending_ram[n]=pending_ram.get(n,0)+run.reserved_ram_gb
+                        batch_counts[allocated.batch_id]=batch_counts.get(allocated.batch_id,0)+1
+                        if selection:endpoint_held.append(selection)
+                        by_slot[slot.id].append(run)
+                        if allocated in pending:pending.remove(allocated)
+                        admitted+=1
+                    cursor.value={'owner':owner}
+                    rotation.value={'group':job.batch_id or 'standalone'}
                     made_progress = True
                     break
             if not made_progress:

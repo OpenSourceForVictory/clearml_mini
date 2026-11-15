@@ -7,6 +7,7 @@ from . import scheduling as admission, image_runtime, endpoints
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
+    'service_not_ready': ('resource','依赖的推理服务尚未健康或正在等待启动','平台会在服务就绪后自动启动客户端；服务失败可在关联服务详情处理'),
     'node_agent_not_ready': ('environment','节点 Agent 离线、配置未生效或 Worker 正在排空','请管理员查看机器详情中的 Agent 状态与配置回执'),
     'worker_upgrade': ('environment','节点正在升级或等待升级恢复','等待升级完成或管理员处理失败'),
     'target_slot_mismatch': ('environment', '不是指定服务目标设备', '选择指定服务设备'),
@@ -37,6 +38,7 @@ REASONS = {
     'node_telemetry_stale': ('resource', '机器资源采样不可用或已过期', '等待 Agent 恢复 CPU 和内存采样'),
     'global_concurrency': ('resource', '平台已达到并发上限', '等待正在执行的任务完成'),
     'user_concurrency': ('resource', '当前用户已达到并发上限', '等待自己的运行任务完成'),
+    'service_dependency': ('resource', '等待服务启动、健康或两端联合资源', '查看关联服务状态与两端资源配置；服务故障时修复后恢复'),
     'endpoint_busy': ('resource', '推理服务正在被互斥任务使用', '等待使用该服务的任务完成'),
     'no_nodes': ('environment', '资源池中尚无 GPU 节点', '请管理员将适合的机器 GPU 加入资源池'),
 }
@@ -50,6 +52,7 @@ def reason(code, message=None):
 class DiagnosticContext:
     """One bounded query set per inspection, shared across all cases."""
     def __init__(self, s):
+        self.session=s
         self.at = now()
         self.active = s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
         self.jobs = {j.id: j for j in s.scalars(select(Job).where(Job.id.in_({r.job_id for r in self.active})))}
@@ -73,7 +76,9 @@ class DiagnosticContext:
         if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')
         if self.owners[owner.id] >= admission.seconds('MAX_ACTIVE_PER_USER', 2): codes.append('user_concurrency')
         if batch and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
-        endpoint_states = endpoints.inspect(job.client_spec, endpoints.holdings(self.active))
+        endpoint_states = endpoints.inspect(job.client_spec, endpoints.holdings(self.active),self.session)
+        if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_not_ready')
+        if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_dependency')
         if endpoint_states and not any(e['available'] for e in endpoint_states): codes.append('endpoint_busy')
         nodes = []
         for slot in sorted(self.slots.values(), key=lambda x: (x.node_name, x.gpu_index)):

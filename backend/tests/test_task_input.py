@@ -99,3 +99,15 @@ def test_legacy_sdk_and_dry_run(tmp_path):
     path=tmp_path/'input.json';path.write_text(json.dumps(c))
     result=subprocess.run([sys.executable,'-m','runner.task_input',str(path),'--dry-run'],check=True,capture_output=True,text=True,timeout=5)
     assert json.loads(result.stdout)=={'valid':True,'argv':['program','--server',c['endpoint']],'environment':{}}
+
+
+def test_docker_publication_path_updates_command_and_environment(tmp_path):
+    from runner.task_input import publication_path
+    from runner.image_runtime import resolve
+    c=config();c['template'].update(execution_mode='docker',runtime={'work_dir':str(tmp_path/'work')},command=['program','--input','${input_path}'])
+    path=publication_path(c,'/tmp/root-owned-input.json')
+    command,environment,_=resolve(c,input_path=path)
+    assert path==str(tmp_path/'work'/'.mini-eval-input.json')
+    assert command[-1]==environment['MINI_EVAL_INPUT']==path
+    c['template']['execution_mode']='host'
+    assert publication_path(c,'/approved/input.json')=='/approved/input.json'

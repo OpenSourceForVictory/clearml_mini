@@ -101,7 +101,10 @@ def install(app,db,current,admin):
         lock(s);t=owned(s,kind,identity,user,True);check_revision(t,body.expected_revision)
         if t.status!='draft' or t.archived:raise HTTPException(409,'only active drafts can be edited; copy to a new version')
         try:fields=(TemplateCreate if kind=='client' else ServerCreate).model_validate(body.definition).model_dump()
-        except ValueError as exc:raise HTTPException(400,'invalid template definition: '+str(exc)) from exc
+        except ValueError as exc:
+            from pydantic import ValidationError
+            detail='; '.join('.'.join(map(str,e['loc']))+': '+e['msg'] for e in exc.errors(include_input=False,include_context=False)) if isinstance(exc,ValidationError) else 'invalid template definition'
+            raise HTTPException(400,detail) from exc
         check_host_edit(user,definition(t),fields);unique(s,model_for(kind),fields['name'],fields['version'],t.id)
         if kind=='client':
             for key,value in fields.items():setattr(t,key,value)
