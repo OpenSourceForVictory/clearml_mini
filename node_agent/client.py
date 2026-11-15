@@ -67,8 +67,7 @@ class Agent:
         if not ready:
             self.status='failed';return
         if self.state.value.get('desired')!=desired or self.state.value['revision']!=revision:
-            with self.state.mutex:
-                self.state.value.update({'desired':desired,'revision':revision});self.state.event('config_applied')
+            self.state.apply_configuration(desired, revision)
         self.program_status=self.programs.inspect()
         self.desired=desired;self.status='applied'
 

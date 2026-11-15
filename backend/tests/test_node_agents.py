@@ -131,3 +131,31 @@ def test_preflight_explains_agent_admission():
     from backend.app.preflight import reason
     value=reason('node_agent_not_ready')
     assert value['category']=='environment' and 'Agent' in value['message'] and '管理员' in value['action']
+
+
+def test_offline_agent_blocks_new_claim_but_not_existing_execution_heartbeat(env):
+    main,c,a=env;t,slots,identity,session=setup(env);beat(c,t,session)
+    submit(env);task=claim(env,t,slots[0]);assert task
+    with main.SessionLocal() as s:
+        w=s.get(Worker,identity)
+        w.connection={**w.connection,'agent':{**w.connection['agent'],'seen_at':(now()-timedelta(seconds=46)).isoformat()}}
+        s.commit()
+    assert c.get('/api/v1/admin/nodes/'+identity+'/agent',headers=a['admin']).json()['status']=='offline'
+    ex=task['execution_id']
+    assert c.post('/api/v1/worker/heartbeat',headers=t,json={'slot_id':slots[0],'execution_id':ex}).status_code==200
+    assert c.post('/api/v1/worker/executions/'+ex+'/complete',headers=t,json={'status':'FAILED','error':'test finished'}).status_code==200
+    submit(env);assert claim(env,t,slots[0]) is None
+    beat(c,t,session,2);assert claim(env,t,slots[0])
+
+
+def test_duplicate_heartbeat_does_not_revive_expired_agent(env):
+    main,c,a=env;t,_,identity,session=setup(env);beat(c,t,session,5)
+    with main.SessionLocal() as s:
+        w=s.get(Worker,identity)
+        old=(now()-timedelta(seconds=46)).isoformat()
+        w.connection={**w.connection,'agent':{**w.connection['agent'],'seen_at':old}};s.commit()
+    assert beat(c,t,session,5).status_code==200
+    r=c.get('/api/v1/admin/nodes/'+identity+'/agent',headers=a['admin']).json()
+    assert r['status']=='offline' and r['seen_at']==old
+    assert beat(c,t,session,6).status_code==200
+    assert c.get('/api/v1/admin/nodes/'+identity+'/agent',headers=a['admin']).json()['status']=='online'

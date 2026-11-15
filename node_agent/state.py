@@ -48,14 +48,23 @@ class State:
     def event(self, code):
         with self.mutex: self._event(code)
 
-    def _event(self, code):
-        self.value['events'] = (self.value['events'] + [{'sequence': self.value['next_event'], 'code': code}])[-64:]
-        self.value['next_event'] += 1
-        self.persist()
+    def _commit(self, value):
+        # Publish in memory only after durable storage accepts the transaction.
+        atomic_json(self.path, value)
+        self.value = value
+
+    def _event(self, code, changes=None):
+        value = {**self.value, **(changes or {})}
+        value['events'] = (value['events'] + [{'sequence': value['next_event'], 'code': code}])[-64:]
+        value['next_event'] += 1
+        self._commit(value)
+
+    def apply_configuration(self, desired, revision):
+        with self.mutex:
+            self._event('config_applied', {'desired': desired, 'revision': revision})
 
     def acknowledge(self, sequence):
         with self.mutex:
-            self.value['events'] = [x for x in self.value['events'] if x['sequence'] > sequence]
-            self.persist()
+            self._commit({**self.value, 'events': [x for x in self.value['events'] if x['sequence'] > sequence]})
 
     def close(self): self.lock.close()
