@@ -81,9 +81,10 @@ def batch_view(s, batch, jobs=None, progresses=None):
         status = 'CANCELLED'
     return {'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
-            'total_episodes': sum(j.episodes for j in jobs),
+            'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command'),
             'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
-                       'seed': j.client_spec['seed'], 'episodes': j.episodes, 'status': j.status,
+                       'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' else j.episodes, 'status': j.status,
+                       'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
                        'episode_reporting': j.client_spec['template'].get('episode_reporting', False),
                        'progress': progresses[j.runs[-1].id] if progresses is not None else progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
@@ -126,6 +127,8 @@ def resolve_batch(s, body, user):
         try: configs.append(snapshot(s, config, user.id))
         except HTTPException as exc:
             raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
+        if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1:
+            raise HTTPException(400,f'case {case.case_id}: ordinary commands require episodes=1; they do not report episodes')
     return pool, cases, configs
 
 

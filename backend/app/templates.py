@@ -18,6 +18,7 @@ class ServerCreate(TemplateCreate):
 
     @model_validator(mode='after')
     def service_only(self):
+        if self.task_type!='evaluation':raise ValueError('server templates use service lifecycle, not command task completion')
         if self.integration_mode != 'direct': raise ValueError('service templates do not use evaluation SDK loops')
         if self.execution_mode == 'docker' and self.runtime is None:
             from runner.image_runtime import validate

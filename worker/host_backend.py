@@ -65,7 +65,7 @@ class HostBackend:
         directory=execution_dirs(w.workspace,task['execution_id']);self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
-        values={k:str(config[k]) for k in ('task_name','episodes','seed','endpoint')}
+        values={k:str(config.get(k,'')) for k in ('task_name','episodes','seed','endpoint')}
         if config.get('workload') == 'service':
             config.update(port=config['service']['port'], bind_host=config['service']['address'])
             values.update(port=str(config['port']), bind_host=config['bind_host'])

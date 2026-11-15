@@ -43,6 +43,11 @@ class CommandClient(EvaluationClient):
             if set(additions) & (set(settings.get('environment', {})) | set(task.get('environment', {}))):
                 raise ValueError('business environment conflicts with runtime configuration')
             env.update(additions)
+        from .task_input import build, bind_platform
+        argv, additions=bind_platform(task['template'].get('platform_bindings',[]),build(task,env),argv)
+        if set(additions)&(set(settings.get('environment',{}))|set(task.get('environment',{}))):
+            raise ValueError('platform environment conflicts with runtime configuration')
+        env.update(additions)
         env.update(MINI_EVAL_EPISODE_ID=str(episode.id),MINI_EVAL_EPISODE_SEED=str(episode.seed),MINI_EVAL_RESULT=str(result_path))
         subprocess.run(argv,env=env,cwd=context.work_dir,check=True)
         if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size>16384:

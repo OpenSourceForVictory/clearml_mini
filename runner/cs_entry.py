@@ -42,9 +42,10 @@ def main():
         if config['contract_version'] != VERSION:
             raise ValueError('unsupported client contract version')
         Path(output_dir).mkdir(parents=True, exist_ok=True)
-        print(json.dumps({'stage': 'connecting', 'task_name': config['task_name']}), flush=True)
-        preflight(config['endpoint'], config['request_timeout_seconds'])
-        print(json.dumps({'stage': 'connected'}), flush=True)
+        if config.get('service_mode')!='none':
+            print(json.dumps({'stage': 'connecting', 'task_name': config['task_name']}), flush=True)
+            preflight(config['endpoint'], config['request_timeout_seconds'])
+            print(json.dumps({'stage': 'connected'}), flush=True)
         env = {**os.environ, 'MINI_EVAL_INPUT': input_path, 'MINI_EVAL_OUTPUT_DIR': output_dir}
         command, cwd = config['template']['command'], None
         if config['template'].get('runtime') is not None:
@@ -55,12 +56,22 @@ def main():
             command = config.get('_resolved_command', command)
             env.update(config.get('_resolved_environment', {}))
             cwd = env.get('MINI_EVAL_WORK_DIR')
+        from .task_input import build, bind_platform
+        config=build(config,env)
+        # Publish the normalized input before the user's program starts. Keep
+        # legacy fields so existing SDK clients continue reading the same file.
+        Path(input_path).write_text(json.dumps(config,ensure_ascii=False,allow_nan=False))
         schema = config['template'].get('parameter_schema')
         if schema is not None and config['template'].get('integration_mode') != 'sdk-command':
             from .parameter_contract import bind_values
             command, additions = bind_values(schema, config.get('parameters', {}), command)
             if set(additions) & set(config.get('environment', {})):
                 raise ValueError('business environment conflicts with runtime overrides')
+            env.update(additions)
+        if config['template'].get('integration_mode') != 'sdk-command':
+            command, additions=bind_platform(config['template'].get('platform_bindings',[]),config,command)
+            if set(additions)&set(config.get('environment',{})):
+                raise ValueError('platform environment conflicts with runtime overrides')
             env.update(additions)
         if config['template'].get('integration_mode') == 'sdk-command':
             command = [sys.executable, '-m', 'runner.command_sdk']

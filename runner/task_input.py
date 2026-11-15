@@ -40,7 +40,7 @@ def binding_schema(bindings):
 
 def validate_combined(business_schema, bindings):
     platform=binding_schema(bindings)
-    fields=deepcopy(business_schema['fields']) if business_schema else {}
+    fields=validate_schema(business_schema)['fields'] if business_schema is not None else {}
     for i,field in enumerate(platform['fields'].values()):
         key='platformBinding'+str(i)
         while key in fields: key+='X'

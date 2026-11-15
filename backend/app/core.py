@@ -284,6 +284,8 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    task_type: Mapped[str] = mapped_column(String(20), default='evaluation', server_default='evaluation')
+    platform_bindings: Mapped[list] = mapped_column(JSON_TYPE, default=list, server_default='[]')
     parameter_schema: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     __tablename__ = 'client_templates'
     owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey('users.id'), index=True)

@@ -20,6 +20,8 @@ class TemplateCreate(BaseModel):
     image: str = Field(default='', min_length=0, max_length=500, pattern=r'^([A-Za-z0-9][A-Za-z0-9_./:@-]*)?$')
     execution_mode: Literal['docker','host'] = 'docker'
     integration_mode: Literal['direct','sdk-command'] = 'direct'
+    task_type: Literal['evaluation','command'] = 'evaluation'
+    platform_bindings: list[dict] = Field(default_factory=list, max_length=32)
     parameter_schema: dict | None = None
     host_runtime: dict | None = None
     runtime: dict | None = None
@@ -31,6 +33,13 @@ class TemplateCreate(BaseModel):
     @model_validator(mode="after")
     def valid_runtime(self):
         from runner.template_contract import host_config
+        from runner.task_input import validate_combined
+        validate_combined(self.parameter_schema,self.platform_bindings)
+        if self.task_type=='command':
+            if self.episode_reporting or self.integration_mode!='direct':
+                raise ValueError('ordinary commands do not use episode reporting')
+        if (self.platform_bindings or self.task_type=='command') and self.execution_mode=='docker' and self.runtime is None:
+            self.runtime={}
         if self.parameter_schema is not None:
             from runner.parameter_contract import validate_schema
             self.parameter_schema = validate_schema(self.parameter_schema)
@@ -54,6 +63,10 @@ class TemplateCreate(BaseModel):
                 binding = field.get('binding', {})
                 if binding.get('target') == 'env' and binding['name'] in names:
                     raise ValueError('business environment binding conflicts with runtime configuration')
+        settings=self.host_runtime if self.execution_mode=='host' else self.runtime
+        names=set((settings or {}).get('environment',{}))|set((settings or {}).get('overridable_env',[]))
+        if any(b.get('target')=='env' and b.get('name') in names for b in self.platform_bindings):
+            raise ValueError('platform binding conflicts with runtime configuration')
         return self
 
     @field_validator('command')
@@ -83,6 +96,7 @@ class Endpoint(BaseModel):
 class ClientRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     template_id: str
+    service_mode: Literal['external','none'] = 'external'
     endpoint: str | None = Field(default=None, min_length=1, max_length=2000)
     endpoints: list[Endpoint] | None = Field(default=None, min_length=1, max_length=100)
     task_name: str = Field(min_length=1, max_length=200)
@@ -101,6 +115,9 @@ class ClientRequest(BaseModel):
     @model_validator(mode='after')
     def endpoint_selection(self):
         from .endpoints import resource_key
+        if self.service_mode=='none':
+            if self.endpoint is not None or self.endpoints is not None:raise ValueError('service_mode none cannot include endpoints')
+            return self
         if (self.endpoint is None) == (self.endpoints is None):
             raise ValueError('provide exactly one of endpoint or endpoints')
         if self.endpoints and len({resource_key(e.url) for e in self.endpoints}) != len(self.endpoints):
@@ -123,7 +140,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings')}
 
 
 def snapshot(s, body, owner_id=None):
@@ -132,7 +149,10 @@ def snapshot(s, body, owner_id=None):
     t = s.get(ClientTemplate, body.template_id)
     if not t or not t.enabled or t.archived or (t.owner_id is not None and t.owner_id != owner_id):
         raise HTTPException(400, 'unknown or disabled client template')
-    urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint]
+    if body.service_mode=='none' and t.task_type!='command':raise HTTPException(400,'evaluation templates require an inference service')
+    urls = [e.url for e in body.endpoints] if body.endpoints else [body.endpoint] if body.endpoint else []
+    if not urls and any(b['source'].startswith('platform.service.') for b in t.platform_bindings):
+        raise HTTPException(400,'template platform bindings require an inference service')
     if any(endpoint_parts(url)[0].scheme not in t.protocols for url in urls):
         raise HTTPException(400, 'endpoint protocol does not match client template')
     if body.timeout_seconds > seconds('EXECUTION_TIMEOUT_SECONDS', 3600):

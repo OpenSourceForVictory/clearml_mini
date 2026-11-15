@@ -207,6 +207,8 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     if body.benchmark == 'cs-client':
         values['client_spec'] = snapshot(s, body.client, user.id)
         template = values['client_spec']['template']
+        if template.get('task_type')=='command' and body.episodes!=1:
+            raise HTTPException(400,'ordinary commands require episodes=1; they do not report episodes')
         values['model_ref'] = template['name'] + ':' + template['version']
     elif body.client is not None:
         raise HTTPException(400, 'client configuration is only valid for CS evaluation')

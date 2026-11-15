@@ -222,7 +222,7 @@ def tick(factory, at=None):
                     if job.batch_id and batches[job.batch_id].scheduling_paused:
                         continue
                     selected_endpoint = endpoints.choose(job.client_spec, endpoint_held)
-                    if job.client_spec and job.benchmark != 'inference-service' and selected_endpoint is None:
+                    if job.client_spec and job.client_spec.get('service_mode')!='none' and job.benchmark != 'inference-service' and selected_endpoint is None:
                         continue
                     if job.batch_id and batch_counts.get(job.batch_id, 0) >= batches[job.batch_id].max_concurrent:
                         continue

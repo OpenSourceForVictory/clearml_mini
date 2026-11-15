@@ -79,7 +79,7 @@ def resolve(config):
     overrides = environment(config.get('environment', {}))
     if set(overrides) - set(runtime['overridable_env']):
         raise ValueError('environment override is not allowed')
-    values = {k: str(config[k]) for k in ('task_name', 'episodes', 'seed', 'endpoint')}
+    values = {k: str(config.get(k,'')) for k in ('task_name', 'episodes', 'seed', 'endpoint')}
     values.update({k:str(config[k]) for k in ('port','bind_host') if k in config})
     values.update(input_path='/tmp/mini-eval-job.json', work_dir=runtime['work_dir'], output_dir=runtime['output_dir'])
     values.update({'assets:'+k: v for k, v in runtime['assets'].items()})

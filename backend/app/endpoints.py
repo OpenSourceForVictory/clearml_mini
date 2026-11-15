@@ -17,6 +17,7 @@ def resource_key(url):
 def candidates(spec):
     if not spec or spec.get('workload') == 'service':
         return []
+    if spec.get('service_mode')=='none':return []
     if spec.get('endpoints'):
         return spec['endpoints']
     return [{'url': spec['endpoint'], 'mode': 'exclusive' if spec['template'].get('endpoint_exclusive', False) else 'shared'}]
@@ -53,7 +54,7 @@ def choose(spec, held):
 
 
 def input_spec(run, spec):
-    if spec.get('workload') == 'service': return dict(spec)
+    if spec.get('workload') == 'service' or spec.get('service_mode')=='none': return dict(spec)
     selected = assigned(run, spec)
     if not selected:
         raise ValueError('execution has no assigned inference endpoint')

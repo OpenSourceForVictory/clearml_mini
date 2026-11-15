@@ -186,7 +186,7 @@ class Worker:
             spec = task['client_spec']
             if spec['contract_version'] != VERSION or spec['template']['image'] != task['image']:
                 raise RuntimeError('invalid CS client contract')
-            endpoint_parts(spec['endpoint'])
+            if spec.get('service_mode')!='none':endpoint_parts(spec['endpoint'])
         runtime = validate_runtime(spec['template']['runtime'], spec['template']['command']) if cs and spec['template'].get('runtime') is not None else None
         if runtime and task.get('runtime_revision', 0) != self.runtime_snapshot['revision']:
             raise RuntimeError('task runtime revision differs from execution snapshot')
@@ -453,7 +453,9 @@ class Worker:
                         except (ValueError, KeyError, TypeError):
                             continue
                     code = container['State']['ExitCode']
-                    status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if not is_service(task) and code == 0 and result else 'FAILED')
+                    command_task=(task.get('client_spec') or {}).get('template',{}).get('task_type')=='command'
+                    if command_task:result=None
+                    status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if not is_service(task) and code == 0 and (result or command_task) else 'FAILED')
                     body = {'status': status, 'metrics': result if status == 'SUCCEEDED' else None,
                             'error': None if status == 'SUCCEEDED' else (err[-900:] or f'runner exited with code {code}')}
                     if task.get('benchmark') == 'cs-client':

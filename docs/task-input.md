@@ -2,6 +2,8 @@
 
 参数契约基础模块已实现；向导、调度和执行器完整接入以OpenSpec任务进度为准，不能仅凭本地dry-run视为已上线。
 
+客户端模板可声明`task_type: command`执行普通命令；使用`service_mode: none`无需推理地址。兼容旧API的episodes字段固定为1，但不生成或报告虚构回合，退出码0代表执行成功。使用平台映射或普通命令需要Worker协议v10（软件0.12.0）；旧Worker不会领取这些任务。普通命令不能声明episode_reporting或sdk-command。原有evaluation模板保持原评测结果契约。
+
 普通程序可读取`MINI_EVAL_INPUT`指定的JSON文件，不需要平台账号或调度API：
 
 ```python
