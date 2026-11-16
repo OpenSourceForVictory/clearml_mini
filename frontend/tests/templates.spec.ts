@@ -74,7 +74,7 @@ test('directory mounts keep drafts across modes and submit logical names',async(
  await route.fulfill({json:data})});
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'运行模板管理'}).click();await page.getByRole('button',{name:'注册模板',exact:true}).click();
  await page.getByLabel('模板名称',{exact:true}).fill('mounted');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('custom:1');
- await page.getByRole('button',{name:'添加目录挂载'}).click();await page.getByLabel('挂载 1 名称',{exact:true}).fill('data');await page.getByLabel('挂载 1 来源',{exact:true}).fill('directories:dataset');await page.getByLabel('挂载 1 容器路径',{exact:true}).fill('/datasets');
+ await page.getByRole('button',{name:'添加目录挂载'}).click();await page.getByLabel('挂载 1 名称',{exact:true}).fill('data');await page.getByLabel('挂载 1 逻辑名称',{exact:true}).fill('dataset');await page.getByLabel('挂载 1 容器路径',{exact:true}).fill('/datasets');
  await page.getByLabel('执行方式',{exact:true}).selectOption('host');await expect(page.getByLabel('挂载 1 名称',{exact:true})).toHaveCount(0);
  await page.getByLabel('执行方式',{exact:true}).selectOption('docker');await expect(page.getByLabel('挂载 1 名称',{exact:true})).toHaveValue('data');await page.getByLabel('Docker 镜像').fill('custom:1');
  await page.getByText('挂载声明预览',{exact:true}).click();await expect(page.getByText('directories:dataset → /datasets · 只读 · 必需',{exact:true})).toBeVisible();

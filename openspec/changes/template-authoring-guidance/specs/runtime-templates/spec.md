@@ -48,3 +48,21 @@
 #### Scenario: View then copy
 - **WHEN** 用户查看后选择复制新版本
 - **THEN** 打开基于完整原模板的编辑表单，原版本不变；仅查看与关闭不会发出写请求
+
+### Requirement: Visual command and directory configuration
+模板注册 SHALL 支持逐项编辑固定命令，选择平台或业务参数并映射到程序参数名或环境变量；目录 SHALL 以来源类型、逻辑名和目标路径统一配置，兼容已有资产声明。
+
+#### Scenario: Conflicting mapping
+- **WHEN** 两个映射使用相同接收名称或与基础命令及环境变量冲突
+- **THEN** 提交前指出冲突并保留草稿，不发送注册请求
+
+#### Scenario: Legacy asset template
+- **WHEN** 查看或复制包含旧资产声明的模板
+- **THEN** 显示其来源与目标并保留原声明及占位符语义，不自动迁移为不兼容声明
+
+### Requirement: Runnable template example catalog
+注册页面 SHALL 提供六种完整样例，覆盖客户端 SDK 命令/直接协议在 Docker/宿主机执行以及服务端两种执行方式，包含配套代码、准备步骤和预期结果；载入 MUST 仅创建草稿。
+
+#### Scenario: Load example
+- **WHEN** 用户选择并载入一个样例
+- **THEN** 表单展示对应配置，用户可修改并注册；配套程序及前置条件可下载，平台不自动注册或启动服务

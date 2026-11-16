@@ -1,0 +1,252 @@
+[
+  {
+    "id": "client-docker-sdk-command",
+    "kind": "client",
+    "title": "客户端 · Docker · SDK 每回合命令",
+    "definition": {
+      "name": "echo-client-docker-sdk-command",
+      "version": "v1",
+      "execution_mode": "docker",
+      "integration_mode": "sdk-command",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "/app/episode.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "image": "mini-eval-template-examples:v1",
+      "runtime": {
+        "environment": {},
+        "overridable_env": [],
+        "assets": {},
+        "work_dir": "/tmp/mini-eval-work",
+        "output_dir": "/tmp/mini-eval-output"
+      }
+    }
+  },
+  {
+    "id": "client-docker-direct",
+    "kind": "client",
+    "title": "客户端 · Docker · 直接协议",
+    "definition": {
+      "name": "echo-client-docker-direct",
+      "version": "v1",
+      "execution_mode": "docker",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "/app/client.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "image": "mini-eval-template-examples:v1",
+      "runtime": {
+        "environment": {},
+        "overridable_env": [],
+        "assets": {},
+        "work_dir": "/tmp/mini-eval-work",
+        "output_dir": "/tmp/mini-eval-output"
+      }
+    }
+  },
+  {
+    "id": "client-host-sdk-command",
+    "kind": "client",
+    "title": "客户端 · 宿主机 · SDK 每回合命令",
+    "definition": {
+      "name": "echo-client-host-sdk-command",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "sdk-command",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "${assets:demo_code}/episode.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [
+          "demo_code"
+        ]
+      }
+    }
+  },
+  {
+    "id": "client-host-direct",
+    "kind": "client",
+    "title": "客户端 · 宿主机 · 直接协议",
+    "definition": {
+      "name": "echo-client-host-direct",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "${assets:demo_code}/client.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [
+          "demo_code"
+        ]
+      }
+    }
+  },
+  {
+    "id": "server-docker-direct",
+    "kind": "server",
+    "title": "服务端 · Docker · HTTP 回显服务",
+    "definition": {
+      "name": "echo-server-docker-direct",
+      "version": "v1",
+      "execution_mode": "docker",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "/app/server.py"
+      ],
+      "episode_reporting": false,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "model": {
+            "type": "string",
+            "default": "echo-demo",
+            "overridable": true
+          }
+        }
+      },
+      "image": "mini-eval-template-examples:v1",
+      "runtime": {
+        "environment": {},
+        "overridable_env": [],
+        "assets": {},
+        "work_dir": "/tmp/mini-eval-work",
+        "output_dir": "/tmp/mini-eval-output"
+      },
+      "port": 8000,
+      "protocol": "http",
+      "health_type": "http",
+      "health_path": "/healthz",
+      "startup_timeout": 30
+    }
+  },
+  {
+    "id": "server-host-direct",
+    "kind": "server",
+    "title": "服务端 · 宿主机 · HTTP 回显服务",
+    "definition": {
+      "name": "echo-server-host-direct",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "${assets:demo_code}/server.py"
+      ],
+      "episode_reporting": false,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "model": {
+            "type": "string",
+            "default": "echo-demo",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [
+          "demo_code"
+        ]
+      },
+      "port": 8000,
+      "protocol": "http",
+      "health_type": "http",
+      "health_path": "/healthz",
+      "startup_timeout": 30
+    }
+  }
+]

@@ -1,6 +1,6 @@
 # 通用运行模板与业务协议
 
-管理设置 → 运行模板管理，分客户端/服务端。每类都有 Docker 与宿主机执行模式，版本不可变；复制新版本后修改，归档只停止新引用，旧任务保存快照。现有模板默认 Docker/direct。
+管理设置 → 运行模板管理，分客户端/服务端。每类下有“已注册模板”和“注册新模板”页签，切换页签保留未提交草稿；每类都有 Docker 与宿主机执行模式，版本不可变；复制新版本后修改，归档只停止新引用，旧任务保存快照。现有模板默认 Docker/direct。
 
 客户端注册 API 为 `/api/v1/admin/client-templates`，服务端为 `/api/v1/admin/server-templates`。注册使用 POST，启停 PATCH `/{id}`，归档 DELETE `/{id}`，复制 POST `/{id}/clone` 带 name（可选）和 version。宿主机模板只能由管理员注册，使用 `host_runtime.environment_name` 指向节点批准环境，不填 image/runtime；Docker 使用 image 和 runtime。环境准备/实例部署由后续同一 OpenSpec 任务实现，模板注册不代表已经可以执行。
 
@@ -34,3 +34,12 @@ SDK 校验结果并生成原有 STARTED/COMPLETED/ERROR 回合事件，最终生
 ## ClearML 参考
 
 参考 [ClearML Agent 官方仓库](https://github.com/clearml/clearml-agent) 的任务配置与队列拉取，以及 [执行环境文档](https://clear.ml/docs/latest/docs/clearml_agent/clearml_agent_execution_env/) 的 Docker/虚拟环境分离。当前平台先接入管理员已准备的宿主机环境，不自动复制 ClearML 的依赖安装流程。推理服务持有 GPU 资源；[ClearML services-mode](https://clear.ml/docs/latest/docs/clearml_agent/clearml_agent_services_mode/) 是轻量维护服务的模式，不能直接用其默认 services 队列承载 GPU 推理。
+
+## 注册界面操作
+
+1. 打开“注册新模板”，根据顶部说明准备镜像或批准的宿主机环境。可展开“从完整样例开始”，预览并载入六种配套样例；存在草稿时确认替换，载入不会自动注册或启动。
+2. 填写名称与新版本，定义业务字段。启动命令按程序和固定参数逐项填写，动态参数在“业务命令参数映射”选择来源，再填写 --task、--server-url 或环境变量名。业务字段的映射与业务参数编辑器共享配置；重复目标会提示，原始命令数组保留在高级配置。
+3. 在统一“目录挂载”区选择工作、输出、缓存、资产或批准目录，填写逻辑名和容器目标。节点负责解析真实路径。旧资产声明标为兼容声明，原 assets 占位符保持有效；资产和缓存只读。
+4. 注册成功回到列表。“查看配置”按注册分组只读展示，复杂参数、挂载和补充配置均可查看；需要修改时复制新版本。配置查看不会修改模板。
+
+完整样例、镜像构建和三任务 CS 演示见 [运行模板样例](../examples/runtime_templates/README.md)。示例是协议连通性回显，不是模型质量评测。

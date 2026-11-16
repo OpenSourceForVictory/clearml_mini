@@ -575,3 +575,16 @@ dd {
 .preflight-result {margin-top:16px}
 .preflight-result details {margin-top:18px}
 .run-wizard fieldset {min-width:0}
+
+.template-help { margin: 1rem 0; padding: 1rem 1.25rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; color: #1e3a5f; }
+.template-help h3 { margin-top: 0; }
+.template-help li { margin: .4rem 0; }
+.template-help pre, .template-config pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+.template-config { margin-top: 1.25rem; border-top: 1px solid #cbd5e1; padding-top: 1rem; }
+.template-config dl { display: block; margin: 0; padding: 0; font-size: inherit; }
+.template-value { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: 1rem; padding: .55rem 0; border-bottom: 1px solid #e2e8f0; }
+.template-value dt { font-weight: 600; }
+.template-value dd { margin: 0; min-width: 0; }
+.template-value pre { margin: 0; font: inherit; }
+.template-table { overflow-x: auto; }
+@media (max-width: 640px) { .template-value { grid-template-columns: 1fr; gap: .3rem; } .template-help { padding: .8rem; } }
