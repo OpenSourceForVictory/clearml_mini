@@ -9,7 +9,7 @@ def main():
     from .task_input import publication_path
     inp=publication_path(config,inp)
     env={**os.environ,'MINI_EVAL_INPUT':inp,'MINI_EVAL_OUTPUT_DIR':os.environ.get('MINI_EVAL_OUTPUT_DIR',OUTPUT_DIR),
-         'MINI_EVAL_PORT':str(config['port']),'MINI_EVAL_BIND_HOST':config['bind_host']}
+         'MINI_EVAL_HEALTH_PORT':str(config.get('health_port',config['port'])),'MINI_EVAL_PORT':str(config['port']),'MINI_EVAL_BIND_HOST':config['bind_host']}
     command=config['template']['command'];cwd=None
     if config['template'].get('execution_mode')=='host':
         command=config['_resolved_command'];env.update(config['_resolved_environment']);cwd=env['MINI_EVAL_WORK_DIR']

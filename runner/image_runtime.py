@@ -41,7 +41,7 @@ def target(value):
 
 
 def placeholders(text, assets, mounts=()):
-    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host'} | {'assets:'+k for k in assets} | {'mounts:'+k for k in mounts}
+    allowed = {'task_name', 'episodes', 'seed', 'endpoint', 'input_path', 'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'health_port', 'bind_host'} | {'assets:'+k for k in assets} | {'mounts:'+k for k in mounts}
     if any(key not in allowed for key in TOKEN.findall(text)) or '${' in TOKEN.sub('', text):
         raise ValueError('unknown or malformed runtime placeholder')
 
@@ -80,7 +80,7 @@ def resolve(config, input_path=None):
     if set(overrides) - set(runtime['overridable_env']):
         raise ValueError('environment override is not allowed')
     values = {k: str(config.get(k,'')) for k in ('task_name', 'episodes', 'seed', 'endpoint')}
-    values.update({k:str(config[k]) for k in ('port','bind_host') if k in config})
+    values.update({k:str(config[k]) for k in ('port','health_port','bind_host') if k in config})
     values.update(input_path=input_path or '/tmp/mini-eval-job.json', work_dir=runtime['work_dir'], output_dir=runtime['output_dir'])
     values.update({'assets:'+k: v for k, v in runtime['assets'].items()})
     values.update({'mounts:'+k: m['target'] for k,m in runtime.get('mounts',{}).items()})

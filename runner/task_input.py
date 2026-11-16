@@ -15,7 +15,7 @@ VERSION = 1
 SOURCES = {
     'platform.job_id':'string', 'platform.execution_id':'string',
     'platform.service.endpoint':'string', 'platform.service.key':'string',
-    'platform.listen.address':'string', 'platform.listen.port':'integer',
+    'platform.listen.address':'string', 'platform.listen.port':'integer', 'platform.listen.health_port':'integer',
     'platform.paths.work':'string', 'platform.paths.output':'string',
     'platform.paths.cache':'string', 'task.case_id':'string',
     'task.task_name':'string', 'task.episodes':'integer', 'task.seed':'integer',
@@ -74,7 +74,7 @@ def build(config, environment=None):
     if config.get('endpoint') and config.get('workload')!='service':
         platform['service']={'key':config.get('service_key','default'),'endpoint':config['endpoint']}
     if config.get('workload')=='service':
-        platform['listen']={'address':config['bind_host'],'port':config['port']}
+        platform['listen']={'address':config['bind_host'],'port':config['port'],'health_port':config.get('health_port',config['port'])}
     task={k:deepcopy(config[k]) for k in ('case_id','task_name','episodes','seed') if k in config}
     result=deepcopy(config)
     result.update(input_version=VERSION,platform=platform,task=task,business=deepcopy(config.get('parameters',{})))

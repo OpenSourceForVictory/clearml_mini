@@ -1,3 +1,4 @@
+import {ServiceProbeStatus} from './service-probe-status';
 import React,{useState} from 'react';
 import {api} from './api';
 import {usePoll} from './poll';
@@ -11,6 +12,6 @@ export function OrchestrationStatus({id}:{id:string}){
  {data&&<><p>{data.orchestration.service_mode==='managed'?(data.orchestration.stop_after_batch?'客户端全部结束并清理后停止服务':'批次结束保留服务，请按需手动停止'):data.orchestration.service_mode==='external'?'外部服务由用户维护':'普通批处理无需服务'}</p>
  {data.orchestration.definitions.map(d=><details key={d.key} className="batch-parameters"><summary>{d.key} · {d.mode==='exclusive'?'独占访问':'共享访问'} · 服务端运行参数</summary><p>{d.template?.name} / {d.template?.version}</p><h4>业务参数</h4><pre>{JSON.stringify(d.parameters||{},null,2)}</pre><h4>资源申请</h4><pre>{JSON.stringify(d.resources||{},null,2)}</pre></details>)}
  <div className="table-scroll"><table><thead><tr><th>任务</th><th>分配的服务</th><th>服务执行</th></tr></thead><tbody>{data.cases.map(c=><tr key={c.case_id}><td>{c.case_id}</td><td>{c.endpoint||'等待分配'}{c.waiting_service&&<small>等待服务健康</small>}</td><td>{c.service_key||'—'}<small>{c.service_execution_id||'—'}</small></td></tr>)}</tbody></table></div>
- {data.orchestration.services.map(s=><div key={s.id}><h4>{s.name} · {s.state}</h4><p>{s.endpoint}{s.cleanup_pending?' · 执行资源尚未释放':''}</p>{s.error&&<p>{s.error}</p>}<button onClick={()=>void read(s)}>查看 {s.name} 日志</button><button disabled={busy} onClick={()=>void action(s,'stop')}>停止 {s.name}</button><button disabled={busy||s.cleanup_pending} onClick={()=>void action(s,'start')}>恢复 {s.name}</button></div>)}</>}{logs&&<><button onClick={()=>setLogs('')}>关闭服务日志</button><pre className="logs">{logs}</pre></>}
+ {data.orchestration.services.map(s=><div key={s.id}><h4>{s.name} · {s.state}</h4><p>{s.endpoint}{s.cleanup_pending?' · 执行资源尚未释放':''}</p>{s.error&&<p>{s.error}</p>}<ServiceProbeStatus service={s}/><button onClick={()=>void read(s)}>查看 {s.name} 日志</button><button disabled={busy} onClick={()=>void action(s,'stop')}>停止 {s.name}</button><button disabled={busy||s.cleanup_pending} onClick={()=>void action(s,'start')}>恢复 {s.name}</button></div>)}</>}{logs&&<><button onClick={()=>setLogs('')}>关闭服务日志</button><pre className="logs">{logs}</pre></>}
  </section>;
 }

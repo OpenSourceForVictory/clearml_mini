@@ -84,6 +84,15 @@ def ready(worker, slot, at):
 
 def blockers(worker, slot, spec, at):
     template=(spec or {}).get('template',{})
+    probe=template.get('readiness')
+    if probe:
+        software=slot.software or {}
+        if slot.protocol_version<12 or 'service_readiness_v1' not in software.get('capabilities',[]):
+            return ['服务就绪检查需要 Worker v12 及探测依赖，请在机器管理中升级或重新纳管']
+        refs=set(probe.get('headers_from_env',{}).values())
+        if probe.get('ca_env'):refs.add(probe['ca_env'])
+        if refs-set(software.get('probe_references',[])):
+            return ['健康检查凭据引用未批准或缺失，请管理员配置节点探测环境并重启 Worker']
     if (template.get('task_type')=='command' or template.get('platform_bindings') or (spec or {}).get('task_input_version')==1) and slot.protocol_version<10:
         return ['统一任务输入、普通命令和平台参数映射需要 Worker 协议 v10']
     if (spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:

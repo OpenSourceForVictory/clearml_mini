@@ -210,6 +210,8 @@ class Worker:
         if is_service(task):
             service = task['client_spec']['service']
             args.extend(['--publish', f"{service['address']}:{service['port']}:{service['container_port']}"])
+            if service.get('readiness',{}).get('port','business')!='business':
+                args.extend(['--publish',f"{service['address']}:{service['health_port']}:{service['readiness']['port']}"])
         if cs:
             directory = execution_dirs(self.workspace, task['execution_id'])
             for source, target, readonly in [
@@ -269,7 +271,11 @@ class Worker:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
                       'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
-            if is_service(task): config.update(port=task['client_spec']['service']['container_port'], bind_host='0.0.0.0')
+            if is_service(task):
+                service=task['client_spec']['service']
+                config.update(port=service['container_port'], bind_host='0.0.0.0')
+                health_port=service.get('readiness',{}).get('port','business')
+                config['health_port']=config['port'] if health_port=='business' else health_port
             (execution_dirs(self.workspace, task['execution_id'])/'input.json').write_text(json.dumps(config))
             with tempfile.TemporaryDirectory(prefix='eval-input-') as directory:
                 path = Path(directory)/'input.json'
@@ -375,6 +381,7 @@ class Worker:
 
         thread = threading.Thread(target=watchdog, daemon=True)
         thread.start()
+        probe_runner=None
         try:
             requested_at = time.monotonic()
             initial = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution, 'started': False})
@@ -396,6 +403,11 @@ class Worker:
                     # Crash before create is safe to fail; never recreate an uncertain execution.
                     self.state['created'] = True
                     self.save()
+                    if task.get('benchmark')=='cs-client' and task.get('client_spec',{}).get('service_mode')!='none':
+                        from .probe_dependencies import ready as probes_available
+                        if probes_available():
+                            from .client_connectivity import verify
+                            verify(task['client_spec']['endpoint'])
                     self.create(task)
                     container = self.inspect(execution)
                 if container['State']['Status'] == 'created':
@@ -403,7 +415,21 @@ class Worker:
                         raise RuntimeError('lease expired before start')
                     if self.host_mode(): HostBackend(self).start(task)
                     else: docker('start', self.name(execution), timeout=10)
+            if is_service(task) and task['client_spec']['service'].get('readiness'):
+                from .readiness import ProbeRunner
+                session=self.api.post(f'worker/executions/{execution}/service-probe-session')
+                epoch=session['epoch']
+                if session.get('ever_ready'):
+                    self.state['service_was_ready']=True;self.save()
+                probe_runner=ProbeRunner(task['client_spec']['service'],self.config,self.api,execution,epoch,self.workspace/'.probe-locks')
             while True:
+                if probe_runner:
+                    if probe_runner.error:raise RuntimeError(probe_runner.error)
+                    if probe_runner.accepted_ready and not self.state.get('service_was_ready'):
+                        self.state['service_was_ready']=True;self.save()
+                    limit=task['client_spec']['service']['readiness']['startup_timeout']
+                    if not self.state.get('service_was_ready') and time.time()-self.state['service_started_at']>limit:
+                        raise RuntimeError('service startup health deadline exceeded')
                 if self.stop_event.is_set() or lease_lost.is_set():
                     raise RuntimeError('worker stopped or lease expired')
                 requested_at = time.monotonic()
@@ -437,7 +463,7 @@ class Worker:
                     logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
                 except (urllib.error.URLError, TimeoutError):
                     continue
-                if is_service(task) and container['State']['Running'] and not reply['cancel']:
+                if is_service(task) and not probe_runner and container['State']['Running'] and not reply['cancel']:
                     probe = service_health(task['client_spec']['service'])
                     try:
                         self.api.post(f'worker/executions/{execution}/service-health', probe)
@@ -511,6 +537,7 @@ class Worker:
             self.state = None
             self.save()
         finally:
+            if probe_runner:probe_runner.close()
             done.set()
             thread.join(timeout=15)
 
@@ -583,10 +610,11 @@ class Worker:
     def run(self, once=False):
         from .version import PROTOCOL_VERSION, metadata
         hardware = device(self.config)
+        from .probe_credentials import available as probe_references
         from .accelerators import capabilities
         hardware['accelerator_backends']=capabilities(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': metadata(), 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': {**metadata(),'probe_references':probe_references(self.config)}, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         from .control import Control
         self.control = Control(self, docker, telemetry)
@@ -652,6 +680,10 @@ def main():
     parser.add_argument('--config', required=True)
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
+    from .probe_dependencies import ensure
+    try:ensure()
+    except (OSError,subprocess.SubprocessError,RuntimeError):
+        LOG.warning('service probe dependencies unavailable; new readiness templates will be blocked')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     path = Path(args.config).resolve()
     config = json.loads(path.read_text())

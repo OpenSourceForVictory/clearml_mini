@@ -31,7 +31,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
@@ -296,6 +296,8 @@ def install(app, db, current):
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
         slot.software = body.software.model_dump() if body.software else None
+        if body.software and 'probe_references' not in body.software.model_fields_set:
+            slot.software.pop('probe_references',None)
         slot.protocol_version = body.protocol_version
         slot.execution_modes = list(set(body.execution_modes)) if body.protocol_version >= 7 else ['docker']
         slot.client_images = body.client_images if body.protocol_version >= 3 else []

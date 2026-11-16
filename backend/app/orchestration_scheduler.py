@@ -79,6 +79,7 @@ class Planner:
             if not worker or not worker.service_network or not self.fits(server,slot):continue
             port=choose_port(self.s,worker,[p for w,p in avoid if w==worker.id])
             if port is None:continue
+            if (definition['template'].get('readiness') or {}).get('port','business')!='business' and choose_port(self.s,worker,[port,*[p for w,p in avoid if w==worker.id]]) is None:continue
             request=budget(self.pools[server.pool_id],server)
             reserved=SimpleNamespace(slot_id=slot.id,exclusive=server.gpu_mode=='exclusive',
                 reserved_vram_mb=slot.vram_mb if server.gpu_mode=='exclusive' else server.requested_vram_gb*1024,
@@ -139,7 +140,7 @@ def allocate_pair(s,job,at):
         server.required_gpu_model=definition['resources'].get('required_gpu_model')
         sr=reserve(s,server,server_slot,at)
         selection=service_dependencies.candidate(s,item,definition)
-        cr=reserve(s,job,client_slot,at,selection,True,definition['template']['startup_timeout']+admission.seconds('STARTUP_TIMEOUT_SECONDS',120))
+        cr=reserve(s,job,client_slot,at,selection,True,(definition['template'].get('readiness') or definition['template'])['startup_timeout']+admission.seconds('STARTUP_TIMEOUT_SECONDS',120))
         return [(server,server_slot,sr,None),(job,client_slot,cr,selection)]
     return None
 

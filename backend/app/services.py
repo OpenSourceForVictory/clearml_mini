@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,field_validator
 from sqlalchemy import select,or_
-from .core import ServiceInstance,ServerTemplate,Worker,Slot,Pool,Job,Run,RunLog,now
+from .core import ServiceInstance,ServerTemplate,Worker,Slot,Pool,Job,Run,RunLog,now,uid
 from .scheduling import lock,ACTIVE,TERMINAL,utc,online
 from .templates import server_view
 from .administration import audit
@@ -56,6 +56,12 @@ class Health(BaseModel):
     model_config=ConfigDict(extra='forbid')
     ready:bool
     error:str|None=Field(default=None,max_length=500)
+    epoch:str|None=Field(default=None,max_length=36)
+    sequence:int=Field(default=0,ge=0)
+    sample_age_ms:int=Field(default=0,ge=0,le=1200000)
+    duration_ms:int=Field(default=0,ge=0,le=120000)
+    phase:Literal['configuration','connect','handshake','response','message']|None=None
+    error_code:Literal['redirect_rejected','unexpected_status','authentication_failed','response_too_large','response_mismatch','subprotocol_mismatch','connection_closed','invalid_message','tls_failed','handshake_failed','timeout','configuration_invalid','connection_failed']|None=None
 
 
 def held(s,instance):
@@ -64,9 +70,13 @@ def held(s,instance):
     return bool(job and (job.status in (*ACTIVE,'PENDING') or s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))))
 
 
+def ports(instance):
+    return {p for p in (instance.port, instance.health_port) if p is not None}
+
+
 def check_port(s,instance):
-    for other in s.scalars(select(ServiceInstance).where(ServiceInstance.worker_id==instance.worker_id,ServiceInstance.port==instance.port,ServiceInstance.id!=instance.id)):
-        if held(s,other):raise HTTPException(409,'service port is already reserved on this machine')
+    for other in s.scalars(select(ServiceInstance).where(ServiceInstance.worker_id==instance.worker_id,ServiceInstance.id!=instance.id)):
+        if ports(instance) & ports(other) and held(s,other):raise HTTPException(409,'service port is already reserved on this machine')
 
 
 def enqueue(s,instance,user):
@@ -74,8 +84,16 @@ def enqueue(s,instance,user):
     if not w or not w.enabled or w.revoked_at or 'server' not in w.roles:raise HTTPException(409,'target machine must be enabled with server role')
     if not slot or not slot.enabled or not pool or not pool.enabled:raise HTTPException(409,'target GPU must belong to an enabled resource pool')
     if instance.gpu_mode=='shared' and (pool.gpu_model=='virtual' or not pool.allow_shared or instance.requested_vram_gb<1):raise HTTPException(400,'shared service requires shared pool and positive VRAM')
-    check_port(s,instance)
     definition=instance.template_snapshot
+    if definition.get('readiness'):
+        from .service_network import choose_port
+        health=definition['readiness']
+        instance.health_port = None
+        if health['port'] != 'business':
+            chosen=choose_port(s,w,[instance.port])
+            if chosen is None:raise HTTPException(409,'no independent health port available in machine service network')
+            instance.health_port=chosen
+    check_port(s,instance)
     resource=instance.resources or {'gpu_mode':instance.gpu_mode,'requested_vram_gb':instance.requested_vram_gb}
     from .job_resources import validate
     validate(pool,resource)
@@ -87,8 +105,10 @@ def enqueue(s,instance,user):
     spec={'resource_sources':instance.resource_sources or {},'resources':resource,'workload':'service','contract_version':1,'template':definition,'environment':instance.environment,'parameters':instance.parameters,
           'task_name':instance.name,'seed':0,'endpoint':f"{definition['protocol']}://{instance.address}:{instance.port}",
           'service':{'address':bind_address,'port':instance.port,'container_port':definition['port'],'protocol':definition['protocol'],'health_type':definition['health_type'],'health_path':definition['health_path'],'startup_timeout':definition['startup_timeout']}}
+    if definition.get('readiness'):
+        spec['service'].update(readiness=definition['readiness'],health_port=instance.health_port or instance.port)
     job=Job(owner_id=user.id,pool_id=pool.id,title='服务: '+instance.name,benchmark='inference-service',model_ref=definition['name'],episodes=1,client_spec=spec,target_slot_id=slot.id,service_instance_id=instance.id,gpu_mode=instance.gpu_mode,requested_vram_gb=instance.requested_vram_gb,requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'),required_gpu_model=resource.get('required_gpu_model'))
-    s.add(job);s.flush();s.add(Run(job_id=job.id,attempt=1));instance.current_job_id=job.id;instance.desired_running=True;instance.health_ready=False;instance.health_at=None;instance.health_error=None
+    s.add(job);s.flush();s.add(Run(job_id=job.id,attempt=1));instance.current_job_id=job.id;instance.desired_running=True;instance.health_ready=False;instance.health_at=None;instance.health_error=None;instance.probe_state={}
 
 
 def view(s,item):
@@ -96,10 +116,13 @@ def view(s,item):
     alive=slot is not None and online(slot)
     state=job.status if job else 'STOPPED'
     if job and state=='RUNNING':
-        fresh=item.health_at and timedelta(0)<=now()-utc(item.health_at)<timedelta(seconds=15)
+        from .service_readiness import fresh as is_fresh
+        fresh=is_fresh(item)
         state='HEALTHY' if alive and fresh and item.health_ready else 'UNHEALTHY' if alive and fresh else 'UNKNOWN'
+        if item.template_snapshot.get('readiness') and alive and fresh and not (item.probe_state or {}).get('ever_ready'):state='STARTING'
     if not item.desired_running and not held(s,item):state='STOPPED'
-    return {**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
+    from .service_readiness import diagnostics
+    return {'probe':diagnostics(item),'health_port':item.health_port,**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
 
 
 def resolve_parameters(definition,parameters,environment,overrides):
@@ -169,6 +192,20 @@ def install(app,db,admin,worker_auth):
         chunks=list(s.scalars(select(RunLog).where(RunLog.run_id==run.id).order_by(RunLog.sequence))) if run else []
         return {'job_id':chosen,'history':[{'job_id':j.id,'status':j.status,'created_at':j.created_at} for j in jobs],'content':''.join(x.content for x in chunks)}
 
+    @app.post('/api/v1/worker/executions/{execution}/service-probe-session')
+    def session(execution:str,worker=Depends(worker_auth),s=Depends(db)):
+        lock(s)
+        run=s.scalar(select(Run).where(Run.execution_id==execution))
+        slot=s.get(Slot,run.slot_id) if run and run.slot_id else None
+        if not slot or slot.worker_id!=worker.id:raise HTTPException(404,'execution not found')
+        if run.status not in ('STARTING','RUNNING') or not run.lease_expires_at or utc(run.lease_expires_at)<=now():raise HTTPException(409,'invalid execution lease')
+        job=s.get(Job,run.job_id);item=s.get(ServiceInstance,job.service_instance_id) if job.service_instance_id else None
+        if not item or item.current_job_id!=job.id:raise HTTPException(409,'service execution no longer current')
+        epoch=uid()
+        item.probe_state={**(item.probe_state or {}),'epoch':epoch,'sequence':0,'successes':0,'failures':0}
+        item.health_ready=False;item.health_at=None
+        s.commit();return {'epoch':epoch,'ever_ready':bool(item.probe_state.get('ever_ready'))}
+
     @app.post('/api/v1/worker/executions/{execution}/service-health')
     def health(execution:str,body:Health,worker=Depends(worker_auth),s=Depends(db)):
         lock(s);run=s.scalar(select(Run).where(Run.execution_id==execution))
@@ -178,4 +215,9 @@ def install(app,db,admin,worker_auth):
         job=s.get(Job,run.job_id)
         item=s.get(ServiceInstance,job.service_instance_id) if job and job.service_instance_id else None
         if not item or item.current_job_id!=job.id:raise HTTPException(409,'service execution no longer current')
-        item.health_at=now();item.health_ready=body.ready;item.health_error=body.error;s.commit();return {'accepted':True}
+        if item.template_snapshot.get('readiness'):
+            from .service_readiness import accept
+            outcome=accept(item,body)
+            if outcome=='epoch':raise HTTPException(409,'probe generation is no longer current')
+            s.commit();return {'accepted':outcome=='accepted','ready':item.health_ready}
+        item.health_at=now();item.health_ready=body.ready;item.health_error=body.error;s.commit();return {'accepted':True,'ready':item.health_ready}

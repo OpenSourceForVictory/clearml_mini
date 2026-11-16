@@ -1,3 +1,4 @@
+import {ReadinessEditor,readinessDraft,Readiness} from './readiness-editor';
 import {ClientRegistration} from './evaluation-setup';
 import React,{useEffect,useState} from 'react';
 import {mountDraft,mountValues} from './mount-editor';
@@ -13,7 +14,7 @@ import {CommandMappings,validateMappings,PlatformBinding} from './command-mappin
 import {TemplateHelp,TemplateConfig} from './template-guidance';
 import {ParameterEditor,parameterDraft,parameterSchema} from './parameter-editor';
 
-export type Template={resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
+export type Template={readiness?:Readiness|null;resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
 export function Templates(){
  const [kind,setKind]=useState('client');
  return <><div className="tabs" role="tablist" aria-label="模板类型">{[['client','客户端模板'],['server','服务端模板'],['registration','镜像与代码接入']].map(([id,label])=><button role="tab" aria-selected={kind===id} key={id} onClick={()=>setKind(id)}>{label}</button>)}</div>
@@ -41,6 +42,8 @@ function TemplateWorkspace({kind}:{kind:string}){
 export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:string;source:Template|null;onSave?:()=>Promise<void>;onClose?:()=>void;readOnly?:boolean}){
  const [mode,setMode]=useState(source?.execution_mode||'docker'),[integration,setIntegration]=useState(source?.integration_mode||'direct'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [taskType,setTaskType]=useState(kind==='client'?(source?.task_type||'evaluation'):'evaluation');
+ const [customReadiness,setCustomReadiness]=useState(!!source?.readiness);
+ const [readiness,setReadiness]=useState(()=>readinessDraft(source?.readiness));
  const ordinary=kind==='client'&&taskType==='command';
  const [reporting,setReporting]=useState(source?.episode_reporting??true);
  const [image,setImage]=useState(source?.image||''),[hostEnvironment,setHostEnvironment]=useState(source?.host_runtime?.environment_name||'');
@@ -64,6 +67,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
    if(mode==='docker'){body.image=f.get('image');body.runtime={...source?.runtime,interpreter:source?.runtime?.interpreter||'python3',environment,overridable_env,assets:assetMap,work_dir:f.get('work_dir'),output_dir:f.get('output_dir'),mounts:mountValues(mounts)};}
    else{body.host_runtime={...source?.host_runtime,environment_name:f.get('environment_name'),environment,overridable_env,assets:assets.map(a=>a.name)};}
    if(kind==='server')Object.assign(body,{port:Number(f.get('port')),protocol:f.get('protocol'),health_type:f.get('health_type'),health_path:f.get('health_path'),startup_timeout:Number(f.get('startup_timeout'))});
+   if(kind==='server')body.readiness=customReadiness?readiness:null;
    await api('admin/'+kind+'-templates','POST',body);await onSave?.();
  }catch(e){setError(String(e))}finally{setBusy(false)}}
  return <section className="panel template-form">{!readOnly&&<h2>{source?.id.startsWith('example:')?'从样例注册模板':source?'复制为新版本':'注册运行模板'}</h2>}{error&&<p ref={errorRef} tabIndex={-1} role="alert" className="error">{error}</p>}{!readOnly&&<TemplateHelp kind={kind} mode={mode} integration={integration} taskType={taskType}/>}<form onSubmit={save}><fieldset disabled={readOnly} className="template-form-fields" aria-label={readOnly?'模板只读配置':'模板注册配置'}>
@@ -81,6 +85,9 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
  <CommandMappings kind={kind} bindings={bindings} onBindings={setBindings} parameters={parameters} onParameters={setParameters}/><LaunchPreview command={command} bindings={bindings} parameters={parameters}/></fieldset>{ordinary?<p className="hint">普通命令每项执行一次，退出码 0 为成功，非零为失败。不需要 SDK、回合事件或结果 JSON；不适用于一直运行的服务。命令按程序和参数执行，不自动解释 Shell 管道。</p>:kind==='client'&&<><label><input type="checkbox" name="episode_reporting" checked={reporting||integration==='sdk-command'} disabled={integration==='sdk-command'} onChange={e=>setReporting(e.target.checked)}/>业务程序逐回合上报（SDK 命令模式自动启用）</label><p>SDK 命令每次执行一个回合，通过 MINI_EVAL_RESULT 写入结果；直接协议程序负责回合事件和最终汇总。参数支持 task_name、episode_id、episode_seed、endpoint、work_dir 等占位符。</p></>}
  <EnvironmentEditor rows={environments[mode]} onChange={rows=>setEnvironments({...environments,[mode]:rows})}/>
  <TemplateDirectories mode={mode} assets={assets} onAssets={setAssets} mounts={mounts} onMounts={setMounts}/>
- {kind==='server'&&<><p className="muted">服务程序需使用平台传入的监听地址和端口。HTTP 健康检查要求程序提供相应路径；TCP 仅检查端口可连接。启动等待时间应覆盖模型加载耗时。</p><div className="row"><Field label="服务端口"><input name="port" type="number" min={1024} max={65535} required defaultValue={source?.port||8000}/></Field><Field label="服务协议"><select name="protocol" defaultValue={source?.protocol||'http'}>{['http','https','ws','wss'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="健康检查"><select name="health_type" defaultValue={source?.health_type||'http'}><option value="http">HTTP</option><option value="tcp">TCP</option></select></Field></div><Field label="健康检查路径"><input name="health_path" required defaultValue={source?.health_path||'/healthz'}/></Field><Field label="启动健康等待秒数"><input name="startup_timeout" type="number" min={5} max={1800} defaultValue={source?.startup_timeout||120} required/></Field></>}
+ {kind==='server'&&<><fieldset><legend>服务监听与健康检查</legend><p>服务程序通过平台参数获取监听地址和端口。健康检查通过后，平台才会分配客户端。</p><div className="row"><Field label="服务端口"><input name="port" type="number" min={1024} max={65535} required defaultValue={source?.port||8000}/></Field><Field label="服务协议"><select name="protocol" defaultValue={source?.protocol||'http'}>{['http','https','ws','wss'].map(x=><option key={x}>{x}</option>)}</select></Field></div>
+ <label><input type="checkbox" checked={customReadiness} onChange={e=>setCustomReadiness(e.target.checked)}/>自定义就绪检查（WebSocket、响应校验与独立端口）</label>
+ <div hidden={customReadiness}><Field label="健康检查"><select name="health_type" defaultValue={source?.health_type||'http'}><option value="http">HTTP</option><option value="tcp">TCP</option></select></Field><Field label="健康检查路径"><input name="health_path" required defaultValue={source?.health_path||'/healthz'}/></Field><Field label="启动健康等待秒数"><input name="startup_timeout" type="number" min={5} max={1800} defaultValue={source?.startup_timeout||120} required/></Field><p>HTTP 检查要求响应 2xx；TCP 仅确认端口可连接。启动等待时间应覆盖模型加载耗时。</p></div>
+ {customReadiness&&<ReadinessEditor value={readiness} onChange={setReadiness}/>}</fieldset></>}
  </fieldset></fieldset>{!readOnly&&<div className="row"><button disabled={busy} className="primary">注册此版本</button><button type="button" onClick={onClose}>取消</button></div>}</form></section>
 }

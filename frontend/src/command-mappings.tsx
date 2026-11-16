@@ -4,7 +4,7 @@ import type {ParameterDraft} from './parameter-editor';
 export type PlatformBinding={source:string;target:string;name?:string;encoding?:string};
 const common=[['platform.job_id','任务 ID','job-id'],['platform.execution_id','执行 ID','execution-id'],['platform.paths.work','工作目录','work-dir'],['platform.paths.output','输出目录','output-dir'],['platform.paths.cache','缓存目录','cache-dir']];
 const client=[['task.task_name','任务名','task'],['task.case_id','集合任务 ID','case-id'],['task.episodes','回合数','episodes'],['task.seed','任务种子','seed'],['platform.service.endpoint','推理服务地址（需配置服务）','endpoint'],['platform.service.key','推理服务标识（需配置服务）','service-key']];
-const server=[['platform.listen.address','监听地址','host'],['platform.listen.port','监听端口','port']];
+const server=[['platform.listen.address','监听地址','host'],['platform.listen.port','监听端口','port'],['platform.listen.health_port','健康端口','health_port']];
 export function validateMappings(bindings:PlatformBinding[],parameters:Record<string,any>|null,command:string[],environment:Record<string,unknown>,overrides:string[]){
  const used=new Set<string>();
  const fields=Object.values(parameters?.fields||{}) as any[];

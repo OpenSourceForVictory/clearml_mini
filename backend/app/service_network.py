@@ -3,7 +3,7 @@ from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,field_validator,model_validator
 from sqlalchemy import select
 from .core import Worker,ServiceInstance
-from .services import Deploy,held
+from .services import Deploy,held,ports
 from .scheduling import lock
 
 
@@ -43,7 +43,7 @@ class Update(BaseModel):
 def choose_port(s,worker,avoid=()):
     config=worker.service_network
     if not config:return None
-    used={i.port for i in s.scalars(select(ServiceInstance).where(ServiceInstance.worker_id==worker.id)) if held(s,i)}|set(avoid)
+    used={p for i in s.scalars(select(ServiceInstance).where(ServiceInstance.worker_id==worker.id)) if held(s,i) for p in ports(i)}|set(avoid)
     return next((p for p in range(config['port_start'],config['port_end']+1) if p not in used),None)
 
 

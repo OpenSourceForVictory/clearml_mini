@@ -458,6 +458,8 @@ class ServiceInstance(Base):
     current_job_id: Mapped[Optional[str]] = mapped_column(String(36))
     desired_running: Mapped[bool] = mapped_column(Boolean, default=True)
     revision: Mapped[int] = mapped_column(Integer, default=0)
+    health_port: Mapped[Optional[int]] = mapped_column(Integer)
+    probe_state: Mapped[dict] = mapped_column(JSON_TYPE, default=dict, server_default='{}')
     health_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     health_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     health_error: Mapped[Optional[str]] = mapped_column(String(500))

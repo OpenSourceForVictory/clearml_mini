@@ -80,8 +80,8 @@ class HostBackend:
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
         values={k:str(config.get(k,'')) for k in ('task_name','episodes','seed','endpoint')}
         if config.get('workload') == 'service':
-            config.update(port=config['service']['port'], bind_host=config['service']['address'])
-            values.update(port=str(config['port']), bind_host=config['bind_host'])
+            config.update(port=config['service']['port'], bind_host=config['service']['address'],health_port=config['service'].get('health_port',config['service']['port']))
+            values.update(port=str(config['port']), bind_host=config['bind_host'],health_port=str(config['health_port']))
         values.update(input_path=str(inp),work_dir=str(directory/'work'),output_dir=str(directory/'output'))
         assets=w.runtime_snapshot['config']['assets']
         for name in host['assets']:

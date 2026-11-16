@@ -13,7 +13,8 @@ def ready(s,instance,at=None):
     at=at or now()
     if not instance or not instance.desired_running or not instance.health_ready or not instance.health_at:
         return False
-    if not timedelta(0)<=at-utc(instance.health_at)<timedelta(seconds=15):return False
+    from .service_readiness import fresh
+    if not fresh(instance,at):return False
     slot=s.get(Slot,instance.slot_id);worker=s.get(Worker,instance.worker_id)
     run=current_run(s,instance)
     return bool(worker and worker.enabled and not worker.revoked_at and slot and slot.enabled and online(slot,at) and run and

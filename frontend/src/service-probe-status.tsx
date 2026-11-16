@@ -1,0 +1,7 @@
+import React,{useState} from 'react';
+import {ReadinessEditor,readinessDraft} from './readiness-editor';
+const errors:Record<string,string>={redirect_rejected:'健康地址发生重定向，请修改检查路径',unexpected_status:'HTTP 状态码不符合配置',authentication_failed:'认证失败，请检查节点凭据引用',response_too_large:'响应超过大小限制，请提供轻量健康接口',response_mismatch:'业务响应不符合预期，请检查匹配条件',subprotocol_mismatch:'WebSocket 子协议不匹配',connection_closed:'服务关闭了检查连接',invalid_message:'响应消息无效或过大',tls_failed:'证书校验失败，请检查证书或批准的 CA 引用',handshake_failed:'WebSocket 握手失败，请检查路径与协议',timeout:'健康检查超时，请查看服务日志或调整检查超时',configuration_invalid:'节点凭据或 CA 引用不可用，请管理员检查节点配置',connection_failed:'服务端口连接失败，请检查监听地址和端口'};
+export function ServiceProbeStatus({service}:{service:any}){
+ const [show,setShow]=useState(false);const p=service.probe;if(!p)return null;
+ return <details><summary>就绪检查详情</summary><p>{p.kind}{p.kind==='websocket'?' / '+(p.mode==='message'?'业务消息':'握手'):''} · 阶段：{p.phase||'等待检查'}</p><p>最近检查：{service.health_at?new Date(service.health_at).toLocaleString():'暂无'} · 耗时：{p.duration_ms??'—'} ms</p><p>连续成功 {p.successes||0}/{p.success_threshold} · 连续失败 {p.failures||0}/{p.failure_threshold}</p>{p.error_code&&<p role="status">{errors[p.error_code]||'检查失败，请查看日志'}</p>}<p>修改位置：管理设置 → 运行模板 → 服务端模板 → {service.template?.name||'对应模板'} → 健康检查。节点凭据需管理员处理。</p>{service.template?.readiness&&<><button type="button" onClick={()=>setShow(!show)}>{show?'收起检查配置':'查看检查配置'}</button>{show&&<fieldset disabled aria-label="服务检查配置快照"><ReadinessEditor value={readinessDraft(service.template.readiness)} onChange={()=>{}}/></fieldset>}</>}</details>;
+}

@@ -18,6 +18,7 @@ BLOCKING={'DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'}
 
 class Software(BaseModel):
     model_config=ConfigDict(extra='forbid')
+    probe_references:list[Annotated[str,Field(pattern=r'^[A-Z_][A-Z0-9_]{0,99}$')]]=Field(default_factory=list,max_length=32)
     version:str=Field(min_length=1,max_length=100,pattern=r'^[A-Za-z0-9._+-]+$')
     build_digest:str|None=Field(default=None,pattern=r'^[a-f0-9]{64}$')
     capabilities:list[Annotated[str,Field(min_length=1,max_length=64,pattern=r'^[a-z][a-z0-9_]*$')]]=Field(default_factory=list,max_length=32)

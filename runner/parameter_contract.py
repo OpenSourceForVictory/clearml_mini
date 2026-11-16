@@ -14,7 +14,7 @@ VERSION = 1
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 TYPES = {'string', 'integer', 'number', 'boolean', 'enum', 'object', 'array'}
 RESERVED = {'task_name', 'episodes', 'seed', 'endpoint', 'execution_id', 'input_path',
-            'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'bind_host',
+            'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'health_port', 'bind_host',
             'platform', 'task', 'business', 'resources', 'job_id', 'input_version'}
 
 
