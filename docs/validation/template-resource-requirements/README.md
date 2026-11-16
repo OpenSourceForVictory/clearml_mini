@@ -1,6 +1,6 @@
 # 模板资源及 NPU 宿主机验收
 
-2026-11-16；开发版本 Worker 0.13.0 / 协议 11。新增功能尚未发布到生产 API 与全部 Worker。证据见 [evidence.json](evidence.json)。
+2026-11-16；API 和五台 GPU 节点已发布，Worker 0.13.0 / 协议 11，Agent 1.1.0。发布后跨机器执行验收及清理已完成。证据见 [evidence.json](evidence.json)。
 
 ## 已验证
 
@@ -16,7 +16,7 @@
 
 前一轮后端全量 526 通过、55 跳过；新增纳管回归 26 通过；后续 NPU/资源/纳管回归 28 通过；宿主机真实停止/超时/恢复及所有权回归 6 通过。前端全量 57 通过、9 跳过，纳管浏览器补测 1 通过，TypeScript/Vite 构建通过。PostgreSQL 并发 5 通过，资源迁移保护单独 1 通过。最终后端全量 541 通过、61 跳过（767 秒）；最新调度补测 39 通过。OpenSpec strict 校验通过。
 
-跳过主要为显式环境变量启用的 Docker/宿主机、专用 PostgreSQL 和生产浏览器场景；本页记录的实机/集成项另外显式运行。逻辑节点执行测试不替代五台物理节点的新版本部署验收。
+跳过主要为显式环境变量启用的 Docker/宿主机、专用 PostgreSQL 和生产浏览器场景；本页记录的实机/集成项另外显式运行。逻辑节点执行测试与五台物理节点的发布后验收分别记录。
 
 ## 关键修正
 
@@ -27,3 +27,17 @@
 - 新宿主机资源契约不交给协议 10 及以前的 Worker，防止旧执行器忽略新增验证。
 
 完整样例与使用方式：[examples/scheduling_acceptance](../../../examples/scheduling_acceptance/README.md)。实机 NPU 脚本：[validate_npu_host.py](../../../scripts/validate_npu_host.py)。
+
+## 生产发布
+
+发布源提交 `3abfc71`，API 固定镜像 `sha256:393d93934ea385aef6025e6ad9bca900c01b3b3a29074cf25aef89b77d4d01f1`，节点制品摘要 `5eb4cb855e3989671cc64932cb1ca1c5001f4f0340f5dbc23c07b1ca94c52ab6`。
+
+五台授权 GPU 节点先停新准入，确认持有执行为零后备份。隔离恢复数据库并由 `r841a23` 迁移至 `s952b34`，222 条历史执行记录数量不变；随后正式迁移、启动 API、逐台升级 Worker/Agent，复核摘要、存储及运行环境回执后恢复原准入状态。前端实际响应的两个静态资源与本地构建逐字节一致。
+
+四台远端为 Worker 用户 UID 1000 增加持久化 systemd CPU/memory/pids 委派并刷新用户管理器；本机 UID 1001 已就绪。五台均通过短任务实际内核配额验证，没有重启主机、终止已有业务或更改登录密码。
+
+生产 Compose 使用 `.runtime/resource-contract/release/image.yml` 作为固定镜像 overlay，同时保留 `deploy/compose.yml` 和 `deploy/lan-compose.yml`。发布阶段记录、0600 数据库备份和恢复校验位于 `.runtime/resource-contract/release/`，不入 Git。后续维护应沿用完整 Compose 配置，不能用旧镜像 overlay 覆盖新版本。
+
+NPU 机器仍采用显式批准的系统级执行配置，本次对空闲 NPU 2 复测宿主机双服务共享、异常退出清理和容器 ACL 分配成功；这不是 NPU 节点自动纳管或常驻 Worker 上线的证明。
+
+生产跨机器 8 组（16 批、48 个客户端任务）全部通过；3 类 GPU 的 9 个 CUDA 分配任务覆盖五台机器。超额 CPU/RAM 拒绝、显存不足排队和取消清理通过。验收模板已停用，临时节点配置已按修订号恢复，最终五台节点均启用、在线、持有执行为零。脱敏证据见 [production.json](production.json)。

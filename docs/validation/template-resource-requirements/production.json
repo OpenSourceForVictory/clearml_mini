@@ -1,0 +1,208 @@
+{
+  "source_commit": "3abfc71",
+  "database": "s952b34",
+  "worker": "0.13.0",
+  "protocol": 11,
+  "agent": "1.1.0",
+  "release_digest": "5eb4cb855e3989671cc64932cb1ca1c5001f4f0340f5dbc23c07b1ca94c52ab6",
+  "backup_restore": {
+    "before": [
+      "r841a23",
+      "222"
+    ],
+    "after": [
+      "s952b34",
+      "222"
+    ],
+    "backup_sha256": "bfc42df2645ecd3dcaefc335e0134624961123df0cdb0967f80dc2b2ae8b77f9"
+  },
+  "host_limits": [
+    {
+      "address": "192.168.8.151",
+      "result": {
+        "ready": true,
+        "uid": 1001,
+        "reason": null,
+        "repairable": false,
+        "verified": true
+      },
+      "exit": 0
+    },
+    {
+      "address": "192.168.8.157",
+      "result": {
+        "ready": true,
+        "uid": 1000,
+        "reason": null,
+        "repairable": false,
+        "verified": true
+      },
+      "exit": 0
+    },
+    {
+      "address": "192.168.8.177",
+      "result": {
+        "ready": true,
+        "uid": 1000,
+        "reason": null,
+        "repairable": false,
+        "verified": true
+      },
+      "exit": 0
+    },
+    {
+      "address": "192.168.8.182",
+      "result": {
+        "ready": true,
+        "uid": 1000,
+        "reason": null,
+        "repairable": false,
+        "verified": true
+      },
+      "exit": 0
+    },
+    {
+      "address": "192.168.8.183",
+      "result": {
+        "ready": true,
+        "uid": 1000,
+        "reason": null,
+        "repairable": false,
+        "verified": true
+      },
+      "exit": 0
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario": "E02-host-host-shared-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-host-host-exclusive-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-host-docker-shared-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-host-docker-exclusive-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-docker-host-shared-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-docker-host-exclusive-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-docker-docker-shared-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E02-docker-docker-exclusive-v2",
+      "status": "passed",
+      "clients": 6,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E01-NVIDIA GeForce RTX 4090",
+      "status": "passed",
+      "clients": 3,
+      "nodes": [
+        "local4090-151",
+        "rtx4090-157",
+        "rtx4090-183"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E01-NVIDIA GeForce RTX 3080",
+      "status": "passed",
+      "clients": 3,
+      "nodes": [
+        "rtx3080-182"
+      ],
+      "all_cleanup_confirmed": true
+    },
+    {
+      "scenario": "E01-Quadro RTX 8000",
+      "status": "passed",
+      "clients": 3,
+      "nodes": [
+        "rtx8000-177"
+      ],
+      "all_cleanup_confirmed": true
+    }
+  ],
+  "final_nodes": [
+    {
+      "node": "local4090-151",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "node": "rtx3080-182",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "node": "rtx4090-157",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "node": "rtx4090-183",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "node": "rtx8000-177",
+      "enabled": true,
+      "held_executions": 0
+    }
+  ],
+  "cleanup": "passed",
+  "npu_validation": "Standalone approved runtime on physical NPU 2; not a continuously enrolled NPU Worker."
+}

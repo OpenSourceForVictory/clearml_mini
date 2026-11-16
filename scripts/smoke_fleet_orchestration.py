@@ -9,6 +9,7 @@ from scripts.fleet_release import atomic_json, TARGETS
 from scripts.fleet_release_api import API
 from scripts.fleet_acceptance import Registry
 from scripts.fleet_probe_programs import SERVER, CLIENT, COMMAND
+from worker.version import PROTOCOL_VERSION
 
 IMAGE = 'mini-eval-runner:dev'
 
@@ -32,7 +33,7 @@ class Acceptance:
             node = next(n for n in nodes if n['node_name'] == name and not n.get('revoked_at'))
             if node['held_executions']: raise RuntimeError('prepare requires idle target nodes')
             slot = next(s for s in slots if s['worker_id'] == node['id'])
-            if not slot['online'] or slot['protocol_version'] != 10: raise RuntimeError('upgrade fleet first')
+            if not slot['online'] or slot['protocol_version'] != PROTOCOL_VERSION: raise RuntimeError('upgrade fleet first')
             route = 'admin/nodes/' + node['id']
             if name in self.state['nodes']: continue
             host = self.api(route+'/host-environments'); runtime = self.api(route+'/runtime')

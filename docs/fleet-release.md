@@ -1,6 +1,6 @@
 # 五节点发布与验收
 
-OpenSpec：`production-fleet-acceptance`。本文件随实施更新；盘点通过不等于已经发布。
+OpenSpec：`production-fleet-acceptance`。本文件保留历次发布记录；最新资源契约版本为 Worker 0.13.0 / 协议 11、数据库 s952b34，详见 [资源契约发布验收](validation/template-resource-requirements/README.md)。盘点通过不等于已经发布。
 
 ## 只读盘点与计划
 
