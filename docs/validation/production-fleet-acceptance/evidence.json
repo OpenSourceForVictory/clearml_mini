@@ -3777,5 +3777,51 @@
       }
     }
   ],
-  "soak_status": "running"
+  "soak_status": "running",
+  "soak": {
+    "scenario": "S01",
+    "status": "passed",
+    "details": {
+      "elapsed_seconds": 7201.643873565947,
+      "users": 3,
+      "batches": 30,
+      "samples": 448,
+      "queued_observed": true
+    }
+  },
+  "cleanup": {
+    "test_users_disabled": [
+      "fleet-soak-20261116-user-0",
+      "fleet-soak-20261116-user-1",
+      "fleet-soak-20261116-user-2"
+    ],
+    "restored_nodes": [
+      {
+        "name": "local4090-151",
+        "status": "online",
+        "held_executions": 0
+      },
+      {
+        "name": "rtx3080-182",
+        "status": "online",
+        "held_executions": 0
+      },
+      {
+        "name": "rtx4090-157",
+        "status": "online",
+        "held_executions": 0
+      },
+      {
+        "name": "rtx4090-183",
+        "status": "online",
+        "held_executions": 0
+      },
+      {
+        "name": "rtx8000-177",
+        "status": "online",
+        "held_executions": 0
+      }
+    ],
+    "test_service_stopped": true
+  }
 }
