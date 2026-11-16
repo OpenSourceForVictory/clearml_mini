@@ -1,3 +1,4 @@
+import {GuideProvider,GuideButton,PageHelp} from './user-guide';
 import {EvaluationSetup} from './evaluation-setup';
 import type {Suite} from './run-wizard';
 import {Admin} from './administration';
@@ -174,7 +175,7 @@ function App() {
           <div className="brand-mark">M</div>
           <p className="eyebrow">MINI EVAL</p>
           <h1>评测工作台</h1>
-          <p className="muted">提交评测，查看进度与结果。</p>
+          <p className="muted">提交评测，查看进度与结果。</p><p className="hint">使用管理员分配的账号登录；忘记密码请联系管理员。登录后可在“用户指南”查看操作与业务接入说明。</p>
           <form onSubmit={login}>
             <Field label="用户名">
               <input name="username" autoComplete="username" required />
@@ -198,7 +199,7 @@ function App() {
       </main>
     );
   return (
-    <div className="shell">
+    <GuideProvider admin={user.role==='admin'}><div className="shell">
       <aside>
         <div className="brand">
           <span className="brand-mark">M</span>
@@ -227,6 +228,7 @@ function App() {
               {title}
             </button>
           ))}
+          <GuideButton/>
         </nav>
         <div className="account">
           <strong>{user.username}</strong>
@@ -250,6 +252,7 @@ function App() {
           </span>
           <span className="live-dot">{tab==='admin'?'管理工作台':tab==='results'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
         </header>
+        <PageHelp topic={({jobs:"jobs",all:"jobs",workers:"resources",cs:"wizard",results:"results",setup:"start",admin:"start"} as Record<string,string>)[tab]||"start"}/>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />
         ) : tab === "cs" || tab === "results" ? (
@@ -261,7 +264,7 @@ function App() {
         )}
         {setupJob&&<JobDetail id={setupJob} close={()=>setSetupJob('')}/>}
       </main>
-    </div>
+    </div></GuideProvider>
   );
 }
 function Jobs({ all }: { all: boolean }) {

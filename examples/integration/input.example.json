@@ -1,0 +1,31 @@
+{
+  "task_name": "demo",
+  "case_id": "demo-1",
+  "episodes": 2,
+  "seed": 42,
+  "parameters": {
+    "force_failure": false
+  },
+  "input_version": 1,
+  "platform": {
+    "job_id": "",
+    "execution_id": "",
+    "paths": {
+      "work": "./work",
+      "output": "./output",
+      "cache": "./cache",
+      "assets": {}
+    },
+    "service": null,
+    "listen": null
+  },
+  "task": {
+    "case_id": "demo-1",
+    "task_name": "demo",
+    "episodes": 2,
+    "seed": 42
+  },
+  "business": {
+    "force_failure": false
+  }
+}

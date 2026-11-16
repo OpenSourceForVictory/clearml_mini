@@ -1,3 +1,5 @@
+import {PageHelp} from './user-guide';
+import {functionGuideTopics} from './guide-content';
 import React, {useEffect, useId, useState} from 'react';
 
 /** Local function pages keep drafts in memory; lazy pages mount on first visit. */
@@ -11,6 +13,7 @@ export function FunctionPages({label,items,value,onChange,lazy=false}:{label:str
       if(next!==null){e.preventDefault();onChange(items[next].id);document.getElementById(prefix+'-tab-'+items[next].id)?.focus()}
     }}>{item.label}</button>)}</div>
     {items.map(item=><div key={item.id} role="tabpanel" id={prefix+'-panel-'+item.id} aria-labelledby={prefix+'-tab-'+item.id} hidden={value!==item.id}>
+      {functionGuideTopics[label]?.[item.id]&&<PageHelp topic={functionGuideTopics[label][item.id]}/>}
       {item.description&&<p className="function-description">{item.description}</p>}
       {(!lazy||value===item.id||visited.includes(item.id))&&item.content}
     </div>)}

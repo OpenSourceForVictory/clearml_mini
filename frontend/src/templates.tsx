@@ -1,3 +1,4 @@
+import {GuideButton} from './user-guide';
 import {ReadinessEditor,readinessDraft,Readiness} from './readiness-editor';
 import {ClientRegistration} from './evaluation-setup';
 import React,{useEffect,useState} from 'react';
@@ -70,7 +71,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
    if(kind==='server')body.readiness=customReadiness?readiness:null;
    await api('admin/'+kind+'-templates','POST',body);await onSave?.();
  }catch(e){setError(String(e))}finally{setBusy(false)}}
- return <section className="panel template-form">{!readOnly&&<h2>{source?.id.startsWith('example:')?'从样例注册模板':source?'复制为新版本':'注册运行模板'}</h2>}{error&&<p ref={errorRef} tabIndex={-1} role="alert" className="error">{error}</p>}{!readOnly&&<TemplateHelp kind={kind} mode={mode} integration={integration} taskType={taskType}/>}<form onSubmit={save}><fieldset disabled={readOnly} className="template-form-fields" aria-label={readOnly?'模板只读配置':'模板注册配置'}>
+ return <section className="panel template-form"><GuideButton topic="integration">业务如何接入：SDK 与样例</GuideButton><GuideButton topic="parameters">参数与目录配置说明</GuideButton>{!readOnly&&<h2>{source?.id.startsWith('example:')?'从样例注册模板':source?'复制为新版本':'注册运行模板'}</h2>}{error&&<p ref={errorRef} tabIndex={-1} role="alert" className="error">{error}</p>}{!readOnly&&<TemplateHelp kind={kind} mode={mode} integration={integration} taskType={taskType}/>}<form onSubmit={save}><fieldset disabled={readOnly} className="template-form-fields" aria-label={readOnly?'模板只读配置':'模板注册配置'}>
  <fieldset><legend>基础信息</legend><p className="muted">名称说明用途，例如 robotwin-client；版本例如 v1。修改已注册配置时创建新版本，历史任务继续使用原配置。</p><div className="row"><Field label="模板名称"><input name="name" defaultValue={source?.name} required maxLength={100}/></Field><Field label="版本"><input name="version" defaultValue={readOnly?source?.version:source?.id.startsWith('example:')?source.version:undefined} required maxLength={100} placeholder="例如 v1"/></Field></div></fieldset>
  <fieldset><legend>平台参数</legend><p className="muted">执行身份、GPU、推理地址和回合身份由平台注入；宿主机目录由机器配置解析。业务程序通过 MINI_EVAL_INPUT 读取任务输入。</p>
  {mode==='docker'?<div className="row"><Field label="容器内工作目录"><input name="work_dir" required value={workDir} onChange={e=>setWorkDir(e.target.value)}/></Field><Field label="容器内输出目录"><input name="output_dir" required value={outputDir} onChange={e=>setOutputDir(e.target.value)}/></Field></div>:<p>工作目录和输出目录使用该节点工作区下的独立执行目录。</p>}

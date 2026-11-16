@@ -1,3 +1,4 @@
+import {PageHelp} from './user-guide';
 import {EvaluationSetup} from './evaluation-setup';
 import type {Suite} from './run-wizard';
 import {FunctionPages} from './navigation';
@@ -28,7 +29,7 @@ export function Admin({onRun,onJob}:{onRun:(suite:Suite)=>void;onJob:(id:string)
   return <div className="administration"><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
     <div className="admin-layout"><div className="admin-navigation"><p className="admin-nav-caption">平台管理</p><div className="admin-nav" role="tablist" aria-label="管理分类" aria-orientation="vertical">{[['machines','机器管理','接入与运行环境'],['pools','资源池管理','GPU 资源与成员'],['templates','运行模板管理','客户端与推理服务'],['suites','评测集合管理','任务清单与版本'],['accounts','账号管理','成员与访问权限']].map(([id,label,hint],index)=><button key={id} id={'admin-tab-'+id} role="tab" aria-controls={'admin-panel-'+id} aria-selected={tab===id} tabIndex={tab===id?0:-1} onKeyDown={e=>{const ids=['machines','pools','templates','suites','accounts'];let next=index;if(e.key==='ArrowDown')next=(index+1)%5;else if(e.key==='ArrowUp')next=(index+4)%5;else if(e.key==='Home')next=0;else if(e.key==='End')next=4;else return;e.preventDefault();setTab(ids[next]);document.getElementById('admin-tab-'+ids[next])?.focus()}} onClick={()=>setTab(id)}><span>{label}</span><small aria-hidden="true">{hint}</small></button>)}</div></div>
     <div className="admin-content" role="tabpanel" id={'admin-panel-'+tab} aria-labelledby={'admin-tab-'+tab}>
-    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='suites'&&<EvaluationSetup onRun={onRun} onJob={onJob}/>} {tab==='accounts'&&<Accounts/>}</div></div></div>;
+    <PageHelp topic={tab}/>{tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='suites'&&<EvaluationSetup onRun={onRun} onJob={onJob}/>} {tab==='accounts'&&<Accounts/>}</div></div></div>;
 
 }
 export function Machines() {

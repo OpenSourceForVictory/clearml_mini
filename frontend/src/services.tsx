@@ -1,3 +1,4 @@
+import {PageHelp} from './user-guide';
 import {ServiceProbeStatus} from './service-probe-status';
 import React,{useEffect,useState} from 'react';
 import {ResourceRequest} from './resource-requirements';
@@ -15,7 +16,7 @@ export function Services({nodes,workerId}:{nodes:{id:string;node_name:string;rol
  const [resourceDrafts,setResourceDrafts]=useState<Record<string,Record<string,any>>>({});
  const selectedTemplate=templates.find(t=>t.id===templateId);
  const serverIds=nodes.filter(n=>n.roles.includes('server')).map(n=>n.id);
- return <section className="panel"><h2>推理服务实例</h2><p>服务与评测共用 GPU 资源。地址可复制到评测提交的推理地址列表；独占/共享由评测地址配置控制。</p>{error&&<p role="alert" className="error">{error}</p>}<button onClick={()=>setShow(!show)}>{show?'收起部署':'部署服务实例'}</button>
+ return <section className="panel"><h2>推理服务实例</h2><PageHelp topic="services"/><p>服务与评测共用 GPU 资源。地址可复制到评测提交的推理地址列表；独占/共享由评测地址配置控制。</p>{error&&<p role="alert" className="error">{error}</p>}<button onClick={()=>setShow(!show)}>{show?'收起部署':'部署服务实例'}</button>
  {show&&<form onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await api('admin/services','POST',{name:f.get('name'),template_id:f.get('template'),slot_id:f.get('slot'),address:f.get('address'),port:Number(f.get('port')),environment:JSON.parse(String(f.get('environment'))),parameters:JSON.parse(String(f.get('parameters'))),parameter_overrides:JSON.parse(String(f.get('parameter_overrides'))),...(selectedTemplate?.resource_requirements?{resources:resourceDrafts[templateId]||{}}:{gpu_mode:f.get('gpu_mode'),requested_vram_gb:Number(f.get('vram'))})});setShow(false);await refresh();setError('')}catch(e){setError(String(e))}}}>
  <Field label="实例名称"><input name="name" required maxLength={100}/></Field><Field label="服务端模板版本"><select name="template" required value={templateId} onChange={e=>setTemplateId(e.target.value)}><option value="" disabled>选择模板</option>{templates.filter(t=>t.enabled).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version} · {t.execution_mode}</option>)}</select></Field>
  <Field label="业务参数 JSON"><textarea name="parameters" defaultValue="{}"/></Field><Field label="允许运行时覆盖的业务参数 JSON"><textarea name="parameter_overrides" defaultValue="{}"/></Field>
