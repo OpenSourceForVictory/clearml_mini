@@ -1,0 +1,9 @@
+{
+  "image": "mini-eval-api:root-managed-20261117",
+  "node_count": 6,
+  "held_executions": 0,
+  "onboarding_available": true,
+  "bundle_root_installer": true,
+  "worker_version": "0.16.0",
+  "fleet_identity_migrated": false
+}

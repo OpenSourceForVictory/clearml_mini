@@ -105,6 +105,7 @@ def test_worker_watchdog_stops_host_when_lease_lost(tmp_path,monkeypatch):
 
 def test_system_launch_preserves_nonroot_manifest_owner(tmp_path,monkeypatch):
     w=worker(tmp_path,['python3','business.py']);b=HostBackend(w);b.system=True
+    w.config['accelerator_type']='npu'
     b.root.mkdir();path=b.root/'launch.json'
     path.write_text(json.dumps({'started':False}))
     owner=path.stat();calls=[]

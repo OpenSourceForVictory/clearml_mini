@@ -94,7 +94,9 @@ class Operations:
             return copy.deepcopy(job)
     def host_resources(self, remote, form):
         source=(Path(__file__).resolve().parents[1]/'worker/resource_limits.py').read_text()
-        program="import json; source="+repr(source)+"; scope={'__name__':'resource_check'}; exec(source,scope); print(json.dumps(scope['verify_host'](source)))"
+        identity_source=(Path(__file__).resolve().parents[1]/'worker/host_identity.py').read_text()
+        # Root uses system units and does not depend on an SSH-created user manager.
+        program="import json,os; source="+repr(source)+"; scope={'__name__':'resource_check'}; exec(source,scope); identity={}; exec("+repr(identity_source)+",identity)\nif os.geteuid()==0:\n    identity['verify_system'](source=source); value={'ready':True,'verified':True,'scope':'system'}\nelse: value=scope['verify_host'](source)\nprint(json.dumps(value))"
         _,data,_=remote.run([form['python'],'-c',program],timeout=60)
         value=json.loads(data)
         if not isinstance(value,dict) or type(value.get('ready')) is not bool:
@@ -103,11 +105,11 @@ class Operations:
 
     def probe(self,remote,form,runner_image):
         source=Path(__file__).with_name('probe.py').read_text()
-        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
+        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts.update({k:form.get(k,default) for k,default in (('accelerator_type','gpu'),('business_uid',29000),('business_gid',29000))});opts['ascend_source']=(Path(__file__).resolve().parents[1]/'node_agent/ascend.py').read_text();opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
         _,data,_=remote.run([form['python'],'-c',source],json.dumps(opts).encode()+b'\n',timeout=120)
         plan=json.loads(data)
         if not isinstance(plan,dict) or not isinstance(plan.get('issues'),list):raise Rejected('invalid_probe_response')
-        if plan['services'] and plan['services'][0]['scope']=='system':
+        if plan['services'] and plan['services'][0]['scope']=='system' and plan.get('uid')!=0:
             if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('sudo_permission_required')
         if form['mode']=='host' and not plan['issues']:
             limits=self.host_resources(remote,form)
@@ -171,6 +173,7 @@ class Operations:
                 credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
                 node_id=credential['id'];self.update(identity,node_id=node_id)
                 credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=[form['mode']],pool_id=None,mock=False)
+                credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
                 self.update(identity,stage='TRANSFER')
                 _,raw,_=remote.run(['mktemp','-d','/tmp/mini-eval-node.XXXXXXXX']);remote_dir=raw.decode().strip()
                 if not re.fullmatch(r'/tmp/mini-eval-node\.[A-Za-z0-9]+',remote_dir):raise Rejected('invalid_remote_temporary_directory')
@@ -196,7 +199,7 @@ class Operations:
                         self.update(identity,resource_limits=limits)
                         if not limits['ready']:raise Rejected('runtime_limits_not_enforced')
                     self.update(identity,stage='INSTALL')
-                    remote.run(args,timeout=420,sudo=bool(plan['services'] and plan['services'][0]['scope']=='system'))
+                    remote.run(args,timeout=420,sudo=bool(plan.get('uid')!=0 and plan['services'] and plan['services'][0]['scope']=='system'))
                 finally:
                     try:remote.run(['rm','-rf','--',remote_dir],timeout=20)
                     except Exception:self.update(identity,cleanup_warning=True)

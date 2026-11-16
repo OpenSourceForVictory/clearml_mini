@@ -1,0 +1,12 @@
+{
+  "systemd": "running",
+  "business_uid": 29000,
+  "worker_units": 2,
+  "agent_and_updater_started": true,
+  "private_configs": true,
+  "business_system_limits_verified": true,
+  "duplicate_install_rejected": true,
+  "cleanup": "all test units stopped",
+  "api": "stub, returns 503 for work; no production registration",
+  "devices": "mock indices 0,1; no hardware inference"
+}

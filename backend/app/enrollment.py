@@ -25,7 +25,7 @@ def bundle():
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('worker-release.zip', release.archive)
         z.writestr('release.sha256', release.id)
-        for name in ('install_node.py', 'deploy_node.py', 'install_worker.py', 'install_worker_updater.py', 'install_node_agent.py', 'configure_node_resources.py'):
+        for name in ('install_node.py', 'deploy_node.py', 'install_worker.py', 'install_worker_updater.py', 'install_node_agent.py', 'configure_node_resources.py', 'install_system_node.py'):
             z.writestr('scripts/'+name, (root/'scripts'/name).read_bytes())
         with zipfile.ZipFile(io.BytesIO(release.archive)) as worker:
             for name in worker.namelist():

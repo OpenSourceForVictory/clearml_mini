@@ -23,6 +23,9 @@ def settings(config):
     user=host.get('user')
     if not isinstance(user,str) or not user:raise RuntimeError('NPU host requires a non-root service account')
     account=pwd.getpwnam(user)
+    if config.get('host_execution'):
+        from .host_identity import settings as identity_settings
+        if identity_settings(config).pw_uid!=account.pw_uid:raise RuntimeError('NPU and managed business identities differ')
     if account.pw_uid==0:raise RuntimeError('NPU business programs must not run as root')
     environment=host.get('environment',{})
     allowed={'PATH','LD_LIBRARY_PATH','PYTHONPATH','ASCEND_HOME_PATH','ASCEND_OPP_PATH','ASCEND_AICPU_PATH'}

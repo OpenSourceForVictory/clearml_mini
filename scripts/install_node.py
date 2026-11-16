@@ -124,6 +124,9 @@ def main():
         credential=json.loads(a.credential.read_text())
         if a.existing:
             layout=replace_existing(existing_layout(a.home.resolve(),a.service),credential)
+        elif os.geteuid()==0:
+            from scripts.install_system_node import install
+            install(credential,a.gpus,a.instance)
         else:
             if a.home!=Path.home() or a.service: raise ValueError('custom home/services require --existing')
             if list((a.home/'.config/mini-eval').glob('*.json')): raise ValueError('existing Worker configuration; use --existing')
@@ -137,7 +140,7 @@ def main():
             Updater(layout).control('enable')
             Updater(layout).control('start')
         print('Installed node Agent, Worker, runner/SDK and independent updater. Verify all GPU instances and updater in the platform before completing enrollment.')
-    except ValueError as error:
+    except (ValueError,RuntimeError) as error:
         p.exit(1,'Node installation stopped: '+str(error)+'\n')
     except (OSError,subprocess.SubprocessError,KeyError):
         # Never echo a subprocess response/config that can contain node credentials.

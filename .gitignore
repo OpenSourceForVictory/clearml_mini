@@ -12,3 +12,6 @@ test-results/
 playwright-report/
 *.dump
 *.dump.sha256
+
+.coverage*
+htmlcov/

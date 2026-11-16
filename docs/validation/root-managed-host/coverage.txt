@@ -1,0 +1,14 @@
+......................................                                   [100%]
+=============================== warnings summary ===============================
+backend/tests/test_managed_host.py::test_onboarding_identity_fields_are_bounded
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+38 passed, 1 warning in 2.16s
+Name                             Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------
+scripts/install_system_node.py     121      0     68      2    99%   58->exit, 109->exit
+worker/host_identity.py             41      0     18      0   100%
+----------------------------------------------------------------------------
+TOTAL                              162      0     86      2    99%

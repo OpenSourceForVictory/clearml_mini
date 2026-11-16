@@ -16,7 +16,7 @@ from runner.cs_contract import MAX_ARTIFACT_BYTES,MAX_ARTIFACT_COUNT,MAX_ARTIFAC
 class HostBackend:
     def __init__(self,worker):
         self.worker=worker
-        self.system=worker.config.get('accelerator_type')=='npu'
+        self.system=worker.config.get('accelerator_type')=='npu' or bool(worker.config.get('host_execution')) or os.geteuid()==0
         self.execution=worker.state['task']['execution_id'] if worker.state else None
         legacy=Path(str(worker.path)+'.host')
         # Business UIDs must never traverse the private Worker journal directory.
@@ -56,11 +56,15 @@ class HostBackend:
     def create(self,task):
         w=self.worker
         npu=None
+        account=None
         if task.get('accelerator_type')=='npu':
             from .accelerators import assignment
             from .npu_host import settings
-            assignment(w.config,task);npu=settings(w.config)
-        elif self.system:raise RuntimeError('GPU task cannot run on NPU Worker')
+            assignment(w.config,task);npu=settings(w.config);account=npu[0]
+        elif w.config.get('accelerator_type')=='npu':raise RuntimeError('GPU task cannot run on NPU Worker')
+        elif self.system:
+            from .host_identity import settings
+            account=settings(w.config)
         approved=w.state.get('host_approval',{})
         host=host_config(task['client_spec']['template']['host_runtime'])
         profile=approved.get('environments',{}).get(host['environment_name'])
@@ -112,6 +116,7 @@ class HostBackend:
              'CUDA_VISIBLE_DEVICES':task.get('gpu_uuid') or '', 'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_WORK_DIR':values['work_dir'],'MINI_EVAL_OUTPUT_DIR':values['output_dir'],
              'MINI_EVAL_ASSETS_DIR':w.config['assets_root'],'MINI_EVAL_CACHE_DIR':w.config['cache_root']}
         env.update({k:expand(v) for k,v in {**host['environment'],**config.get('environment',{})}.items()})
+        if account:env['HOME']=account.pw_dir
         if npu:
             account,device,cann_env=npu
             env.update(cann_env)
@@ -128,12 +133,25 @@ class HostBackend:
         launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
-        if npu:
-            account=npu[0]
+        if account:
             for base in (self.root,directory):
                 for item in [base,*base.rglob('*')]:
                     if item.is_symlink():raise RuntimeError('unexpected symlink in new execution directory')
                     os.chown(item,account.pw_uid,account.pw_gid)
+                    if item.is_dir():item.chmod(0o700)
+            # Only platform execution containers get traversal; never chmod arbitrary code/assets.
+            for parent in (Path(w.workspace),Path(w.workspace)/'runs'):
+                if parent.is_symlink():raise RuntimeError('workspace ancestor must not be a symlink')
+                owner=parent.stat()
+                if owner.st_uid==0:parent.chmod(owner.st_mode | 0o011)
+            from .host_identity import check_paths
+            paths=[('Python',profile['python'],os.R_OK|os.X_OK),('code root',str(code_root),os.R_OK|os.X_OK),
+                   ('business cwd',str(business_cwd),os.R_OK|os.X_OK),('platform code',platform_root,os.R_OK|os.X_OK),
+                   ('work directory',values['work_dir'],os.R_OK|os.W_OK|os.X_OK),('output directory',values['output_dir'],os.R_OK|os.W_OK|os.X_OK),
+                   ('cache directory',w.config['cache_root'],os.R_OK|os.W_OK|os.X_OK)]
+            paths += [('asset '+name,assets[name],os.R_OK|os.X_OK) for name in host['assets']]
+            if len(argv)>1 and argv[0]==profile['python'] and not argv[1].startswith('-'):paths.append(('business script',argv[1],os.R_OK))
+            check_paths(account,paths)
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())
         if launch['started']:raise RuntimeError('refusing duplicate host launch')
@@ -143,9 +161,12 @@ class HostBackend:
         properties={'Description':'Mini Eval execution '+task['execution_id'],'CPUQuota':str(task['cpus']*100)+'%','MemoryMax':str(task['ram_gb'])+'G','TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']),'StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
         command=['systemd-run',*([] if self.system else ['--user']),'--quiet','--unit='+self.unit(task['execution_id']),'--working-directory='+str(Path(__file__).resolve().parent.parent)]
         for k,v in properties.items():command+=['--property='+k+'='+v]
-        if self.system:
+        if self.worker.config.get('accelerator_type')=='npu':
             from .npu_host import properties as npu_properties
             command+=['--property='+value for value in npu_properties(self.worker.config)]
+        elif self.system:
+            from .host_identity import settings,properties as identity_properties
+            command+=['--property='+value for value in identity_properties(settings(self.worker.config))]
         command+=['/usr/bin/python3','-m','worker.host_supervisor',str(path.resolve())]
         p=subprocess.run(command,env=user_environment(),capture_output=True,text=True,timeout=15)
         if p.returncode:raise RuntimeError('host launch failed: '+p.stderr[-500:])

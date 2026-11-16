@@ -110,3 +110,5 @@ Worker 主动通过 HTTP API 注册、心跳和领取任务；平台不需要保
 升级后的 Worker 可后台盘点执行目录；管理员在机器的“执行数据”入口预览并提交清理。自动保留默认关闭，空间不足不会自行删除数据。范围、协议和回退见 [执行数据保留文档](worker-retention.md)。
 
 SSH 纳管界面提示执行器未配置或不可用时，检查 [SSH 纳管执行器部署](ssh-onboarding-executor.md)。纳管执行器与节点 Agent 是两个不同程序，前者运行在平台主机。
+
+新节点推荐从机器管理使用 root SSH 纳管，安装系统 Agent/Worker，宿主机业务统一由 mini-eval 普通账号运行。账号、NFS UID/GID、目录权限和旧节点迁移限制见 [root 纳管指南](root-managed-host.md)。

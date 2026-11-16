@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = worker.host_identity,scripts.install_system_node
+[report]
+fail_under = 90
+show_missing = True

@@ -17,10 +17,25 @@ def probe(profile,config=None):
     python=Path(profile['python']);root=Path(profile['code_root'])
     if not python.is_absolute() or not python.is_file() or not os.access(python,os.X_OK):raise ValueError('approved Python executable is missing')
     if not root.is_absolute() or not root.is_dir() or not os.access(root,os.R_OK|os.X_OK):raise ValueError('approved code root is missing')
-    subprocess.run([str(python),'-c','import sys; assert sys.version_info >= (3,10)'],check=True,timeout=5,capture_output=True)
+    account=None
+    if config and (config.get('host_execution') or os.geteuid()==0):
+        if config.get('accelerator_type')=='npu':
+            from .npu_host import settings
+            account=settings(config)[0]
+        else:
+            from .host_identity import settings
+            account=settings(config)
+        from .host_identity import check_paths
+        check_paths(account,[('Python',str(python),os.R_OK|os.X_OK),('code root',str(root),os.R_OK|os.X_OK)])
+    identity={'user':account.pw_uid,'group':account.pw_gid,'extra_groups':os.getgrouplist(account.pw_name,account.pw_gid),'cwd':'/'} if account else {}
+    subprocess.run([str(python),'-c','import sys; assert sys.version_info >= (3,10)'],check=True,timeout=5,capture_output=True,**identity)
     if config and config.get('accelerator_type')=='npu':
         from .npu_host import probe as npu_probe
         npu_probe(config)
+        return
+    if account:
+        from .host_identity import verify_system
+        verify_system(account)
         return
     r=subprocess.run(['systemctl','--user','show','--property=ControlGroup','--value'],env=user_environment(),capture_output=True,text=True,timeout=5)
     if r.returncode:raise ValueError('systemd user manager unavailable; enable linger for Worker user')
@@ -47,7 +62,7 @@ class HostEnvironments:
         record=self.record
         def work():
             result={}
-            limits=verify_host() if record['environments'] and self.config.get('accelerator_type')!='npu' else {'ready':True}
+            limits=verify_host() if record['environments'] and self.config.get('accelerator_type')!='npu' and not self.config.get('host_execution') and os.geteuid()!=0 else {'ready':True}
             for name,profile in record['environments'].items():
                 try:
                     if not limits['ready']:raise ValueError(limits['reason'])
