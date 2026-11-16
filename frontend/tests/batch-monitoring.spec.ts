@@ -52,6 +52,7 @@ test('history stays selected; delayed route responses cannot overwrite next batc
 
 test('detail tabs preserve filtering and retry selection and contain narrow tables',async({page})=>{
   await setup(page);
+  expect(await page.locator('.batch-detail-tabs').evaluate(el=>getComputedStyle(el).flexDirection)).toBe('row');
   await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
   await page.getByLabel('选择补跑 case0').check();
   await page.getByRole('button',{name:'运行参数',exact:true}).click();
