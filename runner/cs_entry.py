@@ -77,6 +77,8 @@ def main():
             env.update(additions)
         if config['template'].get('integration_mode') == 'sdk-command':
             command = [sys.executable, '-m', 'runner.command_sdk']
+        from .process_command import for_template
+        command=for_template(config['template'],command,cwd,env)
         code = subprocess.call(command, env=env, cwd=cwd)
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:

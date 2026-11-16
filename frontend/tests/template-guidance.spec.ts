@@ -85,3 +85,13 @@ test('template resource contract saves defaults, minimums and locked accelerator
  await page.getByLabel('执行方式',{exact:true}).selectOption('host');await expect(page.getByLabel('默认设备内存 GiB',{exact:true})).toHaveValue('12');await page.getByLabel('执行方式',{exact:true}).selectOption('docker');
  await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body.resource_requirements).toEqual({version:1,cpu:{minimum:1,default:4},memory:{minimum:4,default:8},accelerator:{type:'npu',mode:'shared',memory:{minimum:8,default:12}},allow_overrides:['ram_gb','requested_vram_gb']});
 });
+test('generic command controls and Docker directory are submitted',async({page})=>{
+ const writes=await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await expect(page.getByLabel('命令解析方式',{exact:true})).toHaveValue('exec');
+ await page.getByText('通用命令示例：Python、Bash、可执行文件',{exact:true}).click();
+ await expect(page.getByText('每一行数组是一种启动方式',{exact:false})).toBeVisible();
+ await page.getByLabel('模板名称',{exact:true}).fill('native');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('native:1');
+ await page.getByLabel('容器业务执行目录',{exact:true}).fill('/app');await page.getByLabel('容器平台 Python',{exact:true}).fill('/opt/platform/bin/python');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.runtime).toMatchObject({command_mode:'exec',working_directory:'/app',interpreter:'/opt/platform/bin/python'});
+});

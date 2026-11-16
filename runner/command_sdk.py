@@ -49,7 +49,10 @@ class CommandClient(EvaluationClient):
             raise ValueError('platform environment conflicts with runtime configuration')
         env.update(additions)
         env.update(MINI_EVAL_EPISODE_ID=str(episode.id),MINI_EVAL_EPISODE_SEED=str(episode.seed),MINI_EVAL_RESULT=str(result_path))
-        subprocess.run(argv,env=env,cwd=task.get('_resolved_cwd',context.work_dir),check=True)
+        from .process_command import for_template
+        cwd=task.get('_resolved_cwd') or (runtime or {}).get('working_directory') or context.work_dir
+        argv=for_template(task['template'],argv,cwd,env)
+        subprocess.run(argv,env=env,cwd=cwd,check=True)
         if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size>16384:
             raise ValueError('business command must write a regular result JSON (max 16 KiB)')
         with result_path.open() as f: result=json.load(f)

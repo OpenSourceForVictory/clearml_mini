@@ -56,3 +56,32 @@ MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用�
 验证用例在 `backend/tests/test_host_working_directory.py`：独立 venv Python 与业务目录、相对配置、四种入口、非法路径、缺失目录、越界链接、旧模板默认和旧 Worker 准入。验收范围是通用业务启动，不代表真实仿真资产或模型评测。
 
 本次发布与逐项验证见 [独立执行目录验收](validation/host-working-directory/README.md)。六个在线节点已升级 Worker 0.15.0 / 协议 13。
+
+## 通用业务命令（Worker 0.17.0 / 协议 14）
+
+在客户端或服务端模板选择“命令解析方式 → 通用命令”。新模板默认使用此模式；旧模板及其复制版本保留兼容模式，可显式切换。
+
+```json
+{"execution_mode":"host","host_runtime":{"environment_name":"simulation","command_mode":"exec","working_directory":".","environment":{},"assets":[]},"command":["/bin/bash","run.sh"]}
+```
+
+通用模式使用“程序 + argv 参数 + 业务执行目录 + 环境变量”，不猜测解释器后的脚本位置：
+
+| 启动程序和参数 | 用途 |
+| --- | --- |
+| `["python3", "-u", "app.py"]` | 使用节点配置的业务 Python，支持解释器选项 |
+| `["/opt/venv/bin/python", "-m", "my_app"]` | 使用其他 Python 环境 |
+| `["/bin/bash", "run.sh"]` | Bash 脚本 |
+| `["./bin/evaluator", "--config", "config.json"]` | C/C++、Go、Rust 等编译后的可执行文件 |
+| `["evaluator", "--config", "config.json"]` | 从最终业务 PATH 查找程序 |
+| `["bash", "-lc", "./prepare && exec ./bin/server"]` | 显式启用 Shell 语法 |
+
+平台不编译或安装业务依赖。原生程序必须匹配主机架构、动态加载器和共享库；脚本必须有解释器或有效 shebang。程序必须具备业务账号执行权限，代码与配置须可读取；错误出现在执行日志中。通用模式允许执行代码根目录之外的系统程序，但业务工作目录仍限制在批准代码根目录内，不构成安全沙箱。
+
+宿主机通用模式留空业务目录时使用 code_root；兼容模式仍使用任务 work 目录。`python`/`python3` 别名沿用批准环境的 Python，绝对程序路径保持用户设置。平台入口使用 Worker 自身 Python；业务无需与它使用同一解释器，也不必导入平台 SDK。节点环境的基础 Python 探测要求仍保留，业务 Python/依赖不会自动安装。平台启动前/启动时检查目录与可执行程序，不能保证业务内部引用的所有文件都存在。
+
+普通命令按退出码判定执行成功；逐回合 SDK 命令仍需写 MINI_EVAL_RESULT；直接评测协议与服务健康检查的约定不变。参数映射仍在执行前追加，环境映射参与最终 PATH 查找。不要把用户参数拼入 Shell 字符串；通过独立 argv 参数传入。
+
+旧问题复现：兼容模式 `python3 -u app.py` 未配置业务目录时，Python 在任务 work 查找脚本并报文件不存在；`/bin/bash run.sh` 被旧 code_root 校验拒绝。迁移到通用模式后使用批准代码目录启动，二者可执行。旧模式不自动改写，避免改变存量任务行为。
+
+Docker 的对应配置与验证见 [通用命令指南](generic-commands.md)。

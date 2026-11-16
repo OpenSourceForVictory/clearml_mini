@@ -84,6 +84,9 @@ def eligibility_codes(slot, pool, job, held, at):
             or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
         return ['disk_capacity']
     template=(job.client_spec or {}).get('template',{})
+    settings=template.get('host_runtime') or template.get('runtime') or {}
+    if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):
+        return ['client_runtime']
     if template.get('execution_mode')=='host' and (template.get('host_runtime') or {}).get('working_directory') is not None and slot.protocol_version<13:
         return ['client_runtime']
     if template.get('resource_requirements') is not None and template.get('execution_mode')=='host' and slot.protocol_version<11:

@@ -47,11 +47,16 @@ def placeholders(text, assets, mounts=()):
 
 
 def validate(value, command=()):
-    if not isinstance(value, dict) or set(value) - {'interpreter', 'environment', 'overridable_env', 'work_dir', 'output_dir', 'assets', 'mounts'}:
+    if not isinstance(value, dict) or set(value) - {'interpreter', 'environment', 'overridable_env', 'work_dir', 'output_dir', 'assets', 'mounts', 'command_mode', 'working_directory'}:
         raise ValueError('invalid runtime fields')
     result = {'interpreter': 'python3', 'environment': {}, 'overridable_env': [], 'work_dir': WORK, 'output_dir': OUTPUT, 'assets': {}, **value}
-    if result['interpreter'] not in ('python', 'python3'):
-        raise ValueError('interpreter must be python or python3')
+    interpreter=result['interpreter']
+    if not isinstance(interpreter,str) or not interpreter or len(interpreter)>1000 or any(c in interpreter for c in ('\x00','\n','\r')) or (interpreter not in ('python','python3') and not PurePosixPath(interpreter).is_absolute()):
+        raise ValueError('platform interpreter must be python, python3 or an absolute Python path')
+    if result.get('command_mode','legacy') not in ('legacy','exec'):raise ValueError('invalid command_mode')
+    directory=result.get('working_directory')
+    if directory is not None and (not isinstance(directory,str) or not directory or len(directory)>2000 or not PurePosixPath(directory).is_absolute() or '..' in PurePosixPath(directory).parts or any(c in directory for c in ('\x00','\n','\r')) or '${' in directory):
+        raise ValueError('container working_directory must be an absolute directory')
     environment(result['environment'])
     keys = result['overridable_env']
     if not isinstance(keys, list) or len(keys) > 64 or any(not isinstance(k, str) for k in keys):
@@ -90,4 +95,4 @@ def resolve(config, input_path=None):
     env = {k: expand(v) for k, v in {**runtime['environment'], **overrides}.items()}
     env.update(MINI_EVAL_INPUT=values['input_path'], MINI_EVAL_WORK_DIR=runtime['work_dir'], MINI_EVAL_OUTPUT_DIR=runtime['output_dir'],
                MINI_EVAL_TASK_NAME=values['task_name'], MINI_EVAL_EPISODES=values['episodes'], MINI_EVAL_SEED=values['seed'], MINI_EVAL_ENDPOINT=values['endpoint'])
-    return [expand(x) for x in config['template']['command']], env, runtime['work_dir']
+    return [expand(x) for x in config['template']['command']], env, runtime.get('working_directory',runtime['work_dir'])

@@ -30,5 +30,7 @@ def main():
     command,additions=bind_platform(config['template'].get('platform_bindings',[]),config,command)
     env.update(additions)
     print(json.dumps({'stage':'starting-service','port':config['port']}),flush=True)
+    from .process_command import for_template
+    command=for_template(config['template'],command,cwd,env)
     raise SystemExit(subprocess.call(command,env=env,cwd=cwd))
 if __name__=='__main__':main()

@@ -1,6 +1,7 @@
 """Host backend with stable systemd unit identity, never a PID-only handle."""
 import json
 import os
+import sys
 from pathlib import Path
 import shutil
 import subprocess
@@ -95,7 +96,8 @@ class HostBackend:
         def expand(text):return TOKEN.sub(lambda m:values.get(m[1],m[0]),text)
         argv=[expand(x) for x in config['template']['command']]
         code_root=Path(profile['code_root']).resolve()
-        business_cwd=directory/'work'
+        generic=host.get('command_mode')=='exec'
+        business_cwd=code_root if generic else directory/'work'
         if host.get('working_directory') is not None:
             business_cwd=(code_root/host['working_directory']).resolve()
             if not business_cwd.is_relative_to(code_root) or not business_cwd.is_dir() or not os.access(business_cwd,os.R_OK|os.X_OK):
@@ -105,7 +107,9 @@ class HostBackend:
             p=(base/text).resolve()
             if not p.is_relative_to(code_root) or not p.is_file():raise RuntimeError('business program must exist inside approved code root')
             return str(p)
-        if argv[0] in ('python','python3',profile['python']):
+        if generic:
+            if argv[0] in ('python','python3'):argv[0]=profile['python']
+        elif argv[0] in ('python','python3',profile['python']):
             argv[0]=profile['python']
             if len(argv)>1 and not argv[1].startswith('-'):argv[1]=code_path(argv[1])
         else:
@@ -130,7 +134,7 @@ class HostBackend:
         config['template']={**config['template'],'command':argv}
         atomic_json(inp,config)
         module='runner.service_entry' if config.get('workload') == 'service' else 'runner.cs_entry'
-        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
+        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[sys.executable if generic else profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
         if account:
@@ -145,12 +149,12 @@ class HostBackend:
                 owner=parent.stat()
                 if owner.st_uid==0:parent.chmod(owner.st_mode | 0o011)
             from .host_identity import check_paths
-            paths=[('Python',profile['python'],os.R_OK|os.X_OK),('code root',str(code_root),os.R_OK|os.X_OK),
+            paths=[('platform Python',sys.executable if generic else profile['python'],os.R_OK|os.X_OK),('Python',profile['python'],os.R_OK|os.X_OK),('code root',str(code_root),os.R_OK|os.X_OK),
                    ('business cwd',str(business_cwd),os.R_OK|os.X_OK),('platform code',platform_root,os.R_OK|os.X_OK),
                    ('work directory',values['work_dir'],os.R_OK|os.W_OK|os.X_OK),('output directory',values['output_dir'],os.R_OK|os.W_OK|os.X_OK),
                    ('cache directory',w.config['cache_root'],os.R_OK|os.W_OK|os.X_OK)]
             paths += [('asset '+name,assets[name],os.R_OK|os.X_OK) for name in host['assets']]
-            if len(argv)>1 and argv[0]==profile['python'] and not argv[1].startswith('-'):paths.append(('business script',argv[1],os.R_OK))
+            if not generic and len(argv)>1 and argv[0]==profile['python'] and not argv[1].startswith('-'):paths.append(('business script',argv[1],os.R_OK))
             check_paths(account,paths)
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())
