@@ -26,3 +26,11 @@ API 最终镜像：`mini-eval-api:service-readiness-final-20261116`。Worker 协
 回滚使用 `.runtime/service-readiness/deployment.json` 中记录的原 API 镜像及原 Worker 发布；先排空新配置任务再回滚，保留增量数据库字段。恢复和迁移演练已通过，未在业务运行期间执行破坏性数据库回滚。具体依赖、配置和处理步骤见 [服务就绪检查说明](../../service-readiness.md)。
 
 最终上线后再次部署 NPU 服务并执行正常/隔离网络探测，均符合预期，服务已停止清理；两个节点升级状态 SUCCEEDED，已恢复准入，上线前端资源核对通过。修正代码提交 `f94de59`。
+
+## 最新版本双宿主机 WS 业务补充验证
+
+Worker 0.14.1：本机 `local4090-151` 运行宿主机 SDK-command 客户端，`ascend910b3-29` 运行宿主机模拟 WebSocket 服务。业务使用 `/infer` 的真实 WS 发送/接收，独立健康端口使用 `/health` 的 WS JSON 就绪消息。
+
+共享、独占各 1 批 × 3 任务 × 2 回合：**6 个任务、12 次 WS 业务交互全部成功**。核对了执行快照 `execution_mode=host`、两端 systemd 执行单元、业务参数、自动分配的 `ws://` 地址、服务执行标识、逐回合上报及清理确认；观察到服务就绪等待、排队与推进。两批服务最终 STOPPED，任务 cleanup_confirmed=true。
+
+临时客户端宿主机环境已恢复并收到配置回执，测试模板已停用，历史批次保留。此验证不加载模型、不使用 NPU 算子，不代表模型推理验证。[详细证据](host-ws-evidence.json) · [可复用程序](../../../examples/host_ws_acceptance/README.md)

@@ -1,0 +1,354 @@
+{
+  "client_node": "local4090-151",
+  "server_node": "ascend910b3-29",
+  "worker_version": "0.14.1",
+  "batches": [
+    {
+      "id": "bdf45a11-5d92-4a23-bddc-7945f29ff76c",
+      "cases": [
+        {
+          "job_id": "53cb0e1f-90c4-4cfe-bb2a-681a6bf0c8f4",
+          "case_id": "0",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "fe46df82-577b-4a42-85b9-34f95d0b2672",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 3.167597854975611,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1068,
+            "endpoint": "ws://192.168.8.151:19402",
+            "service_instance_id": "46951f0c-6dce-414a-bbec-70c82e1d5eb2",
+            "service_execution_id": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "0",
+                "episode_id": 1,
+                "variant": 0
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875234
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "0",
+                "episode_id": 2,
+                "variant": 0
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875255
+            }
+          ]
+        },
+        {
+          "job_id": "72d1927e-2df5-42b5-95e9-cea65f666ed7",
+          "case_id": "1",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "cdc8f0c0-f359-4a7e-a596-13177aa9f6a6",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 2.928267198964022,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1068,
+            "endpoint": "ws://192.168.8.151:19402",
+            "service_instance_id": "46951f0c-6dce-414a-bbec-70c82e1d5eb2",
+            "service_execution_id": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "1",
+                "episode_id": 1,
+                "variant": 1
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875578
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "1",
+                "episode_id": 2,
+                "variant": 1
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875618
+            }
+          ]
+        },
+        {
+          "job_id": "4a5ba872-e274-42f3-afc7-0fd1b3bdd940",
+          "case_id": "2",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "d9dc5b10-fe45-4606-ad23-a2b51da6614d",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 3.188043473986909,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1068,
+            "endpoint": "ws://192.168.8.151:19402",
+            "service_instance_id": "46951f0c-6dce-414a-bbec-70c82e1d5eb2",
+            "service_execution_id": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "2",
+                "episode_id": 1,
+                "variant": 2
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875870
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "2",
+                "episode_id": 2,
+                "variant": 2
+              },
+              "server_execution": "78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+              "pid": 3875935
+            }
+          ]
+        }
+      ],
+      "services": [
+        {
+          "id": "46951f0c-6dce-414a-bbec-70c82e1d5eb2",
+          "state": "STOPPED",
+          "endpoint": "ws://192.168.8.151:19402",
+          "health_port": 19403,
+          "cleanup_pending": false,
+          "execution_mode": "host"
+        }
+      ]
+    },
+    {
+      "id": "9721eb67-4c01-4f40-ba39-643988de85c7",
+      "cases": [
+        {
+          "job_id": "4e539ae9-2b5e-47f3-944c-95e01f5b0dea",
+          "case_id": "0",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "18ac5fa7-1dbf-48c9-9e08-c27773620e90",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 3.1766049379948527,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1070,
+            "endpoint": "ws://192.168.8.151:19400",
+            "service_instance_id": "f072a4d9-6c9c-4ba9-a182-3d2ef11c8acd",
+            "service_execution_id": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "exclusive",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "0",
+                "episode_id": 1,
+                "variant": 0
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3874745
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "0",
+                "episode_id": 2,
+                "variant": 0
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3874759
+            }
+          ]
+        },
+        {
+          "job_id": "caca4496-e502-4c1c-849b-2ee648057e5a",
+          "case_id": "1",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "27d4e437-a0da-47e1-b875-0ac414982bb3",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 3.074194901040755,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1065,
+            "endpoint": "ws://192.168.8.151:19400",
+            "service_instance_id": "f072a4d9-6c9c-4ba9-a182-3d2ef11c8acd",
+            "service_execution_id": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "exclusive",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "1",
+                "episode_id": 1,
+                "variant": 1
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3875389
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "1",
+                "episode_id": 2,
+                "variant": 1
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3875460
+            }
+          ]
+        },
+        {
+          "job_id": "784bc491-7109-4407-9b95-174f72fc604e",
+          "case_id": "2",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "d7281b4b-f702-4887-a23e-dd63ac387cb6",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 2.7788935700664297,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 24564,
+            "log_bytes": 1070,
+            "endpoint": "ws://192.168.8.151:19400",
+            "service_instance_id": "f072a4d9-6c9c-4ba9-a182-3d2ef11c8acd",
+            "service_execution_id": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+            "service_key": "default",
+            "waiting_service": false,
+            "endpoint_mode": "exclusive",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "2",
+                "episode_id": 1,
+                "variant": 2
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3875724
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "2",
+                "episode_id": 2,
+                "variant": 2
+              },
+              "server_execution": "859e7f3e-cd94-44c0-921e-72a1b54d0961",
+              "pid": 3875729
+            }
+          ]
+        }
+      ],
+      "services": [
+        {
+          "id": "f072a4d9-6c9c-4ba9-a182-3d2ef11c8acd",
+          "state": "STOPPED",
+          "endpoint": "ws://192.168.8.151:19400",
+          "health_port": 19401,
+          "cleanup_pending": false,
+          "execution_mode": "host"
+        }
+      ]
+    }
+  ],
+  "observed_pending": true,
+  "observed_waiting_service": true,
+  "temporary_host_environment_restored": true,
+  "test_templates_disabled": true,
+  "local_systemd_units_observed": [
+    "  mini-eval-exec-df885f33-c676-4e7a-ae37-947d5a3206d3.service loaded active running Mini Eval execution df885f33-c676-4e7a-ae37-947d5a3206d3"
+  ],
+  "server_systemd_units_observed": [
+    "  mini-eval-exec-78e18b3b-54b6-4fbe-93ba-e3fba7bc968b.service loaded active running Mini Eval execution 78e18b3b-54b6-4fbe-93ba-e3fba7bc968b",
+    "  mini-eval-exec-859e7f3e-cd94-44c0-921e-72a1b54d0961.service loaded active running Mini Eval execution 859e7f3e-cd94-44c0-921e-72a1b54d0961"
+  ]
+}
