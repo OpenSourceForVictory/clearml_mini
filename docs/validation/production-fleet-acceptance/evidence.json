@@ -1,0 +1,3781 @@
+{
+  "release": {
+    "id": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+    "version": "0.12.0",
+    "protocol_version": 10,
+    "capabilities": [
+      "docker",
+      "host",
+      "episode_reporting",
+      "typed_parameters",
+      "directory_mounts",
+      "inference_services",
+      "task_input",
+      "command_tasks"
+    ],
+    "created_at": "2026-11-16T01:07:26.734652+00:00"
+  },
+  "restore": {
+    "before": [
+      "n407c89",
+      "27"
+    ],
+    "after": [
+      "r841a23",
+      "27"
+    ],
+    "backup_sha256": "8fc849a75a5328d0eb130fff446bc59bc6597136fb1d32ae78f33798b5d74b6e"
+  },
+  "nodes": [
+    {
+      "id": "a6101438-91bf-42e6-94c2-67379b485a3a",
+      "name": "local4090-151",
+      "agent_version": "1.1.0",
+      "agent_status": "online",
+      "slots": [
+        {
+          "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "gpu_index": 0,
+          "online": true,
+          "protocol_version": 10,
+          "software": {
+            "version": "0.12.0",
+            "build_digest": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+            "capabilities": [
+              "docker",
+              "host",
+              "episode_reporting",
+              "typed_parameters",
+              "directory_mounts",
+              "inference_services",
+              "task_input",
+              "command_tasks"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "bace1b18-8901-479c-ab50-22bdd8f6efe4",
+      "name": "rtx3080-182",
+      "agent_version": "1.1.0",
+      "agent_status": "online",
+      "slots": [
+        {
+          "id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+          "gpu_index": 0,
+          "online": true,
+          "protocol_version": 10,
+          "software": {
+            "version": "0.12.0",
+            "build_digest": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+            "capabilities": [
+              "docker",
+              "host",
+              "episode_reporting",
+              "typed_parameters",
+              "directory_mounts",
+              "inference_services",
+              "task_input",
+              "command_tasks"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "f5a985d5-233e-4923-aff4-5236a237085c",
+      "name": "rtx4090-157",
+      "agent_version": "1.1.0",
+      "agent_status": "online",
+      "slots": [
+        {
+          "id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+          "gpu_index": 0,
+          "online": true,
+          "protocol_version": 10,
+          "software": {
+            "version": "0.12.0",
+            "build_digest": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+            "capabilities": [
+              "docker",
+              "host",
+              "episode_reporting",
+              "typed_parameters",
+              "directory_mounts",
+              "inference_services",
+              "task_input",
+              "command_tasks"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "6e08f811-79a4-4303-b7fc-916085ca9ee6",
+      "name": "rtx4090-183",
+      "agent_version": "1.1.0",
+      "agent_status": "online",
+      "slots": [
+        {
+          "id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+          "gpu_index": 0,
+          "online": true,
+          "protocol_version": 10,
+          "software": {
+            "version": "0.12.0",
+            "build_digest": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+            "capabilities": [
+              "docker",
+              "host",
+              "episode_reporting",
+              "typed_parameters",
+              "directory_mounts",
+              "inference_services",
+              "task_input",
+              "command_tasks"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "56baf1b6-f94c-4717-8216-d169399e35ee",
+      "name": "rtx8000-177",
+      "agent_version": "1.1.0",
+      "agent_status": "online",
+      "slots": [
+        {
+          "id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+          "gpu_index": 0,
+          "online": true,
+          "protocol_version": 10,
+          "software": {
+            "version": "0.12.0",
+            "build_digest": "ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0",
+            "capabilities": [
+              "docker",
+              "host",
+              "episode_reporting",
+              "typed_parameters",
+              "directory_mounts",
+              "inference_services",
+              "task_input",
+              "command_tasks"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "matrix": [
+    {
+      "scenario": "E02-host-host-shared-initial",
+      "status": "failed",
+      "details": {
+        "reason": "test business command omitted required SDK result JSON; original batches retained"
+      }
+    },
+    {
+      "scenario": "E02-host-host-shared-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "588b9559-6002-4eec-bb7b-dffa716d262e",
+          "c88494cb-c92b-4d51-ba7d-56595122d46a"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "24a1c6ff-9ce0-4e31-9f97-045fd5dba781",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "266b788b-4eae-4851-8c04-9f2be0181a6f",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.601106230984442,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f4ecbd61-783c-4c70-941e-28f08c16e447",
+                "service_execution_id": "da13c942-308e-44c1-a881-59342d1164c5",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "89c3594c-8932-4ada-81bf-5547a0983c9d",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "89c3594c-8932-4ada-81bf-5547a0983c9d",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                }
+              ]
+            },
+            {
+              "job_id": "f11f9601-d13a-463b-9b6a-674d6e6b97c6",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "ff89811d-75d3-4104-b30c-f3871dabe9bc",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5689480860019103,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f4ecbd61-783c-4c70-941e-28f08c16e447",
+                "service_execution_id": "da13c942-308e-44c1-a881-59342d1164c5",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "9765f149-c78d-4838-a83a-f4d476a8aefb",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "9765f149-c78d-4838-a83a-f4d476a8aefb",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                }
+              ]
+            },
+            {
+              "job_id": "fbc0bdc0-faf1-4b77-8b88-b2a98fde26df",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "02de7458-1d5c-4faf-8bf8-14b4961419d8",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.507438159082085,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f4ecbd61-783c-4c70-941e-28f08c16e447",
+                "service_execution_id": "da13c942-308e-44c1-a881-59342d1164c5",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "10d72597-85cd-4c28-8932-7cd4d6819e0e",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "10d72597-85cd-4c28-8932-7cd4d6819e0e",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "da13c942-308e-44c1-a881-59342d1164c5"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "a5448055-b21b-4ac7-9cbb-614c6169661e",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "5833bd27-6fe4-4088-bc51-ddf7cc079474",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.436649429029785,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "240475cb-5d15-4687-99d6-43d9aeea3d61",
+                "service_execution_id": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "0f6ae67b-1cc5-4ca4-9065-2ab02bf0306b",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "0f6ae67b-1cc5-4ca4-9065-2ab02bf0306b",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                }
+              ]
+            },
+            {
+              "job_id": "4d9577b8-062d-4cbc-8008-561cc4567d75",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "5582e08e-632c-439e-9564-15bf64394638",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.566907485947013,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "240475cb-5d15-4687-99d6-43d9aeea3d61",
+                "service_execution_id": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1405a450-64ff-445d-9179-d3bd9eff7c55",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1405a450-64ff-445d-9179-d3bd9eff7c55",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                }
+              ]
+            },
+            {
+              "job_id": "ead7c5c1-0b19-496f-beca-f5432f842d35",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "3c19a6bd-e4c2-49aa-a5e1-1243b696f777",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4752054599812254,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1150,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "240475cb-5d15-4687-99d6-43d9aeea3d61",
+                "service_execution_id": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "e7f2ce72-3d27-47c9-b5e1-1f386d70ffd5",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "e7f2ce72-3d27-47c9-b5e1-1f386d70ffd5",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2451fcf4-8c0b-4b81-99bc-475cc8d7c271"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-host-host-exclusive-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "d8706f83-48fa-45dd-99f5-aac50425b5b8",
+          "ab8e40d3-b7f6-4f4f-906f-df9cd2fe5fcd"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "05c9ff2e-eab8-4c8d-a0ec-c01e77321215",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "6f9d1472-ab0a-4fa3-92e8-c353cd924f0c",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4668265789514408,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "10440eb3-62d3-414e-96bd-4a50ceb76d77",
+                "service_execution_id": "ce1d0845-2b43-4de4-80ee-26c5500676b3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e3c9043e-4228-4e11-80d0-bb96ad01e671",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e3c9043e-4228-4e11-80d0-bb96ad01e671",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                }
+              ]
+            },
+            {
+              "job_id": "cbc6fb2a-c6f2-4305-86ab-8cd2a93f8339",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "54a57d7d-a6d4-4dfd-b5bd-bc3ef6216bd8",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.461388186085969,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "10440eb3-62d3-414e-96bd-4a50ceb76d77",
+                "service_execution_id": "ce1d0845-2b43-4de4-80ee-26c5500676b3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1e1005db-d826-434a-9eec-58f03878b3c0",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1e1005db-d826-434a-9eec-58f03878b3c0",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                }
+              ]
+            },
+            {
+              "job_id": "1925cbfb-1133-4bb3-bac6-2b803951fcd0",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "6979c452-27ce-446f-ae54-b2c3f7b3f159",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.3354088090127334,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "10440eb3-62d3-414e-96bd-4a50ceb76d77",
+                "service_execution_id": "ce1d0845-2b43-4de4-80ee-26c5500676b3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "1264a1ba-b4bc-4650-8833-a0da54d03c96",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "1264a1ba-b4bc-4650-8833-a0da54d03c96",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ce1d0845-2b43-4de4-80ee-26c5500676b3"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "9f448bff-109d-4879-a117-b6b63349cb6d",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "4c990716-fd0d-4e0f-a952-73aeaad52cc2",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.448384336079471,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1148,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "e5597145-edad-43a6-a2d1-934ef5b6be23",
+                "service_execution_id": "1d7d043e-4f39-4090-8b87-b020720a52d0",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "d40c6252-b56d-48bb-98c0-1e615c390beb",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "d40c6252-b56d-48bb-98c0-1e615c390beb",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                }
+              ]
+            },
+            {
+              "job_id": "27251f85-1f67-4979-84f0-038b9b8324c0",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "a964f793-962c-4414-b14e-8f6af9cdd538",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4165337960002944,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1150,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "e5597145-edad-43a6-a2d1-934ef5b6be23",
+                "service_execution_id": "1d7d043e-4f39-4090-8b87-b020720a52d0",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "9098aee5-953f-401a-b8cb-317f55224798",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "9098aee5-953f-401a-b8cb-317f55224798",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                }
+              ]
+            },
+            {
+              "job_id": "c99566c0-ba69-4e9c-b595-5bc1f817daeb",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "0fb691f5-02c3-4ba1-9fe1-2d18e3ab1f71",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.3940688910661265,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "e5597145-edad-43a6-a2d1-934ef5b6be23",
+                "service_execution_id": "1d7d043e-4f39-4090-8b87-b020720a52d0",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "3896619f-8af2-4217-af93-fe7fd829c66e",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "3896619f-8af2-4217-af93-fe7fd829c66e",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "1d7d043e-4f39-4090-8b87-b020720a52d0"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-host-docker-shared-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "4df59729-3971-4e4d-80ca-e3da4371c93b",
+          "f8e41095-6eff-4780-801f-48dee458060d"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "7835a84e-9767-404b-ae5d-279033e0e8dd",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "f0c8c2b0-884b-49bb-8540-cb8c5705b968",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.500922975013964,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1148,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "fd240f14-480f-403e-99e8-0950b8ec2646",
+                "service_execution_id": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "c88c5994-5247-4cfe-a7a5-c51e65bc9afd",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "c88c5994-5247-4cfe-a7a5-c51e65bc9afd",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                }
+              ]
+            },
+            {
+              "job_id": "bc09df09-9617-4e82-9ae9-e0ca8c626ede",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "e4dc7b3f-2ecc-4c43-84bd-abb7157ac6c8",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5947569760028273,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "fd240f14-480f-403e-99e8-0950b8ec2646",
+                "service_execution_id": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "c8d233aa-9d8b-4e46-9edb-b7b619c6c9ea",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "c8d233aa-9d8b-4e46-9edb-b7b619c6c9ea",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                }
+              ]
+            },
+            {
+              "job_id": "87db99f3-52d7-4cff-a5ed-5f9a37443d60",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "ca4b2f66-41e7-4986-badd-f43705691d3e",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5560050109634176,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "fd240f14-480f-403e-99e8-0950b8ec2646",
+                "service_execution_id": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "1bc85fc7-6d45-43ce-a49d-91d966ad5284",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "1bc85fc7-6d45-43ce-a49d-91d966ad5284",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "aa356ebc-cceb-40dc-a2fb-b103f4d1fc08"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "884e10e4-ee1a-4aea-bf71-1b0d9a26412d",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "76cd2400-ee9d-4317-87df-ab018b15b1c9",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.359858773997985,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f6a67534-fe63-425d-a327-b8efe40ce61c",
+                "service_execution_id": "76c8f043-356b-479e-b99b-3a175730caa6",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "55f57085-3b07-451c-8ada-3673a062fce4",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "55f57085-3b07-451c-8ada-3673a062fce4",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                }
+              ]
+            },
+            {
+              "job_id": "baee1b45-d690-4ec4-86e0-6233af0f001f",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "e7c08a79-da42-4efa-a67a-3f299b200217",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.555167922982946,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1148,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f6a67534-fe63-425d-a327-b8efe40ce61c",
+                "service_execution_id": "76c8f043-356b-479e-b99b-3a175730caa6",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "2dffed0c-0b4a-4364-bf67-cc96d071580d",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "2dffed0c-0b4a-4364-bf67-cc96d071580d",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                }
+              ]
+            },
+            {
+              "job_id": "01d48d8a-fb8f-4a2d-8a93-d004325462ef",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "f5e25ec8-8d41-4946-ae36-3c9d2b345995",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.478044558898546,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "f6a67534-fe63-425d-a327-b8efe40ce61c",
+                "service_execution_id": "76c8f043-356b-479e-b99b-3a175730caa6",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "7ba29f18-a814-44cf-9563-8b16bc69a4be",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "7ba29f18-a814-44cf-9563-8b16bc69a4be",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "76c8f043-356b-479e-b99b-3a175730caa6"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-host-docker-exclusive-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "a900690b-dde3-4021-9dad-a23c6b442488",
+          "6685a63e-c3db-4f62-a4ef-6654f5a629c8"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "eb4aa073-b8b7-4128-b0d5-51e026c13c24",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "ee6f8159-e655-4466-8ba8-7c8dcca18df8",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.519830562057905,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1147,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "40216a14-4e24-4f5f-af12-69e338830c61",
+                "service_execution_id": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "096e6f86-4722-4cce-9d5b-4b02008c41b4",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "096e6f86-4722-4cce-9d5b-4b02008c41b4",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                }
+              ]
+            },
+            {
+              "job_id": "13a8f46d-a6f7-4b7a-b23c-23aeae4be744",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "04385938-6737-4b59-bbea-8fd772e9c663",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4949572790646926,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1149,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "40216a14-4e24-4f5f-af12-69e338830c61",
+                "service_execution_id": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "25100d59-3b1f-4703-8f10-ad5cd3a55875",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "25100d59-3b1f-4703-8f10-ad5cd3a55875",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                }
+              ]
+            },
+            {
+              "job_id": "4519ea7c-7c3f-43cd-9e98-1253253d10c3",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "b65b569b-e5af-4d97-a655-9a99c2663f3f",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5282291799085215,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "40216a14-4e24-4f5f-af12-69e338830c61",
+                "service_execution_id": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "9921757d-b340-4a5b-985c-f09d076b372f",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "9921757d-b340-4a5b-985c-f09d076b372f",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "2e827dbf-33d4-4fa1-8be3-72e97e88ba49"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "848ca392-1977-4c14-96c6-a1bb6c733db6",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "27df8ee3-d24d-4bfa-ad04-f3e3bcca343f",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4963304990669712,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "1444d890-ce67-474a-8c0f-b35c8f6ff4a6",
+                "service_execution_id": "c8206f7d-c58d-4d35-a26b-781f7383fb7b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "cd9454cd-4c9a-45cf-8551-b712934a8174",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "cd9454cd-4c9a-45cf-8551-b712934a8174",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                }
+              ]
+            },
+            {
+              "job_id": "50db031c-ba77-46a0-bc8e-9dec2cf0740f",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "7e8160ff-77fb-432b-9c72-6b6327ee7b5a",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4616628419607878,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1151,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "1444d890-ce67-474a-8c0f-b35c8f6ff4a6",
+                "service_execution_id": "c8206f7d-c58d-4d35-a26b-781f7383fb7b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "cb239da0-27e4-4310-a171-cf60f1ce13fa",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "cb239da0-27e4-4310-a171-cf60f1ce13fa",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                }
+              ]
+            },
+            {
+              "job_id": "4ccddc66-99d7-4ee4-9bd6-30e15487d37e",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "a45ee61c-d7ce-46f0-a592-7d83f4363393",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.436365540022962,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1148,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "1444d890-ce67-474a-8c0f-b35c8f6ff4a6",
+                "service_execution_id": "c8206f7d-c58d-4d35-a26b-781f7383fb7b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "f7a7f668-83a3-44a8-9d22-5c94fdac1f43",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "f7a7f668-83a3-44a8-9d22-5c94fdac1f43",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "c8206f7d-c58d-4d35-a26b-781f7383fb7b"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-docker-host-shared-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "3e27dfec-906f-4a11-a706-18fd7c4312bb",
+          "233ff674-dfb9-4cba-a409-ab27b68daae5"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "e042c432-0866-492f-8452-7a257c48e630",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "c44dd982-2bd1-490f-86c3-da9aabb1ee97",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5565261479932815,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "76a8ef2a-192f-47e4-a535-8a618f0fc5a3",
+                "service_execution_id": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "ad6c36b2-b966-44ad-8cef-68d942263daf",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "ad6c36b2-b966-44ad-8cef-68d942263daf",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                }
+              ]
+            },
+            {
+              "job_id": "f68aa1df-cedd-490c-a94f-90a5d019ebf9",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "3ef2e1f0-bc09-434e-819a-6f60b216eaf8",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.567691909032874,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "76a8ef2a-192f-47e4-a535-8a618f0fc5a3",
+                "service_execution_id": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "20db3f0c-8938-4310-825c-9db0cb1f47b0",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "20db3f0c-8938-4310-825c-9db0cb1f47b0",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                }
+              ]
+            },
+            {
+              "job_id": "cc9e50bb-22f8-4c86-ae40-b7c7bd9e3e5a",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "7a5545a7-41c2-4f32-a90b-d87c211f354e",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5358046930050477,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "76a8ef2a-192f-47e4-a535-8a618f0fc5a3",
+                "service_execution_id": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "fcddc54d-b085-415a-aaa6-64bc6546f7da",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "fcddc54d-b085-415a-aaa6-64bc6546f7da",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "777f4fa3-4fdc-408e-9fa6-d8c935bfb5ee"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "89555367-a49a-4016-8d30-471ee40d4b7b",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "450770be-ed24-495b-a4fe-827d55a273e5",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.675695565994829,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "bb3f2206-4189-4f64-b0b3-6c90bc87e8b5",
+                "service_execution_id": "ed0c4270-fbad-405e-8400-c0749ebb1c6d",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e3b297d7-bacc-4595-bf1d-28a8e93e2fd7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e3b297d7-bacc-4595-bf1d-28a8e93e2fd7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                }
+              ]
+            },
+            {
+              "job_id": "7620468c-a0d7-4b28-abca-900564f2b31d",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "34763336-9f1e-4192-a39c-a10652c8c294",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.6064864090876654,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "bb3f2206-4189-4f64-b0b3-6c90bc87e8b5",
+                "service_execution_id": "ed0c4270-fbad-405e-8400-c0749ebb1c6d",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1ae0d13b-e23a-4ccd-a628-68111dcd5e5a",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "1ae0d13b-e23a-4ccd-a628-68111dcd5e5a",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                }
+              ]
+            },
+            {
+              "job_id": "32f33b8e-3ba4-4b17-870c-29d3cbc761ba",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "26ad723b-2af7-4835-a6b3-df2da8f15507",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4362047920003533,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "bb3f2206-4189-4f64-b0b3-6c90bc87e8b5",
+                "service_execution_id": "ed0c4270-fbad-405e-8400-c0749ebb1c6d",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "e0f2e9a5-d348-43f4-98e4-c66bf16c7cc4",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "e0f2e9a5-d348-43f4-98e4-c66bf16c7cc4",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "ed0c4270-fbad-405e-8400-c0749ebb1c6d"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-docker-host-exclusive-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "1d7e3606-ab0b-47d4-867d-e711805a615d",
+          "7448af3e-3d18-4c4d-9923-c9b299ff9c5c"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "ef707e2d-90ba-4ac6-bde8-cdec55e345d4",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "59018966-caa6-4074-8929-f96c5eb563a0",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4675396530656144,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "8a6748ac-1e63-42fc-ad9d-930fe35050c7",
+                "service_execution_id": "34d33ce8-738c-4d63-9276-853b9ccb12ce",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e4055f81-538e-4be4-93d5-a66150eb4fa7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "e4055f81-538e-4be4-93d5-a66150eb4fa7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                }
+              ]
+            },
+            {
+              "job_id": "e1cfab62-0cfc-4710-bb9b-64930fe2263e",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "35657e49-4b87-4af4-bbab-0cc35c42449f",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5365791079821065,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "8a6748ac-1e63-42fc-ad9d-930fe35050c7",
+                "service_execution_id": "34d33ce8-738c-4d63-9276-853b9ccb12ce",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "b0ca3437-ea95-4c60-b438-27b24589df25",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "b0ca3437-ea95-4c60-b438-27b24589df25",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                }
+              ]
+            },
+            {
+              "job_id": "269b8ad0-4270-417f-b147-bd3086df8f80",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "98bd41db-d0ca-4a0a-8d38-c344575896b3",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5240866319509223,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "8a6748ac-1e63-42fc-ad9d-930fe35050c7",
+                "service_execution_id": "34d33ce8-738c-4d63-9276-853b9ccb12ce",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "eedce3d2-1969-4152-8230-a4e268afb239",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "eedce3d2-1969-4152-8230-a4e268afb239",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "34d33ce8-738c-4d63-9276-853b9ccb12ce"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "f7f4a65c-cb15-46db-afc9-9be18fbce20d",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "6e19c1e2-02db-43d9-946b-1e83547b6c60",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.6267315309960395,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "77c15b55-ccac-4f2d-8d72-e9d63ea530c2",
+                "service_execution_id": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "9d8d0932-4d16-4bcc-b440-2d0939cf8655",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "9d8d0932-4d16-4bcc-b440-2d0939cf8655",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                }
+              ]
+            },
+            {
+              "job_id": "6efc8b12-31e0-42e4-85c0-19186da02d35",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "f18e9e30-8b1f-4d94-bffb-47a43559bdf1",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.7158806319348514,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "77c15b55-ccac-4f2d-8d72-e9d63ea530c2",
+                "service_execution_id": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "bc8e8be8-cd66-445d-8be8-491f68c524fe",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "bc8e8be8-cd66-445d-8be8-491f68c524fe",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                }
+              ]
+            },
+            {
+              "job_id": "681f8ebf-8d7d-42b2-9916-e7ae1a9cf56a",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "78d1327c-4e5c-4eb9-b904-342696ddac6c",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5935856190044433,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "77c15b55-ccac-4f2d-8d72-e9d63ea530c2",
+                "service_execution_id": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "8894ea45-39a8-49ec-8703-30709942fd19",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "8894ea45-39a8-49ec-8703-30709942fd19",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "0e5496b6-4be7-476a-8b6e-d356ce63cbe3"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-docker-docker-shared-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "4b83e51b-f71f-44d8-90fd-e9440cf45bb6",
+          "b0879ffc-e25d-4826-aeb3-7790b75a1ad5"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "76d2ca77-a9e9-491d-97cc-31e1503e2b5d",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "84bf59b8-dc35-4881-bab9-32a217da30b0",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4470485360361636,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "63e52ee1-1dc5-4339-a8ea-22b3f828a219",
+                "service_execution_id": "563c4f5b-95f9-4983-aa2e-771743f8a5ef",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "bd1b3eeb-ffc1-4a9b-ab8d-f602f6679eb7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "bd1b3eeb-ffc1-4a9b-ab8d-f602f6679eb7",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                }
+              ]
+            },
+            {
+              "job_id": "eb52984d-5c2d-499b-9abe-62cb2365124c",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "996b3f62-fcb8-4677-a9a2-336f44355445",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.3877153689973056,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "63e52ee1-1dc5-4339-a8ea-22b3f828a219",
+                "service_execution_id": "563c4f5b-95f9-4983-aa2e-771743f8a5ef",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "104c0fc1-9d03-41c6-a652-0177fc1313b3",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "104c0fc1-9d03-41c6-a652-0177fc1313b3",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                }
+              ]
+            },
+            {
+              "job_id": "706e416f-8939-4260-8f56-e6986e8245e4",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "be804da8-6605-46ad-826c-9eb07ebc373c",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.4724184999940917,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "63e52ee1-1dc5-4339-a8ea-22b3f828a219",
+                "service_execution_id": "563c4f5b-95f9-4983-aa2e-771743f8a5ef",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "6281b472-767d-4f5c-ae96-065ac3b8f05f",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "6281b472-767d-4f5c-ae96-065ac3b8f05f",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "563c4f5b-95f9-4983-aa2e-771743f8a5ef"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "a75fc153-5de3-40ad-bb5b-e72aabadc07c",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "bfc1cb74-b332-439e-a8e8-28af93696857",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.448103789007291,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "ccaa7ec1-34f4-415b-9509-39a4c029c7af",
+                "service_execution_id": "128e6132-bbb2-4bdc-8187-048171b58232",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "20af14f1-a32c-4e17-b294-a7c570f81c72",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "20af14f1-a32c-4e17-b294-a7c570f81c72",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                }
+              ]
+            },
+            {
+              "job_id": "d7e250be-cda4-432f-a1f7-a678505e4942",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "44b85c5b-1a94-4354-b273-d973efea9e80",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5094262599013746,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "ccaa7ec1-34f4-415b-9509-39a4c029c7af",
+                "service_execution_id": "128e6132-bbb2-4bdc-8187-048171b58232",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "29d68239-c153-4ac6-8a8a-1add0ac2b90b",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "29d68239-c153-4ac6-8a8a-1add0ac2b90b",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                }
+              ]
+            },
+            {
+              "job_id": "f7e6121e-5752-45fe-8fd7-4a2de5275c42",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "c6850caa-36c5-4ad0-95d9-24d6bc2ac43e",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.6445745249511674,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "ccaa7ec1-34f4-415b-9509-39a4c029c7af",
+                "service_execution_id": "128e6132-bbb2-4bdc-8187-048171b58232",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "shared",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "09435394-a5d5-43c5-a227-55e97758343b",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "09435394-a5d5-43c5-a227-55e97758343b",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "128e6132-bbb2-4bdc-8187-048171b58232"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E02-docker-docker-exclusive-v2",
+      "status": "passed",
+      "details": {
+        "batches": [
+          "8efd05af-d072-47d6-9c8a-9ec1038900da",
+          "da1562a6-2d0a-4d11-b66f-8631c8212705"
+        ],
+        "results": [
+          [
+            {
+              "job_id": "8f88f779-4aad-4665-9f2d-c0e483fe107e",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "1e5f55db-54aa-4203-a212-60f186f3ea72",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5659265290014446,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "071cf809-3f22-4716-a517-a569e1c48d64",
+                "service_execution_id": "86febaf6-d41c-44de-be9f-f6b0b7bb698b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "03f227c3-8b19-4937-9de1-4be2e541b1f3",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "03f227c3-8b19-4937-9de1-4be2e541b1f3",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                }
+              ]
+            },
+            {
+              "job_id": "b4c9b758-27da-4220-9d06-f6640098ad84",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "1fc9eba0-5991-44d8-9809-c17fa31c9a2e",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.56216176901944,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1064,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "071cf809-3f22-4716-a517-a569e1c48d64",
+                "service_execution_id": "86febaf6-d41c-44de-be9f-f6b0b7bb698b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "87293d26-4aba-488e-b494-1cb0e05f9c36",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "87293d26-4aba-488e-b494-1cb0e05f9c36",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                }
+              ]
+            },
+            {
+              "job_id": "47737b2e-e023-424e-8aae-c0af2e711fc9",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "b5d44c95-40b3-4dc9-aea0-e11dd6b82043",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.580477193929255,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1064,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "071cf809-3f22-4716-a517-a569e1c48d64",
+                "service_execution_id": "86febaf6-d41c-44de-be9f-f6b0b7bb698b",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "dfe3b2a5-1999-4475-9225-205ace39cd06",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "dfe3b2a5-1999-4475-9225-205ace39cd06",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "86febaf6-d41c-44de-be9f-f6b0b7bb698b"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "job_id": "4e8ef7d1-7b16-4852-ac0b-376824c7f82e",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "b521b9d2-754d-4254-8055-420cd0c6eb11",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.5621160520240664,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "6beab584-9eb1-40ff-848c-dba168c5be41",
+                "service_execution_id": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "bd4fa740-cdce-4b2c-b550-029a1fa9ae85",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "0",
+                    "execution_id": "bd4fa740-cdce-4b2c-b550-029a1fa9ae85",
+                    "business": {
+                      "variant": 0,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                }
+              ]
+            },
+            {
+              "job_id": "40ae7719-89f7-4f9a-8c06-5297a95a81b7",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "5bb72140-613f-4868-af89-c19fb458c6ba",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.656737091951072,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1065,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "6beab584-9eb1-40ff-848c-dba168c5be41",
+                "service_execution_id": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "836397af-ca74-4dc2-8779-7e30a7382f50",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "1",
+                    "execution_id": "836397af-ca74-4dc2-8779-7e30a7382f50",
+                    "business": {
+                      "variant": 1,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                }
+              ]
+            },
+            {
+              "job_id": "9d84afae-2c87-4de1-8c50-9d93188e0878",
+              "node": "rtx8000-177",
+              "attempt": {
+                "id": "0dda9530-39cb-47cc-a926-da6f5fb2734b",
+                "attempt": 1,
+                "status": "SUCCEEDED",
+                "metrics": {
+                  "runtime": 2.6210860130377114,
+                  "success_rate": 1.0,
+                  "episode_count": 2
+                },
+                "error": null,
+                "cleanup_confirmed": true,
+                "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                "reserved_vram_mb": 49152,
+                "log_bytes": 1066,
+                "endpoint": "http://192.168.8.157:19300",
+                "service_instance_id": "6beab584-9eb1-40ff-848c-dba168c5be41",
+                "service_execution_id": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7",
+                "service_key": "default",
+                "waiting_service": false,
+                "endpoint_mode": "exclusive",
+                "endpoint_candidates": []
+              },
+              "echoes": [
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "952db701-6966-4a6e-a252-6a1b78fe20a1",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                },
+                {
+                  "verified_input": {
+                    "case_id": "2",
+                    "execution_id": "952db701-6966-4a6e-a252-6a1b78fe20a1",
+                    "business": {
+                      "variant": 2,
+                      "sleep_seconds": 1
+                    }
+                  },
+                  "endpoint": "http://192.168.8.157:19300",
+                  "server_execution": "e2dc9966-ce8a-407c-8580-7fcf9152d8b7"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "scenario": "E01-NVIDIA GeForce RTX 4090",
+      "status": "passed",
+      "details": {
+        "batch": "f243eb74-7fd4-42f8-aaf5-655c80c6b257",
+        "result": [
+          {
+            "job_id": "bc894f41-368e-47ea-9d1b-77da6e7e158d",
+            "node": "rtx4090-157",
+            "attempt": {
+              "id": "d481c8e4-ce0e-4068-8e9c-8577f43c961e",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+              "reserved_vram_mb": 24564,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "0",
+                "execution_id": "a8e2f435-b78a-4774-b19d-b8f7fa648202"
+              }
+            ]
+          },
+          {
+            "job_id": "4735db67-4239-4da1-8e7b-3a3f10a4b6fd",
+            "node": "rtx4090-183",
+            "attempt": {
+              "id": "05bd3dcb-7eab-48b1-a94b-1ffd63d93652",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+              "reserved_vram_mb": 24564,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "1",
+                "execution_id": "1d76cc9c-cacc-465e-ac02-d5f0b3e50647"
+              }
+            ]
+          },
+          {
+            "job_id": "049e3a0f-30b9-4ffc-964c-6841f34a7211",
+            "node": "local4090-151",
+            "attempt": {
+              "id": "5ae0707c-9411-49ef-a1e7-84f2585afeab",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+              "reserved_vram_mb": 24564,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "2",
+                "execution_id": "a809dd38-5dff-4a6e-bbf8-4bf3664bf89e"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "E01-NVIDIA GeForce RTX 3080",
+      "status": "passed",
+      "details": {
+        "batch": "07fb6a49-03d0-4fb8-a5f7-ea7967eb62ca",
+        "result": [
+          {
+            "job_id": "76a4d433-ff7d-4b69-9dbc-8f743340b2a6",
+            "node": "rtx3080-182",
+            "attempt": {
+              "id": "a04f4579-1250-4c7d-a836-218db442e74e",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+              "reserved_vram_mb": 10240,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "0",
+                "execution_id": "230abd4f-3217-43d8-9fbe-daf42906d5e1"
+              }
+            ]
+          },
+          {
+            "job_id": "8c12b504-4af0-4866-a9d9-3252b3d2b918",
+            "node": "rtx3080-182",
+            "attempt": {
+              "id": "24e72da1-4478-4ef5-ba43-72f8c48d0f54",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+              "reserved_vram_mb": 10240,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "1",
+                "execution_id": "2643b448-b8a0-4275-a173-de3abfcd0298"
+              }
+            ]
+          },
+          {
+            "job_id": "56fe3d0c-ef3e-4d12-a35c-880291ec13be",
+            "node": "rtx3080-182",
+            "attempt": {
+              "id": "346e2213-6d77-4489-ad4e-ef85d5f4b721",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+              "reserved_vram_mb": 10240,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "2",
+                "execution_id": "ed045c4d-d278-4ddc-a82b-32df6103781e"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "E01-Quadro RTX 8000",
+      "status": "passed",
+      "details": {
+        "batch": "a910c356-82f3-4913-a8c1-e05f615eef41",
+        "result": [
+          {
+            "job_id": "023185c1-74a6-4426-9d1c-6e100fcfdd67",
+            "node": "rtx8000-177",
+            "attempt": {
+              "id": "5e517c95-61a6-407a-8e10-c9311e1c22b5",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+              "reserved_vram_mb": 49152,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "0",
+                "execution_id": "5a4173e8-a77e-446a-8c44-fe21979b6ad7"
+              }
+            ]
+          },
+          {
+            "job_id": "64c16a75-5bc7-4cbf-b616-57184c6c1634",
+            "node": "rtx8000-177",
+            "attempt": {
+              "id": "e55f32ad-2274-4be5-bd84-9930dd2091c7",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+              "reserved_vram_mb": 49152,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "1",
+                "execution_id": "a5fe5ed7-7ea9-4d84-90aa-2b008c50e7a9"
+              }
+            ]
+          },
+          {
+            "job_id": "51c8380a-0225-446e-a460-b4e88591424f",
+            "node": "rtx8000-177",
+            "attempt": {
+              "id": "b4365bb8-e7cd-4893-80d5-4cd3331d483d",
+              "attempt": 1,
+              "status": "SUCCEEDED",
+              "metrics": null,
+              "error": null,
+              "cleanup_confirmed": true,
+              "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+              "reserved_vram_mb": 49152,
+              "log_bytes": 95,
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": []
+            },
+            "echoes": [
+              {
+                "gpu_verified": true,
+                "case_id": "2",
+                "execution_id": "23ec174a-5bc6-4f39-b3bd-0896d5e977e5"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "scenario": "E06-controls",
+      "status": "passed",
+      "details": {
+        "batch": "961418a7-703f-4657-a849-311adaeb777a",
+        "retried_job": "06d4f045-1a10-4f52-8180-728f548c8d1a",
+        "attempts": [
+          {
+            "id": "ed3666e6-856c-4eee-a8bf-e1c10e1afd69",
+            "attempt": 1,
+            "status": "CANCELLED",
+            "metrics": null,
+            "error": "runner exited with code 137",
+            "cleanup_confirmed": true,
+            "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+            "reserved_vram_mb": 10240,
+            "log_bytes": 0,
+            "endpoint": null,
+            "service_instance_id": null,
+            "service_execution_id": null,
+            "service_key": null,
+            "waiting_service": false,
+            "endpoint_mode": null,
+            "endpoint_candidates": []
+          },
+          {
+            "id": "e26d0830-6cf7-4101-9112-a0eb7aaa7443",
+            "attempt": 2,
+            "status": "SUCCEEDED",
+            "metrics": null,
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+            "reserved_vram_mb": 10240,
+            "log_bytes": 95,
+            "endpoint": null,
+            "service_instance_id": null,
+            "service_execution_id": null,
+            "service_key": null,
+            "waiting_service": false,
+            "endpoint_mode": null,
+            "endpoint_candidates": []
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "E06-controls",
+      "status": "passed",
+      "details": {
+        "batch": "11333719-f4ad-4451-9f8a-1246ca313916",
+        "retried_job": "4452413e-1675-4d33-8a8c-1543567eda69",
+        "attempts": [
+          {
+            "id": "744db085-5543-4001-8bf3-dc2adeb93037",
+            "attempt": 1,
+            "status": "CANCELLED",
+            "metrics": null,
+            "error": "runner exited with code 137",
+            "cleanup_confirmed": true,
+            "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+            "reserved_vram_mb": 10240,
+            "log_bytes": 0,
+            "endpoint": null,
+            "service_instance_id": null,
+            "service_execution_id": null,
+            "service_key": null,
+            "waiting_service": false,
+            "endpoint_mode": null,
+            "endpoint_candidates": []
+          },
+          {
+            "id": "a8266bcc-d8e6-4d1e-809f-3715479487e8",
+            "attempt": 2,
+            "status": "SUCCEEDED",
+            "metrics": null,
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+            "reserved_vram_mb": 10240,
+            "log_bytes": 95,
+            "endpoint": null,
+            "service_instance_id": null,
+            "service_execution_id": null,
+            "service_key": null,
+            "waiting_service": false,
+            "endpoint_mode": null,
+            "endpoint_candidates": []
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "E06-bulk-retry",
+      "status": "passed",
+      "details": {
+        "batch": "a3dc6b5a-4b22-4850-aed4-8125a1a02449",
+        "retried": {
+          "items": [
+            {
+              "job_id": "b7472734-8da5-44f1-b2cd-f9b7ff23bf76",
+              "outcome": "retried",
+              "run_id": "589ce88a-7916-4e4a-9392-6af06f350d3d",
+              "attempt": 2
+            },
+            {
+              "job_id": "6387bcd9-8f15-44b5-b108-11673ffd8afc",
+              "outcome": "retried",
+              "run_id": "5793c1cf-dbfb-4fbf-90ca-103b68cca852",
+              "attempt": 2
+            },
+            {
+              "job_id": "b18f2afb-2156-4143-a518-01f9b8050aa2",
+              "outcome": "retried",
+              "run_id": "73326a22-6eec-4191-bc40-c579c87de773",
+              "attempt": 2
+            }
+          ],
+          "retried": 3,
+          "skipped": 0
+        },
+        "completed": {
+          "orchestrated": true,
+          "scheduling_paused": false,
+          "control_revision": 0,
+          "control_updated_at": null,
+          "id": "a3dc6b5a-4b22-4850-aed4-8125a1a02449",
+          "suite_id": null,
+          "max_concurrent": 3,
+          "title": "fleet-controls-20261116-bulk-fa6bea688d876c6d3473a725",
+          "owner_id": "79ffff8f-1ee7-4315-a7a6-7381d71c0dc8",
+          "created_at": "2026-11-16T01:18:21.982304+00:00",
+          "status": "SUCCEEDED",
+          "total": 3,
+          "succeeded": 3,
+          "finished": 3,
+          "total_episodes": 0,
+          "cases": [
+            {
+              "job_id": "b7472734-8da5-44f1-b2cd-f9b7ff23bf76",
+              "case_id": "0",
+              "task_name": "echo-0",
+              "seed": 0,
+              "episodes": 0,
+              "status": "SUCCEEDED",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 2,
+              "run_id": "589ce88a-7916-4e4a-9392-6af06f350d3d",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null
+            },
+            {
+              "job_id": "6387bcd9-8f15-44b5-b108-11673ffd8afc",
+              "case_id": "1",
+              "task_name": "echo-1",
+              "seed": 0,
+              "episodes": 0,
+              "status": "SUCCEEDED",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 2,
+              "run_id": "5793c1cf-dbfb-4fbf-90ca-103b68cca852",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null
+            },
+            {
+              "job_id": "b18f2afb-2156-4143-a518-01f9b8050aa2",
+              "case_id": "2",
+              "task_name": "echo-2",
+              "seed": 0,
+              "episodes": 0,
+              "status": "SUCCEEDED",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 2,
+              "run_id": "73326a22-6eec-4191-bc40-c579c87de773",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null
+            }
+          ],
+          "orchestration": {
+            "stop_after_batch": true,
+            "services": [],
+            "definitions": [],
+            "service_mode": "none"
+          }
+        }
+      }
+    }
+  ],
+  "admission": [
+    {
+      "scenario": "E05-cpus",
+      "status": "passed",
+      "details": {
+        "request": 10000,
+        "result": "rejected before scheduling"
+      }
+    },
+    {
+      "scenario": "E05-ram_gb",
+      "status": "passed",
+      "details": {
+        "request": 10000,
+        "result": "rejected before scheduling"
+      }
+    },
+    {
+      "scenario": "E05-vram",
+      "status": "passed",
+      "details": {
+        "batch": "b6ff6073-1075-48ce-8100-30346b814029",
+        "result": "queued without allocating a device",
+        "monitor": {
+          "orchestrated": true,
+          "scheduling_paused": false,
+          "control_revision": 0,
+          "control_updated_at": null,
+          "id": "b6ff6073-1075-48ce-8100-30346b814029",
+          "suite_id": null,
+          "max_concurrent": 3,
+          "title": "fleet-admission-20261116-oversized-vram-1794792130142911362",
+          "owner_id": "79ffff8f-1ee7-4315-a7a6-7381d71c0dc8",
+          "created_at": "2026-11-16T01:22:10.163978+00:00",
+          "status": "PENDING",
+          "total": 3,
+          "succeeded": 0,
+          "finished": 0,
+          "total_episodes": 0,
+          "cases": [
+            {
+              "job_id": "f63c5ed1-f7b2-454a-acfc-453bfb5ef333",
+              "case_id": "0",
+              "task_name": "echo-0",
+              "seed": 0,
+              "episodes": 0,
+              "status": "PENDING",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 1,
+              "run_id": "e8fcfa79-e750-4b88-9c43-aa718195427c",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null,
+              "cleanup_confirmed": true,
+              "node_name": null,
+              "gpu_index": null,
+              "waiting": {
+                "checked_at": "2026-11-16T01:22:13.218725+00:00",
+                "status": "needs_environment",
+                "nodes": [
+                  {
+                    "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+                    "node_name": "local4090-151",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+                    "node_name": "rtx3080-182",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 3080",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+                    "node_name": "rtx4090-157",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+                    "node_name": "rtx4090-183",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                    "node_name": "rtx8000-177",
+                    "gpu_index": 0,
+                    "gpu_model": "Quadro RTX 8000",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  }
+                ],
+                "reasons": [],
+                "endpoints": []
+              },
+              "reason_codes": [
+                "vram_capacity"
+              ],
+              "config": {
+                "pool_id": "a4c6dc2d-e59c-4de3-891c-4943517cf1bf",
+                "pool_name": "公共 GPU 评测池",
+                "gpu_mode": "shared",
+                "requested_vram_gb": 1000,
+                "required_gpu_model": null,
+                "endpoint": null,
+                "service_instance_id": null,
+                "service_execution_id": null,
+                "service_key": null,
+                "waiting_service": false,
+                "endpoint_mode": null,
+                "endpoint_candidates": [],
+                "client_name": "fleet-20261116-command-docker",
+                "client_version": "1"
+              }
+            },
+            {
+              "job_id": "8e2d1484-91d0-4133-a530-59b151297f9a",
+              "case_id": "1",
+              "task_name": "echo-1",
+              "seed": 0,
+              "episodes": 0,
+              "status": "PENDING",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 1,
+              "run_id": "ca00f02d-0ba4-4fcc-ab15-4765236658a3",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null,
+              "cleanup_confirmed": true,
+              "node_name": null,
+              "gpu_index": null,
+              "waiting": {
+                "checked_at": "2026-11-16T01:22:13.218725+00:00",
+                "status": "needs_environment",
+                "nodes": [
+                  {
+                    "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+                    "node_name": "local4090-151",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+                    "node_name": "rtx3080-182",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 3080",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+                    "node_name": "rtx4090-157",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+                    "node_name": "rtx4090-183",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                    "node_name": "rtx8000-177",
+                    "gpu_index": 0,
+                    "gpu_model": "Quadro RTX 8000",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  }
+                ],
+                "reasons": [],
+                "endpoints": []
+              },
+              "reason_codes": [
+                "vram_capacity"
+              ],
+              "config": {
+                "pool_id": "a4c6dc2d-e59c-4de3-891c-4943517cf1bf",
+                "pool_name": "公共 GPU 评测池",
+                "gpu_mode": "shared",
+                "requested_vram_gb": 1000,
+                "required_gpu_model": null,
+                "endpoint": null,
+                "service_instance_id": null,
+                "service_execution_id": null,
+                "service_key": null,
+                "waiting_service": false,
+                "endpoint_mode": null,
+                "endpoint_candidates": [],
+                "client_name": "fleet-20261116-command-docker",
+                "client_version": "1"
+              }
+            },
+            {
+              "job_id": "e67923fe-39b7-4726-b55a-3d0ee896ba10",
+              "case_id": "2",
+              "task_name": "echo-2",
+              "seed": 0,
+              "episodes": 0,
+              "status": "PENDING",
+              "task_type": "command",
+              "endpoint": null,
+              "service_instance_id": null,
+              "service_execution_id": null,
+              "service_key": null,
+              "waiting_service": false,
+              "endpoint_mode": null,
+              "endpoint_candidates": [],
+              "attempt": 1,
+              "run_id": "6bdab603-2253-4863-8f34-4ea0798f88fb",
+              "episode_reporting": false,
+              "progress": {
+                "completed": 0,
+                "successes": 0,
+                "errors": 0,
+                "running": [],
+                "success_rate": null
+              },
+              "error": null,
+              "cleanup_confirmed": true,
+              "node_name": null,
+              "gpu_index": null,
+              "waiting": {
+                "checked_at": "2026-11-16T01:22:13.218725+00:00",
+                "status": "needs_environment",
+                "nodes": [
+                  {
+                    "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+                    "node_name": "local4090-151",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+                    "node_name": "rtx3080-182",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 3080",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+                    "node_name": "rtx4090-157",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+                    "node_name": "rtx4090-183",
+                    "gpu_index": 0,
+                    "gpu_model": "NVIDIA GeForce RTX 4090",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  },
+                  {
+                    "slot_id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+                    "node_name": "rtx8000-177",
+                    "gpu_index": 0,
+                    "gpu_model": "Quadro RTX 8000",
+                    "ready": false,
+                    "reasons": [
+                      {
+                        "code": "vram_capacity",
+                        "category": "environment",
+                        "message": "GPU 显存总容量不足",
+                        "action": "调整显存申请或选择更大显存的 GPU"
+                      }
+                    ]
+                  }
+                ],
+                "reasons": [],
+                "endpoints": []
+              },
+              "reason_codes": [
+                "vram_capacity"
+              ],
+              "config": {
+                "pool_id": "a4c6dc2d-e59c-4de3-891c-4943517cf1bf",
+                "pool_name": "公共 GPU 评测池",
+                "gpu_mode": "shared",
+                "requested_vram_gb": 1000,
+                "required_gpu_model": null,
+                "endpoint": null,
+                "service_instance_id": null,
+                "service_execution_id": null,
+                "service_key": null,
+                "waiting_service": false,
+                "endpoint_mode": null,
+                "endpoint_candidates": [],
+                "client_name": "fleet-20261116-command-docker",
+                "client_version": "1"
+              }
+            }
+          ],
+          "checked_at": "2026-11-16T01:22:13.218725+00:00",
+          "summary": {
+            "states": {
+              "PENDING": 3
+            },
+            "cancel_requested_tasks": 0,
+            "cleanup_pending_tasks": 0,
+            "completed_episodes": 0,
+            "successes": 0,
+            "goal_failures": 0,
+            "episode_errors": 0,
+            "execution_failures": 0,
+            "reporting_tasks": 0,
+            "unreported_tasks": 0,
+            "success_rate": null
+          }
+        }
+      }
+    }
+  ],
+  "soak_status": "running"
+}

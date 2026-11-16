@@ -164,8 +164,27 @@ def release_plan(inventory):
                          'machine_id': x['machine_id'], 'gpus': x['gpus'],
                          'mount': x['mount']} for x in nodes],
             'target_worker': SOFTWARE_VERSION, 'target_protocol': PROTOCOL_VERSION,
-            'target_agent': VERSION, 'source_observed_at': inventory['observed_at'],
+            'target_agent': VERSION, 'target_database': migration_head(),
+            'source_observed_at': inventory['observed_at'],
             'requires_fresh_preflight': True}
+
+
+def migration_head():
+    revisions=set();parents=set()
+    for path in (ROOT/'backend/alembic/versions').glob('*.py'):
+        values={}
+        for node in ast.parse(path.read_text()).body:
+            names=node.targets if isinstance(node,ast.Assign) else [node.target] if isinstance(node,ast.AnnAssign) else []
+            for name in names:
+                if isinstance(name,ast.Name) and name.id in ('revision','down_revision'):
+                    values[name.id]=ast.literal_eval(node.value)
+        if 'revision' not in values:continue
+        revisions.add(values['revision'])
+        parent=values.get('down_revision')
+        parents.update([parent] if isinstance(parent,str) else parent or [])
+    heads=revisions-parents
+    if len(heads)!=1:raise ValueError('release requires a single migration head')
+    return heads.pop()
 
 
 def verify_identity(expected, observed):

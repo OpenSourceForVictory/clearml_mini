@@ -13,7 +13,7 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 
 报告原子写入且权限 0600。计划绑定 machine-id、GPU 和挂载信息，执行变更前必须重新盘点比较，不能直接信任历史记录。计划不包含凭据。
 
-发布阶段记录采用同一目录下的机群锁，不同 release ID 也不能同时执行。步骤以输入摘要绑定，完成项可幂等跳过；开始但未完成的步骤必须先核验现场状态，不能盲目重放。所有发布进程须使用同一状态目录。`scripts.fleet_rollout` 提供 check/apply/resume/restore-admission；阶段记录与目标镜像 ID 及计划摘要绑定。
+发布阶段记录采用同一目录下的机群锁，不同 release ID 也不能同时执行。步骤以输入摘要绑定，完成项可幂等跳过；开始但未完成的步骤必须先核验现场状态，不能盲目重放。所有发布进程须使用同一状态目录。`scripts.fleet_rollout` 提供 check/apply/resume/restore-admission；阶段记录与目标镜像 ID 及计划摘要绑定；隔离启动候选镜像核对 Worker/Agent/协议及 Alembic head，版本不符在排空前拒绝。
 
 ## 2026-11-16 发布前基线
 

@@ -42,6 +42,13 @@ def complete(journal, plan):
     return True
 
 
+def check_image(image,plan):
+    code="import json;from worker.version import SOFTWARE_VERSION,PROTOCOL_VERSION;from node_agent import VERSION;from alembic.config import Config;from alembic.script import ScriptDirectory;print(json.dumps({'worker':SOFTWARE_VERSION,'protocol':PROTOCOL_VERSION,'agent':VERSION,'heads':ScriptDirectory.from_config(Config('backend/alembic.ini')).get_heads()}))"
+    actual=json.loads(run(['docker','run','--rm','--network','none','--entrypoint','python',image,'-c',code]))
+    expected={'worker':plan['target_worker'],'protocol':plan['target_protocol'],'agent':plan['target_agent'],'heads':[plan['target_database']]}
+    if actual!=expected:raise RuntimeError('release image is incompatible with the approved component and migration plan')
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('action',choices=['check','apply','resume','restore-admission'])
@@ -62,6 +69,7 @@ def main():
             assert_release_ready(api,plan,release['id'])
             restore_admission(api,plan,journal);return
         image_id=json.loads(run(['docker','image','inspect',args.image]))[0]['Id']
+        check_image(args.image,plan)
         active=json.loads(run(['docker','inspect','mini-eval-api-1']))[0]
         if active['Config']['Labels'].get('com.docker.compose.project')!='mini-eval':raise RuntimeError('unexpected control-plane container identity')
         overlay=args.state_directory/'image.yml';image_overlay(overlay,args.image)

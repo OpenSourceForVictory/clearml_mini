@@ -439,3 +439,26 @@ def test_release_gate_includes_worker_configuration_receipts():
     with pytest.raises(RuntimeError,match='storage/runtime'):assert_release_ready(current,plan,'release')
     ready['storage']=True
     assert_release_ready(current,plan,'release')
+
+
+def test_plan_rejects_ambiguous_migration_heads(tmp_path,monkeypatch):
+    import scripts.fleet_release as release
+    versions=tmp_path/'backend/alembic/versions';versions.mkdir(parents=True)
+    (versions/'first.py').write_text("revision: str='first'\ndown_revision=None\n")
+    (versions/'second.py').write_text("revision='second'\ndown_revision='first'\n")
+    monkeypatch.setattr(release,'ROOT',tmp_path)
+    assert release.migration_head()=='second'
+    (versions/'branch.py').write_text("revision='branch'\ndown_revision='first'\n")
+    with pytest.raises(ValueError,match='single migration head'):release.migration_head()
+
+
+def test_release_rejects_image_migration_or_protocol_mismatch(monkeypatch):
+    import scripts.fleet_rollout as rollout
+    calls=[]
+    def wrong(argv):
+        calls.append(argv)
+        return json.dumps({'worker':'0.12.0','protocol':9,'agent':'1.1.0','heads':['n407c89']})
+    monkeypatch.setattr(rollout,'run',wrong)
+    plan={'target_worker':'0.12.0','target_protocol':10,'target_agent':'1.1.0','target_database':'r841a23'}
+    with pytest.raises(RuntimeError,match='incompatible'):rollout.check_image('image:1',plan)
+    assert len(calls)==1 and calls[0][:5]==['docker','run','--rm','--network','none']
