@@ -29,3 +29,11 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 五台 Worker、Agent、升级执行器均运行；目录修订 .151/.177 为 2，其余为 3，平台回执均匹配。工作基目录在 `/mnt/eval-share/work/<节点名>`；.157 为本地 ext4，其余为来自 .157 的 NFS。盘点时活动与待清理执行为零，历史执行 25 成功、2 失败。该数量仅是盘点时快照，发布前必须重查。
 
 当前 Compose 包含 LAN overlay 与独立镜像 overlay；发布不得仅执行默认 `control.py up` 而遗漏内网监听。原始脱敏盘点保存在 `.runtime/fleet-release/inventory.json`（不入库）。未访问 .174；未改变节点或平台状态。
+
+## 排空与准入恢复
+
+`scripts.fleet_release_api` 通过现有管理 API 操作；`drain` 使用管理修订号停用新准入，等待 `held_executions=0`，不会撤销执行租约或杀任务。超时停止发布，调用 `restore_admission` 恢复本次成功记录的变更。原本停用的节点保持停用；管理员期间修改修订号、请求响应丢失或节点身份改变时拒绝自动恢复，需要对账。
+
+`assert_release_ready` 核验每个 GPU Worker 在线、软件版本、协议、制品摘要，以及 Agent 在线、版本、摘要和配置应用状态；任一不符都不能通过发布验收。原有 claim 协议兼容检查继续负责阻止旧 Worker 领取新编排。
+
+模块测试同时包含真实 API 集成：运行中的任务在排空期间继续获得心跳续租，且不会领到新任务。测试使用隔离数据库，不操作生产节点。
