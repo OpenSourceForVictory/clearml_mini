@@ -1,0 +1,149 @@
+{
+  "processes": [
+    {
+      "pid": 4026736,
+      "cwd": "/home/dgh/Code/clearml_mini/examples/runtime_templates",
+      "executable": "/opt/anaconda3/bin/python3.13",
+      "argv": [
+        "/home/dgh/Code/clearml_mini/.venv/bin/python",
+        "/home/dgh/Code/clearml_mini/examples/runtime_templates/server.py"
+      ]
+    }
+  ],
+  "batches": [
+    {
+      "id": "1430ec91-52d2-409d-b2fc-9dc855e2815b",
+      "cases": [
+        {
+          "job_id": "74161841-f601-434f-8c11-bcbcd2516994",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.39897155901417136,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        },
+        {
+          "job_id": "718dfcb0-353d-441b-afd0-b154ea8dfde6",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.463846025057137,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        },
+        {
+          "job_id": "4db02c91-280e-42de-bef8-17072f33a559",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.4322753269225359,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        }
+      ],
+      "services": [
+        {
+          "id": "bef13a91-aecd-4bad-a074-a0a54127d106",
+          "state": "STOPPED",
+          "cleanup_pending": false
+        }
+      ]
+    },
+    {
+      "id": "7e2bc00f-6858-4bb0-bd97-6c281a43d1ec",
+      "cases": [
+        {
+          "job_id": "589c5688-203d-44ae-bf73-c25cd085c6bc",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.4800963110756129,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        },
+        {
+          "job_id": "df8b2336-2d7b-4c50-b68b-7b68b6b771ab",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.19520246097818017,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        },
+        {
+          "job_id": "cbb6f7c4-470d-4035-867e-eaed5211c01c",
+          "status": "SUCCEEDED",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.17916451999917626,
+            "success_rate": 1.0,
+            "episode_count": 2
+          },
+          "progress": {
+            "completed": 2,
+            "successes": 2,
+            "errors": 0,
+            "running": [],
+            "success_rate": 1.0
+          },
+          "working_directory": "examples/runtime_templates"
+        }
+      ],
+      "services": [
+        {
+          "id": "731af453-df75-4dad-8f27-b18c2ed6b0c0",
+          "state": "STOPPED",
+          "cleanup_pending": false
+        }
+      ]
+    }
+  ],
+  "initial_configuration_failure": "Initial server bind used an obsolete LAN address; cancelled initial batches and resubmitted after correction.",
+  "held_executions": 0
+}
