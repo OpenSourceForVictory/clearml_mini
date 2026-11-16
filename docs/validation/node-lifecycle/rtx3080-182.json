@@ -1,0 +1,63 @@
+{
+  "node_id": "bace1b18-8901-479c-ab50-22bdd8f6efe4",
+  "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+  "original_pool": "a4c6dc2d-e59c-4de3-891c-4943517cf1bf",
+  "jobs": [
+    "b517e861-9169-46b1-afae-31357323f660",
+    "e3aea9b3-4050-40c6-b842-8b88fe251e05"
+  ],
+  "checks": {
+    "active_execution_blocks_unmanage": true,
+    "job_before_succeeded": true,
+    "drained": true,
+    "old_credential_revoked": true,
+    "history_retained": true,
+    "local_settings_preserved": true,
+    "same_node_and_slot": true,
+    "all_components_reconnected": true,
+    "job_after_succeeded": true,
+    "original_pool_restored": true
+  },
+  "test_pool": "ede537c2-2f9f-4a43-a30f-ee02cf969c66",
+  "stage": "complete",
+  "final_node": {
+    "node_name": "rtx3080-182",
+    "status": "online",
+    "enabled": true,
+    "held_executions": 0
+  },
+  "job_results": [
+    {
+      "id": "b517e861-9169-46b1-afae-31357323f660",
+      "status": "SUCCEEDED",
+      "attempts": [
+        {
+          "status": "SUCCEEDED",
+          "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.0006448030471801758,
+            "success_rate": 0.7,
+            "episode_count": 10
+          }
+        }
+      ]
+    },
+    {
+      "id": "e3aea9b3-4050-40c6-b842-8b88fe251e05",
+      "status": "SUCCEEDED",
+      "attempts": [
+        {
+          "status": "SUCCEEDED",
+          "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+          "cleanup_confirmed": true,
+          "metrics": {
+            "runtime": 0.0006510431412607431,
+            "success_rate": 0.8,
+            "episode_count": 10
+          }
+        }
+      ]
+    }
+  ]
+}

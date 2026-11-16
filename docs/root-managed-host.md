@@ -29,3 +29,5 @@
 新增身份和系统安装模块启用分支测量，综合覆盖率门槛 90%。普通测试不需要 root。真实 systemd 测试需在隔离验证主机准备 mini-eval 账号，以 root 设置 `MANAGED_HOST_TEST=1` 运行相同命令；测试实际创建短期系统单元并清理，不能把跳过算通过。
 
 测试覆盖账号冲突/幂等、多卡配置隔离、配置权限、失败回滚、保留恢复证据、重复安装、GPU/NPU 选择、缺失身份、权限拒绝、CPU/内存限制、四种业务运行方式、独立 Python/cwd 和清理。SSH 探测和旧节点升级另由关联回归覆盖。结果与实际设备验证边界见 [验证记录](validation/root-managed-host/README.md)。
+
+实体 GPU 节点解除/重新纳管及任务执行闭环另见 [节点生命周期真机验收](validation/node-lifecycle/README.md)，该测试保留原运行身份，不等于完成身份迁移。
