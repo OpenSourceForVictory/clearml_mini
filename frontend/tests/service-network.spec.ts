@@ -9,7 +9,7 @@ test('forwarded service distinguishes reachable and local addresses and restores
  if(p==='admin/nodes/n/agent')data={status:'not_installed',revision:0,desired:{heartbeat_seconds:5,sample_seconds:15,programs:'running'}};
  if(p.endsWith('/storage')||p.endsWith('/runtime'))data={revision:0,config:null,slots:[],all_applied:false};
  await route.fulfill({json:data});});
- await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();await page.getByRole('button',{name:'查看配置'}).click();
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();await page.getByRole('button',{name:'查看配置'}).click();await page.getByRole('tab',{name:'服务网络',exact:true}).click();
  const panel=page.getByRole('region',{name:'服务自动分配网络'});
  await expect(panel.getByLabel('服务可达 IPv4')).toHaveValue('192.168.8.151');
  await panel.getByLabel('节点本地监听 IPv4（可选）').fill('127.0.0.1');await panel.getByRole('button',{name:'保存服务网络'}).click();

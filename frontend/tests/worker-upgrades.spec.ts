@@ -13,7 +13,7 @@ test('version management distinguishes protocol, software and drain upgrade',asy
  }
  if(p==='admin/nodes/n/upgrades/u/cancel'){expect(route.request().postDataJSON()).toEqual({expected_revision:1});operation.status='CANCELLED';revision++;}
  await route.fulfill({json:data})});
- await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByText('Worker 版本与升级',{exact:true}).click();
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByRole('tab',{name:'版本升级',exact:true}).click();await page.getByText('Worker 版本与升级',{exact:true}).click();
  await expect(page.getByRole('cell').filter({hasText:'0.9.0'})).toBeVisible();await expect(page.getByText('v8',{exact:true})).toBeVisible();
  await page.getByLabel('目标 Worker 发布版本').selectOption(release.id);await page.getByRole('button',{name:'排空并升级此机器'}).click();
  await expect.poll(()=>submitted).toEqual({release_id:release.id,expected_revision:0});await expect(page.getByRole('button',{name:'排空并升级此机器'})).toBeDisabled();

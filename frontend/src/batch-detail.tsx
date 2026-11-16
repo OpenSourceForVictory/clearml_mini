@@ -1,3 +1,4 @@
+import {BatchParameters} from './batch-parameters';
 import {OrchestrationStatus} from './orchestration-status';
 import {ReportDownloads} from './batch-reports';
 import React,{useEffect,useState} from 'react';
@@ -13,6 +14,7 @@ type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:str
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
 export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.MutableRefObject<Record<string,Filters>>;id:string;onBack:()=>void;onJob:(id:string)=>void}) {
+  const [showParameters,setShowParameters]=useState(false);
   const {data:b,error}=usePoll<Monitor>('batches/'+id+'/monitor');
   const [status,setStatus]=useState(savedFilters.current[id]?.status||''),[reason,setReason]=useState(savedFilters.current[id]?.reason||''),[query,setQuery]=useState(savedFilters.current[id]?.query||''),[job,setJob]=useState('');
   useEffect(()=>{savedFilters.current[id]={status,reason,query};},[id,status,reason,query,savedFilters]);
@@ -39,6 +41,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
     {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>
+      <details onToggle={e=>setShowParameters(e.currentTarget.open)}><summary>查看本次运行参数</summary>{showParameters&&<BatchParameters cases={b.cases} maxConcurrent={b.max_concurrent}/>}</details>
       {b.orchestrated&&<OrchestrationStatus id={id}/>}
       <section aria-label="批次运行控制">
         <p>{control?.scheduling_paused?'调度已暂停':'调度已开启'} · 取消中 {b.summary.cancel_requested_tasks||0} 项 · 待清理 {b.summary.cleanup_pending_tasks||0} 项（数量可能重叠）</p>

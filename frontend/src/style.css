@@ -591,3 +591,6 @@ dd {
 
 .launch-preview {margin-top:16px;padding:16px;border:1px solid var(--border,#cbd5e1);border-radius:8px;background:#f8fafc;color:#172033}
 .launch-preview pre {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+
+[hidden] { display: none !important; }
+.batch-parameters pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#f4f6f3;padding:16px;border-radius:8px;}

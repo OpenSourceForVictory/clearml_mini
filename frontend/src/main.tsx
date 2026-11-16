@@ -1,3 +1,5 @@
+import {EvaluationSetup} from './evaluation-setup';
+import type {Suite} from './run-wizard';
 import {Admin} from './administration';
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -7,7 +9,7 @@ import { Memberships, admissionLabels } from "./memberships";
 import { ExecutionDataSettings, JobExecutionData } from "./retention";
 import { StorageSettings } from "./storage";
 import { RuntimeSettings, RuntimeReadiness } from "./image-runtime";
-import { CSWorkbench, ClientTemplates, ArtifactList } from "./cs";
+import { CSWorkbench, ArtifactList } from "./cs";
 
 type User = { id: string; username: string; role: string };
 type Pool = {
@@ -120,16 +122,20 @@ function Field({
   );
 }
 function App() {
+  const [launch,setLaunch]=useState<{suite:Suite}|null>(null);
+  const [setupJob,setSetupJob]=useState('');
+  function runSuite(suite:Suite){setLaunch({suite});setTab('cs');location.hash='/cs';}
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [tab, setTab] = useState(location.hash.startsWith('#/cs')?'cs':'jobs');
+    [tab, setTab] = useState(location.hash.startsWith('#/cs/batches/')||location.hash.startsWith('#/cs/compare/')||location.hash==='#/cs/results'?'results':location.hash.startsWith('#/cs')?'cs':'jobs');
   const [comparisonView,setComparisonView]=useState(location.hash.startsWith('#/cs/compare/'));
-  useEffect(()=>{const change=()=>{setComparisonView(location.hash.startsWith('#/cs/compare/'));if(location.hash.startsWith('#/cs'))setTab('cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
+  useEffect(()=>{const change=()=>{setComparisonView(location.hash.startsWith('#/cs/compare/'));if(location.hash.startsWith('#/cs'))setTab(location.hash==='#/cs/results'||location.hash.startsWith('#/cs/batches/')||location.hash.startsWith('#/cs/compare/')?'results':'cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   useEffect(() => {
     const logout = () => {
       sessionStorage.removeItem("eval-token");
       setUser(null);
+      setLaunch(null);setSetupJob('');setTab('jobs');
     };
     window.addEventListener("eval-logout", logout);
     if (sessionStorage.getItem("eval-token"))
@@ -203,7 +209,9 @@ function App() {
           {[
             ["jobs", "我的任务"],
             ["workers", "计算资源"],
-            ["cs", "CS 评测批次"],
+            ["cs", "业务评测向导"],
+            ["results", "评测运行与结果"],
+            ...(user.role!=="admin"?[["setup", "评测配置"]]:[]),
             ...(user.role === "admin"
               ? [
                   ["all", "全部任务"],
@@ -214,7 +222,7 @@ function App() {
             <button
               key={id}
               className={tab === id ? "active" : ""}
-              onClick={() => setTab(id)}
+              onClick={() => {setTab(id);if(id==='cs'||id==='results')location.hash=id==='cs'?'/cs':'/cs/results';}}
             >
               {title}
             </button>
@@ -238,50 +246,37 @@ function App() {
               ? "计算资源"
               : tab === "admin"
                 ? "管理设置"
-                : "评测任务"}
+                : tab === "cs" ? "业务评测向导" : tab === "results" ? "评测运行与结果" : "评测任务"}
           </span>
-          <span className="live-dot">{tab==='admin'?'管理工作台':tab==='cs'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
+          <span className="live-dot">{tab==='admin'?'管理工作台':tab==='results'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
         </header>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />
-        ) : tab === "cs" ? (
-          <CSWorkbench admin={user.role === "admin"} renderJob={(id, close) => <JobDetail id={id} close={close} />} />
+        ) : tab === "cs" || tab === "results" ? (
+          <CSWorkbench initialLaunch={launch} pageView={tab==='results'?'records':'wizard'} admin={user.role === "admin"} renderJob={(id, close) => <JobDetail id={id} close={close} />} />
         ) : tab === "workers" ? (
           <Resources admin={user.role === "admin"} />
         ) : (
-          <Admin />
+          tab==='setup'?<EvaluationSetup member onRun={runSuite} onJob={setSetupJob}/>:<Admin onRun={runSuite} onJob={setSetupJob}/>
         )}
+        {setupJob&&<JobDetail id={setupJob} close={()=>setSetupJob('')}/>}
       </main>
     </div>
   );
 }
 function Jobs({ all }: { all: boolean }) {
-  const [benchmarks, setBenchmarks] = useState<{ id: string; name: string }[]>([]);
-  const [benchmark, setBenchmark] = useState('mock');
   const [jobs, setJobs] = useState<Job[]>([]),
-    [pools, setPools] = useState<Pool[]>([]),
     [selected, setSelected] = useState(""),
     [error, setError] = useState(""),
     [filter, setFilter] = useState(""),
-    [page, setPage] = useState(1),
-    [revision, setRevision] = useState(0),
-    [submitting, setSubmitting] = useState(false);
-  const submission = useRef({ body: "", key: "" });
+    [page, setPage] = useState(1);
   useEffect(() => {
     let active = true;
     const load = async () => {
       try {
-        const [j, p, b] = await Promise.all([
-          api<Job[]>(
-            `${all ? "admin/jobs" : "jobs"}?page=${page}&page_size=20${filter ? "&status=" + filter : ""}`,
-          ),
-          api<Pool[]>("pools"),
-          api<{ id: string; name: string }[]>("benchmarks"),
-        ]);
+        const j = await api<Job[]>(`${all ? "admin/jobs" : "jobs"}?page=${page}&page_size=20${filter ? "&status=" + filter : ""}`);
         if (active) {
           setJobs(j);
-          setPools(p);
-          setBenchmarks(b.filter(x => x.id !== 'cs-client'));
           setError("");
         }
       } catch (e) {
@@ -294,41 +289,7 @@ function Jobs({ all }: { all: boolean }) {
       active = false;
       clearInterval(timer);
     };
-  }, [all, page, filter, revision]);
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
-    const form = new FormData(e.currentTarget);
-    const body = {
-      title: form.get("title"),
-      model_ref: benchmark === 'robotwin-render' ? 'sapien-render' : form.get("model_ref"),
-      episodes: Number(form.get("episodes")),
-      pool_id: form.get("pool_id"),
-      benchmark,
-      gpu_mode: form.get("gpu_mode"),
-      requested_vram_gb: Number(form.get("requested_vram_gb")),
-      required_gpu_model: String(form.get("required_gpu_model") || "").trim() || null,
-    };
-    const serialized = JSON.stringify(body);
-    if (submission.current.body !== serialized)
-      submission.current = {
-        body: serialized,
-        key: Date.now() + "-" + Math.random().toString(36).slice(2),
-      };
-    try {
-      const r = await api<{ id: string }>("jobs", "POST", body, {
-        "Idempotency-Key": submission.current.key,
-      });
-      submission.current = { body: "", key: "" };
-      setSelected(r.id);
-      setRevision((x) => x + 1);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  }, [all, page, filter]);
   return (
     <>
       <div className="page-title">
@@ -337,7 +298,7 @@ function Jobs({ all }: { all: boolean }) {
           <h1>{all ? "全部评测任务" : "我的评测任务"}</h1>
           <p className="muted">跟踪每一次评测，从排队到结果。</p>
         </div>
-        <span className="pill">Mock 评测已开放</span>
+
       </div>
       {error && (
         <div role="alert" className="error">
@@ -368,76 +329,6 @@ function Jobs({ all }: { all: boolean }) {
           <strong>{jobs.filter((j) => j.status === "SUCCEEDED").length}</strong>
         </div>
       </div>
-      {!all && (
-        <section className="panel">
-          <h2>新建评测</h2>
-          <form onSubmit={submit} className="submit-grid">
-            <Field label="评测类型">
-              <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}>
-                {benchmarks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </Field>
-            <Field label="任务名称">
-              <input
-                name="title"
-                placeholder="例如：基线模型验证"
-                required
-                maxLength={200}
-              />
-            </Field>
-            {benchmark === 'mock' && <Field label="模型 / checkpoint 标识">
-              <input
-                name="model_ref"
-                placeholder="model-v1"
-                required
-                maxLength={500}
-              />
-            </Field>}
-            <Field label="资源池">
-              <select key={benchmark} name="pool_id" required defaultValue="">
-                <option value="" disabled>
-                  选择资源池
-                </option>
-                {pools.filter((p) => benchmark === 'mock' || p.gpu_model !== 'virtual').map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {p.gpu_model === "virtual" ? "模拟池" : "异构 GPU 池"}{p.allow_shared ? " · 可共享" : " · GPU 独占"}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="GPU 使用模式">
-              <select name="gpu_mode" defaultValue="exclusive">
-                <option value="exclusive">独占：每卡一个任务</option>
-                <option value="shared">共享：需资源池开启并声明显存</option>
-              </select>
-            </Field>
-            <Field label="所需显存 GiB（共享至少 1）">
-              <input name="requested_vram_gb" type="number" min={0} max={10000} defaultValue={0} required />
-            </Field>
-            <Field label="指定 GPU 型号（可选，精确匹配）">
-              <input name="required_gpu_model" maxLength={100} placeholder="留空使用池内任意合格 GPU" />
-            </Field>
-            <Field label="评测回合">
-              <input
-                name="episodes"
-                type="number"
-                min={1}
-                max={benchmark === 'robotwin-render' ? 100 : 10000}
-                defaultValue={10}
-                required
-              />
-            </Field>
-            <button className="primary" disabled={submitting || !pools.length}>
-              {submitting ? "提交中…" : "提交评测"}
-            </button>
-          </form>
-          <p className="hint">
-            {benchmark === 'robotwin-render'
-              ? '验证 GPU 上的 SAPIEN 物理仿真和图像渲染，不使用模型 checkpoint；通过率表示环境检查结果。'
-              : '使用可重复的模拟评测。真实机器人任务与模型评测将在环境和资产验收后开放。'}
-          </p>
-        </section>
-      )}
       <section className="panel">
         <div className="section-title">
           <h2>任务记录</h2>

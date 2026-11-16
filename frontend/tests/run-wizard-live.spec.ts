@@ -13,7 +13,7 @@ test('real trial, three-case formal execution and empty-pool queue through wizar
   const saved=await request.post('/api/v1/suites',{headers,data:{name,version:'1',template_id:t.id,cases}});expect(saved.status()).toBe(201);const suite=await saved.json();
   const empty=await request.post('/api/v1/admin/pools',{headers,data:{name:name+'-empty',gpu_model:'virtual'}});expect(empty.status()).toBe(201);const pool=await empty.json();
   await page.goto('/');await page.getByLabel('用户名',{exact:true}).fill(credentials.username);await page.getByLabel('密码',{exact:true}).fill(credentials.password);await page.getByRole('button',{name:'登录',exact:true}).click();
-  await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();const wizard=page.getByRole('region',{name:'集合运行向导'});
+  await page.getByRole('button',{name:'业务评测向导',exact:true}).click();const wizard=page.getByRole('region',{name:'集合运行向导'});
   await wizard.getByLabel('选择已保存集合').selectOption(suite.id);await wizard.getByLabel('批次名称',{exact:true}).fill(name);
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('推理服务地址').fill(process.env.CS_TEST_ENDPOINT!);
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端资源池').selectOption({label:process.env.CS_POOL_NAME!});await wizard.getByLabel('最大并发任务数').fill('2');

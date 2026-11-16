@@ -32,7 +32,7 @@ async function setup(page:Page){
 }
 test('cross-page selection limit, back preserves draft/page and direct refresh',async({page})=>{
  await setup(page);await page.goto('/#/cs');
- await page.getByLabel('批次名称',{exact:true}).fill('保留实验草稿');
+ await page.getByLabel('批次名称',{exact:true}).fill('保留实验草稿');await page.getByRole('button',{name:'评测运行与结果',exact:true}).click();
  await page.getByLabel('比较选择 批次 0',{exact:true}).check();await page.getByRole('button',{name:'下一页',exact:true}).click();
  await page.getByLabel('比较选择 批次 20',{exact:true}).check();await expect(page.getByLabel('比较选择 批次 21',{exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'比较所选批次'}).click();await expect(page).toHaveURL(/compare\/0\/20/);

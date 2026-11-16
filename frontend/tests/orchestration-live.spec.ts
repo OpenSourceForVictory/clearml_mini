@@ -7,7 +7,7 @@ test('real API: publish template copy, create suite and queue managed orchestrat
  const schema={version:1,fields:{batch_size:{type:'integer',default:2,min:1,max:8,overridable:true}}};
  const created=await request.post(base+'/api/v1/admin/client-templates',{headers,data:{name,version:'1',image:'test:1',task_type:'command',command:['python3','client.py'],parameter_schema:schema}});expect(created.status()).toBe(201);const client=await created.json();
  const serverResponse=await request.post(base+'/api/v1/admin/server-templates',{headers,data:{name:name+'-server',version:'1',image:'test:1',command:['python3','server.py']}});expect(serverResponse.status()).toBe(201);const server=await serverResponse.json();
- await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);await page.goto(base);await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+ await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);await page.goto(base);await page.getByRole('button',{name:'业务评测向导',exact:true}).click();
  const wizard=page.getByRole('region',{name:'集合运行向导'});
  await wizard.getByLabel('批次名称',{exact:true}).fill(name);await wizard.getByLabel('第 1 项回合数').fill('1');
  await wizard.getByLabel('同时保存为可复用集合').check();await wizard.getByLabel('新集合名称').fill(name);

@@ -21,7 +21,7 @@ async function setup(page:Page,resource_requirements?:any){
   if(path==='runtime-templates/client/copy/actions'){data={...client,id:'copy',version:'2',status:'published',revision:2}}
   await route.fulfill({json:data});
  });
- await page.goto('/');await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+ await page.goto('/');await page.getByRole('button',{name:'业务评测向导',exact:true}).click();
  const wizard=page.getByRole('region',{name:'集合运行向导'});
  await wizard.getByLabel('批次名称',{exact:true}).fill('New run');await wizard.getByLabel('第 1 项回合数').fill('1');
  await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端模板',{exact:true}).selectOption('client');

@@ -10,7 +10,7 @@ test('RoboTwin subset, drafts, publish, copies, export and archive through real 
   expect(t.ok()).toBeTruthy();const template=(await t.json()).id;
   await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);
   await page.goto(base);
-  await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+  await page.getByRole('button',{name:'管理设置',exact:true}).click();
   await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
   await page.getByRole('button',{name:'从 RoboTwin 预置创建'}).click();
   for(const task of ['adjust_bottle','beat_block_hammer','blocks_ranking_rgb'])await page.getByLabel('选择任务 '+task,{exact:true}).check();
@@ -57,7 +57,7 @@ test('YAML defaults and field errors have no implicit persistence',async({page,r
   const login=await request.post(base+'/api/v1/auth/login',{data:{username:'admin',password:'suite-test-password'}});
   const token=(await login.json()).access_token;
   await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);await page.goto(base);
-  await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
+  await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
   const upload=page.getByLabel('导入集合 JSON / YAML',{exact:true});
   await upload.setInputFiles({name:'bad.yaml',mimeType:'application/yaml',buffer:Buffer.from('cases:\n  - task_name: task\n    episodes: 0\n')});
   await expect(page.getByRole('alert')).toContainText('cases.0.episodes');

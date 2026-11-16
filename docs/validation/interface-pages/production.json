@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-16",
+  "image": "sha256:50faaa7c0e61710b1a7edd9722432e60021d2c81c51d344ac835ed0797cc46a6",
+  "publication": "atomic static index switch; existing API process kept running",
+  "checks": [
+    "task-list-only",
+    "wizard-only",
+    "batch-results",
+    "real-npu-batch-parameters",
+    "machine-tabs",
+    "readonly-template",
+    "mobile-no-overflow"
+  ],
+  "passed": true,
+  "console_errors": [],
+  "batch_verified": "704d054e-bb09-41dd-99b3-e2b9daf5964e",
+  "new_evaluations_started": false
+}

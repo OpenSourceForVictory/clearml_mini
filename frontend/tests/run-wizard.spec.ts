@@ -25,7 +25,7 @@ async function setup(page:Page){
     if(path==='batches/batch')data={id:'batch',title:'[试跑] Three tasks',status:'SUCCEEDED',cases:[{job_id:'job',status:'SUCCEEDED',episode_reporting:reporting,progress:{completed:1,successes:0},error:null}]};
     await route.fulfill({json:data});
   });
-  await page.goto('/');await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+  await page.goto('/');await page.getByRole('button',{name:'业务评测向导',exact:true}).click();
   const wizard=page.getByRole('region',{name:'集合运行向导'});
   await wizard.getByLabel('选择已保存集合').selectOption('suite');await wizard.getByLabel('批次名称',{exact:true}).fill('Full run');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
@@ -83,7 +83,7 @@ test('late inspection from a previous suite handoff is discarded',async({page})=
   await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
   await expect.poll(checks).toBe(1);
   const response=page.waitForResponse(r=>r.url().endsWith('/orchestrations/preflight'));
-  await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
+  await page.getByRole('button',{name:'评测配置',exact:true}).click();
   await page.getByRole('button',{name:'查看 Three tasks / v1',exact:true}).click();
   await page.getByRole('button',{name:'运行此集合',exact:true}).click();
   await response;
@@ -91,7 +91,9 @@ test('late inspection from a previous suite handoff is discarded',async({page})=
   await wizard.getByLabel('批次名称',{exact:true}).fill('New launch');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+  await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+  await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');
   setDelay(0);await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
   await expect.poll(checks).toBe(2);
   await expect(wizard.getByRole('button',{name:'提交排队',exact:true})).toBeEnabled();

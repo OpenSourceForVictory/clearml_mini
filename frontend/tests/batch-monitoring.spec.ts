@@ -28,7 +28,7 @@ async function setup(page:Page){
 }
 test('direct navigation, refresh, draft preservation, filtering and offline recovery',async({page})=>{
   const ctl=await setup(page);await page.reload();await expect(page.getByText('目标成功率 0.0%',{exact:false})).toBeVisible();
-  await page.getByRole('button',{name:'返回批次列表'}).click();await page.getByLabel('批次名称',{exact:true}).fill('保留草稿');
+  await page.getByRole('button',{name:'返回批次列表'}).click();await page.getByRole('button',{name:'业务评测向导',exact:true}).click();await page.getByLabel('批次名称',{exact:true}).fill('保留草稿');await page.getByRole('button',{name:'评测运行与结果',exact:true}).click();
   await page.getByRole('button',{name:'查看批次',exact:true}).click();
   await page.getByLabel('任务状态',{exact:true}).selectOption('PENDING');await expect(page.locator('td p').filter({hasText:'GPU 已占用'})).toBeVisible();
   ctl.offline(true);await expect(page.getByRole('alert')).toContainText('监控更新失败');ctl.offline(false);await expect(page.getByRole('alert')).toHaveCount(0);

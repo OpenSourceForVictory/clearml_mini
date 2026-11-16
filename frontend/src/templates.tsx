@@ -1,3 +1,4 @@
+import {ClientRegistration} from './evaluation-setup';
 import React,{useEffect,useState} from 'react';
 import {mountDraft,mountValues} from './mount-editor';
 import {ResourceRequirements,ResourceContract} from './resource-requirements';
@@ -15,8 +16,8 @@ import {ParameterEditor,parameterDraft,parameterSchema} from './parameter-editor
 export type Template={resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
 export function Templates(){
  const [kind,setKind]=useState('client');
- return <><div className="tabs" role="tablist" aria-label="模板类型">{[['client','客户端模板'],['server','服务端模板']].map(([id,label])=><button role="tab" aria-selected={kind===id} key={id} onClick={()=>setKind(id)}>{label}</button>)}</div>
- {['client','server'].map(id=><div key={id} hidden={kind!==id}><TemplateWorkspace kind={id}/></div>)}</>;
+ return <><div className="tabs" role="tablist" aria-label="模板类型">{[['client','客户端模板'],['server','服务端模板'],['registration','镜像与代码接入']].map(([id,label])=><button role="tab" aria-selected={kind===id} key={id} onClick={()=>setKind(id)}>{label}</button>)}</div>
+ <div hidden={kind!=='registration'}>{kind==='registration'&&<ClientRegistration/>}</div>{['client','server'].map(id=><div key={id} hidden={kind!==id}><TemplateWorkspace kind={id}/></div>)}</>;
 }
 function TemplateWorkspace({kind}:{kind:string}){
  const [rows,setRows]=useState<Template[]>([]),[edit,setEdit]=useState<Template|null|undefined>(undefined),[error,setError]=useState('');
@@ -34,10 +35,10 @@ function TemplateWorkspace({kind}:{kind:string}){
  <section className="panel" hidden={tab!=='list'}><h2>{kind==='client'?'客户端':'服务端'}运行模板</h2><p>模板版本固定执行配置；修改时复制为新版本，已提交任务保留原快照。</p>{error&&<p role="alert" className="error">{error}</p>}<button onClick={()=>register()}>注册模板</button>
  {!rows.length&&<p className="muted">暂无模板。进入“注册新模板”，根据操作说明准备运行环境并填写配置。</p>}
  <div className="template-table"><table><thead><tr><th>名称 / 版本</th><th>执行方式</th><th>接入方式</th><th>状态</th><th>操作</th></tr></thead><tbody>{rows.map(t=><tr key={t.id}><td>{t.name} / {t.version}</td><td>{t.execution_mode==='host'?'宿主机':'Docker'}</td><td>{kind==='server'?'长期服务':t.integration_mode==='sdk-command'?'SDK + 业务命令':'直接评测协议'}</td><td>{t.enabled?'启用':'停用'}</td><td><button onClick={()=>setView(t)}>查看配置</button><button onClick={()=>register(t)}>复制新版本</button>{kind==='server'&&!t.owner_id&&<button onClick={async()=>{try{await api('admin/server-templates/'+t.id+'/access','PATCH',{expected_revision:t.revision||0,available_to_members:!t.available_to_members});await refresh()}catch(e){setError(String(e))}}}>{t.available_to_members?'撤回成员使用':'允许成员使用'}</button>}<button onClick={()=>void act(t,'state')}>{t.enabled?'停用':'启用'}</button><button onClick={()=>{if(confirm('归档此模板？已有任务快照保留。'))void act(t,'archive')}}>归档</button></td></tr>)}</tbody></table></div>
- {view&&<TemplateConfig template={view} kind={kind} onClose={()=>setView(null)} onCopy={()=>register(view)}/>}</section>
+ {view&&<TemplateConfig key={view.id} template={view} kind={kind} onClose={()=>setView(null)} onCopy={()=>register(view)}/>}</section>
  <div hidden={tab!=='register'}><TemplateExamples kind={kind} onUse={register}/>{edit!==undefined&&<div onChange={()=>setDirty(true)} onClick={e=>{if((e.target as HTMLElement).closest('form button'))setDirty(true)}}><TemplateForm key={generation} kind={kind} source={edit} onClose={()=>setTab('list')} onSave={async()=>{await refresh();setEdit(undefined);setDirty(false);setTab('list')}}/></div>}</div></>;
 }
-function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|null;onSave:()=>Promise<void>;onClose:()=>void}){
+export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:string;source:Template|null;onSave?:()=>Promise<void>;onClose?:()=>void;readOnly?:boolean}){
  const [mode,setMode]=useState(source?.execution_mode||'docker'),[integration,setIntegration]=useState(source?.integration_mode||'direct'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [image,setImage]=useState(source?.image||''),[hostEnvironment,setHostEnvironment]=useState(source?.host_runtime?.environment_name||'');
  const [resources,setResources]=useState<ResourceContract|null>(source?.resource_requirements||null);
@@ -51,7 +52,7 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  const [workDir,setWorkDir]=useState(source?.runtime?.work_dir||'/tmp/mini-eval-work'),[outputDir,setOutputDir]=useState(source?.runtime?.output_dir||'/tmp/mini-eval-output');
  const errorRef=React.useRef<HTMLParagraphElement>(null);
  useEffect(()=>{if(error){errorRef.current?.focus({preventScroll:true});errorRef.current?.scrollIntoView({block:'center'});}},[error]);
- async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),assetMap=assetValues(assets),{environment,overridable_env}=environmentValues(environments[mode]);
+ async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(readOnly)return;setBusy(true);setError('');try{const f=new FormData(e.currentTarget),assetMap=assetValues(assets),{environment,overridable_env}=environmentValues(environments[mode]);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:f.has('episode_reporting')||integration==='sdk-command',endpoint_exclusive:source?.endpoint_exclusive??false,protocols:source?.protocols||['http','https','ws','wss']};
    body.resource_requirements=resources;
    body.parameter_schema=parameterSchema(parameters);
@@ -60,10 +61,10 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
    if(mode==='docker'){body.image=f.get('image');body.runtime={...source?.runtime,interpreter:source?.runtime?.interpreter||'python3',environment,overridable_env,assets:assetMap,work_dir:f.get('work_dir'),output_dir:f.get('output_dir'),mounts:mountValues(mounts)};}
    else{body.host_runtime={...source?.host_runtime,environment_name:f.get('environment_name'),environment,overridable_env,assets:assets.map(a=>a.name)};}
    if(kind==='server')Object.assign(body,{port:Number(f.get('port')),protocol:f.get('protocol'),health_type:f.get('health_type'),health_path:f.get('health_path'),startup_timeout:Number(f.get('startup_timeout'))});
-   await api('admin/'+kind+'-templates','POST',body);await onSave();
+   await api('admin/'+kind+'-templates','POST',body);await onSave?.();
  }catch(e){setError(String(e))}finally{setBusy(false)}}
- return <section className="panel"><h2>{source?.id.startsWith('example:')?'从样例注册模板':source?'复制为新版本':'注册运行模板'}</h2>{error&&<p ref={errorRef} tabIndex={-1} role="alert" className="error">{error}</p>}<TemplateHelp kind={kind} mode={mode} integration={integration}/><form onSubmit={save}>
- <fieldset><legend>基础信息</legend><p className="muted">名称说明用途，例如 robotwin-client；版本例如 v1。修改已注册配置时创建新版本，历史任务继续使用原配置。</p><div className="row"><Field label="模板名称"><input name="name" defaultValue={source?.name} required maxLength={100}/></Field><Field label="版本"><input name="version" defaultValue={source?.id.startsWith('example:')?source.version:undefined} required maxLength={100} placeholder="例如 v1"/></Field></div></fieldset>
+ return <section className="panel template-form">{!readOnly&&<h2>{source?.id.startsWith('example:')?'从样例注册模板':source?'复制为新版本':'注册运行模板'}</h2>}{error&&<p ref={errorRef} tabIndex={-1} role="alert" className="error">{error}</p>}{!readOnly&&<TemplateHelp kind={kind} mode={mode} integration={integration}/>}<form onSubmit={save}><fieldset disabled={readOnly} className="template-form-fields" aria-label={readOnly?'模板只读配置':'模板注册配置'}>
+ <fieldset><legend>基础信息</legend><p className="muted">名称说明用途，例如 robotwin-client；版本例如 v1。修改已注册配置时创建新版本，历史任务继续使用原配置。</p><div className="row"><Field label="模板名称"><input name="name" defaultValue={source?.name} required maxLength={100}/></Field><Field label="版本"><input name="version" defaultValue={readOnly?source?.version:source?.id.startsWith('example:')?source.version:undefined} required maxLength={100} placeholder="例如 v1"/></Field></div></fieldset>
  <fieldset><legend>平台参数</legend><p className="muted">执行身份、GPU、推理地址和回合身份由平台注入；宿主机目录由机器配置解析。业务程序通过 MINI_EVAL_INPUT 读取任务输入。</p>
  {mode==='docker'?<div className="row"><Field label="容器内工作目录"><input name="work_dir" required value={workDir} onChange={e=>setWorkDir(e.target.value)}/></Field><Field label="容器内输出目录"><input name="output_dir" required value={outputDir} onChange={e=>setOutputDir(e.target.value)}/></Field></div>:<p>工作目录和输出目录使用该节点工作区下的独立执行目录。</p>}
  </fieldset>
@@ -77,5 +78,5 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  <EnvironmentEditor rows={environments[mode]} onChange={rows=>setEnvironments({...environments,[mode]:rows})}/>
  <TemplateDirectories mode={mode} assets={assets} onAssets={setAssets} mounts={mounts} onMounts={setMounts}/>
  {kind==='server'&&<><p className="muted">服务程序需使用平台传入的监听地址和端口。HTTP 健康检查要求程序提供相应路径；TCP 仅检查端口可连接。启动等待时间应覆盖模型加载耗时。</p><div className="row"><Field label="服务端口"><input name="port" type="number" min={1024} max={65535} required defaultValue={source?.port||8000}/></Field><Field label="服务协议"><select name="protocol" defaultValue={source?.protocol||'http'}>{['http','https','ws','wss'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="健康检查"><select name="health_type" defaultValue={source?.health_type||'http'}><option value="http">HTTP</option><option value="tcp">TCP</option></select></Field></div><Field label="健康检查路径"><input name="health_path" required defaultValue={source?.health_path||'/healthz'}/></Field><Field label="启动健康等待秒数"><input name="startup_timeout" type="number" min={5} max={1800} defaultValue={source?.startup_timeout||120} required/></Field></>}
- </fieldset><div className="row"><button disabled={busy} className="primary">注册此版本</button><button type="button" onClick={onClose}>取消</button></div></form></section>
+ </fieldset></fieldset>{!readOnly&&<div className="row"><button disabled={busy} className="primary">注册此版本</button><button type="button" onClick={onClose}>取消</button></div>}</form></section>
 }

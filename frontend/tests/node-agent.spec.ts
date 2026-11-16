@@ -8,7 +8,7 @@ test('node Agent separates runtime health and desired configuration',async({page
  if(p==='admin/nodes/n/agent'){if(route.request().method()==='PUT'){update=route.request().postDataJSON();agent={...agent,revision:agent.revision+1,desired:update}}data=agent}
  if(p.endsWith('/storage')||p.endsWith('/runtime'))data={revision:0,config:null,slots:[],all_applied:false};
  await route.fulfill({json:data});});
- await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置'}).click();
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置'}).click();await page.getByRole('tab',{name:'节点 Agent',exact:true}).click();
  const panel=page.getByRole('region',{name:'节点 Agent',exact:true});
  await expect(panel.getByText(/版本 1.0.0/)).toBeVisible();
  await panel.getByLabel('主机采样周期（秒）').fill('20');await panel.getByRole('button',{name:'保存 Agent 配置'}).click();
@@ -25,6 +25,6 @@ test('legacy machine explicitly reports Agent not installed',async({page})=>{
  if(p==='admin/nodes/n/agent')data={status:'not_installed',revision:0,desired:{heartbeat_seconds:5,sample_seconds:15,programs:'running'}};
  if(p.endsWith('/storage')||p.endsWith('/runtime'))data={revision:0,config:null,slots:[],all_applied:false};
  await route.fulfill({json:data});});
- await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置'}).click();
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置'}).click();await page.getByRole('tab',{name:'节点 Agent',exact:true}).click();
  const panel=page.getByRole('region',{name:'节点 Agent',exact:true});await expect(panel.getByText(/此节点尚未安装 Agent/)).toBeVisible();await expect(panel.getByRole('button',{name:'排空并停止 Worker'})).toHaveCount(0);
 });

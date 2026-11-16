@@ -15,7 +15,7 @@ test('production fleet: member wizard, actual execution, logs and owner isolatio
  const pool=pools.find((p:any)=>p.gpu_model==='*');expect(pool).toBeTruthy();
  const name='fleet-ui-'+Date.now();let batch:any;
  await page.addInitScript(t=>sessionStorage.setItem('eval-token',t),token);
- await page.goto(base);await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
+ await page.goto(base);await page.getByRole('button',{name:'业务评测向导',exact:true}).click();
  const wizard=page.getByRole('region',{name:'集合运行向导'});
  await wizard.getByLabel('批次名称',{exact:true}).fill(name);
  await wizard.getByLabel('第 1 项回合数').fill('1');

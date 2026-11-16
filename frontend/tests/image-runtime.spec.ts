@@ -15,12 +15,12 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
     if(path==='orchestrations'&&route.request().method()==='POST'){batch=route.request().postDataJSON();body={id:'b1',...batch};}
     await route.fulfill({json:body});
   });
-  await page.goto('/');await page.getByRole('button',{name:'CS 评测批次',exact:true}).click();
-  await page.getByRole('tab',{name:'客户端注册',exact:true}).click();
+  await page.goto('/');await page.getByRole('button',{name:'评测配置',exact:true}).click();
+  await page.getByRole('tab',{name:'客户端接入',exact:true}).click();
   await page.getByLabel('镜像客户端名称',{exact:true}).fill('My simulator');
   await page.getByLabel('客户端镜像地址',{exact:true}).fill('my-client:1');
-  await page.getByRole('tab',{name:'评测集合运行',exact:true}).click();
-  await page.getByRole('tab',{name:'客户端注册',exact:true}).click();
+  await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
+  await page.getByRole('tab',{name:'客户端接入',exact:true}).click();
   await expect(page.getByLabel('镜像客户端名称',{exact:true})).toHaveValue('My simulator');
   await page.getByLabel('启动命令 JSON 数组',{exact:true}).fill('["python3","/app/evaluate.py"]');
   const runtime=await page.getByLabel('运行配置 JSON',{exact:true}).inputValue();
@@ -29,7 +29,7 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
   await expect(page.getByRole('status')).toContainText('已注册');
   expect(templates[0].runtime.assets.robotwin).toBe('/data/robotwin');
   await expect(page.getByRole('button',{name:'管理设置',exact:true})).toHaveCount(0);
-  await page.getByRole('tab',{name:'评测集合运行',exact:true}).click();
+  await page.getByRole('button',{name:'业务评测向导',exact:true}).click();
   await page.getByLabel('批次名称',{exact:true}).fill('run');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('客户端模板',{exact:true}).selectOption('image-1');
@@ -61,7 +61,7 @@ test('node runtime preserves drafts, reports missing assets and prevents stale s
       }body=data;
     }await route.fulfill({json:body});
   });
-  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();
+  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByRole('tab',{name:'容器环境',exact:true}).click();
   await page.getByText('host 镜像与逻辑资产',{exact:true}).click();
   await expect(page.getByText(/asset directory missing/)).toBeVisible();
   await page.getByLabel('host 逻辑资产宿主映射',{exact:true}).fill('{"robotwin":"/new/assets"}');

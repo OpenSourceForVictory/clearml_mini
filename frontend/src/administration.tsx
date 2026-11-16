@@ -1,3 +1,6 @@
+import {EvaluationSetup} from './evaluation-setup';
+import type {Suite} from './run-wizard';
+import {FunctionPages} from './navigation';
 import {ServiceNetwork} from './service-network';
 import React, {useEffect, useState} from 'react';
 import {api} from './api';
@@ -20,17 +23,18 @@ type Pool={id:string;name:string;enabled:boolean;gpu_model:string;allow_shared:b
 type Account={id:string;username:string;role:string;active:boolean};
 export {Field} from './form-fields';
 const status:Record<string,string>={online:'在线',offline:'离线',waiting:'等待连接',disabled:'已停用',unmanaged:'已解除纳管',enrolling:'重新纳管中'};
-export function Admin() {
+export function Admin({onRun,onJob}:{onRun:(suite:Suite)=>void;onJob:(id:string)=>void}) {
   const [tab,setTab]=useState('machines');
   return <div className="administration"><div className="page-title"><div><p className="eyebrow">ADMINISTRATION</p><h1>管理设置</h1><p className="muted">机器接入、资源组织、运行模板与团队账号。</p></div></div>
-    <div className="admin-layout"><div className="admin-navigation"><p className="admin-nav-caption">平台管理</p><div className="admin-nav" role="tablist" aria-label="管理分类" aria-orientation="vertical">{[['machines','机器管理','接入与运行环境'],['pools','资源池管理','GPU 资源与成员'],['templates','运行模板管理','客户端与推理服务'],['accounts','账号管理','成员与访问权限']].map(([id,label,hint],index)=><button key={id} id={'admin-tab-'+id} role="tab" aria-controls={'admin-panel-'+id} aria-selected={tab===id} tabIndex={tab===id?0:-1} onKeyDown={e=>{const ids=['machines','pools','templates','accounts'];let next=index;if(e.key==='ArrowDown')next=(index+1)%4;else if(e.key==='ArrowUp')next=(index+3)%4;else if(e.key==='Home')next=0;else if(e.key==='End')next=3;else return;e.preventDefault();setTab(ids[next]);document.getElementById('admin-tab-'+ids[next])?.focus()}} onClick={()=>setTab(id)}><span>{label}</span><small aria-hidden="true">{hint}</small></button>)}</div></div>
+    <div className="admin-layout"><div className="admin-navigation"><p className="admin-nav-caption">平台管理</p><div className="admin-nav" role="tablist" aria-label="管理分类" aria-orientation="vertical">{[['machines','机器管理','接入与运行环境'],['pools','资源池管理','GPU 资源与成员'],['templates','运行模板管理','客户端与推理服务'],['suites','评测集合管理','任务清单与版本'],['accounts','账号管理','成员与访问权限']].map(([id,label,hint],index)=><button key={id} id={'admin-tab-'+id} role="tab" aria-controls={'admin-panel-'+id} aria-selected={tab===id} tabIndex={tab===id?0:-1} onKeyDown={e=>{const ids=['machines','pools','templates','suites','accounts'];let next=index;if(e.key==='ArrowDown')next=(index+1)%5;else if(e.key==='ArrowUp')next=(index+4)%5;else if(e.key==='Home')next=0;else if(e.key==='End')next=4;else return;e.preventDefault();setTab(ids[next]);document.getElementById('admin-tab-'+ids[next])?.focus()}} onClick={()=>setTab(id)}><span>{label}</span><small aria-hidden="true">{hint}</small></button>)}</div></div>
     <div className="admin-content" role="tabpanel" id={'admin-panel-'+tab} aria-labelledby={'admin-tab-'+tab}>
-    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='accounts'&&<Accounts/>}</div></div></div>;
+    {tab==='machines'&&<Machines/>}{tab==='pools'&&<Pools/>}{tab==='templates'&&<Templates/>}{tab==='suites'&&<EvaluationSetup onRun={onRun} onJob={onJob}/>} {tab==='accounts'&&<Accounts/>}</div></div></div>;
 
 }
 export function Machines() {
+  const [configPage,setConfigPage]=useState('basic');
   const detailRef=React.useRef<HTMLElement>(null);
-  function openDetails(id:string){setSelected(id);requestAnimationFrame(()=>{detailRef.current?.focus({preventScroll:true});detailRef.current?.scrollIntoView({block:'start'});});}
+  function openDetails(id:string){setSelected(id);setConfigPage('basic');requestAnimationFrame(()=>{detailRef.current?.focus({preventScroll:true});detailRef.current?.scrollIntoView({block:'start'});});}
   const [nodes,setNodes]=useState<Machine[]>([]),[role,setRole]=useState('client'),[selected,setSelected]=useState(''),[register,setRegister]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[loaded,setLoaded]=useState(false),[loadError,setLoadError]=useState('');
   const refresh=()=>api<Machine[]>('admin/nodes').then(values=>{setNodes(values.map(n=>({...n,management_revision:n.management_revision??0,roles:n.roles??['client'],gpu_count:n.gpu_count??0,held_executions:n.held_executions??0,status:n.status??(n.enabled?'waiting':'disabled')})));setLoaded(true);setLoadError('')});
   useEffect(()=>{void refresh().catch(e=>setLoadError(String(e)));const t=setInterval(()=>void refresh().catch(e=>setLoadError(String(e))),5000);return()=>clearInterval(t)},[]);
@@ -54,12 +58,20 @@ export function Machines() {
     {node&&!register&&<section key={node.id} ref={detailRef} id="machine-configuration" tabIndex={-1} aria-labelledby="machine-configuration-title" className="panel machine-configuration"><div className="row"><h2 id="machine-configuration-title">{node.node_name} · 配置详情</h2><button onClick={()=>setSelected('')}>关闭详情</button></div>
       <p>{status[node.status]} · 角色变更和解除纳管需要等待执行清理完成。</p>
       {(node.revoked_at||node.connection?.enrollment?.state==='INSTALLING')&&<ReEnrollment name={node.node_name} id={node.id} revision={node.management_revision} revoked={Boolean(node.revoked_at)} onChange={refresh}/>}
-      {!node.revoked_at&&<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>
+      {!node.revoked_at&&<FunctionPages label="机器配置功能" lazy value={configPage} onChange={setConfigPage} items={[{id:'basic',label:'基本配置',description:'配置机器角色和资源容量，或停用、解除纳管。',content:<><form key={node.id+':'+node.management_revision} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void act('admin/nodes/'+node.id,'PATCH',{expected_revision:node.management_revision,roles:f.getAll('roles'),max_concurrent:Number(f.get('max_concurrent')),cpu_capacity:Number(f.get('cpu_capacity')),ram_gb_capacity:Number(f.get('ram_gb_capacity'))})}}>
         <fieldset><legend>机器角色</legend>{[['client','客户端'],['server','服务端']].map(([r,label])=><label key={r}><input type="checkbox" name="roles" value={r} defaultChecked={node.roles.includes(r)}/>{label}</label>)}</fieldset>
         <div className="row"><Field label="并发上限"><input name="max_concurrent" type="number" min={1} defaultValue={node.max_concurrent} required/></Field><Field label="CPU 核数"><input name="cpu_capacity" type="number" min={1} defaultValue={node.cpu_capacity} required/></Field><Field label="内存 GiB"><input name="ram_gb_capacity" type="number" min={1} defaultValue={node.ram_gb_capacity} required/></Field></div><button disabled={busy}>保存配置</button></form>
         <div className="row"><button disabled={busy||node.connection?.enrollment?.state==='INSTALLING'} onClick={()=>void act('admin/nodes/'+node.id,'PATCH',{enabled:!node.enabled,expected_revision:node.management_revision})}>{node.enabled?'停用（停止接新任务）':'启用'}</button>
         <button className="danger" disabled={busy} onClick={()=>{if(confirm('解除 '+node.node_name+' 纳管将撤销凭据。历史数据保留；持有执行时先停用并等待清理。继续？'))void act('admin/nodes/'+node.id+'/unmanage','POST',{expected_revision:node.management_revision})}}>解除纳管</button></div>
-        {node.roles.includes('server')&&<ServiceNetwork id={node.id}/>}<NodeAgent id={node.id}/><WorkerUpgrades id={node.id}/><HostEnvironments id={node.id}/><StorageSettings id={node.id} name={node.node_name}/><RuntimeSettings id={node.id} name={node.node_name}/><ExecutionDataSettings id={node.id} name={node.node_name}/></>}
+        </>},
+        {id:'agent',label:'节点 Agent',content:<NodeAgent id={node.id}/>},
+        {id:'upgrades',label:'版本升级',content:<WorkerUpgrades id={node.id}/>},
+        {id:'host',label:'宿主机环境',content:<HostEnvironments id={node.id}/>},
+        {id:'storage',label:'工作目录与资产',content:<StorageSettings id={node.id} name={node.node_name}/>},
+        {id:'runtime',label:'容器环境',content:<RuntimeSettings id={node.id} name={node.node_name}/>},
+        {id:'retention',label:'数据保留',content:<ExecutionDataSettings id={node.id} name={node.node_name}/>},
+        ...(node.roles.includes('server')?[{id:'network',label:'服务网络',content:<ServiceNetwork id={node.id}/>}]:[])
+      ]}/>}
     </section>}</>;
 }
 function Registration({role,onChange}:{role:string;onChange:()=>Promise<unknown>}) {

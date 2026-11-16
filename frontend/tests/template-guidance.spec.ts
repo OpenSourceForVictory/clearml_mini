@@ -21,12 +21,12 @@ test('guidance, tabs and rejected copy preserve draft; failed registration keeps
 });
 test('structured read-only view and copy retain mappings, assets and protocol restrictions',async({page})=>{
  const writes=await setup(page);await page.getByRole('button',{name:'查看配置',exact:true}).click();const view=page.getByRole('region',{name:'模板配置详情'});
- await expect(view.getByText('scene',{exact:true})).toBeVisible();await expect(view.getByText('/datasets',{exact:false}).first()).toBeVisible();expect(writes).toHaveLength(0);
+ await expect(view.getByLabel('字段名称',{exact:true})).toBeVisible();await expect(view.locator('input[value="/datasets"]')).toBeVisible();expect(writes).toHaveLength(0);
  await page.screenshot({path:'test-results/template-config-desktop.png',fullPage:true});
  await page.getByRole('button',{name:'以此配置创建新版本'}).click();await page.getByLabel('版本',{exact:true}).fill('2');await page.getByRole('button',{name:'注册此版本'}).click();
  await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body).toMatchObject({platform_bindings:template.platform_bindings,parameter_schema:template.parameter_schema,endpoint_exclusive:true,protocols:['http'],runtime:{assets:template.runtime.assets,mounts:template.runtime.mounts}});
  await expect(page.getByRole('tab',{name:'已注册模板',exact:true})).toHaveAttribute('aria-selected','true');
- await page.getByRole('tab',{name:'服务端模板',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await expect(page.getByRole('region',{name:'模板配置详情'}).getByText('/healthz',{exact:true})).toBeVisible();
+ await page.getByRole('tab',{name:'服务端模板',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await expect(page.getByRole('region',{name:'模板配置详情'}).getByLabel('健康检查路径')).toBeVisible();
 });
 test('choose platform and business parameters; reject duplicate targets before submit',async({page})=>{
  const writes=await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();await page.getByLabel('模板名称',{exact:true}).fill('mapped');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('demo:1');

@@ -77,3 +77,20 @@
 .administration .parameter-card { background: #f8faf7; border-left: 3px solid #8eb59a; }
 .administration .parameter-editor details { margin-top: 18px; }
 .administration .parameter-editor legend { font-weight: 600; }
+
+/* Configuration tabs stay within the selected machine detail. */
+.administration [hidden] { display: none !important; }
+.function-pages { min-width: 0; }
+.function-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 20px; padding: 6px; background: #eaf0eb; border-radius: 10px; }
+.function-tabs button { background: transparent; border-color: transparent; }
+.function-tabs button[aria-selected="true"] { background: white; border-color: #d8e3da; color: #19573e; font-weight: 650; }
+.function-description { color: #617368; line-height: 1.8; margin: 0 0 20px; }
+.administration .admin-content > div { min-width: 0; }
+.administration .template-config, .administration .template-form { min-width: 0; max-width: 100%; }
+.administration .template-form-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.administration .template-form-fields:disabled { opacity: 1; }
+.administration .template-form-fields:disabled :is(input,select,textarea,button) { opacity: 1; color: #405249; -webkit-text-fill-color: #405249; }
+.administration .template-form-fields:disabled :is(input,select,textarea) { background: #f6f8f5; }
+.administration .template-config pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.administration .template-config .panel { padding: 16px; }
+.administration .template-table { max-width: 100%; }
