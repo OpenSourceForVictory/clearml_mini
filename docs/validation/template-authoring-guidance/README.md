@@ -26,3 +26,7 @@
 环境变量逐行编辑，支持空默认值、仅提交时提供及覆盖权限；Docker/宿主机草稿独立。启动程序、固定参数和映射合并，实时显示来源占位、环境映射以及 flag/repeat/JSON 编码语义。保留变量校验与执行端一致，包含 ASCEND/ROCR/HIP 设备变量。
 
 新增浏览器场景覆盖环境重复拒绝、空值与仅覆盖声明、模式切换保留、映射改名/改目标、固定参数带空格、实际保存不含预览占位、条件开关及数组重复编码。模板、向导、目录相关回归共 19 项通过；TypeScript 与 Vite 构建通过。此次无 API、数据库、调度或 Worker 协议变更。
+
+交互补充已上线，前端源码 `8ab2d8a`；实际生产浏览器验证映射改名后命令预览立即更新、环境逐行填写及覆盖权限、样例草稿和页签保留通过，无浏览器异常。五节点 release readiness 通过。API 容器 ID 和启动时间未变，后台稳定性测试继续。
+
+持久化前端镜像：`mini-eval-api:template-ui-8ab2d8a@sha256:14189228e0c54a4ff0e8c3dc2657368bd318a280327bb0e57861f198c4deb216`；API Compose overlay 已固定该镜像，迁移和 bootstrap 保留原镜像。发布清单、旧静态文件及旧 overlay 位于 `.runtime/template-launch-release/`，可原子恢复旧 index 和 overlay。
