@@ -1,3 +1,5 @@
+import {FunctionPages} from './navigation';
+import {SuiteManager} from './suites';
 import {BatchComparison} from './batch-reports';
 import React, {useEffect, useState, useRef} from 'react';
 import {api} from './api';
@@ -17,13 +19,14 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(initialLaunch);
   useEffect(()=>{if(initialLaunch)setLaunch(initialLaunch)},[initialLaunch]);
+  const [resultsTab,setResultsTab]=useState('history');
   const deletedIds=useRef(new Set<string>());
   const [compareIds,setCompareIds]=useState<string[]>([]);
   const [compareRoute,setCompareRoute]=useState(()=>location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);
   const batchFilters=useRef<Record<string,{status:string;reason:string;query:string}>>({});
   const [batchId,setBatchId]=useState(()=>location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');
   useEffect(()=>{const change=()=>{setCompareRoute(location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);setBatchId(location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
-  const openBatch=(id:string)=>{location.hash='/cs/batches/'+id;};
+  const openBatch=(id:string)=>{setResultsTab('history');location.hash='/cs/batches/'+id;};
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
     setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));
@@ -42,7 +45,7 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
     {error&&<p className="error" role="alert">{error}</p>}
     <div hidden={!!batchId||!!compareRoute.length}><div hidden={pageView==='records'}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/></div>
-    <div hidden={pageView==='wizard'}><BatchHistory batches={batches} page={page} loading={loading} error={error} compareIds={compareIds} onCompareChange={setCompareIds} onOpen={openBatch} onPage={p=>{setBatches([]);setPage(p);}} onDeleted={id=>{deletedIds.current.add(id);setCompareIds(old=>old.filter(x=>x!==id));setBatches(old=>old.filter(x=>x.id!==id));if(batches.length===1&&page>1)setPage(page-1);else void refresh().catch(e=>setError(String(e)));}}/></div>
+    <div hidden={pageView==='wizard'}><FunctionPages label="评测运行与结果" value={resultsTab} onChange={setResultsTab} lazy items={[{id:'history',label:'运行记录',content:<BatchHistory batches={batches} page={page} loading={loading} error={error} compareIds={compareIds} onCompareChange={setCompareIds} onOpen={openBatch} onPage={p=>{setBatches([]);setPage(p);}} onDeleted={id=>{deletedIds.current.add(id);setCompareIds(old=>old.filter(x=>x!==id));setBatches(old=>old.filter(x=>x.id!==id));if(batches.length===1&&page>1)setPage(page-1);else void refresh().catch(e=>setError(String(e)));}}/>},{id:'suites',label:'评测任务集合管理',content:<SuiteManager templates={templates} onSaved={()=>void refresh().catch(e=>setError(String(e)))} onJob={setSelected} onRun={suite=>{setResultsTab('history');setLaunch({suite});location.hash='/cs';}}/>}]}/></div>
     </div>
     {compareRoute.length===2&&<BatchComparison left={compareRoute[0]} right={compareRoute[1]} onBack={()=>{location.hash='/cs/results';}}/>}
     {batchId&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onBack={()=>{location.hash='/cs/results';}} onJob={setSelected}/>}
