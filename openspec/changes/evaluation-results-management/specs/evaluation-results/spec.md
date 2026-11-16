@@ -19,3 +19,9 @@ The results workspace SHALL expose run history and evaluation collection managem
 #### Scenario: Switch while editing
 - **WHEN** the user edits a collection draft and switches to history and back
 - **THEN** the draft remains intact and launching the collection opens the wizard with that collection selected.
+
+### Requirement: Collapsible collection configuration
+The collection manager SHALL display compact rows and a collapsible configuration area, preserving unsaved edits when collapsed.
+#### Scenario: Collapse an unsaved draft
+- **WHEN** the user edits a draft, collapses configuration and expands it again
+- **THEN** the draft values remain intact while the collection list stays available.

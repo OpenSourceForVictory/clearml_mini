@@ -1,5 +1,6 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useState,useRef,useId} from 'react';
 import {api} from './api';
+import './suite-manager.css';
 type Case={case_id:string;task_name:string;episodes:number;seed:number;parameters:Record<string,unknown>};
 type Template={id:string;name:string;version:string};
 export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
@@ -20,6 +21,8 @@ function Parameters({value,change,label}:{value:Record<string,unknown>;change:(v
   }catch{setError('参数必须为 JSON 对象');e.target.setCustomValidity('参数必须为 JSON 对象');}}}/>{error&&<small role="alert">{error}</small>}</>;
 }
 export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template[];onRun:(s:ManagedSuite)=>void;onSaved:()=>void;onJob:(id:string)=>void}){
+  const [configOpen,setConfigOpen]=useState(false),[configStarted,setConfigStarted]=useState(false);
+  const configRef=useRef<HTMLElement>(null),configId=useId();
   const [list,setList]=useState<Summary[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1);
   const [q,setQ]=useState(''),[tag,setTag]=useState(''),[client,setClient]=useState(''),[state,setState]=useState('active');
   const [clientDefaults,setClientDefaults]=useState<Record<string,unknown>>({});
@@ -28,6 +31,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   const [preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const [episodes,setEpisodes]=useState(3),[seed,setSeed]=useState(0),[params,setParams]=useState<Record<string,unknown>>({});
   const [runs,setRuns]=useState<{id:string;title:string;status:string;finished:number;total:number;cases:{job_id:string;task_name:string;status:string;episodes:number;progress:{completed:number;successes:number}}[]}[]>([]),[runPage,setRunPage]=useState(1);
+  useEffect(()=>{if(configOpen&&configRef.current?.getClientRects().length)configRef.current.scrollIntoView({block:'start'});},[configOpen,editing?.id]);
   const locked=!!editing&&(editing.status==='published'||editing.archived);
   const visible=doc.cases.map((c,i)=>({c,i})).filter(({c})=>(c.task_name+' '+c.case_id).toLowerCase().includes(taskQuery.toLowerCase()));
   async function refresh(){
@@ -38,7 +42,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     void load();const t=setInterval(()=>void load(),5000);return()=>{live=false;clearInterval(t);};},[page,q,tag,client,state]);
   useEffect(()=>{let live=true;setRuns([]);if(editing)void api<typeof runs>('suites/'+editing.id+'/runs?page='+runPage).then(r=>{if(live)setRuns(r);}).catch(e=>{if(live)setError(String(e));});return()=>{live=false;};},[editing?.id,runPage]);
   function reset(value:Doc=empty(),t='',defaults:Record<string,unknown>={}){
-    setClientDefaults(defaults);
+    setConfigStarted(true);setConfigOpen(true);setClientDefaults(defaults);
     setDoc(value);setTemplate(t);setEditing(null);setSelected(new Set());setPreview(null);setMessage('');setError('');setTaskQuery('');setRunPage(1);
   }
   function setCases(cases:Case[]){setDoc(old=>({...old,cases}));setPreview(null);}
@@ -52,7 +56,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   async function importFile(file:File){
     setBusy(true);setError('');
     try{if(file.size>1048576)throw Error('文件不能超过 1 MiB');
-      const result=await api<Preview>('suites/preview','POST',{content:await file.text()});setPreview(result);
+      const result=await api<Preview>('suites/preview','POST',{content:await file.text()});setPreview(result);setConfigStarted(true);setConfigOpen(true);
       if(result.valid&&result.document){reset(result.document,result.template_id||'');setPreview(result);setMessage('文件已载入预览，尚未保存。请确认客户端及任务。');}
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
@@ -91,28 +95,32 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     setMessage(newVersion?'已复制为新版本草稿，请确认版本号。':'已复制到新集合草稿，尚未保存。');
     if(old)setSelected(new Set());
   }
-  return <>
+  return <div className="suite-manager">
+    {error&&<p role="alert" className="error">{error}</p>}
     <section className="panel">
       <h2>评测集合管理</h2>
       <p className="hint">从预置目录、JSON/YAML 文件或已有集合创建。集合定义评测内容；服务地址、资源池和并发在运行时配置。</p>
-      <div className="row"><button disabled={busy} onClick={()=>reset()}>新建集合</button><button disabled={busy} onClick={()=>void preset()}>从 RoboTwin 预置创建</button>
+      <div className="suite-overview" aria-label="集合概览"><div><span>筛选结果 · 集合版本</span><strong>{total}</strong></div><div><span>当前页已发布</span><strong>{list.filter(s=>s.status==='published'&&!s.archived).length}</strong></div><div><span>当前页草稿</span><strong>{list.filter(s=>s.status==='draft'&&!s.archived).length}</strong></div></div>
+      <div className="row suite-create"><button disabled={busy} onClick={()=>reset()}>新建集合</button><button disabled={busy} onClick={()=>void preset()}>从 RoboTwin 预置创建</button>
         <label className="field">导入集合 JSON / YAML<input aria-label="导入集合 JSON / YAML" type="file" accept=".json,.yaml,.yml" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f);e.target.value='';}}/></label></div>
-      <div className="submit-grid">
+      <div className="suite-filters">
         <Field label="搜索集合"><input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}}/></Field>
         <Field label="筛选标签"><input value={tag} onChange={e=>{setTag(e.target.value);setPage(1);}}/></Field>
         <Field label="筛选客户端"><select value={client} onChange={e=>{setClient(e.target.value);setPage(1);}}><option value="">全部客户端</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
         <Field label="集合状态"><select value={state} onChange={e=>{setState(e.target.value);setPage(1);}}><option value="active">未归档</option><option value="draft">草稿</option><option value="published">已发布</option><option value="archived">已归档</option><option value="all">全部</option></select></Field>
       </div>
-      <div className="table-scroll"><table><thead><tr><th>名称 / 版本</th><th>状态 / 标签</th><th>任务 / 回合</th><th>最近运行</th><th>操作</th></tr></thead>
-        <tbody>{list.map(s=><tr key={s.id}><td>{s.name}<small>{s.version}</small></td><td>{s.archived?'已归档':s.status==='draft'?'草稿':'已发布'}<small>{s.tags.join('、')}</small></td>
-          <td>{s.task_count} 项 / {s.total_episodes} 回合</td><td>{s.latest_run?s.latest_run.title+' · '+s.latest_run.status:'尚未运行'}</td>
-          <td><button onClick={()=>void load(s.id)}>查看 {s.name} / {s.version}</button></td></tr>)}</tbody></table></div>
+      <div className="suite-list-scroll" role="region" aria-label="集合列表，可横向滚动" tabIndex={0}><table className="suite-list"><thead><tr><th scope="col">集合名称 / 版本</th><th scope="col">状态</th><th scope="col">客户端模板</th><th scope="col">任务 / 回合</th><th scope="col">最近运行</th><th scope="col">操作</th></tr></thead>
+        <tbody>{list.map(s=><tr key={s.id} aria-label={'集合 '+s.name+' / '+s.version}><th scope="row"><span className="suite-ellipsis suite-name" title={s.name}>{s.name}</span><small className="suite-ellipsis" title={s.version+' · '+s.tags.join('、')}>{s.version}{s.tags.length?' · '+s.tags.join('、'):''}</small></th><td><span className={'suite-status '+(s.archived?'archived':s.status)}>{s.archived?'已归档':s.status==='draft'?'草稿':'已发布'}</span></td>
+          <td><span className="suite-ellipsis" title={templates.find(t=>t.id===s.template_id)?.name||s.template_id}>{templates.find(t=>t.id===s.template_id)?.name||'模板不可用'}</span><small>{templates.find(t=>t.id===s.template_id)?.version||'—'}</small></td>
+          <td>{s.task_count} 项 / {s.total_episodes} 回合</td><td><span className="suite-ellipsis" title={s.latest_run?.title}>{s.latest_run?.title||'尚未运行'}</span>{s.latest_run&&<small>{({PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',CANCELLED:'已取消'} as Record<string,string>)[s.latest_run.status]||s.latest_run.status}</small>}</td>
+          <td><button aria-label={'查看 '+s.name+' / '+s.version} disabled={busy} onClick={()=>{if(editing?.id===s.id){setConfigOpen(true);setConfigStarted(true);}else void load(s.id);}}>查看配置</button></td></tr>)}</tbody></table></div>
       {!list.length&&<p>没有符合条件的集合。</p>}
       <div className="pagination"><button disabled={page<=1} onClick={()=>setPage(p=>p-1)}>集合上一页</button><span>第 {page} 页，共 {total} 个版本</span><button disabled={page*20>=total} onClick={()=>setPage(p=>p+1)}>集合下一页</button></div>
     </section>
-    <section className="panel">
-      <h2>{editing?editing.name+' / '+editing.version:'新建集合草稿'}</h2>
-      {message&&<p role="status" className="success">{message}</p>}{error&&<p role="alert" className="error">{error}</p>}
+    <section ref={configRef} className="panel suite-config" hidden={!configStarted}>
+      <div className="suite-config-heading"><h2>{editing?editing.name+' / '+editing.version:'新建集合草稿'}</h2><button type="button" aria-expanded={configOpen} aria-controls={configId} onClick={()=>setConfigOpen(v=>!v)}>{configOpen?'收起配置':'展开配置'}</button></div>
+      <div id={configId} hidden={!configOpen}>
+      {message&&<p role="status" className="success">{message}</p>}
       {editing&&<><p>版本状态：{editing.archived?'已归档':editing.status==='draft'?'草稿':'已发布'} · 编辑版本 {editing.revision}</p>
         <div className="row"><button disabled={busy} onClick={()=>copy(false)}>复制为新集合</button><button disabled={busy} onClick={()=>copy(true)}>创建新版本</button>
           <button onClick={()=>void exportFile()}>导出集合</button>
@@ -172,6 +180,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
             <td>{c.task_name}</td><td>{c.status}</td><td>{c.progress?.completed||0}/{c.episodes} · 成功 {c.progress?.successes||0}</td><td><button onClick={()=>onJob(c.job_id)}>任务详情与结果</button></td>
           </tr>)}</tbody></table></details>)}
         <button disabled={runPage<=1} onClick={()=>setRunPage(p=>p-1)}>运行上一页</button><span>第 {runPage} 页</span><button disabled={runs.length<20} onClick={()=>setRunPage(p=>p+1)}>运行下一页</button></div>}
+      </div>
     </section>
-  </>;
+  </div>;
 }
