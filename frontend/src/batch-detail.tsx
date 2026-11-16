@@ -1,3 +1,4 @@
+import './batch-detail.css';
 import {BatchParameters} from './batch-parameters';
 import {OrchestrationStatus} from './orchestration-status';
 import {ReportDownloads} from './batch-reports';
@@ -14,7 +15,8 @@ type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:str
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
 export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.MutableRefObject<Record<string,Filters>>;id:string;onBack:()=>void;onJob:(id:string)=>void}) {
-  const [showParameters,setShowParameters]=useState(false);
+  const [tab,setTab]=useState('tasks');
+  const [showParameters,setShowParameters]=useState(false),[showServices,setShowServices]=useState(false);
   const {data:b,error}=usePoll<Monitor>('batches/'+id+'/monitor');
   const [status,setStatus]=useState(savedFilters.current[id]?.status||''),[reason,setReason]=useState(savedFilters.current[id]?.reason||''),[query,setQuery]=useState(savedFilters.current[id]?.query||''),[job,setJob]=useState('');
   useEffect(()=>{savedFilters.current[id]={status,reason,query};},[id,status,reason,query,savedFilters]);
@@ -37,13 +39,17 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
     const r=await api<RetryResult>('batches/'+id+'/retry-failed','POST',{items:Object.entries(selected).map(([job_id,expected_run_id])=>({job_id,expected_run_id}))});
     setResult(r);setSelected({});
   }catch(e){setRetryError(String(e)+'；保留原尝试选择，可安全再次提交。');}finally{setBusy(false);}}
-  return <section className="panel" aria-label="批次详情"><button onClick={onBack}>返回批次列表</button><ReportDownloads id={id}/>
+  return <section className="panel batch-detail" aria-label="批次详情"><div className="batch-detail-toolbar"><button onClick={onBack}>返回批次列表</button><ReportDownloads id={id}/></div>
     {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>
-      <details onToggle={e=>setShowParameters(e.currentTarget.open)}><summary>查看本次运行参数</summary>{showParameters&&<BatchParameters cases={b.cases} maxConcurrent={b.max_concurrent}/>}</details>
-      {b.orchestrated&&<OrchestrationStatus id={id}/>}
-      <section aria-label="批次运行控制">
+      <div className="batch-detail-metrics" aria-label="批次运行概览">
+        <div><span>任务已结束</span><strong>{b.finished}<small> / {b.total}</small></strong><progress aria-label="任务完成进度" value={b.finished} max={Math.max(1,b.total)}/></div>
+        <div><span>已完成回合</span><strong>{b.summary.completed_episodes}<small> / {b.total_episodes}</small></strong></div>
+        <div><span>执行失败 / 超时</span><strong>{b.summary.execution_failures}</strong></div>
+        <div><span>待清理任务</span><strong>{b.summary.cleanup_pending_tasks||0}</strong></div>
+      </div>
+      <section className="batch-detail-controls" aria-label="批次运行控制">
         <p>{control?.scheduling_paused?'调度已暂停':'调度已开启'} · 取消中 {b.summary.cancel_requested_tasks||0} 项 · 待清理 {b.summary.cleanup_pending_tasks||0} 项（数量可能重叠）</p>
         <p className="hint">暂停只阻止后续任务领取，已领取的任务继续执行。恢复不会自动补跑已取消任务。</p>
         <button disabled={busy||!!command} onClick={()=>void changeControl({action:control?.scheduling_paused?'resume':'pause',expected_revision:control!.control_revision})}>{control?.scheduling_paused?'恢复调度':'暂停后续调度'}</button>
@@ -52,6 +58,14 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
           <button disabled={busy} onClick={()=>void changeControl(command)}>{controlError?'重试原控制请求':command.action==='cancel'?'确认取消整批':'提交控制请求'}</button><button disabled={busy} onClick={()=>{setCommand(null);setControlError('');}}>关闭操作确认</button></div>}
         {controlError&&<p role="alert" className="error">{controlError}</p>}{controlMessage&&<p role="status">{controlMessage}</p>}
       </section>
+      <nav className="batch-detail-tabs" aria-label="批次详情分类">
+        <button aria-pressed={tab==='tasks'} onClick={()=>setTab('tasks')}>任务与结果</button>
+        <button aria-pressed={tab==='parameters'} onClick={()=>{setTab('parameters');setShowParameters(true);}}>运行参数</button>
+        <button aria-pressed={tab==='services'} onClick={()=>{setTab('services');setShowServices(true);}}>服务端与关联</button>
+      </nav>
+      <section hidden={tab!=='parameters'} aria-label="批次参数页">{showParameters&&<BatchParameters cases={b.cases} maxConcurrent={b.max_concurrent}/>}</section>
+      <section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行参数或任务执行配置中查看。</p>}</section>
+      <section hidden={tab!=='tasks'} aria-label="批次任务页">
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>
       <p>已完成回合 {b.summary.completed_episodes}/{b.total_episodes} · 目标成功 {b.summary.successes} · 目标失败 {b.summary.goal_failures} · 回合异常 {b.summary.episode_errors} · 执行失败/超时 {b.summary.execution_failures}</p>
       <p>目标成功率 {b.summary.success_rate===null?'暂无数据':(b.summary.success_rate*100).toFixed(1)+'%'} · 未上报任务 {b.summary.unreported_tasks}</p>
@@ -64,15 +78,16 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <button disabled={busy||!Object.keys(selected).length} onClick={()=>setSelected({})}>清空选择</button>
       {retryError&&<p role="alert" className="error">{retryError}</p>}
       {result&&<div role="status"><p>已补跑 {result.retried} 项，跳过 {result.skipped} 项。</p>{result.items.map(r=><p key={r.job_id}>{b.cases.find(c=>c.job_id===r.job_id)?.case_id}: {r.outcome==='retried'?`已创建尝试 ${r.attempt}`:r.message}</p>)}</div>}
-      <table><thead><tr><th>补跑</th><th>任务</th><th>状态 / 位置</th><th>回合</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><tr key={c.job_id}>
+      <div className="batch-detail-table"><table><thead><tr><th>补跑</th><th>任务</th><th>状态 / 位置</th><th>回合</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><tr key={c.job_id}>
         <td><input type="checkbox" aria-label={'选择补跑 '+c.case_id} checked={!!selected[c.job_id]} disabled={busy||(!eligible(c)&&!selected[c.job_id])} onChange={e=>setSelected(old=>{const next={...old};if(e.target.checked)next[c.job_id]=c.run_id;else delete next[c.job_id];return next;})}/></td>
         <td>{c.case_id}<small>{c.task_name} · 种子 {c.seed}</small></td><td>{statusLabels[c.status]}<small>{c.node_name||'未分配'}{c.gpu_index!==null?' / GPU '+c.gpu_index:''} · 尝试 {c.attempt}</small></td>
         <td>{c.task_type==='command'?'普通命令，按退出码完成':c.episode_reporting?`${c.progress.completed}/${c.episodes}，目标成功 ${c.progress.successes}`:'客户端未上报回合'}</td>
         <td>{c.waiting&&<><p>{c.waiting.reasons.map(r=>r.message).join('；')||'等待可用节点'}</p><details><summary>节点诊断</summary>{c.waiting.nodes.map(n=><p key={n.node_name+':'+n.gpu_index}>{n.node_name} / GPU {n.gpu_index}: {n.reasons.map(r=>r.message).join('；')||'符合要求'}</p>)}</details></>}
           <details><summary>执行配置</summary><p>{c.config.pool_name} · {c.config.client_name}/{c.config.client_version}</p><p>实际推理地址：{c.config.endpoint||'未分配'} · {c.config.endpoint_mode==='exclusive'?'独占':c.config.endpoint_mode==='shared'?'共享':''}</p><ul>{c.config.endpoint_candidates?.map(e=><li key={e.url}>候选：{e.url} · {e.mode==='exclusive'?'独占':'共享'}</li>)}</ul><p>{c.config.gpu_mode} · 显存 {c.config.requested_vram_gb} GiB</p></details>{c.error&&<p>{c.error}</p>}</td>
-        <td><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table>
+        <td><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table></div>
       {!cases.length&&<p>没有符合筛选条件的任务。</p>}
       {job&&<AttemptInspector key={job} jobId={job} onClose={()=>setJob('')}/>}
+      </section>
     </>}
   </section>;
 }

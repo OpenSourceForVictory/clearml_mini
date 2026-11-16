@@ -49,3 +49,20 @@ test('history stays selected; delayed route responses cannot overwrite next batc
   ctl.delay();await page.waitForRequest(r=>r.url().endsWith('/a/monitor'));await page.evaluate(()=>{location.hash='/cs/batches/b';});await expect(page.getByRole('heading',{name:'批次 B',exact:true})).toBeVisible();await page.waitForResponse(r=>r.url().endsWith('/b/monitor'));await expect(page.getByRole('heading',{name:'批次 A',exact:true})).toHaveCount(0);
   await page.evaluate(()=>{location.hash='/cs/batches/private';});await expect(page.getByRole('alert')).toContainText('batch not found');await expect(page.getByRole('heading',{name:'批次 B',exact:true})).toHaveCount(0);
 });
+
+test('detail tabs preserve filtering and retry selection and contain narrow tables',async({page})=>{
+  await setup(page);
+  await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
+  await page.getByLabel('选择补跑 case0').check();
+  await page.getByRole('button',{name:'运行参数',exact:true}).click();
+  await expect(page.getByRole('region',{name:'批次任务页'})).toBeHidden();
+  await expect(page.getByRole('heading',{name:'本次运行参数',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'服务端与关联',exact:true}).click();
+  await expect(page.getByText('本批次没有平台托管的服务编排。',{exact:false})).toBeVisible();
+  await page.getByRole('button',{name:'任务与结果',exact:true}).click();
+  await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('FAILED');
+  await expect(page.getByLabel('选择补跑 case0')).toBeChecked();
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.locator('.batch-detail-table').evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});

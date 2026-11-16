@@ -1,0 +1,27 @@
+
+.batch-detail{min-width:0;overflow-wrap:anywhere}
+.batch-detail-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.batch-detail h2{margin-bottom:8px}
+.batch-detail-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.batch-detail-metrics>div{background:#f7faf8;border:1px solid #e0e7e2;border-radius:10px;padding:16px}
+.batch-detail-metrics span{display:block;font-size:13px;color:#627168}
+.batch-detail-metrics strong{display:block;font-size:28px;color:#243e30;margin-top:8px;font-variant-numeric:tabular-nums}
+.batch-detail-metrics strong small{display:inline;font-size:14px;font-weight:400;color:#627168}
+.batch-detail-metrics progress{width:100%;height:5px;accent-color:#43835c}
+.batch-detail-controls{border:1px solid #e0e7e2;border-radius:10px;padding:12px 16px;margin-bottom:20px}
+.batch-detail-controls p{margin:6px 0 10px}
+.batch-detail-tabs{display:flex;gap:6px;border-bottom:1px solid #dbe5de;margin:20px 0;overflow-x:auto}
+.batch-detail-tabs button{margin:0;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 18px;white-space:nowrap;color:#65746b}
+.batch-detail-tabs button[aria-pressed=true]{color:#22623b;border-bottom-color:#43835c;background:#f0f6f2;font-weight:600}
+.batch-detail-table{width:100%;overflow-x:auto;border:1px solid #dfe7e1;border-radius:8px;margin-top:14px}
+.batch-detail-table table{width:100%;min-width:850px;table-layout:fixed;margin:0;border-collapse:collapse}
+.batch-detail-table th,.batch-detail-table td{padding:12px 10px;vertical-align:top;white-space:normal;overflow-wrap:anywhere}
+.batch-detail-table th{background:#f4f7f5;color:#52665a}
+.batch-detail-table th:first-child{width:55px}
+.batch-detail-table th:nth-child(5){width:27%}
+.batch-detail-table tbody tr:hover{background:#fafcfb}
+.batch-detail-table small{display:block;margin-top:5px;color:#6b786f}
+.batch-detail-table td button{font-size:12px;padding:6px 8px}
+.batch-detail pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+.batch-detail [hidden]{display:none!important}
+@media(max-width:700px){.batch-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-detail-metrics>div{padding:12px}.batch-detail-toolbar{align-items:flex-start}.batch-detail-tabs button{padding:10px 12px}}

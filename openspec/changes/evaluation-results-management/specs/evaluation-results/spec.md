@@ -25,3 +25,9 @@ The collection manager SHALL display compact rows and a collapsible configuratio
 #### Scenario: Collapse an unsaved draft
 - **WHEN** the user edits a draft, collapses configuration and expands it again
 - **THEN** the draft values remain intact while the collection list stays available.
+
+### Requirement: Focused batch detail
+The batch detail SHALL separate task results, runtime parameters and service relationships while preserving task filters and retry selections across tab switches.
+#### Scenario: Switch detail categories
+- **WHEN** a user selects failed tasks and switches to parameters and back
+- **THEN** filters and selected attempt identities remain unchanged and narrow screens scroll inside the task table.
