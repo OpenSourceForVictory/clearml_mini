@@ -3,6 +3,8 @@ import {mountDraft,mountValues} from './mount-editor';
 import {api} from './api';
 import {Field} from './form-fields';
 import {TemplateExamples} from './template-examples';
+import {EnvironmentEditor,environmentDraft,environmentValues,EnvironmentRow} from './environment-editor';
+import {LaunchPreview} from './launch-preview';
 import {CommandEditor} from './command-editor';
 import {TemplateDirectories,assetValues,AssetRow} from './template-directories';
 import {CommandMappings,validateMappings,PlatformBinding} from './command-mappings';
@@ -41,11 +43,12 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  const [mounts,setMounts]=useState(()=>mountDraft(source?.runtime?.mounts));
  const [assets,setAssets]=useState<AssetRow[]>(()=>source?.execution_mode==='host'?(source.host_runtime?.assets||[]).map((name:string)=>({name,target:''})):Object.entries(source?.runtime?.assets||{}).map(([name,target])=>({name,target:String(target)})));
  const settings=(mode==='host'?source?.host_runtime:source?.runtime)||{};
+ const [environments,setEnvironments]=useState<Record<string,EnvironmentRow[]>>(()=>({docker:environmentDraft(source?.runtime),host:environmentDraft(source?.host_runtime)}));
  const [bindings,setBindings]=useState<PlatformBinding[]>(()=>structuredClone(source?.platform_bindings||[]) as PlatformBinding[]);
  const [workDir,setWorkDir]=useState(source?.runtime?.work_dir||'/tmp/mini-eval-work'),[outputDir,setOutputDir]=useState(source?.runtime?.output_dir||'/tmp/mini-eval-output');
  const errorRef=React.useRef<HTMLParagraphElement>(null);
  useEffect(()=>{if(error){errorRef.current?.focus({preventScroll:true});errorRef.current?.scrollIntoView({block:'center'});}},[error]);
- async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),environment=JSON.parse(String(f.get('environment'))),assetMap=assetValues(assets),overridable_env=String(f.get('overrides')).split(',').map(x=>x.trim()).filter(Boolean);
+ async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),assetMap=assetValues(assets),{environment,overridable_env}=environmentValues(environments[mode]);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:f.has('episode_reporting')||integration==='sdk-command',endpoint_exclusive:source?.endpoint_exclusive??false,protocols:source?.protocols||['http','https','ws','wss']};
    body.parameter_schema=parameterSchema(parameters);
    validateMappings(bindings,body.parameter_schema,body.command,environment,overridable_env);
@@ -65,10 +68,9 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  <Field label="执行方式"><select value={mode} onChange={e=>setMode(e.target.value)}><option value="docker">Docker 镜像运行</option><option value="host">宿主机运行</option></select></Field>
  {kind==='client'&&<Field label="协议接入方式"><select value={integration} onChange={e=>setIntegration(e.target.value)}><option value="direct">业务程序直接实现评测协议</option><option value="sdk-command">SDK + 每回合业务命令</option></select></Field>}
  {mode==='docker'?<Field label="Docker 镜像"><input name="image" required defaultValue={source?.image} placeholder="registry/image:tag 或 digest"/></Field>:<><Field label="节点环境名称"><input name="environment_name" required pattern="[A-Za-z][A-Za-z0-9_]*" defaultValue={settings.environment_name} placeholder="例如 simulation"/></Field><p>节点需批准并探测此宿主机环境。宿主机模式适合可信业务程序，不提供容器安全隔离。</p></>}
- <CommandEditor value={command} onChange={setCommand}/>
- <CommandMappings kind={kind} bindings={bindings} onBindings={setBindings} parameters={parameters} onParameters={setParameters}/>{kind==='client'&&<><label><input type="checkbox" name="episode_reporting" defaultChecked={source?.episode_reporting??true}/>业务程序逐回合上报（SDK 命令模式自动启用）</label><p>SDK 命令每次执行一个回合，通过 MINI_EVAL_RESULT 写入结果；直接协议程序负责回合事件和最终汇总。参数支持 task_name、episode_id、episode_seed、endpoint、work_dir 等占位符。</p></>}
- <p className="muted">环境变量填写 JSON 对象，例如 {'{"LOG_LEVEL":"info"}'}；不需要时保留 {'{}'}。允许覆盖的变量名填写 LOG_LEVEL，多个名称用逗号分隔。平台身份、GPU 和地址等保留变量由平台管理。</p><Field label="环境变量（JSON 对象）"><textarea name="environment" rows={3} defaultValue={JSON.stringify(settings.environment||{},null,2)}/></Field>
- <Field label="允许提交时覆盖的变量名（逗号分隔）"><input name="overrides" defaultValue={(settings.overridable_env||[]).join(',')}/></Field>
+ <fieldset><legend>启动命令</legend><CommandEditor value={command} onChange={setCommand}/>
+ <CommandMappings kind={kind} bindings={bindings} onBindings={setBindings} parameters={parameters} onParameters={setParameters}/><LaunchPreview command={command} bindings={bindings} parameters={parameters}/></fieldset>{kind==='client'&&<><label><input type="checkbox" name="episode_reporting" defaultChecked={source?.episode_reporting??true}/>业务程序逐回合上报（SDK 命令模式自动启用）</label><p>SDK 命令每次执行一个回合，通过 MINI_EVAL_RESULT 写入结果；直接协议程序负责回合事件和最终汇总。参数支持 task_name、episode_id、episode_seed、endpoint、work_dir 等占位符。</p></>}
+ <EnvironmentEditor rows={environments[mode]} onChange={rows=>setEnvironments({...environments,[mode]:rows})}/>
  <TemplateDirectories mode={mode} assets={assets} onAssets={setAssets} mounts={mounts} onMounts={setMounts}/>
  {kind==='server'&&<><p className="muted">服务程序需使用平台传入的监听地址和端口。HTTP 健康检查要求程序提供相应路径；TCP 仅检查端口可连接。启动等待时间应覆盖模型加载耗时。</p><div className="row"><Field label="服务端口"><input name="port" type="number" min={1024} max={65535} required defaultValue={source?.port||8000}/></Field><Field label="服务协议"><select name="protocol" defaultValue={source?.protocol||'http'}>{['http','https','ws','wss'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="健康检查"><select name="health_type" defaultValue={source?.health_type||'http'}><option value="http">HTTP</option><option value="tcp">TCP</option></select></Field></div><Field label="健康检查路径"><input name="health_path" required defaultValue={source?.health_path||'/healthz'}/></Field><Field label="启动健康等待秒数"><input name="startup_timeout" type="number" min={5} max={1800} defaultValue={source?.startup_timeout||120} required/></Field></>}
  </fieldset><div className="row"><button disabled={busy} className="primary">注册此版本</button><button type="button" onClick={onClose}>取消</button></div></form></section>

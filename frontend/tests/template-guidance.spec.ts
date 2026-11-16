@@ -52,3 +52,28 @@ test('complete examples load a draft without registering automatically',async({p
  await expect(page.getByLabel('模板名称',{exact:true})).toHaveValue('echo-client-docker-sdk-command');await expect(page.getByLabel('固定参数 1',{exact:true})).toHaveValue('/app/episode.py');expect(writes).toHaveLength(0);
  await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body.parameter_schema.fields.scene.default).toBe('room');
 });
+
+test('environment rows preserve mode drafts, empty defaults, override-only entries and reject duplicates',async({page})=>{
+ const writes=await setup(page);await page.getByRole('button',{name:'复制新版本',exact:true}).click();await page.getByLabel('版本',{exact:true}).fill('2');
+ await expect(page.getByLabel('变量名称 1',{exact:true})).toHaveValue('LOG_LEVEL');await page.getByLabel('变量值 1',{exact:true}).fill('');await page.getByLabel('允许提交时覆盖 1',{exact:true}).check();
+ await page.getByRole('button',{name:'添加环境变量',exact:true}).click();await page.getByLabel('变量名称 2',{exact:true}).fill('LOG_LEVEL');await page.getByRole('button',{name:'注册此版本'}).click();await expect(page.getByRole('alert')).toContainText('环境变量名称重复');expect(writes).toHaveLength(0);
+ await page.getByLabel('变量名称 2',{exact:true}).fill('OPTIONAL_VALUE');await page.getByLabel('提供默认值 2',{exact:true}).uncheck();await page.getByLabel('允许提交时覆盖 2',{exact:true}).check();
+ await page.getByLabel('执行方式',{exact:true}).selectOption('host');await expect(page.getByLabel('变量名称 1',{exact:true})).toHaveCount(0);await page.getByRole('button',{name:'添加环境变量',exact:true}).click();await page.getByLabel('变量名称 1',{exact:true}).fill('HOST_ONLY');
+ await page.getByLabel('执行方式',{exact:true}).selectOption('docker');await expect(page.getByLabel('变量名称 1',{exact:true})).toHaveValue('LOG_LEVEL');await expect(page.getByLabel('变量值 1',{exact:true})).toHaveValue('');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body.runtime.environment).toEqual({LOG_LEVEL:''});expect(writes[0].body.runtime.overridable_env).toEqual(['LOG_LEVEL','OPTIONAL_VALUE']);
+});
+
+test('launch preview follows fixed args, mapping names and targets without persisting placeholders',async({page})=>{
+ const writes=await setup(page);await page.getByRole('button',{name:'复制新版本',exact:true}).click();await page.getByLabel('版本',{exact:true}).fill('2');
+ const preview=page.getByRole('region',{name:'实时启动预览'});await expect(preview).toContainText('--task ⟪task.task_name⟫');await expect(preview).toContainText('SCENE ⟪business.scene⟫');
+ await page.getByLabel('固定参数 1',{exact:true}).fill('/app/path with spaces.py');await expect(preview).toContainText('"/app/path with spaces.py"');
+ const rows=page.getByRole('group',{name:/^参数映射 /});await rows.first().getByLabel('程序接收的参数名').fill('--simulation');await expect(preview).toContainText('--simulation ⟪task.task_name⟫');await expect(preview).not.toContainText('--task');
+ await rows.first().getByLabel('传递到',{exact:true}).selectOption('env');await rows.first().getByLabel('程序接收的参数名').fill('SIM_TASK');await expect(page.getByLabel('动态环境变量预览',{exact:true})).toContainText('SIM_TASK ⟪task.task_name⟫');await expect(page.getByLabel('启动命令预览',{exact:true})).not.toContainText('SIM_TASK');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body.command).toEqual(['python3','/app/path with spaces.py']);expect(writes[0].body.platform_bindings[0]).toMatchObject({target:'env',name:'SIM_TASK'});
+});
+
+test('conditional flag and repeated array previews reflect business encodings',async({page})=>{
+ await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();await page.getByLabel('启用类型化业务参数').check();await page.getByRole('button',{name:'添加业务字段'}).click();await page.getByLabel('字段名称',{exact:true}).fill('verbose');await page.getByLabel('参数类型',{exact:true}).selectOption('boolean');await page.getByLabel('传递方式',{exact:true}).selectOption('argv');await page.getByLabel('绑定名称',{exact:true}).fill('--verbose');await page.getByLabel('传递编码',{exact:true}).selectOption('flag');
+ const preview=page.getByRole('region',{name:'实时启动预览'});await expect(preview).toContainText('--verbose：仅当 ⟪business.verbose⟫ 为 true');
+ await page.getByLabel('参数类型',{exact:true}).selectOption('array');await page.getByLabel('字段名称',{exact:true}).fill('scenes');await page.getByLabel('传递方式',{exact:true}).selectOption('argv');await page.getByLabel('绑定名称',{exact:true}).fill('--scene');await expect(preview).toContainText('business.scenes · JSON 编码');await page.getByLabel('传递编码',{exact:true}).selectOption('repeat');await expect(preview).toContainText('--scene ⟪business.scenes 的元素⟫：逐项重复');
+});

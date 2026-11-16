@@ -66,3 +66,14 @@
 #### Scenario: Load example
 - **WHEN** 用户选择并载入一个样例
 - **THEN** 表单展示对应配置，用户可修改并注册；配套程序及前置条件可下载，平台不自动注册或启动服务
+
+### Requirement: Friendly environment and live launch preview
+模板注册 SHALL 逐行编辑环境变量及覆盖权限，并在统一启动命令区域实时预览固定参数和动态参数来源。
+
+#### Scenario: Edit mapped name
+- **WHEN** 用户修改命令或映射名称、目标及编码
+- **THEN** 预览立即同步，环境映射与 argv 分开，动态值和条件编码明确标注且不保存为实际值
+
+#### Scenario: Preserve environment contract
+- **WHEN** 复制模板、切换执行模式或编辑环境变量
+- **THEN** 默认值（含空字符串）和仅覆盖声明准确保留，重复或保留名称阻止提交

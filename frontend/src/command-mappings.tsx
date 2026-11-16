@@ -12,7 +12,7 @@ export function validateMappings(bindings:PlatformBinding[],parameters:Record<st
   if(b.target==='input')continue;
   const name=b.name||'';
   if(b.target==='argv'&&!/^--[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name))throw new Error('命令参数名须使用 --name 形式');
-  if(b.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)||/^(MINI_EVAL_|NVIDIA_)/.test(name)||['CUDA_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(name)))throw new Error('环境变量名称非法或为平台保留变量');
+  if(b.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)||/^(MINI_EVAL_|NVIDIA_|ASCEND_)/.test(name)||['CUDA_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(name)))throw new Error('环境变量名称非法或为平台保留变量');
   const key=b.target+':'+name;
   if(used.has(key))throw new Error('参数映射目标重复：'+name);used.add(key);
   if(b.target==='argv'&&command.some(arg=>arg===name||arg.startsWith(name+'=')))throw new Error('基础命令已包含映射参数：'+name+'，请只保留一处');
@@ -29,8 +29,8 @@ export function CommandMappings({kind,bindings,onBindings,parameters,onParameter
   if(selection.startsWith('business:')){const id=selection.slice(9);onParameters({...parameters,rows:parameters.rows.map(r=>r.id===id?{...r,definition:{...r.definition,binding:{target:'argv',name:'--'+r.name.replaceAll('_','-'),encoding:['object','array'].includes(r.definition.type)?'json':'literal'}}}:r)})}
   else{const s=sources.find(s=>s[0]===selection);if(s)onBindings([...bindings,{source:s[0],target:'argv',name:'--'+s[2],encoding:'literal'}])}setSelection('');
  }
- return <fieldset><legend>业务命令参数映射</legend><p>选择程序需要的参数，再填写程序接收的名称。平台在启动时追加参数或设置环境变量；不需要在基础命令中重复填写。业务字段先在上方定义。</p>
+ return <div><h3>动态参数映射</h3><p>选择程序需要的参数，再填写程序接收的名称。平台在启动时追加参数或设置环境变量；不需要在基础命令中重复填写。业务字段先在上方定义。</p>
  <div className="row"><Field label="选择要传递的参数"><select value={selection} onChange={e=>setSelection(e.target.value)}><option value="">请选择参数来源</option><optgroup label="平台参数">{sources.filter(s=>!bindings.some(b=>b.source===s[0])).map(s=><option key={s[0]} value={s[0]}>{s[1]}</option>)}</optgroup><optgroup label="业务参数">{business.filter(r=>!r.definition.binding||r.definition.binding.target==='input').map(r=><option key={r.id} value={'business:'+r.id}>{r.name}</option>)}</optgroup></select></Field><button type="button" disabled={!selection} onClick={add}>添加参数映射</button></div>
  {rows.map((row,i)=><fieldset key={row.id}><legend>参数映射 {i+1} · {row.label}</legend><div className="row"><Field label="传递到"><select value={row.b.target} onChange={e=>row.update({target:e.target.value,name:e.target.value==='argv'?'--parameter':'PARAMETER',encoding:['object','array'].includes(row.type)?'json':'literal'})}><option value="argv">命令行参数</option><option value="env">环境变量</option></select></Field><Field label="程序接收的参数名"><input value={row.b.name||''} onChange={e=>row.update({name:e.target.value})} placeholder={row.b.target==='argv'?'--server-url':'SERVER_URL'}/></Field><button type="button" onClick={row.remove}>移除映射 {i+1}</button></div></fieldset>)}
- <details><summary>参数传递预览</summary>{rows.length?<ul>{rows.map(r=><li key={r.id}>{r.label} → {r.b.target==='env'?'环境变量':'命令行参数'} {r.b.name}（{r.b.encoding||'literal'}）</li>)}</ul>:<p>未添加映射，程序可从 MINI_EVAL_INPUT 输入文件读取参数。</p>}<p>实际值在提交和调度后确定；SDK 每回合的编号与种子还可读取 MINI_EVAL_EPISODE_ID 和 MINI_EVAL_EPISODE_SEED。</p></details></fieldset>;
+ <details><summary>参数传递预览</summary>{rows.length?<ul>{rows.map(r=><li key={r.id}>{r.label} → {r.b.target==='env'?'环境变量':'命令行参数'} {r.b.name}（{r.b.encoding||'literal'}）</li>)}</ul>:<p>未添加映射，程序可从 MINI_EVAL_INPUT 输入文件读取参数。</p>}<p>实际值在提交和调度后确定；SDK 每回合的编号与种子还可读取 MINI_EVAL_EPISODE_ID 和 MINI_EVAL_EPISODE_SEED。</p></details></div>;
 }
