@@ -111,3 +111,12 @@ def test_docker_publication_path_updates_command_and_environment(tmp_path):
     assert command[-1]==environment['MINI_EVAL_INPUT']==path
     c['template']['execution_mode']='host'
     assert publication_path(c,'/approved/input.json')=='/approved/input.json'
+
+
+def test_explicit_health_port_binding():
+    from runner.task_input import bind_platform
+    c=config();c.update(workload='service',bind_host='127.0.0.1',port=8000,health_port=8001)
+    document=build(c,{})
+    assert document['platform']['listen']['health_port']==8001
+    command,env=bind_platform([{'source':'platform.listen.health_port','target':'argv','name':'--health-port'}],document,['server'])
+    assert command==['server','--health-port','8001']

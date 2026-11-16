@@ -84,6 +84,8 @@ def ready(worker, slot, at):
 
 def blockers(worker, slot, spec, at):
     template=(spec or {}).get('template',{})
+    if slot.protocol_version<12 and any(b.get('source')=='platform.listen.health_port' for b in template.get('platform_bindings',[])):
+        return ['健康端口映射需要 Worker v12，请升级目标节点']
     probe=template.get('readiness')
     if probe:
         software=slot.software or {}

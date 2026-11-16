@@ -112,3 +112,28 @@ def test_startup_deadline_survives_log_upload_failure(tmp_path,mode):
     assert 'startup health deadline' in completed[-1]['error']
     assert time.monotonic()-begin<10
     assert inspect(w,task) is None
+
+
+@pytest.mark.parametrize('mode',['host','docker'])
+def test_client_connection_failure_prevents_business_launch(tmp_path,monkeypatch,mode):
+    build,task=service(tmp_path,"raise RuntimeError('must never launch')",mode)
+    task['benchmark']='cs-client';task['client_spec']['service_mode']='external'
+    task['client_spec']['endpoint']='http://192.0.2.1:12345'
+    task['client_spec'].pop('service');task['client_spec'].pop('workload',None)
+    monkeypatch.setattr('worker.probe_dependencies.ready',lambda:True)
+    def fail(endpoint):raise RuntimeError('client_service_unreachable: test isolated client')
+    monkeypatch.setattr('worker.client_connectivity.verify',fail)
+    w=build();completed=[];paths=[]
+    monkeypatch.setattr(w,'create',lambda task:pytest.fail('business launch must not occur'))
+    class API:
+        def post(self,path,data=None):
+            paths.append(path)
+            if path=='worker/heartbeat':return {'lease_seconds':10,'cancel':False}
+            if path.endswith('/complete'):completed.append(data)
+            return {}
+    w.api=API();w.execute(task)
+    assert completed[-1]['status']=='FAILED'
+    assert 'client_service_unreachable' in completed[-1]['error']
+    assert not any('service-health' in p for p in paths)
+    assert w.state is None
+    assert inspect(w,task) is None

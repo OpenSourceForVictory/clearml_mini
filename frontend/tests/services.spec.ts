@@ -34,3 +34,23 @@ test('service deployment sends typed business values separately from environment
  await page.getByRole('button',{name:'提交部署',exact:true}).click();
  await expect.poll(()=>submitted).toMatchObject({template_id:'t',slot_id:'slot',parameters:{scene:'room'},parameter_overrides:{},environment:{}});
 });
+
+test('readiness diagnostics are read-only and collapse on a narrow screen',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{let data:any=[];const p=new URL(route.request().url()).pathname.replace('/api/v1/','');
+ if(p==='auth/me')data={username:'admin',role:'admin'};
+ if(p==='admin/nodes')data=[{id:'n',node_name:'server',roles:['server'],enabled:true,status:'online'}];
+ if(p==='admin/services')data=[{id:'s',name:'checked',worker_id:'n',state:'UNHEALTHY',revision:1,endpoint:'http://192.168.8.151:19093',probe:{kind:'websocket',mode:'message',phase:'message',duration_ms:12,successes:0,failures:3,success_threshold:2,failure_threshold:3,error_code:'configuration_invalid',startup_remaining_seconds:42},template:{name:'checked',version:'1',readiness:{kind:'websocket',mode:'message',path:'/health',headers_from_env:{Authorization:'HEALTH_TOKEN'},expect:{type:'json_equals',pointer:'/ready',value:true}}}}];
+ await route.fulfill({json:data});});
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();
+ const detail=page.locator('details').filter({has:page.locator('summary',{hasText:'就绪检查详情'})});
+ await detail.locator('summary').click();
+ await expect(detail.getByText('首次就绪剩余约 42 秒')).toBeVisible();
+ await expect(detail.getByRole('status')).toContainText('管理员');
+ await detail.getByRole('button',{name:'查看检查配置'}).click();
+ const snapshot=detail.getByRole('group',{name:'服务检查配置快照'});
+ await expect(snapshot.getByLabel('就绪检查方式')).toBeDisabled();
+ await detail.getByRole('button',{name:'收起检查配置'}).click();await expect(snapshot).toHaveCount(0);
+ await detail.locator('summary').click();await expect(detail.getByRole('status')).not.toBeVisible();
+});

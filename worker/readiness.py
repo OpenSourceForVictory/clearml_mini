@@ -34,7 +34,7 @@ async def probe(address,port,config,local=None):
                 async def no_redirect(session,ctx,params):raise ProbeFailure('redirect_rejected')
                 trace=aiohttp.TraceConfig();trace.on_request_redirect.append(no_redirect)
                 try:
-                    async with aiohttp.ClientSession(connector=connector,trust_env=False,
+                    async with aiohttp.ClientSession(connector=connector,trust_env=False,auto_decompress=False,
                             timeout=aiohttp.ClientTimeout(total=config['timeout']),trace_configs=[trace],
                             cookie_jar=aiohttp.DummyCookieJar()) as session:
                         scheme=('wss' if config['tls'] else 'ws') if config['kind']=='websocket' else ('https' if config['tls'] else 'http')

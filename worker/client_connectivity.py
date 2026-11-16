@@ -22,7 +22,7 @@ async def check(endpoint,timeout=3):
         trace=aiohttp.TraceConfig();trace.on_request_redirect.append(redirect)
         try:
             async with aiohttp.ClientSession(connector=connector,trust_env=False,trace_configs=[trace],timeout=aiohttp.ClientTimeout(total=timeout)) as session:
-                if parts.scheme in ('ws','wss'):
+                if parts.scheme in ('ws','wss') and parts.path not in ('','/'):
                     try:
                         async with session.ws_connect(endpoint,max_msg_size=65536,timeout=aiohttp.ClientWSTimeout(ws_close=.1)):pass
                     except aiohttp.WSServerHandshakeError as exc:
@@ -32,7 +32,8 @@ async def check(endpoint,timeout=3):
                 else:
                     # Any HTTP response proves transport reachability, without making
                     # assumptions about a business root path or credentials.
-                    async with session.head(endpoint,allow_redirects=False):pass
+                    transport_url=parts._replace(scheme={'ws':'http','wss':'https'}.get(parts.scheme,parts.scheme)).geturl()
+                    async with session.head(transport_url,allow_redirects=False):pass
         finally:
             await connector.close();await resolver.close()
 

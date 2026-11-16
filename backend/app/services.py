@@ -202,7 +202,7 @@ def install(app,db,admin,worker_auth):
         job=s.get(Job,run.job_id);item=s.get(ServiceInstance,job.service_instance_id) if job.service_instance_id else None
         if not item or item.current_job_id!=job.id:raise HTTPException(409,'service execution no longer current')
         epoch=uid()
-        item.probe_state={**(item.probe_state or {}),'epoch':epoch,'sequence':0,'successes':0,'failures':0}
+        item.probe_state={**(item.probe_state or {}),'startup_at':(item.probe_state or {}).get('startup_at',now().isoformat()),'epoch':epoch,'sequence':0,'successes':0,'failures':0}
         item.health_ready=False;item.health_at=None
         s.commit();return {'epoch':epoch,'ever_ready':bool(item.probe_state.get('ever_ready'))}
 

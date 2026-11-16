@@ -143,3 +143,31 @@ def test_dependencies_do_not_import_old_client_before_upgrade(monkeypatch):
     assert ready()
     monkeypatch.setattr(importlib.metadata,'version',lambda name:'0.0.1')
     assert not ready()
+
+
+def test_pip_bootstrap_rejects_corrupt_download_and_preserves_cache(monkeypatch,tmp_path):
+    import importlib.util,io,urllib.request
+    from worker.probe_dependencies import pip_command
+    monkeypatch.setattr(importlib.util,'find_spec',lambda name:None)
+    cache=tmp_path/'.mini-eval-pip-25.2.pyz';cache.write_bytes(b'corrupted')
+    monkeypatch.setattr(urllib.request,'urlopen',lambda *a,**k:io.BytesIO(b'bad download'))
+    with pytest.raises(RuntimeError,match='checksum mismatch'):pip_command(tmp_path)
+    assert cache.read_bytes()==b'corrupted'
+    assert list(tmp_path.iterdir())==[cache]
+
+
+def test_client_guard_base_ws_url_timeout_and_cancel(monkeypatch):
+    monkeypatch.setattr('runner.cs_contract.check_ip',lambda host:None)
+    from worker.client_connectivity import check
+    async def run(port):
+        # Base WS URL can legitimately append a business-specific path later.
+        await check(f'ws://127.0.0.1:{port}')
+        before=time.monotonic()
+        with pytest.raises(TimeoutError):await check(f'http://127.0.0.1:{port}/slow',timeout=.1)
+        assert time.monotonic()-before<.8
+        task=asyncio.create_task(check(f'http://127.0.0.1:{port}/slow'))
+        await asyncio.sleep(.05);task.cancel()
+        with pytest.raises(asyncio.CancelledError):await task
+        # One client's failed connection has no effect on the reachable service.
+        await check(f'http://127.0.0.1:{port}/http')
+    asyncio.run(with_server(run))

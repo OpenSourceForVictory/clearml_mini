@@ -74,7 +74,8 @@ def build(config, environment=None):
     if config.get('endpoint') and config.get('workload')!='service':
         platform['service']={'key':config.get('service_key','default'),'endpoint':config['endpoint']}
     if config.get('workload')=='service':
-        platform['listen']={'address':config['bind_host'],'port':config['port'],'health_port':config.get('health_port',config['port'])}
+        platform['listen']={'address':config['bind_host'],'port':config['port']}
+        if 'health_port' in config:platform['listen']['health_port']=config['health_port']
     task={k:deepcopy(config[k]) for k in ('case_id','task_name','episodes','seed') if k in config}
     result=deepcopy(config)
     result.update(input_version=VERSION,platform=platform,task=task,business=deepcopy(config.get('parameters',{})))

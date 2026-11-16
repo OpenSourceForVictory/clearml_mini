@@ -15,7 +15,7 @@ def test_legacy_snapshot_and_independent_protocol():
 
 
 @pytest.mark.parametrize('config',[
-    {'kind':'websocket','mode':'message'}, {'path':'//evil'}, {'path':'/a\nb'},
+    {'kind':[]}, {'kind':{}}, {'kind':'websocket','mode':'message'}, {'path':'//evil'}, {'path':'/a\nb'},
     {'stale_after':5},{'timeout':float('nan')},{'success_threshold':True},
     {'port':True},{'headers':{'Authorization':'hidden'}},
     {'headers':{'Host':'elsewhere'}},{'headers':{'x':'a\rb'}},

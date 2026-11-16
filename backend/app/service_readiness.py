@@ -1,5 +1,5 @@
 """Single readiness policy used by scheduler and service presentation."""
-from datetime import timedelta
+from datetime import timedelta,datetime
 from .core import now
 from .scheduling import utc
 from runner.readiness_contract import normalize
@@ -33,6 +33,9 @@ def accept(item,body):
 
 def diagnostics(item):
     state=item.probe_state or {};c=normalize(item.template_snapshot)
-    return {k:state.get(k) for k in ('successes','failures','phase','duration_ms','error_code','ever_ready')} | {
+    remaining=None
+    if state.get('startup_at') and not state.get('ever_ready'):
+        remaining=max(0,round(c['startup_timeout']-(now()-utc(datetime.fromisoformat(state['startup_at']))).total_seconds()))
+    return {'startup_remaining_seconds':remaining,**{k:state.get(k) for k in ('successes','failures','phase','duration_ms','error_code','ever_ready')}} | {
         'kind':c['kind'],'mode':c['mode'],'success_threshold':c['success_threshold'],
         'failure_threshold':c['failure_threshold'],'stale_after':c['stale_after']}

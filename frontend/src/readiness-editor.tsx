@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import {Field} from './form-fields';
 export type Readiness={version:number;kind:string;port:string|number;path:string;tls:boolean;mode:string;send_text:string|null;expect:any;headers:Record<string,string>;headers_from_env:Record<string,string>;ca_env:string|null;subprotocols:string[];statuses:number[];interval:number;timeout:number;startup_timeout:number;success_threshold:number;failure_threshold:number;stale_after:number};
 export function readinessDraft(source?:Partial<Readiness>|null):Readiness{return {version:1,kind:'http',port:'business',path:'/healthz',tls:false,mode:'handshake',send_text:null,expect:null,headers:{},headers_from_env:{},ca_env:null,subprotocols:[],statuses:[200],interval:5,timeout:2,startup_timeout:120,success_threshold:1,failure_threshold:3,stale_after:20,...source};}
@@ -18,7 +18,7 @@ export function ReadinessEditor({value,onChange}:{value:Readiness;onChange:(v:Re
  {value.kind==='http'&&<Field label="允许的 HTTP 状态码（逗号分隔）"><input required value={value.statuses.join(',')} onChange={e=>set({statuses:e.target.value.split(',').map(Number)})}/></Field>}
  {(value.kind==='http'||ws&&value.mode==='message')&&<><Field label="响应校验"><select value={value.expect?.type||'none'} onChange={e=>set({expect:e.target.value==='none'?null:e.target.value==='text_equals'?{type:'text_equals',value:'ready'}:{type:'json_equals',pointer:'/ready',value:true}})}>{value.kind==='http'&&<option value="none">仅检查状态码</option>}<option value="text_equals">文本完全相等</option><option value="json_equals">JSON 字段相等</option></select></Field>
  {value.expect?.type==='json_equals'&&<Field label="JSON 字段路径"><input value={value.expect.pointer} placeholder="/ready" onChange={e=>set({expect:{...value.expect,pointer:e.target.value}})}/></Field>}
- {value.expect&&<Field label="预期响应值"><input key={value.expect.type} defaultValue={value.expect.type==='json_equals'?JSON.stringify(value.expect.value):value.expect.value} onChange={e=>{if(value.expect.type==='json_equals'){try{const parsed=JSON.parse(e.target.value);if(parsed!==null&&typeof parsed==='object')throw Error();e.target.setCustomValidity('');set({expect:{...value.expect,value:parsed}});}catch{e.target.setCustomValidity('请输入 JSON 标量，例如 true、1 或 "ready"');}}else set({expect:{...value.expect,value:e.target.value}});}}/></Field>}</>}
+ {value.expect&&<Field label="预期响应值"><ExpectedValue key={value.expect.type} json={value.expect.type==='json_equals'} value={value.expect.value} onChange={v=>set({expect:{...value.expect,value:v}})}/></Field>}</>}
  {value.kind!=='tcp'&&<><HeaderRows label="普通请求头" values={value.headers} onChange={v=>set({headers:v})}/><HeaderRows label="认证请求头引用" values={value.headers_from_env} onChange={v=>set({headers_from_env:v})}/><p>认证填写节点批准的环境变量名称，例如 HEALTH_TOKEN，不填写令牌本身。修改引用后需要管理员在节点配置。</p>{value.tls&&<Field label="自定义 CA 环境变量引用（可选）"><input value={value.ca_env||''} onChange={e=>set({ca_env:e.target.value||null})}/></Field>}</>}
  <div className="row">{numbers.map(([key,label,min,max])=><Field key={key} label={label}><input type="number" required min={min} max={max} step={key.includes('threshold')?1:.1} value={Number(value[key])} onChange={e=>set({[key]:Number(e.target.value)})}/></Field>)}</div><p>报告有效期至少为两次检查间隔加单次超时。连续失败只暂停新客户端分配，不自动重启服务。</p>
  </fieldset>;
@@ -26,4 +26,10 @@ export function ReadinessEditor({value,onChange}:{value:Readiness;onChange:(v:Re
 function HeaderRows({label,values,onChange}:{label:string;values:Record<string,string>;onChange:(v:Record<string,string>)=>void}){
  const rows=Object.entries(values);
  return <fieldset><legend>{label}</legend>{rows.map(([name,value],index)=><div className="row" key={index}><Field label={label+'名称 '+(index+1)}><input value={name} onChange={e=>onChange(Object.fromEntries(rows.map((r,i)=>i===index?[e.target.value,r[1]]:r)))}/></Field><Field label={label+'值 '+(index+1)}><input value={value} onChange={e=>onChange({...values,[name]:e.target.value})}/></Field><button type="button" onClick={()=>onChange(Object.fromEntries(rows.filter((_,i)=>i!==index)))}>删除此请求头</button></div>)}<button type="button" onClick={()=>onChange({...values,['X-Header-'+(rows.length+1)]:''})}>添加{label}</button></fieldset>;
+}
+
+function ExpectedValue({json,value,onChange}:{json:boolean;value:any;onChange:(value:any)=>void}){
+ const format=(v:any)=>json?JSON.stringify(v):String(v);const [draft,setDraft]=useState(()=>format(value));
+ useEffect(()=>setDraft(format(value)),[json,value]);
+ return <input value={draft} onChange={e=>{const raw=e.target.value;setDraft(raw);try{const parsed=json?JSON.parse(raw):raw;if(parsed!==null&&typeof parsed==='object')throw Error();e.target.setCustomValidity('');onChange(parsed);}catch{e.target.setCustomValidity('请输入 JSON 标量，例如 true、1 或 "ready"');}}}/>;
 }

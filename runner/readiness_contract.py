@@ -17,7 +17,7 @@ def validate(value):
     if not isinstance(value, dict) or set(value)-set(DEFAULTS):
         raise ValueError('readiness: unknown configuration fields')
     out = {**deepcopy(DEFAULTS), **deepcopy(value)}
-    if type(out['version']) is not int or out['version'] != 1 or out['kind'] not in KINDS:
+    if type(out['version']) is not int or out['version'] != 1 or not isinstance(out['kind'],str) or out['kind'] not in KINDS:
         raise ValueError('readiness: unsupported version or kind')
     if type(out['tls']) is not bool:
         raise ValueError('readiness.tls: expected boolean')
