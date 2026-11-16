@@ -37,3 +37,11 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 `assert_release_ready` 核验每个 GPU Worker 在线、软件版本、协议、制品摘要，以及 Agent 在线、版本、摘要和配置应用状态；任一不符都不能通过发布验收。原有 claim 协议兼容检查继续负责阻止旧 Worker 领取新编排。
 
 模块测试同时包含真实 API 集成：运行中的任务在排空期间继续获得心跳续租，且不会领到新任务。测试使用隔离数据库，不操作生产节点。
+
+## 备份恢复与逐节点升级
+
+`scripts.fleet_release_control` 将 Compose 的基础配置、LAN overlay 和固定镜像配置作为完整发布输入。备份以独占创建、0600 权限落盘并计算 SHA-256；`restore_probe` 先校验摘要，然后在无外部网络的临时 PostgreSQL 容器恢复，使用目标镜像执行迁移，比较迁移前后历史执行数量。恢复或迁移失败会终止，不覆盖生产数据库。
+
+本次预演：生产快照从 n407c89 恢复并升级至 r841a23，27 条执行记录保持不变；临时恢复容器已删除。正式迁移前需在排空状态重新生成备份，预演备份不能替代最终备份。
+
+`upgrade_nodes` 要求整个目标集合已停新准入且无持有执行，通过现有升级 API 逐节点发起；每个节点成功后复核所有 Worker 与 Agent 的版本和摘要，才继续下一个。共享存储主机 .157 最后处理。失败、回滚、超时或不确定响应即停止后续节点；不通过删 journal 或取消尚未确认的安装恢复准入。

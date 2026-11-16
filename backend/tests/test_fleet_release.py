@@ -215,3 +215,28 @@ def test_invalid_backup_never_starts_recovery(tmp_path):
     backup = tmp_path/'db.dump'; backup.write_bytes(b'bad backup')
     def never(*a, **kw): pytest.fail('recovery started for invalid backup')
     with pytest.raises(ValueError): restore_probe(backup, 'incorrect', 'image', run=never)
+
+
+def test_upgrade_requires_drain(tmp_path):
+    from scripts.fleet_release_api import upgrade_nodes
+    api, node, calls, plan = fake_api()
+    with Checkpoints(tmp_path, 'one').locked() as j:
+        with pytest.raises(RuntimeError, match='drained'): upgrade_nodes(api, plan, j, 'release')
+    assert not calls
+
+
+def test_upgrade_failure_does_not_touch_next_node(tmp_path):
+    from scripts.fleet_release_api import upgrade_nodes
+    nodes = [{'id': str(i), 'node_name': name, 'enabled': False, 'held_executions': 0}
+             for i, name in enumerate(TARGETS.values())]
+    calls = []
+    def api(path, body=None, method=None):
+        if path == 'admin/nodes': return nodes
+        if body:
+            calls.append(path)
+            return {'id': 'upgrade'}
+        return {'revision': 0, 'updater_online': True, 'history': [{'id': 'upgrade', 'status': 'FAILED'}]}
+    plan = {'targets': [{'address': h, 'node_name': n} for h,n in TARGETS.items()]}
+    with Checkpoints(tmp_path, 'one').locked() as j:
+        with pytest.raises(RuntimeError, match='later nodes'): upgrade_nodes(api, plan, j, 'release')
+    assert len(calls) == 1

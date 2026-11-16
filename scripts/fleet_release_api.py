@@ -95,3 +95,36 @@ def assert_release_ready(api, plan, release_id):
         agent = (node.get('connection') or {}).get('agent') or {}
         if agent.get('status') != 'online' or agent.get('version') != plan['target_agent'] or agent.get('digest') != release_id or agent.get('config_status') != 'applied':
             raise RuntimeError('agent release is not ready: ' + node['node_name'])
+
+
+def upgrade_nodes(api, plan, journal, release_id, timeout=300, clock=time.monotonic, sleep=time.sleep):
+    """Sequential API upgrades; require a drained fleet and stop at the first failure."""
+    nodes = node_map(api, plan)
+    if any(n['enabled'] or n['held_executions'] for n in nodes.values()):
+        raise RuntimeError('fleet must be drained before rolling upgrade')
+    # Upgrade a compute-only node first, shared storage host last.
+    ordered = sorted(plan['targets'], key=lambda t: (t['address'] == '192.168.8.157', t['address']))
+    for target in ordered:
+        node = node_map(api, plan)[target['node_name']]
+        if node['enabled'] or node['held_executions']: raise RuntimeError('node changed during rollout')
+        step = 'upgrade:' + node['node_name']
+        inputs = {'node_id': node['id'], 'release_id': release_id}
+        if not journal.begin(step, inputs): continue
+        route = 'admin/nodes/' + node['id'] + '/upgrades'
+        status = api(route)
+        if not status['updater_online']: raise RuntimeError('updater unavailable')
+        operation = api(route, {'release_id': release_id, 'expected_revision': status['revision']}, 'POST')
+        record = journal.state['steps'][step]
+        record['upgrade_id'] = operation['id']
+        atomic_json(journal.path, journal.state)
+        until = clock() + timeout
+        while True:
+            status = api(route)
+            actual = next((i for i in status['history'] if i['id'] == operation['id']), None)
+            if actual is None or actual['status'] in ('FAILED', 'CANCELLED', 'ROLLING_BACK'):
+                raise RuntimeError('node upgrade failed; later nodes were not touched')
+            if actual['status'] == 'SUCCEEDED': break
+            if clock() >= until: raise TimeoutError('node upgrade timed out; reconcile before continuing')
+            sleep(min(2, max(0, until-clock())))
+        assert_release_ready(api, {**plan, 'targets': [target]}, release_id)
+        journal.finish(step)
