@@ -2,9 +2,9 @@
 import json
 from pathlib import Path
 
-SOFTWARE_VERSION='0.12.0'
-PROTOCOL_VERSION=10
-CAPABILITIES=['docker','host','episode_reporting','typed_parameters','directory_mounts','inference_services','task_input','command_tasks']
+SOFTWARE_VERSION='0.13.0'
+PROTOCOL_VERSION=11
+CAPABILITIES=['docker','host','episode_reporting','typed_parameters','directory_mounts','inference_services','task_input','command_tasks','accelerator_contract','ascend_docker','ascend_host']
 
 
 def metadata():

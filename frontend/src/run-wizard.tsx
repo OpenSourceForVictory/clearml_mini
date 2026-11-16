@@ -1,14 +1,15 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {ResourceContract,ResourceRequest} from './resource-requirements';
 import {api} from './api';
 import {BusinessValues,ParameterSchema,ValuesDraft,parseValues} from './business-values';
 import {ManagedServices,ServerTemplate,newService,servicePayload} from './managed-services';
 import {TemplateCopy,CopyTemplate} from './template-copy';
 
-export type Template = {task_type?:string;execution_mode?:string;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
+export type Template = {resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
 export type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>;service_keys?:string[];resources?:Record<string,unknown>};
 export type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[];client_defaults?:Record<string,unknown>};
 type Reason = {code:string;category:string;message:string;action:string};
-type Preview = {effective_parameters?:{case_id:string;parameters:Record<string,unknown>;sources:Record<string,string>}[];pair_checks?:{case_id:string;pair_ready:boolean}[];endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
+type Preview = {case_checks?:{case_id:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];service_plan?:{key:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];effective_parameters?:{case_id:string;parameters:Record<string,unknown>;sources:Record<string,string>}[];pair_checks?:{case_id:string;pair_ready:boolean}[];endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
 type Trial = {id:string;title:string;status:string;cases:{job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
 const statuses:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'执行完成',FAILED:'执行失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 function Field({label,children}:{label:string;children:React.ReactNode}) {
@@ -17,6 +18,7 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
 }
 const initial={cpus:'',ram_gb:'',title:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
 export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
+  const [resourceDrafts,setResourceDrafts]=useState<Record<string,Record<string,any>>>({});
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [serviceMode,setServiceMode]=useState<'external'|'managed'|'none'>('external'),[servers,setServers]=useState<ServerTemplate[]>([]),[serviceRows,setServiceRows]=useState([newService()]),[stopAfter,setStopAfter]=useState(true);
   const [values,setValues]=useState<ValuesDraft>({}),[extraTemplates,setExtraTemplates]=useState<Template[]>([]),[copy,setCopy]=useState<{kind:'client'|'server';source:CopyTemplate}|null>(null);
@@ -34,7 +36,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   useEffect(()=>{if(launch){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(launch.suite.template_id);setCases(launch.suite.cases);setStep(0);}},[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
-  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
+  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
   useEffect(()=>{
     if(!trial?.id)return;
     let active=true;const id=trial.id;
@@ -64,8 +66,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='external')validateAddresses();
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
-    return {resources:{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,
-      required_gpu_model:draft.required_gpu_model.trim()||null,max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:parseCases(cases),
+    return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:parseCases(cases),
       new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:parseCases(cases),client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
       client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
   }
@@ -141,24 +142,25 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {step===3&&<div className="submit-grid">
       <Field label="客户端资源池"><select required value={draft.pool_id} onChange={e=>update('pool_id',e.target.value)}><option value="" disabled>选择资源池</option>{pools.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
       <Field label="最大并发任务数"><input type="number" required min={1} max={100} value={draft.max_concurrent} onChange={e=>update('max_concurrent',Number(e.target.value))}/></Field>
-      <Field label="客户端 GPU 模式"><select value={draft.gpu_mode} onChange={e=>update('gpu_mode',e.target.value)}><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
+      {template?.resource_requirements?<ResourceRequest contract={template.resource_requirements} value={resourceDrafts[templateId]||{}} onChange={v=>{setResourceDrafts({...resourceDrafts,[templateId]:v});setPreview(null)}} label="客户端资源"/>:<>      <Field label="客户端 GPU 模式"><select value={draft.gpu_mode} onChange={e=>update('gpu_mode',e.target.value)}><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
       <Field label="每项所需显存 GiB"><input type="number" required min={0} max={10000} value={draft.requested_vram_gb} onChange={e=>update('requested_vram_gb',Number(e.target.value))}/></Field>
       <details><summary>高级资源约束</summary><Field label="每项 CPU 核数（可选）"><input type="number" min={1} step={1} value={draft.cpus} placeholder="使用资源池默认值" onChange={e=>update('cpus',e.target.value)}/></Field>
       <Field label="每项内存 GiB（可选）"><input type="number" min={1} step={1} value={draft.ram_gb} placeholder="使用资源池默认值" onChange={e=>update('ram_gb',e.target.value)}/></Field>
-      <Field label="指定 GPU 型号（可选）"><input maxLength={100} value={draft.required_gpu_model} onChange={e=>update('required_gpu_model',e.target.value)}/></Field></details>
+      <Field label="指定 GPU 型号（可选）"><input maxLength={100} value={draft.required_gpu_model} onChange={e=>update('required_gpu_model',e.target.value)}/></Field></details></>}
     </div>}
     {step===4&&<>
       <h3>确认运行配置</h3><dl className="run-summary">
         <dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:'自定义清单'}</dd>
         <dt>任务与回合</dt><dd>{cases.length} 项任务，{template?.task_type==='command'?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
         <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{serviceMode==='managed'?serviceRows.map(s=><p key={s.key}>{s.key} · {servers.find(t=>t.id===s.template_id)?.name} · {s.mode==='exclusive'?'独占':'共享'} · 自动地址</p>):serviceMode==='none'?'无需服务':addresses.map((e,i)=><p key={i}>{e.url} · {e.mode==='exclusive'?'独占':'共享'}</p>)}</dd>
-        <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {draft.gpu_mode==='shared'?'共享':'独占'} · 每项 {draft.requested_vram_gb} GiB · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
+        <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {template?.resource_requirements?'按模板及本次覆盖申请':(draft.gpu_mode==='shared'?'共享':'独占')+' · 每项 '+draft.requested_vram_gb+' GiB'} · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
         <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项 {draft.timeout_seconds} 秒</dd>
         <dt>启动变量</dt><dd><code>{draft.environment}</code></dd>
       </dl>
       <button type="button" onClick={()=>void inspect()}>重新检查</button>
       {!preview&&<p role="status">{busy?'正在检查配置与资源…':'尚无有效检查结果，请重新检查。'}</p>}
       {preview&&<div className="preflight-result" aria-label="预检结果">
+        <details><summary>有效资源申请与来源</summary><p>以下为后端按模板、提交及集合单项解析的结果。</p><pre>{JSON.stringify({客户端:preview.case_checks?.map(c=>({任务:c.case_id,申请:c.resources,来源:c.resource_sources})),服务端:preview.service_plan?.map(s=>({服务:s.key,申请:s.resources,来源:s.resource_sources}))},null,2)}</pre></details>
         <h3>{preview.status==='ready'?'当前有节点可接纳单项任务':preview.status==='waiting_resources'?'需要等待资源':'需要准备运行环境'}</h3>
         <p className="hint">检查时间：{new Date(preview.checked_at).toLocaleTimeString()}。{preview.note} 最大并发为上限，不保证同时启动。</p>
         <details><summary>有效业务参数与来源</summary>{preview.effective_parameters?.map(p=><div key={p.case_id}><h4>{p.case_id}</h4><pre>{JSON.stringify(p,null,2)}</pre></div>)}</details>{preview.pair_checks?.map(p=><p key={p.case_id}>{p.case_id}：{p.pair_ready?'两端资源当前可接纳':'等待两端资源或服务环境'}</p>)}<Reasons reasons={preview.reasons}/><ul>{preview.endpoints?.map(e=><li key={e.url}>{e.url} · {e.mode==='exclusive'?'独占':'共享'} · {e.available?'当前可分配':'等待互斥占用释放'} · 当前占用 {e.occupancy}</li>)}</ul>

@@ -16,11 +16,12 @@ from runner.cs_contract import MAX_ARTIFACT_BYTES,MAX_ARTIFACT_COUNT,MAX_ARTIFAC
 class HostBackend:
     def __init__(self,worker):
         self.worker=worker
+        self.system=worker.config.get('accelerator_type')=='npu'
         self.root=Path(str(worker.path)+'.host')
         self.execution=worker.state['task']['execution_id'] if worker.state else None
     def unit(self,execution):return 'mini-eval-exec-'+str(uuid.UUID(execution))+'.service'
     def control(self,*args,check=True):
-        p=subprocess.run(['systemctl','--user',*args],env=user_environment(),capture_output=True,text=True,timeout=15)
+        p=subprocess.run(['systemctl',*([] if self.system else ['--user']),*args],env=user_environment(),capture_output=True,text=True,timeout=15)
         if check and p.returncode:raise RuntimeError('host unit control failed: '+p.stderr[-500:])
         return p
     def inspect(self,execution):
@@ -50,11 +51,17 @@ class HostBackend:
         (self.root/'launch.json').unlink(missing_ok=True)
     def create(self,task):
         w=self.worker
+        npu=None
+        if task.get('accelerator_type')=='npu':
+            from .accelerators import assignment
+            from .npu_host import settings
+            assignment(w.config,task);npu=settings(w.config)
+        elif self.system:raise RuntimeError('GPU task cannot run on NPU Worker')
         approved=w.state.get('host_approval',{})
         host=host_config(task['client_spec']['template']['host_runtime'])
         profile=approved.get('environments',{}).get(host['environment_name'])
         if approved.get('revision')!=task.get('host_revision') or profile!=task.get('host_profile'):raise RuntimeError('host environment approval changed or is missing')
-        probe(profile)
+        probe(profile,w.config)
         validate_storage(w.config,w.config.get('_supervisor_state',w.path),w.config.get('_config_path'))
         if task.get('storage_revision',0)!=w.storage_snapshot['revision']:raise RuntimeError('storage revision mismatch')
         disk=disk_status(w.workspace,w.config)
@@ -93,29 +100,57 @@ class HostBackend:
              'CUDA_VISIBLE_DEVICES':task.get('gpu_uuid') or '', 'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_WORK_DIR':values['work_dir'],'MINI_EVAL_OUTPUT_DIR':values['output_dir'],
              'MINI_EVAL_ASSETS_DIR':w.config['assets_root'],'MINI_EVAL_CACHE_DIR':w.config['cache_root']}
         env.update({k:expand(v) for k,v in {**host['environment'],**config.get('environment',{})}.items()})
+        if npu:
+            account,device,cann_env=npu
+            env.update(cann_env)
+            env['HOME']=account.pw_dir
+            env['PYTHONPATH']=platform_root+':'+str(code_root)+(':'+cann_env['PYTHONPATH'] if cann_env.get('PYTHONPATH') else '')
+            env.pop('CUDA_VISIBLE_DEVICES',None)
+            # The device policy leaves one accessible card; CANN enumerates it as logical zero.
+            env['ASCEND_RT_VISIBLE_DEVICES']='0'
         config['_resolved_command']=argv;config['_resolved_environment']=env;config['_resolved_assets']={k:v for k,v in values.items() if k.startswith('assets:')}
         config['template']={**config['template'],'command':argv}
         atomic_json(inp,config)
         module='runner.service_entry' if config.get('workload') == 'service' else 'runner.cs_entry'
-        launch={'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
+        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
+        if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
+        if npu:
+            account=npu[0]
+            for base in (self.root,directory):
+                for item in [base,*base.rglob('*')]:
+                    if item.is_symlink():raise RuntimeError('unexpected symlink in new execution directory')
+                    os.chown(item,account.pw_uid,account.pw_gid)
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())
         if launch['started']:raise RuntimeError('refusing duplicate host launch')
+        owner=path.stat()
         launch['started']=True;atomic_json(path,launch)
-        properties={'Description':'Mini Eval execution '+task['execution_id'],'CPUQuota':str(task['cpus']*100)+'%','MemoryMax':str(task['ram_gb'])+'G','TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']),'StandardOutput':'null','StandardError':'null'}
-        command=['systemd-run','--user','--quiet','--unit='+self.unit(task['execution_id']),'--working-directory='+str(Path(__file__).resolve().parent.parent)]
+        if self.system:os.chown(path,owner.st_uid,owner.st_gid)
+        properties={'Description':'Mini Eval execution '+task['execution_id'],'CPUQuota':str(task['cpus']*100)+'%','MemoryMax':str(task['ram_gb'])+'G','TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']),'StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
+        command=['systemd-run',*([] if self.system else ['--user']),'--quiet','--unit='+self.unit(task['execution_id']),'--working-directory='+str(Path(__file__).resolve().parent.parent)]
         for k,v in properties.items():command+=['--property='+k+'='+v]
+        if self.system:
+            from .npu_host import properties as npu_properties
+            command+=['--property='+value for value in npu_properties(self.worker.config)]
         command+=['/usr/bin/python3','-m','worker.host_supervisor',str(path.resolve())]
         p=subprocess.run(command,env=user_environment(),capture_output=True,text=True,timeout=15)
         if p.returncode:raise RuntimeError('host launch failed: '+p.stderr[-500:])
+        try:
+            group=self.control('show',self.unit(task['execution_id']),'--property=ControlGroup','--value').stdout.strip()
+            from .resource_limits import verify_group
+            verify_group(group,task['cpus'],task['ram_gb']*1024**3)
+        except Exception:
+            self.stop(task['execution_id'])
+            raise
+
     def logs(self):
         def read(name):
             p=self.root/name
             return p.read_bytes()[:262144].decode(errors='replace') if p.exists() else ''
         out=read('stdout.log')
         if (self.root/'final.json').exists():out+='\n'+read('final.json')+'\n'
-        return out,read('stderr.log')
+        return out,read('stderr.log')+read('supervisor.log')
     def artifacts(self,execution):
         root=execution_dirs(self.worker.workspace,execution)/'output';files=[];total=0
         for i,p in enumerate(root.rglob('*')):

@@ -83,6 +83,9 @@ def eligibility_codes(slot, pool, job, held, at):
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
             or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
         return ['disk_capacity']
+    template=(job.client_spec or {}).get('template',{})
+    if template.get('resource_requirements') is not None and template.get('execution_mode')=='host' and slot.protocol_version<11:
+        return ['client_runtime']
     if (job.client_spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:
         return ['client_runtime']
     mode = (job.client_spec or {}).get('template', {}).get('execution_mode', 'docker')
@@ -92,6 +95,13 @@ def eligibility_codes(slot, pool, job, held, at):
     if job.client_spec and job.client_spec['template'].get('execution_mode', 'docker') == 'docker' and (slot.protocol_version < 3 or
                             job.client_spec['template']['image'] not in (slot.client_images or [])):
         return ['client_image']
+    requested_type=((job.client_spec or {}).get('resources') or {}).get('accelerator_type','gpu')
+    actual_type=getattr(slot,'accelerator_type',None) or 'gpu'
+    if requested_type!=actual_type:return ['accelerator_type']
+    if requested_type=='npu':
+        capability=f'npu:{mode}:{job.gpu_mode}'
+        if slot.protocol_version<11 or capability not in (getattr(slot,'accelerator_backends',None) or []):return ['accelerator_backend']
+        if not telemetry_fresh(slot,at):return ['telemetry_stale']
     if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:
         return ['gpu_model']
     requested = job.requested_vram_gb * 1024

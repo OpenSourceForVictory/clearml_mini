@@ -1,0 +1,83 @@
+{
+  "host_runtime": {
+    "environment_name": "acceptance_demo",
+    "environment": {
+      "DEMO_ASSETS": "${assets:acceptance_data}",
+      "VERIFY_LIMITS": "1",
+      "VERIFY_READ_ONLY": "0"
+    },
+    "assets": [
+      "acceptance_data"
+    ]
+  },
+  "name": "acceptance-client-host",
+  "version": "v1",
+  "execution_mode": "host",
+  "command": [
+    "python3",
+    "client.py"
+  ],
+  "parameter_schema": {
+    "version": 1,
+    "fields": {
+      "label": {
+        "type": "string",
+        "default": "client-label",
+        "overridable": true,
+        "binding": {
+          "target": "env",
+          "name": "DEMO_LABEL"
+        }
+      },
+      "variant": {
+        "type": "integer",
+        "min": 0,
+        "max": 2,
+        "default": 0,
+        "overridable": true,
+        "binding": {
+          "target": "argv",
+          "name": "--variant"
+        }
+      },
+      "sleep_seconds": {
+        "type": "number",
+        "min": 0,
+        "max": 60,
+        "default": 1,
+        "overridable": true
+      },
+      "fail": {
+        "type": "boolean",
+        "default": false,
+        "overridable": true
+      }
+    }
+  },
+  "resource_requirements": {
+    "version": 1,
+    "cpu": {
+      "minimum": 1,
+      "default": 1
+    },
+    "memory": {
+      "minimum": 1,
+      "default": 1
+    },
+    "accelerator": {
+      "type": "gpu",
+      "mode": "exclusive",
+      "memory": {
+        "minimum": 0,
+        "default": 0
+      }
+    },
+    "allow_overrides": []
+  },
+  "task_type": "evaluation",
+  "integration_mode": "sdk-command",
+  "episode_reporting": true,
+  "protocols": [
+    "http"
+  ]
+}

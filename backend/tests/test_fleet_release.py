@@ -51,7 +51,8 @@ def test_partial_plan_rejected():
 
 def test_plan_and_changed_identity():
     plan = release_plan({'observed_at': 'now', 'nodes': [observed(h) for h in TARGETS]})
-    assert plan['target_protocol'] == 10
+    from worker.version import PROTOCOL_VERSION
+    assert plan['target_protocol'] == PROTOCOL_VERSION
     expected = plan['targets'][0]
     verify_identity(expected, observed(expected['address']))
     with pytest.raises(ValueError): verify_identity(expected, {**observed(expected['address']), 'machine_id': 'other'})

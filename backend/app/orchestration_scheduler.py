@@ -15,7 +15,7 @@ from .service_network import choose_port
 def server_job(definition,owner_id):
     resource=definition['resources']
     return SimpleNamespace(owner_id=owner_id,pool_id=definition['pool_id'],benchmark='inference-service',target_slot_id=definition.get('slot_id'),
-        client_spec={'workload':'service','template':definition['template'],'task_input_version':1},gpu_mode=resource['gpu_mode'],
+        client_spec={'resources':resource,'workload':'service','template':definition['template'],'task_input_version':1},gpu_mode=resource['gpu_mode'],
         requested_vram_gb=resource['requested_vram_gb'],required_gpu_model=resource.get('required_gpu_model'),
         requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'))
 
@@ -127,7 +127,7 @@ def allocate_pair(s,job,at):
         if not pair:continue
         server_slot,client_slot,address,port=pair
         reusable=next((i for i in stopped if i.auto_stopped),None)
-        item=reusable or ServiceInstance(name=(s.get(EvaluationBatch,job.batch_id).title+' / '+definition['key'])[:100],
+        item=reusable or ServiceInstance(resource_sources=definition.get('resource_sources',{}),resources=definition['resources'],name=(s.get(EvaluationBatch,job.batch_id).title+' / '+definition['key'])[:100],
             template_snapshot=definition['template'],parameters=definition['parameters'],environment=definition['environment'],
             gpu_mode=definition['resources']['gpu_mode'],requested_vram_gb=definition['resources']['requested_vram_gb'],
             orchestration_batch_id=job.batch_id,service_key=definition['key'])

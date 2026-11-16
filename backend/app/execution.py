@@ -22,6 +22,8 @@ MAX_LOG_BYTES = 262144
 
 
 class Register(BaseModel):
+    accelerator_type:Literal['gpu','npu']='gpu'
+    accelerator_backends:list[Literal['gpu:docker:exclusive','gpu:docker:shared','gpu:host:exclusive','gpu:host:shared','npu:docker:exclusive','npu:docker:shared','npu:host:exclusive','npu:host:shared']]=Field(default_factory=list,max_length=8)
     pool_id: str | None = None
     gpu_index: int = Field(ge=0, le=1023)
     gpu_uuid: str = Field(min_length=1, max_length=100)
@@ -29,7 +31,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
@@ -252,6 +254,8 @@ def install(app, db, current):
         lock(s)
         if (body.gpu_model == 'virtual') != body.gpu_uuid.startswith('mock:'):
             raise HTTPException(400, 'virtual and physical device identities must be distinct')
+        if body.accelerator_type=='npu' and (body.protocol_version<11 or not body.gpu_uuid.startswith('ascend:')):
+            raise HTTPException(400,'NPU registration requires protocol 11 and stable Ascend identity')
         existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid))
         indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index))
         if existing and (existing.worker_id != worker.id or existing.gpu_index != body.gpu_index):
@@ -284,8 +288,11 @@ def install(app, db, current):
             slot = Slot(node_name=worker.node_name, gpu_index=body.gpu_index, gpu_uuid=body.gpu_uuid,
                         pool_id=body.pool_id, desired_pool_id=body.pool_id,
                         membership_revision=revision, membership_applied_revision=revision,
-                        worker_id=worker.id, queue_name=f'{worker.id}-{body.gpu_index}', agent_id=worker.id)
+                        worker_id=worker.id, accelerator_type=body.accelerator_type, queue_name=f'{worker.id}-{body.gpu_index}', agent_id=worker.id)
             s.add(slot)
+        if slot.accelerator_type and slot.accelerator_type!=body.accelerator_type:raise HTTPException(409,'cannot change registered accelerator type')
+        slot.accelerator_type=body.accelerator_type
+        slot.accelerator_backends=body.accelerator_backends if body.protocol_version>=11 else []
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
         slot.software = body.software.model_dump() if body.software else None
@@ -394,6 +401,7 @@ def install(app, db, current):
         task = {'runtime_revision': (slot.runtime_report or {}).get('applied_revision', 0), 'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
+                'accelerator_type':slot.accelerator_type,'device_index':slot.gpu_index,
                 'gpu_uuid': None if pool.gpu_model == 'virtual' else slot.gpu_uuid,
                 'cpus': run.reserved_cpu, 'ram_gb': run.reserved_ram_gb,
                 'gpu_mode': 'exclusive' if run.exclusive else 'shared',

@@ -79,7 +79,10 @@ class Login(BaseModel):
     password: str
 
 
+from .job_resources import Request as ResourceRequest
+
 class Submit(BaseModel):
+    resources: ResourceRequest = Field(default_factory=ResourceRequest)
     title: str = Field(min_length=1, max_length=200)
     benchmark: Literal['mock', 'robotwin-render', 'cs-client']
     model_ref: str = Field(default='client', min_length=1, max_length=500)
@@ -160,7 +163,7 @@ def workers(user: User = Depends(current), s: Session = Depends(db)):
         return [{'id': x.id, 'worker_id': x.worker_id, **view(s, x), 'node_name': x.node_name, 'gpu_index': x.gpu_index,
                  'gpu_uuid': x.gpu_uuid, 'pool_id': x.pool_id, 'online': online(x),
                  'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at,
-                 'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,
+                 'accelerator_type':x.accelerator_type,'accelerator_backends':x.accelerator_backends,'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,
                  'gpu_utilization': x.gpu_utilization, 'telemetry_at': x.telemetry_at,
                  'disk_free_mb': x.disk_free_mb, 'disk_min_free_mb': x.disk_min_free_mb,
                  'disk_fresh': bool(x.disk_at and datetime.now(timezone.utc)-utc(x.disk_at) < timedelta(seconds=15)),
@@ -185,10 +188,6 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     pool = s.get(Pool, body.pool_id)
     if not pool or not pool.enabled:
         raise HTTPException(400, 'unknown or disabled pool')
-    if body.gpu_mode == 'shared' and (not pool.allow_shared or body.requested_vram_gb < 1):
-        raise HTTPException(400, 'shared jobs require an enabled pool and positive VRAM request')
-    if pool.gpu_model == 'virtual' and (body.gpu_mode == 'shared' or body.requested_vram_gb):
-        raise HTTPException(400, 'virtual pools do not allocate GPU memory')
     if body.benchmark == 'robotwin-render':
         if os.getenv('ROBOTWIN_RENDER_ENABLED') != '1':
             raise HTTPException(400, 'RoboTwin environment check is not enabled')
@@ -203,7 +202,7 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     pending = s.scalar(select(func.count()).select_from(Job).where(Job.owner_id == user.id, Job.status == 'PENDING'))
     if pending >= int(os.getenv('MAX_PENDING_PER_USER', '20')):
         raise HTTPException(429, 'pending limit')
-    values = body.model_dump(exclude={'client'})
+    values = body.model_dump(exclude={'client','resources'})
     if body.benchmark == 'cs-client':
         if body.client and body.client.service_mode=='managed':raise HTTPException(400,'managed services require orchestration submission')
         values['client_spec'] = snapshot(s, body.client, user.id)
@@ -213,6 +212,12 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
         values['model_ref'] = template['name'] + ':' + template['version']
     elif body.client is not None:
         raise HTTPException(400, 'client configuration is only valid for CS evaluation')
+    from .job_resources import resolve as resolve_resources,explicit,submission
+    spec=values.get('client_spec')
+    resource,sources=resolve_resources(pool,(spec or {}).get('template'),('submission',submission(body)))
+    values.update(gpu_mode=resource['gpu_mode'],requested_vram_gb=resource['requested_vram_gb'],required_gpu_model=resource['required_gpu_model'],requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'))
+    if spec is not None:spec.update(resources=resource,resource_sources=sources)
+    elif resource.get('accelerator_type')=='npu':raise HTTPException(400,'NPU requests require a runtime template')
     job = Job(owner_id=user.id, idempotency_key=idempotency_key, **values)
     s.add(job)
     s.flush()

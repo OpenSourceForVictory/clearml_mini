@@ -12,7 +12,10 @@ from .administration import audit
 from .batch_controls import cancel_job
 
 
+from .job_resources import Request as ResourceRequest
+
 class Deploy(BaseModel):
+    resources:ResourceRequest=Field(default_factory=ResourceRequest)
     model_config=ConfigDict(extra='forbid')
     name:str=Field(min_length=1,max_length=100)
     template_id:str
@@ -73,10 +76,13 @@ def enqueue(s,instance,user):
     if instance.gpu_mode=='shared' and (pool.gpu_model=='virtual' or not pool.allow_shared or instance.requested_vram_gb<1):raise HTTPException(400,'shared service requires shared pool and positive VRAM')
     check_port(s,instance)
     definition=instance.template_snapshot
-    spec={'workload':'service','contract_version':1,'template':definition,'environment':instance.environment,'parameters':instance.parameters,
+    resource=instance.resources or {'gpu_mode':instance.gpu_mode,'requested_vram_gb':instance.requested_vram_gb}
+    from .job_resources import validate
+    validate(pool,resource)
+    spec={'resource_sources':instance.resource_sources or {},'resources':resource,'workload':'service','contract_version':1,'template':definition,'environment':instance.environment,'parameters':instance.parameters,
           'task_name':instance.name,'seed':0,'endpoint':f"{definition['protocol']}://{instance.address}:{instance.port}",
           'service':{'address':instance.address,'port':instance.port,'container_port':definition['port'],'protocol':definition['protocol'],'health_type':definition['health_type'],'health_path':definition['health_path'],'startup_timeout':definition['startup_timeout']}}
-    job=Job(owner_id=user.id,pool_id=pool.id,title='服务: '+instance.name,benchmark='inference-service',model_ref=definition['name'],episodes=1,client_spec=spec,target_slot_id=slot.id,service_instance_id=instance.id,gpu_mode=instance.gpu_mode,requested_vram_gb=instance.requested_vram_gb)
+    job=Job(owner_id=user.id,pool_id=pool.id,title='服务: '+instance.name,benchmark='inference-service',model_ref=definition['name'],episodes=1,client_spec=spec,target_slot_id=slot.id,service_instance_id=instance.id,gpu_mode=instance.gpu_mode,requested_vram_gb=instance.requested_vram_gb,requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'),required_gpu_model=resource.get('required_gpu_model'))
     s.add(job);s.flush();s.add(Run(job_id=job.id,attempt=1));instance.current_job_id=job.id;instance.desired_running=True;instance.health_ready=False;instance.health_at=None;instance.health_error=None
 
 
@@ -88,7 +94,7 @@ def view(s,item):
         fresh=item.health_at and timedelta(0)<=now()-utc(item.health_at)<timedelta(seconds=15)
         state='HEALTHY' if alive and fresh and item.health_ready else 'UNHEALTHY' if alive and fresh else 'UNKNOWN'
     if not item.desired_running and not held(s,item):state='STOPPED'
-    return {**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'error':job.error if job else None}
+    return {**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
 
 
 def resolve_parameters(definition,parameters,environment,overrides):
@@ -112,7 +118,11 @@ def create_instance(s,body,user):
     if not slot:raise HTTPException(404,'GPU slot not found')
     definition=server_view(t)
     parameters=resolve_parameters(definition,body.parameters,body.environment,body.parameter_overrides)
-    item=ServiceInstance(parameters=parameters,name=body.name,worker_id=slot.worker_id,slot_id=slot.id,address=body.address,port=body.port,template_snapshot=definition,environment=body.environment,gpu_mode=body.gpu_mode,requested_vram_gb=body.requested_vram_gb)
+    from .job_resources import resolve as resolve_resources,explicit,submission
+    pool=s.get(Pool,slot.pool_id)
+    if not pool:raise HTTPException(400,'target device requires a resource pool')
+    resource,sources=resolve_resources(pool,definition,('submission',submission(body)))
+    item=ServiceInstance(resource_sources=sources,resources=resource,parameters=parameters,name=body.name,worker_id=slot.worker_id,slot_id=slot.id,address=body.address,port=body.port,template_snapshot=definition,environment=body.environment,gpu_mode=resource['gpu_mode'],requested_vram_gb=resource['requested_vram_gb'])
     s.add(item);s.flush();enqueue(s,item,user);audit(s,user,'service.deploy',item.id);return item
 
 

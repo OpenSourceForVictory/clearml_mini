@@ -115,7 +115,7 @@ def resolve_batch(s, body, user, initial_defaults=None):
             raise HTTPException(409, 'suite must be published and not archived')
         if body.cases or body.client.template_id != suite.template_id:
             raise HTTPException(400, 'suite run must use saved cases and client template')
-        cases = [Case.model_validate(c) for c in suite.cases]
+        cases = [Case.model_validate({**c,'resources':{k:v for k,v in c.get('resources',{}).items() if v is not None}}) for c in suite.cases]
         defaults=suite.client_defaults
     if not cases:
         raise HTTPException(400, 'evaluation manifest is empty')
@@ -140,10 +140,10 @@ def resolve_batch(s, body, user, initial_defaults=None):
             raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
         if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1:
             raise HTTPException(400,f'case {case.case_id}: ordinary commands require episodes=1; they do not report episodes')
-        from .job_resources import validate
-        resource={'gpu_mode':body.gpu_mode,'requested_vram_gb':body.requested_vram_gb,'required_gpu_model':body.required_gpu_model,
-                  **body.resources.model_dump(exclude_none=True),**case.resources.model_dump(exclude_none=True)}
-        configs[-1]['resources']=validate(pool,resource)
+        from .job_resources import resolve,explicit,submission
+        resource,sources=resolve(pool,configs[-1]['template'],('submission',submission(body)),('case',explicit(case.resources)))
+        configs[-1]['resources']=resource
+        configs[-1]['resource_sources']=sources
         configs[-1]['service_keys']=case.service_keys
         configs[-1]['case_id']=case.case_id
         schema=configs[-1]['template'].get('parameter_schema')

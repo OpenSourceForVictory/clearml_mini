@@ -1,0 +1,64 @@
+{
+  "host_runtime": {
+    "environment_name": "acceptance_demo",
+    "environment": {
+      "DEMO_ASSETS": "${assets:acceptance_data}",
+      "VERIFY_LIMITS": "1",
+      "VERIFY_READ_ONLY": "0"
+    },
+    "assets": [
+      "acceptance_data"
+    ]
+  },
+  "name": "acceptance-server-host",
+  "version": "v1",
+  "execution_mode": "host",
+  "command": [
+    "python3",
+    "server.py"
+  ],
+  "parameter_schema": {
+    "version": 1,
+    "fields": {
+      "label": {
+        "type": "string",
+        "default": "server-label",
+        "overridable": true,
+        "binding": {
+          "target": "env",
+          "name": "DEMO_LABEL"
+        }
+      },
+      "model": {
+        "type": "string",
+        "default": "test-model",
+        "overridable": true,
+        "binding": {
+          "target": "argv",
+          "name": "--model"
+        }
+      }
+    }
+  },
+  "resource_requirements": {
+    "version": 1,
+    "cpu": {
+      "minimum": 1,
+      "default": 1
+    },
+    "memory": {
+      "minimum": 1,
+      "default": 1
+    },
+    "accelerator": {
+      "type": "gpu",
+      "mode": "exclusive",
+      "memory": {
+        "minimum": 0,
+        "default": 0
+      }
+    },
+    "allow_overrides": []
+  },
+  "startup_timeout": 20
+}

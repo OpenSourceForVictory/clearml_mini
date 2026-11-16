@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "name": "Scheduling acceptance: three cases",
+  "version": "v1",
+  "cases": [
+    {
+      "case_id": "0",
+      "task_name": "echo-0",
+      "episodes": 2,
+      "seed": 1,
+      "parameters": {
+        "variant": 0,
+        "label": "client-label",
+        "sleep_seconds": 1,
+        "fail": false
+      }
+    },
+    {
+      "case_id": "1",
+      "task_name": "echo-1",
+      "episodes": 2,
+      "seed": 2,
+      "parameters": {
+        "variant": 1,
+        "label": "client-label",
+        "sleep_seconds": 1,
+        "fail": false
+      }
+    },
+    {
+      "case_id": "2",
+      "task_name": "echo-2",
+      "episodes": 2,
+      "seed": 3,
+      "parameters": {
+        "variant": 2,
+        "label": "client-label",
+        "sleep_seconds": 1,
+        "fail": false
+      }
+    }
+  ]
+}

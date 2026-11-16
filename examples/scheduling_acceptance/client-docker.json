@@ -1,0 +1,90 @@
+{
+  "image": "mini-eval-scheduling-acceptance:v1",
+  "runtime": {
+    "environment": {
+      "DEMO_ASSETS": "${mounts:dataset}",
+      "VERIFY_LIMITS": "1",
+      "VERIFY_READ_ONLY": "1"
+    },
+    "work_dir": "/sample-work",
+    "output_dir": "/sample-output",
+    "mounts": {
+      "dataset": {
+        "source": "assets:acceptance_data",
+        "target": "/sample-assets",
+        "read_only": true,
+        "required": true
+      }
+    }
+  },
+  "name": "acceptance-client-docker",
+  "version": "v1",
+  "execution_mode": "docker",
+  "command": [
+    "python3",
+    "/demo/client.py"
+  ],
+  "parameter_schema": {
+    "version": 1,
+    "fields": {
+      "label": {
+        "type": "string",
+        "default": "client-label",
+        "overridable": true,
+        "binding": {
+          "target": "env",
+          "name": "DEMO_LABEL"
+        }
+      },
+      "variant": {
+        "type": "integer",
+        "min": 0,
+        "max": 2,
+        "default": 0,
+        "overridable": true,
+        "binding": {
+          "target": "argv",
+          "name": "--variant"
+        }
+      },
+      "sleep_seconds": {
+        "type": "number",
+        "min": 0,
+        "max": 60,
+        "default": 1,
+        "overridable": true
+      },
+      "fail": {
+        "type": "boolean",
+        "default": false,
+        "overridable": true
+      }
+    }
+  },
+  "resource_requirements": {
+    "version": 1,
+    "cpu": {
+      "minimum": 1,
+      "default": 1
+    },
+    "memory": {
+      "minimum": 1,
+      "default": 1
+    },
+    "accelerator": {
+      "type": "gpu",
+      "mode": "exclusive",
+      "memory": {
+        "minimum": 0,
+        "default": 0
+      }
+    },
+    "allow_overrides": []
+  },
+  "task_type": "evaluation",
+  "integration_mode": "sdk-command",
+  "episode_reporting": true,
+  "protocols": [
+    "http"
+  ]
+}

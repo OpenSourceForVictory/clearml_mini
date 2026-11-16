@@ -92,6 +92,15 @@ class Operations:
             job['form']['fingerprint']=fingerprint
             self.update(identity,'CHECKING','SSH');self.pool.submit(self.check,identity)
             return copy.deepcopy(job)
+    def host_resources(self, remote, form):
+        source=(Path(__file__).resolve().parents[1]/'worker/resource_limits.py').read_text()
+        program="import json; source="+repr(source)+"; scope={'__name__':'resource_check'}; exec(source,scope); print(json.dumps(scope['verify_host'](source)))"
+        _,data,_=remote.run([form['python'],'-c',program],timeout=60)
+        value=json.loads(data)
+        if not isinstance(value,dict) or type(value.get('ready')) is not bool:
+            raise Rejected('invalid_resource_probe_response')
+        return value
+
     def probe(self,remote,form,runner_image):
         source=Path(__file__).with_name('probe.py').read_text()
         opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
@@ -100,6 +109,14 @@ class Operations:
         if not isinstance(plan,dict) or not isinstance(plan.get('issues'),list):raise Rejected('invalid_probe_response')
         if plan['services'] and plan['services'][0]['scope']=='system':
             if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('sudo_permission_required')
+        if form['mode']=='host' and not plan['issues']:
+            limits=self.host_resources(remote,form)
+            plan['resource_limits']=limits
+            if not limits['ready']:
+                if limits.get('repairable') and plan.get('uid',0)>0:
+                    if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('resource_delegation_requires_sudo')
+                    else:plan['resource_repair_required']=True
+                else:plan['issues'].append(limits.get('reason','runtime_limits_not_enforced'))
         if plan['free_disk_gb']<.1:plan['issues'].append('insufficient_installation_disk')
         return plan
     def check(self,identity):
@@ -166,6 +183,18 @@ class Operations:
                         args+=['--existing','--home',plan['home']]
                         for s in plan['services']:args+=['--service',s['scope']+':'+s['name']]
                     else:args+=['--gpus',','.join(map(str,plan['selected_gpus']))]
+                    if plan.get('resource_repair_required'):
+                        self.update(identity,stage='RESOURCE_SETUP')
+                        remote.run([plan['python'],remote_dir+'/scripts/configure_node_resources.py','--uid',str(plan['uid'])],sudo=True,timeout=60)
+                        # Re-exec refreshes the manager's cached controllers without restarting services.
+                        env=['env','XDG_RUNTIME_DIR=/run/user/'+str(plan['uid']),
+                             'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(plan['uid'])+'/bus']
+                        remote.run(env+['systemctl','--user','daemon-reexec'],timeout=30)
+                    if form['mode']=='host':
+                        self.update(identity,stage='RESOURCE_VERIFY')
+                        limits=self.host_resources(remote,form)
+                        self.update(identity,resource_limits=limits)
+                        if not limits['ready']:raise Rejected('runtime_limits_not_enforced')
                     self.update(identity,stage='INSTALL')
                     remote.run(args,timeout=420,sudo=bool(plan['services'] and plan['services'][0]['scope']=='system'))
                 finally:

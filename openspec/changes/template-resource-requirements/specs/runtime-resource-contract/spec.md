@@ -39,3 +39,15 @@
 #### Scenario: Exclusive task arrives
 - **WHEN** 同一设备上有未清理的共享执行，另一个任务请求独占
 - **THEN** 独占任务不能领取该设备，也不能通过更换客户端/服务端角色绕过互斥
+
+
+### Requirement: Verified host limits during enrollment
+平台 SHALL 在宿主机纳管及重新纳管时检查资源控制器和实际 CPU/内存/进程限制；权限配置 SHALL 幂等且限定运行用户。Worker 升级后的后台检查 MUST 重新判断环境就绪性，不在心跳主线程执行阻塞探测。
+
+#### Scenario: Delegation requires administrator configuration
+- **WHEN** 用户缺少控制器委派且管理员确认纳管安装
+- **THEN** 平台通过临时 sudo 权限持久化用户委派并执行短任务验证，任务仍以普通用户运行，验证失败不完成纳管
+
+#### Scenario: Maintenance required
+- **WHEN** 节点没有 cgroup v2 或配置文件与平台预期冲突
+- **THEN** 显示明确原因，保留配置，不自动重启节点或修改系统启动参数，不影响独立的 Docker 能力判断

@@ -75,10 +75,10 @@ def compile_submission(s,body,user):
         if any(definition['protocol'] not in spec['template']['protocols'] for spec in configs if not spec.get('service_keys') or item.key in spec['service_keys']):
             raise HTTPException(400,'server protocol does not match client template')
         values=services.resolve_parameters(definition,item.parameters,item.environment,item.parameter_overrides)
-        resource={'gpu_mode':'exclusive','requested_vram_gb':0,'required_gpu_model':None,**item.resources.model_dump(exclude_none=True)}
-        validate_resources(server_pool,resource)
+        from .job_resources import resolve as resolve_resources,explicit
+        resource,resource_sources=resolve_resources(server_pool,definition,('submission',explicit(item.resources)))
         definitions.append({**item.model_dump(exclude={'parameter_overrides','resources'}),'parameters':values,'template':definition,
-                            'resources':resource,'max_instances':item.max_instances or (1 if item.mode=='shared' else min(body.max_concurrent,20))})
+                            'resources':resource,'resource_sources':resource_sources,'max_instances':item.max_instances or (1 if item.mode=='shared' else min(body.max_concurrent,20))})
     keys={d['key'] for d in definitions}
     for spec in configs:
         spec['task_input_version']=1
@@ -128,7 +128,7 @@ def install(app,db,current):
         request,pool,cases,configs,definitions=compile_submission(s,body,user)
         from .preflight import inspect_batch
         result=inspect_batch(s,request,user,pool,cases,configs)
-        result['service_plan']=[{'key':d['key'],'template':d['template'],'mode':d['mode'],'pool_id':d['pool_id'],'resources':d['resources'],'address':'automatic','max_instances':d['max_instances']} for d in definitions]
+        result['service_plan']=[{'key':d['key'],'template':d['template'],'mode':d['mode'],'pool_id':d['pool_id'],'resources':d['resources'],'resource_sources':d.get('resource_sources',{}),'address':'automatic','max_instances':d['max_instances']} for d in definitions]
         result['effective_parameters']=[{'case_id':c.case_id,'parameters':spec['parameters'],'sources':spec.get('parameter_sources',{})} for c,spec in zip(cases,configs)]
         if definitions:
             from .orchestration_scheduler import Planner

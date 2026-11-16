@@ -101,3 +101,18 @@ def test_worker_watchdog_stops_host_when_lease_lost(tmp_path,monkeypatch):
     w.execute(task)
     assert any(x.endswith('/complete') for x in completed)
     assert w.state is None
+
+
+def test_system_launch_preserves_nonroot_manifest_owner(tmp_path,monkeypatch):
+    w=worker(tmp_path,['python3','business.py']);b=HostBackend(w);b.system=True
+    b.root.mkdir();path=b.root/'launch.json'
+    path.write_text(json.dumps({'started':False}))
+    owner=path.stat();calls=[]
+    monkeypatch.setattr(os,'chown',lambda path,uid,gid:calls.append((uid,gid)))
+    monkeypatch.setattr('worker.npu_host.properties',lambda cfg:['User=approved-user'])
+    monkeypatch.setattr('worker.resource_limits.verify_group',lambda *a:None)
+    monkeypatch.setattr(subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=0,stdout='',stderr=''))
+    monkeypatch.setattr(b,'control',lambda *a,**kw:SimpleNamespace(stdout='/system.slice/test.service'))
+    b.start(w.state['task'])
+    assert calls==[(owner.st_uid,owner.st_gid)]
+    assert json.loads(path.read_text())['started']

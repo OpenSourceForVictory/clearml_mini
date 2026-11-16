@@ -1,8 +1,8 @@
 import {test,expect,Page} from '@playwright/test';
-async function setup(page:Page){
+async function setup(page:Page,resource_requirements?:any){
  const requests:any[]=[];
  const schema={version:1,fields:{batch_size:{type:'integer',default:2,min:1,max:8,overridable:true},fast:{type:'boolean',default:false},model:{type:'enum',enum:['a','b'],default:'a'}}};
- const client={id:'client',name:'Client',version:'1',enabled:true,task_type:'command',command:['python','run.py'],protocols:['http'],parameter_schema:schema};
+ const client={resource_requirements,id:'client',name:'Client',version:'1',enabled:true,task_type:'command',command:['python','run.py'],protocols:['http'],parameter_schema:schema};
  const server={...client,id:'server',name:'Server',task_type:'evaluation',protocol:'http',status:'published',execution_mode:'host'};
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
@@ -80,4 +80,16 @@ test('typed invalid input and version conflict retain the editing draft',async({
  await wizard.getByLabel('新版本',{exact:true}).fill('conflict');await wizard.getByRole('button',{name:'保存并发布此版本'}).click();
  await expect(wizard.getByRole('alert')).toContainText('already exist');await expect(wizard.getByLabel('新版本',{exact:true})).toHaveValue('conflict');
  await expect(wizard.getByLabel('客户端模板',{exact:true})).toHaveValue('client');
+});
+
+test('client and server resource contracts preserve defaults, locks and independent overrides',async({page})=>{
+ const contract={version:1,cpu:{minimum:2,default:4},memory:{minimum:4,default:8},accelerator:{type:'gpu',mode:'shared',memory:{minimum:4,default:8}},allow_overrides:['cpus','ram_gb','requested_vram_gb']};
+ const {wizard,requests}=await setup(page,contract);
+ await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('服务来源').selectOption('managed');await wizard.getByLabel('服务 1 模板').selectOption('server');await wizard.getByText('服务资源与运行变量',{exact:true}).click();
+ await expect(wizard.getByLabel('服务 1 资源 · 加速设备使用方式',{exact:true})).toBeDisabled();await wizard.getByLabel('服务 1 资源 · 内存 GiB',{exact:true}).fill('12');
+ await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');await expect(wizard.getByLabel('客户端资源 · CPU 核数',{exact:true})).toHaveValue('4');await expect(wizard.getByLabel('客户端资源 · 加速设备类型',{exact:true})).toBeDisabled();
+ await wizard.getByLabel('客户端资源 · CPU 核数',{exact:true}).fill('1');await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();expect(requests).toHaveLength(0);
+ await wizard.getByLabel('客户端资源 · CPU 核数',{exact:true}).fill('3');await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>requests.length).toBe(1);
+ expect(requests[0].body.resources).toEqual({cpus:3});expect(requests[0].body).not.toHaveProperty('gpu_mode');expect(requests[0].body.services[0].resources).toEqual({ram_gb:12});
+ await wizard.getByRole('button',{name:'提交评测批次'}).click();await expect.poll(()=>requests.length).toBe(2);expect(requests[1].body.resources).toEqual({cpus:3});
 });

@@ -1,0 +1,238 @@
+{
+  "execution_matrix": [
+    {
+      "mode": "docker",
+      "access": "exclusive",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "docker-exclusive.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "docker-host",
+      "access": "exclusive",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "docker-host-exclusive.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "docker-host",
+      "access": "shared",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "docker-host-shared.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "docker",
+      "access": "shared",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "docker-shared.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "host-docker",
+      "access": "exclusive",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "host-docker-exclusive.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "host-docker",
+      "access": "shared",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "host-docker-shared.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "host",
+      "access": "exclusive",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "host-exclusive.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "host",
+      "access": "shared",
+      "clients": 6,
+      "services": 2,
+      "executions": 8,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "file": "host-shared.json",
+      "verified_episodes": 6
+    },
+    {
+      "mode": "docker",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 11,
+      "all_succeeded": false,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": "cancel",
+      "file": "sample-cancel-docker-shared.json",
+      "verified_episodes": 12
+    },
+    {
+      "mode": "host",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 11,
+      "all_succeeded": false,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": "cancel",
+      "file": "sample-cancel-host-shared.json",
+      "verified_episodes": 12
+    },
+    {
+      "mode": "docker",
+      "access": "exclusive",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": null,
+      "file": "sample-docker-exclusive.json",
+      "verified_episodes": 18
+    },
+    {
+      "mode": "docker",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": null,
+      "file": "sample-docker-shared.json",
+      "verified_episodes": 18
+    },
+    {
+      "mode": "docker",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": false,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": "failure",
+      "file": "sample-failure-docker-shared.json",
+      "verified_episodes": 16
+    },
+    {
+      "mode": "host",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": false,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "fault": "failure",
+      "file": "sample-failure-host-shared.json",
+      "verified_episodes": 16
+    },
+    {
+      "mode": "host",
+      "access": "exclusive",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "file": "sample-host-exclusive.json",
+      "verified_episodes": 18
+    },
+    {
+      "mode": "host",
+      "access": "shared",
+      "clients": 9,
+      "services": 3,
+      "executions": 12,
+      "all_succeeded": true,
+      "cleanup_pending": 0,
+      "queued_while_active": true,
+      "sample": true,
+      "file": "sample-host-shared.json",
+      "verified_episodes": 18
+    }
+  ],
+  "npu_host": {
+    "services": [
+      {
+        "uid": 1001,
+        "count": 1,
+        "allocated": 1048576,
+        "visible": "0"
+      },
+      {
+        "uid": 1001,
+        "count": 1,
+        "allocated": 1048576,
+        "visible": "0"
+      }
+    ],
+    "same_device": 2,
+    "concurrent": true,
+    "abnormal_exit_isolated": true,
+    "cleanup_confirmed": true
+  },
+  "npu_host_isolation": {
+    "device": 2,
+    "user": "HwHiAiUser",
+    "isolation": "kernel-device-policy",
+    "cpu_memory_pids_verified": true,
+    "unassigned_devices_denied": true
+  },
+  "npu_docker": {
+    "returncode": 0,
+    "stdout": "{\"device_count\": 1, \"device_nodes\": [\"/dev/davinci2\"], \"allocation_bytes\": 1024}\n",
+    "stderr": ""
+  },
+  "npu_post_cleanup": {
+    "npu2_no_process": true,
+    "owned_units_empty": true
+  }
+}

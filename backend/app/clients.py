@@ -22,6 +22,7 @@ class TemplateCreate(BaseModel):
     integration_mode: Literal['direct','sdk-command'] = 'direct'
     task_type: Literal['evaluation','command'] = 'evaluation'
     platform_bindings: list[dict] = Field(default_factory=list, max_length=32)
+    resource_requirements: dict | None = None
     parameter_schema: dict | None = None
     host_runtime: dict | None = None
     runtime: dict | None = None
@@ -32,6 +33,8 @@ class TemplateCreate(BaseModel):
 
     @model_validator(mode="after")
     def valid_runtime(self):
+        from runner.resource_contract import validate as resource_contract
+        self.resource_requirements=resource_contract(self.resource_requirements)
         from runner.template_contract import host_config
         from runner.task_input import validate_combined
         validate_combined(self.parameter_schema,self.platform_bindings)
@@ -140,7 +143,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements')}
 
 
 def snapshot(s, body, owner_id=None):

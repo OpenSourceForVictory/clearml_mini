@@ -66,7 +66,7 @@ def collect(options):
         with urllib.request.build_opener(NoRedirect()).open(options['api_url'].rstrip('/')+'/healthz',timeout=10) as response:
             if response.status!=200:issues.append('node_cannot_reach_API')
     except Exception:issues.append('node_cannot_reach_API')
-    return {'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
+    return {'uid':os.getuid(),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
             'gpus':gpus,'selected_gpus':chosen,'existing':bool(configs),'services':services,
             'configs':configs,'issues':sorted(set(issues)),'free_disk_gb':round(shutil.disk_usage(home).free/1024**3,1)}
 

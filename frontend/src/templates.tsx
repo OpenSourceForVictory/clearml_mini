@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {mountDraft,mountValues} from './mount-editor';
+import {ResourceRequirements,ResourceContract} from './resource-requirements';
 import {api} from './api';
 import {Field} from './form-fields';
 import {TemplateExamples} from './template-examples';
@@ -11,7 +12,7 @@ import {CommandMappings,validateMappings,PlatformBinding} from './command-mappin
 import {TemplateHelp,TemplateConfig} from './template-guidance';
 import {ParameterEditor,parameterDraft,parameterSchema} from './parameter-editor';
 
-export type Template={owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
+export type Template={resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
 export function Templates(){
  const [kind,setKind]=useState('client');
  return <><div className="tabs" role="tablist" aria-label="模板类型">{[['client','客户端模板'],['server','服务端模板']].map(([id,label])=><button role="tab" aria-selected={kind===id} key={id} onClick={()=>setKind(id)}>{label}</button>)}</div>
@@ -38,6 +39,8 @@ function TemplateWorkspace({kind}:{kind:string}){
 }
 function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|null;onSave:()=>Promise<void>;onClose:()=>void}){
  const [mode,setMode]=useState(source?.execution_mode||'docker'),[integration,setIntegration]=useState(source?.integration_mode||'direct'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const [image,setImage]=useState(source?.image||''),[hostEnvironment,setHostEnvironment]=useState(source?.host_runtime?.environment_name||'');
+ const [resources,setResources]=useState<ResourceContract|null>(source?.resource_requirements||null);
  const [parameters,setParameters]=useState(()=>parameterDraft(source?.parameter_schema));
  const [command,setCommand]=useState(()=>JSON.stringify(source?.command||['python3','/app/business.py'],null,2));
  const [mounts,setMounts]=useState(()=>mountDraft(source?.runtime?.mounts));
@@ -50,6 +53,7 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  useEffect(()=>{if(error){errorRef.current?.focus({preventScroll:true});errorRef.current?.scrollIntoView({block:'center'});}},[error]);
  async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');try{const f=new FormData(e.currentTarget),assetMap=assetValues(assets),{environment,overridable_env}=environmentValues(environments[mode]);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:f.has('episode_reporting')||integration==='sdk-command',endpoint_exclusive:source?.endpoint_exclusive??false,protocols:source?.protocols||['http','https','ws','wss']};
+   body.resource_requirements=resources;
    body.parameter_schema=parameterSchema(parameters);
    validateMappings(bindings,body.parameter_schema,body.command,environment,overridable_env);
    body.platform_bindings=bindings;body.task_type=source?.task_type||'evaluation';
@@ -63,11 +67,11 @@ function TemplateForm({kind,source,onSave,onClose}:{kind:string;source:Template|
  <fieldset><legend>平台参数</legend><p className="muted">执行身份、GPU、推理地址和回合身份由平台注入；宿主机目录由机器配置解析。业务程序通过 MINI_EVAL_INPUT 读取任务输入。</p>
  {mode==='docker'?<div className="row"><Field label="容器内工作目录"><input name="work_dir" required value={workDir} onChange={e=>setWorkDir(e.target.value)}/></Field><Field label="容器内输出目录"><input name="output_dir" required value={outputDir} onChange={e=>setOutputDir(e.target.value)}/></Field></div>:<p>工作目录和输出目录使用该节点工作区下的独立执行目录。</p>}
  </fieldset>
- <fieldset><legend>业务参数</legend><p className="muted">这里定义可填写的字段，具体取值在集合任务或服务部署时填写。例如 scene（字符串）绑定命令行 --scene，平台会追加该参数；不要在命令中重复写同一绑定。任务名、回合数和种子在任务集合中配置。</p><details><summary>业务参数如何传给程序？</summary><p>输入文件：从 MINI_EVAL_INPUT 指向的 JSON 读取 business 字段。命令行：绑定名称填 --scene。环境变量：绑定名称填 SCENE。需要在提交时修改的字段，勾选“允许运行时覆盖”；不要使用 endpoint 等平台保留名称。</p></details><ParameterEditor value={parameters} onChange={setParameters}/></fieldset>
+ <ResourceRequirements value={resources} onChange={setResources}/><fieldset><legend>业务参数</legend><p className="muted">这里定义可填写的字段，具体取值在集合任务或服务部署时填写。例如 scene（字符串）绑定命令行 --scene，平台会追加该参数；不要在命令中重复写同一绑定。任务名、回合数和种子在任务集合中配置。</p><details><summary>业务参数如何传给程序？</summary><p>输入文件：从 MINI_EVAL_INPUT 指向的 JSON 读取 business 字段。命令行：绑定名称填 --scene。环境变量：绑定名称填 SCENE。需要在提交时修改的字段，勾选“允许运行时覆盖”；不要使用 endpoint 等平台保留名称。</p></details><ParameterEditor value={parameters} onChange={setParameters}/></fieldset>
  <fieldset><legend>运行参数</legend>
  <Field label="执行方式"><select value={mode} onChange={e=>setMode(e.target.value)}><option value="docker">Docker 镜像运行</option><option value="host">宿主机运行</option></select></Field>
  {kind==='client'&&<Field label="协议接入方式"><select value={integration} onChange={e=>setIntegration(e.target.value)}><option value="direct">业务程序直接实现评测协议</option><option value="sdk-command">SDK + 每回合业务命令</option></select></Field>}
- {mode==='docker'?<Field label="Docker 镜像"><input name="image" required defaultValue={source?.image} placeholder="registry/image:tag 或 digest"/></Field>:<><Field label="节点环境名称"><input name="environment_name" required pattern="[A-Za-z][A-Za-z0-9_]*" defaultValue={settings.environment_name} placeholder="例如 simulation"/></Field><p>节点需批准并探测此宿主机环境。宿主机模式适合可信业务程序，不提供容器安全隔离。</p></>}
+ {mode==='docker'?<Field label="Docker 镜像"><input name="image" required value={image} onChange={e=>setImage(e.target.value)} placeholder="registry/image:tag 或 digest"/></Field>:<><Field label="节点环境名称"><input name="environment_name" required pattern="[A-Za-z][A-Za-z0-9_]*" value={hostEnvironment} onChange={e=>setHostEnvironment(e.target.value)} placeholder="例如 simulation"/></Field><p>节点需批准并探测此宿主机环境。宿主机模式适合可信业务程序，不提供容器安全隔离。</p></>}
  <fieldset><legend>启动命令</legend><CommandEditor value={command} onChange={setCommand}/>
  <CommandMappings kind={kind} bindings={bindings} onBindings={setBindings} parameters={parameters} onParameters={setParameters}/><LaunchPreview command={command} bindings={bindings} parameters={parameters}/></fieldset>{kind==='client'&&<><label><input type="checkbox" name="episode_reporting" defaultChecked={source?.episode_reporting??true}/>业务程序逐回合上报（SDK 命令模式自动启用）</label><p>SDK 命令每次执行一个回合，通过 MINI_EVAL_RESULT 写入结果；直接协议程序负责回合事件和最终汇总。参数支持 task_name、episode_id、episode_seed、endpoint、work_dir 等占位符。</p></>}
  <EnvironmentEditor rows={environments[mode]} onChange={rows=>setEnvironments({...environments,[mode]:rows})}/>

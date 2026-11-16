@@ -11,6 +11,12 @@ LIMIT=262144
 
 def main():
     config=json.loads(Path(sys.argv[1]).read_text());root=Path(sys.argv[1]).parent
+    if config.get('resource_limits'):
+        from .resource_limits import verify_current
+        verify_current(**config['resource_limits'])
+    if config.get('npu_device'):
+        from .npu_host import verify_devices
+        verify_devices(config['npu_device'])
     child=subprocess.Popen(config['command'],cwd=config['cwd'],env=config['environment'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     selector=selectors.DefaultSelector();selector.register(child.stdout,selectors.EVENT_READ,'stdout');selector.register(child.stderr,selectors.EVENT_READ,'stderr')
     handles={k:(root/(k+'.log')).open('wb') for k in ('stdout','stderr')};sizes={'stdout':0,'stderr':0};tail=b''

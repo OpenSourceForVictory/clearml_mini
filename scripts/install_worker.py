@@ -92,6 +92,11 @@ def main():
             subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=30)
             for image in {config['runner_image'], *config.get('client_images', [])}:
                 subprocess.run(['docker', 'image', 'inspect', image], check=True, stdout=subprocess.DEVNULL, timeout=30)
+        if 'host' in config.get('execution_modes', []):
+            sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+            from worker.resource_limits import verify_host
+            limits=verify_host()
+            if not limits['ready']:raise ValueError('host resource verification failed: '+str(limits['reason']))
         indices = discover(config, args.gpus)
         home = Path.home()
         planned = plan(config, args.instance, args.gpus, indices, home, args.update)
@@ -129,7 +134,7 @@ def main():
         for directory in (app, conf, home/'.local/state/mini-eval', units):
             directory.mkdir(parents=True, exist_ok=True)
         source = Path(__file__).resolve().parents[1]
-        for package in ('worker', 'runner'):
+        for package in ('worker', 'runner', 'node_agent'):
             shutil.copytree(source/package, app/package, dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         for name, target, value in planned:
             flags = os.O_WRONLY | os.O_CREAT | (os.O_TRUNC if args.update else os.O_EXCL)

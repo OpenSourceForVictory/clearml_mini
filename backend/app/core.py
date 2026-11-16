@@ -108,6 +108,8 @@ class Worker(Base):
 
 
 class Slot(Base):
+    accelerator_type: Mapped[str] = mapped_column(String(10),default='gpu',server_default='gpu')
+    accelerator_backends: Mapped[list] = mapped_column(JSON_TYPE,default=list,server_default='[]')
     __tablename__ = 'gpu_slots'
     __table_args__ = (UniqueConstraint('node_name', 'gpu_index'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -293,6 +295,7 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    resource_requirements: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')
     revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     task_type: Mapped[str] = mapped_column(String(20), default='evaluation', server_default='evaluation')
@@ -434,6 +437,8 @@ class ServerTemplate(Base):
 
 
 class ServiceInstance(Base):
+    resource_sources: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    resources: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     orchestration_batch_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_batches.id'),index=True)
     service_key: Mapped[Optional[str]] = mapped_column(String(64))
     auto_stopped: Mapped[bool] = mapped_column(Boolean,default=False,server_default='false')

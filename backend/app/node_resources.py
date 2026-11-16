@@ -41,18 +41,20 @@ def number(values, key, maximum):
 
 def apply_resources(s, w):
     if not resource_source(w): return
-    values = resource_values(w, 'gpu')
     for slot in s.scalars(select(Slot).where(Slot.worker_id == w.id)):
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
+        kind=getattr(slot,'accelerator_type',None) or 'gpu'
+        values=resource_values(w,kind)
         if values is None: continue
-        prefix = 'gpu_' + str(slot.gpu_index) + '_'
+        prefix = kind+'_' + str(slot.gpu_index) + '_'
         try:
-            if values[prefix+'uuid'] != slot.gpu_uuid: continue
+            if values[prefix+('identity' if kind=='npu' else 'uuid')] != slot.gpu_uuid: continue
             total = number(values, prefix+'total_mb', 10240000)
             if total != slot.vram_mb: continue
             free = number(values, prefix+'free_mb', total)
             utilization = number(values, prefix+'utilization', 100)
-            sampled = record(w)['samples']['gpu']['sampled_at']
+            sampled = record(w)['samples'][kind]['sampled_at']
+            if kind=='npu' and values.get(prefix+'health')!='OK':continue
             slot.telemetry_at = datetime.fromtimestamp(sampled, timezone.utc)
             slot.free_vram_mb, slot.gpu_utilization = int(free), int(utilization)
         except (KeyError, TypeError, ValueError, OverflowError): continue

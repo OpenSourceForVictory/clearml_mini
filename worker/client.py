@@ -63,6 +63,10 @@ def device(config):
     index = int(config.get('gpu_index', 0))
     if config.get('mock', False):
         return {'gpu_index': index, 'gpu_uuid': f'mock:{config["node_name"]}:{index}', 'gpu_model': 'virtual', 'vram_gb': 0}
+    if config.get('accelerator_type')=='npu':
+        from .accelerators import ascend_sample
+        d=ascend_sample(config)
+        return {'accelerator_type':'npu','gpu_index':index,'gpu_uuid':d['identity'],'gpu_model':d['model'],'vram_gb':int(d['total_mb']/1024),'vram_mb':d['total_mb']}
     result = subprocess.run(['nvidia-smi', f'--id={index}', '--query-gpu=uuid,name,memory.total', '--format=csv,noheader,nounits'],
                             check=True, capture_output=True, text=True, timeout=10)
     identity, model, memory = [x.strip() for x in result.stdout.strip().split(',')]
@@ -72,6 +76,9 @@ def device(config):
 def telemetry(config):
     if config.get('mock', False):
         return {'free_vram_mb': 0, 'gpu_utilization': 0}
+    if config.get('accelerator_type')=='npu':
+        from .accelerators import ascend_sample
+        d=ascend_sample(config);return {'free_vram_mb':d['free_mb'],'gpu_utilization':d['utilization']}
     result = subprocess.run(['nvidia-smi', f"--id={int(config.get('gpu_index', 0))}",
         '--query-gpu=memory.free,utilization.gpu', '--format=csv,noheader,nounits'],
         check=True, capture_output=True, text=True, timeout=5)
@@ -104,7 +111,7 @@ class Worker:
         if self.state and 'storage' not in self.state:
             self.state['storage'] = snapshot
             self.save()
-        self.host_environments = HostEnvironments(self.path) if self.storage else None
+        self.host_environments = HostEnvironments(self.path,self.config) if self.storage else None
         self.slot_id = None
         self.stop_event = threading.Event()
         self.start_lock = threading.Lock()
@@ -228,13 +235,16 @@ class Worker:
                 if target not in (WORK, OUTPUT):
                     args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
             args.extend(['--pull', 'never', '--entrypoint', runtime['interpreter'], '--workdir', ADAPTER, '--env', 'PYTHONPATH='+ADAPTER])
-        if task['gpu_uuid']:
+        if task.get('accelerator_type')=='npu':
+            from .accelerators import docker_args
+            args.extend(docker_args(self.config,task))
+        elif task['gpu_uuid']:
             if self.config.get('gpu_runtime') == 'nvidia':
                 args.extend(['--runtime', 'nvidia', '--env', 'NVIDIA_VISIBLE_DEVICES=' + task['gpu_uuid'],
                              '--env', 'NVIDIA_DRIVER_CAPABILITIES=compute,utility'])
             else:
                 args.extend(['--gpus', 'device=' + task['gpu_uuid']])
-        if task['benchmark'] in ('robotwin-render', 'cs-client'):
+        if task.get('accelerator_type','gpu')=='gpu' and task['benchmark'] in ('robotwin-render', 'cs-client'):
             args.extend(['--env', 'NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics'])
         if 'mock_episode_sleep' in self.config:
             args.extend(['--env', 'MOCK_EPISODE_SLEEP=' + str(self.config['mock_episode_sleep'])])
@@ -573,6 +583,8 @@ class Worker:
     def run(self, once=False):
         from .version import PROTOCOL_VERSION, metadata
         hardware = device(self.config)
+        from .accelerators import capabilities
+        hardware['accelerator_backends']=capabilities(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
             **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': metadata(), 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']

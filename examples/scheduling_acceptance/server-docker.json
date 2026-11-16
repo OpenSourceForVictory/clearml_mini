@@ -1,0 +1,71 @@
+{
+  "image": "mini-eval-scheduling-acceptance:v1",
+  "runtime": {
+    "environment": {
+      "DEMO_ASSETS": "${mounts:dataset}",
+      "VERIFY_LIMITS": "1",
+      "VERIFY_READ_ONLY": "1"
+    },
+    "work_dir": "/sample-work",
+    "output_dir": "/sample-output",
+    "mounts": {
+      "dataset": {
+        "source": "assets:acceptance_data",
+        "target": "/sample-assets",
+        "read_only": true,
+        "required": true
+      }
+    }
+  },
+  "name": "acceptance-server-docker",
+  "version": "v1",
+  "execution_mode": "docker",
+  "command": [
+    "python3",
+    "/demo/server.py"
+  ],
+  "parameter_schema": {
+    "version": 1,
+    "fields": {
+      "label": {
+        "type": "string",
+        "default": "server-label",
+        "overridable": true,
+        "binding": {
+          "target": "env",
+          "name": "DEMO_LABEL"
+        }
+      },
+      "model": {
+        "type": "string",
+        "default": "test-model",
+        "overridable": true,
+        "binding": {
+          "target": "argv",
+          "name": "--model"
+        }
+      }
+    }
+  },
+  "resource_requirements": {
+    "version": 1,
+    "cpu": {
+      "minimum": 1,
+      "default": 1
+    },
+    "memory": {
+      "minimum": 1,
+      "default": 1
+    },
+    "accelerator": {
+      "type": "gpu",
+      "mode": "exclusive",
+      "memory": {
+        "minimum": 0,
+        "default": 0
+      }
+    },
+    "allow_overrides": []
+  },
+  "startup_timeout": 20
+}

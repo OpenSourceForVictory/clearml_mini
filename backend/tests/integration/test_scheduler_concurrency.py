@@ -12,7 +12,8 @@ pytestmark = pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'), reason='TEST
 
 
 @pytest.mark.parametrize('shared', [False, True])
-def test_transaction_leader_and_atomic_capacity(monkeypatch, shared):
+@pytest.mark.parametrize('template_request',[False,True])
+def test_transaction_leader_and_atomic_capacity(monkeypatch, shared,template_request):
     factory = session_factory(os.environ['TEST_DATABASE_URL'])
     suffix = uuid.uuid4().hex[:8]
     users = ['u'+suffix+str(i) for i in range(3)]
@@ -21,7 +22,7 @@ def test_transaction_leader_and_atomic_capacity(monkeypatch, shared):
     try:
         with factory() as s:
             s.add_all([User(id=u, username=u, password_hash='unused') for u in users])
-            s.add(Pool(id=pool, name=pool, gpu_model='*' if shared else 'virtual', allow_shared=shared, max_tasks_per_gpu=3))
+            s.add(Pool(id=pool, name=pool,cpu_per_job=4 if template_request else 2,ram_gb_per_job=8 if template_request else 4, gpu_model='*' if shared else 'virtual', allow_shared=shared, max_tasks_per_gpu=3))
             s.add(Worker(id=worker, node_name=worker, token_hash=uuid.uuid4().hex*2, max_concurrent=3, cpu_capacity=8, ram_gb_capacity=16))
             s.flush()
             for i in range(1 if shared else 3):
@@ -30,7 +31,7 @@ def test_transaction_leader_and_atomic_capacity(monkeypatch, shared):
                            free_vram_mb=24*1024, gpu_utilization=0, telemetry_at=now()))
             for owner in users:
                 for _ in range(5):
-                    j = Job(owner_id=owner, pool_id=pool, title='concurrent', benchmark='mock', model_ref='m', episodes=1, gpu_mode='shared' if shared else 'exclusive', requested_vram_gb=8 if shared else 0)
+                    j = Job(requested_cpu=2 if template_request else None,requested_ram_gb=3 if template_request else None,owner_id=owner, pool_id=pool, title='concurrent', benchmark='mock', model_ref='m', episodes=1, gpu_mode='shared' if shared else 'exclusive', requested_vram_gb=8 if shared else 0)
                     s.add(j)
                     s.flush()
                     s.add(Run(job_id=j.id, attempt=1))
@@ -46,6 +47,9 @@ def test_transaction_leader_and_atomic_capacity(monkeypatch, shared):
             runs = s.scalars(select(Run).join(Job).where(Job.pool_id == pool, Run.status.in_(ACTIVE))).all()
             expected = 2 if shared else 3
             assert len(runs) == len({r.execution_id for r in runs}) == expected
+            if template_request:
+                assert all(r.reserved_cpu==2 and r.reserved_ram_gb==3 for r in runs)
+                assert sum(r.reserved_cpu for r in runs)<=8 and sum(r.reserved_ram_gb for r in runs)<=16
             assert len({(r.slot_id, r.allocation_index) for r in runs}) == expected
             assert len({s.get(Job, r.job_id).owner_id for r in runs}) == expected
             if shared:

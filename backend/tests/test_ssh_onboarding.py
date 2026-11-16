@@ -90,6 +90,7 @@ def operations(tmp_path,monkeypatch):
     monkeypatch.setattr('onboarding.executor.Control',Control)
     ops=Operations(tmp_path/'state','http://test',Remote)
     ops.probe=lambda *a:{'home':'/home/test','python':'/usr/bin/python3','python_version':'3.11','gpus':[{'index':0,'uuid':'GPU-1','name':'GPU'}],'selected_gpus':[0],'configs':[],'services':[],'existing':False,'issues':[],'free_disk_gb':10}
+    ops.host_resources=lambda *a:{'ready':True,'verified':True}
     yield ops,calls
     ops.close()
 
@@ -124,6 +125,7 @@ def test_timeout_failure_and_expiry_release_credentials(operations):
 def test_restart_interrupts_and_never_replays_installation(operations):
     ops,_=operations;op=ops.start('admin',form(),'Bearer SECRET')
     wait(lambda:ops.jobs[op['id']]['state']=='NEEDS_HOST_KEY')
+    ops.close()  # A restarted executor cannot race a still-running old writer.
     fresh=Operations(ops.root,'http://test')
     try:
         assert fresh.list('admin')['operations'][0]['state']=='INTERRUPTED'
@@ -139,3 +141,27 @@ def test_probe_failure_does_not_create_node_and_changed_plan_refuses_install(ope
     assert ops.jobs[op['id']]['error']=='environment_changed_repeat_check'
     assert not any(path.endswith('/begin') for path,_ in calls)
     assert not ops.secrets
+
+
+def test_resource_repair_precedes_install_and_failed_verification_blocks(operations):
+    ops,calls=operations
+    original=ops.probe
+    ops.probe=lambda *a:{**original(*a),'uid':1001,'resource_repair_required':True}
+    commands=[]
+    factory=ops.remote_factory
+    class Remote(factory):
+        def run(self,argv,*a,**kw):
+            commands.append((argv,kw.get('sudo',False)))
+            return super().run(argv,*a,**kw)
+    ops.remote_factory=Remote
+    ops.host_resources=lambda *a:{'ready':False,'reason':'runtime_limits_not_enforced'}
+    op=ops.start('admin',form(fingerprint='SHA256:'+'A'*43),'Bearer SECRET')
+    wait(lambda:ops.jobs[op['id']]['state']=='READY')
+    ops.confirm(op['id'],'admin')
+    wait(lambda:ops.jobs[op['id']]['state']=='FAILED')
+    assert ops.jobs[op['id']]['error']=='runtime_limits_not_enforced'
+    assert any('configure_node_resources.py' in ' '.join(argv) and sudo for argv,sudo in commands)
+    assert any('daemon-reexec' in argv and not sudo for argv,sudo in commands)
+    assert not any('install_node.py' in ' '.join(argv) for argv,_ in commands)
+    assert not any(path.endswith('/complete') for path,_ in calls)
+    assert op['id'] not in ops.secrets

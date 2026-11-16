@@ -36,6 +36,30 @@
         "assets": {},
         "work_dir": "/tmp/mini-eval-work",
         "output_dir": "/tmp/mini-eval-output"
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
       }
     }
   },
@@ -76,6 +100,30 @@
         "assets": {},
         "work_dir": "/tmp/mini-eval-work",
         "output_dir": "/tmp/mini-eval-output"
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
       }
     }
   },
@@ -116,6 +164,30 @@
         "assets": [
           "demo_code"
         ]
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
       }
     }
   },
@@ -155,6 +227,30 @@
         "overridable_env": [],
         "assets": [
           "demo_code"
+        ]
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
         ]
       }
     }
@@ -201,7 +297,31 @@
       "protocol": "http",
       "health_type": "http",
       "health_path": "/healthz",
-      "startup_timeout": 30
+      "startup_timeout": 30,
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
+      }
     }
   },
   {
@@ -246,7 +366,31 @@
       "protocol": "http",
       "health_type": "http",
       "health_path": "/healthz",
-      "startup_timeout": 30
+      "startup_timeout": 30,
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
+      }
     }
   }
 ]

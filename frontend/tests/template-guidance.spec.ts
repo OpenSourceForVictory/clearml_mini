@@ -77,3 +77,11 @@ test('conditional flag and repeated array previews reflect business encodings',a
  const preview=page.getByRole('region',{name:'实时启动预览'});await expect(preview).toContainText('--verbose：仅当 ⟪business.verbose⟫ 为 true');
  await page.getByLabel('参数类型',{exact:true}).selectOption('array');await page.getByLabel('字段名称',{exact:true}).fill('scenes');await page.getByLabel('传递方式',{exact:true}).selectOption('argv');await page.getByLabel('绑定名称',{exact:true}).fill('--scene');await expect(preview).toContainText('business.scenes · JSON 编码');await page.getByLabel('传递编码',{exact:true}).selectOption('repeat');await expect(preview).toContainText('--scene ⟪business.scenes 的元素⟫：逐项重复');
 });
+
+test('template resource contract saves defaults, minimums and locked accelerator settings',async({page})=>{
+ const writes=await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();await page.getByLabel('模板名称',{exact:true}).fill('resource-template');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('demo:1');
+ await page.getByLabel('设置模板资源要求',{exact:true}).check();await page.getByLabel('默认 CPU 核数',{exact:true}).fill('4');await page.getByLabel('默认内存 GiB',{exact:true}).fill('8');await page.getByLabel('加速设备类型',{exact:true}).selectOption('npu');await page.getByLabel('加速设备使用方式',{exact:true}).selectOption('shared');await page.getByLabel('默认设备内存 GiB',{exact:true}).fill('12');
+ await page.getByText('最低要求与覆盖权限',{exact:true}).click();await page.getByLabel('最低内存 GiB',{exact:true}).fill('4');await page.getByLabel('最低设备内存 GiB',{exact:true}).fill('8');await page.getByLabel('允许修改CPU 核数',{exact:true}).uncheck();
+ await page.getByLabel('执行方式',{exact:true}).selectOption('host');await expect(page.getByLabel('默认设备内存 GiB',{exact:true})).toHaveValue('12');await page.getByLabel('执行方式',{exact:true}).selectOption('docker');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body.resource_requirements).toEqual({version:1,cpu:{minimum:1,default:4},memory:{minimum:4,default:8},accelerator:{type:'npu',mode:'shared',memory:{minimum:8,default:12}},allow_overrides:['ram_gb','requested_vram_gb']});
+});

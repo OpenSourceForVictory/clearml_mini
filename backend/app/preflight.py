@@ -7,6 +7,8 @@ from . import scheduling as admission, image_runtime, endpoints
 
 # Public explanations intentionally contain no host paths or other owners' jobs.
 REASONS = {
+    'accelerator_type':('environment','加速设备类型不匹配（GPU/NPU）','选择包含所需设备类型的资源池'),
+    'accelerator_backend':('environment','节点未声明该设备的执行或共享能力','准备并验证对应宿主机或容器执行后端'),
     'service_not_ready': ('resource','依赖的推理服务尚未健康或正在等待启动','平台会在服务就绪后自动启动客户端；服务失败可在关联服务详情处理'),
     'node_agent_not_ready': ('environment','节点 Agent 离线、配置未生效或 Worker 正在排空','请管理员查看机器详情中的 Agent 状态与配置回执'),
     'worker_upgrade': ('environment','节点正在升级或等待升级恢复','等待升级完成或管理员处理失败'),
@@ -111,7 +113,7 @@ def inspect_batch(s, body, user, pool, cases, configs):
         job=SimpleNamespace(client_spec=spec,required_gpu_model=request.get('required_gpu_model',body.required_gpu_model),
                             requested_vram_gb=request.get('requested_vram_gb',body.requested_vram_gb),gpu_mode=request.get('gpu_mode',body.gpu_mode),
                             requested_cpu=request.get('cpus'),requested_ram_gb=request.get('ram_gb'))
-        checks.append({'case_id':case.case_id,**context.inspect(job,user,pool)})
+        checks.append({'case_id':case.case_id,'resources':request,'resource_sources':spec.get('resource_sources',{}),**context.inspect(job,user,pool)})
     primary={k:v for k,v in checks[0].items() if k!='case_id'}
     return dict(**primary,case_checks=checks,can_submit=True,
                 task_count=len(cases), total_episodes=sum(c.episodes for c,spec in zip(cases,configs) if spec['template'].get('task_type')!='command'), max_concurrent=body.max_concurrent,
