@@ -22,6 +22,7 @@ assert v['received']==p and v['model']=='fleet-test-model'
 assert c['business']['variant']==int(c['task']['case_id'])
 time.sleep(c['business'].get('sleep_seconds',1))
 print(json.dumps({'verified_input':p,'endpoint':u,'server_execution':v['server_execution']}),flush=True)
+Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True,'metrics':{'echo_verified':1}}))
 '''
 COMMAND = '''import json,os,time,ctypes
 from pathlib import Path

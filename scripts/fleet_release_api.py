@@ -96,6 +96,13 @@ def assert_release_ready(api, plan, release_id):
         agent = (node.get('connection') or {}).get('agent') or {}
         if agent.get('status') != 'online' or agent.get('version') != plan['target_agent'] or agent.get('digest') != release_id or agent.get('config_status') != 'applied':
             raise RuntimeError('agent release is not ready: ' + node['node_name'])
+        storage=api('admin/nodes/'+node['id']+'/storage')
+        runtime=api('admin/nodes/'+node['id']+'/runtime')
+        host=api('admin/nodes/'+node['id']+'/host-environments')
+        if not storage['all_applied'] or not runtime['slots'] or any(not s['ready'] for s in runtime['slots']):
+            raise RuntimeError('worker storage/runtime configuration is not ready: '+node['node_name'])
+        if host['environments'] and (not host['slots'] or any((s.get('report') or {}).get('applied_revision')!=host['revision'] for s in host['slots'])):
+            raise RuntimeError('worker host configuration is not ready: '+node['node_name'])
 
 
 def upgrade_nodes(api, plan, journal, release_id, timeout=300, clock=time.monotonic, sleep=time.sleep):

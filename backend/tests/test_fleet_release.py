@@ -334,3 +334,108 @@ def test_reconcile_only_exact_successful_upgrade(tmp_path,monkeypatch):
         operation['release_id']='release'
         release.reconcile_upgrade(current,plan,j,node['node_name'],'release')
         assert j.state['steps'][step]['status']=='done'
+
+
+def test_echo_business_command_writes_sdk_result(tmp_path):
+    import os,subprocess,sys,threading
+    from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+    from scripts.fleet_probe_programs import CLIENT
+    class Echo(BaseHTTPRequestHandler):
+        def do_POST(self):
+            value=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            self.send_response(200);self.end_headers()
+            self.wfile.write(json.dumps({'received':value,'model':'fleet-test-model','server_execution':'server-id'}).encode())
+        def log_message(self,*args):pass
+    server=ThreadingHTTPServer(('127.0.0.1',0),Echo)
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    source=tmp_path/'input.json';result=tmp_path/'result.json'
+    source.write_text(json.dumps({'task':{'case_id':'0'},'platform':{'execution_id':'client-id','service':{'endpoint':'http://127.0.0.1:'+str(server.server_port)}},'business':{'variant':0,'sleep_seconds':0}}))
+    try:
+        output=subprocess.run([sys.executable,'-c',CLIENT],env={**os.environ,'MINI_EVAL_INPUT':str(source),'MINI_EVAL_RESULT':str(result)},capture_output=True,text=True,timeout=10,check=True)
+        assert json.loads(result.read_text())=={'success':True,'metrics':{'echo_verified':1}}
+        assert json.loads(output.stdout)['server_execution']=='server-id'
+    finally:
+        server.shutdown();server.server_close();thread.join(2)
+
+
+def test_failed_backup_removes_partial_and_does_not_replace_old_file(tmp_path):
+    from scripts.fleet_release_control import backup_database
+    path=tmp_path/'backup.dump'
+    def failed(*args,**kwargs):
+        kwargs['stdout'].write(b'incomplete')
+        return SimpleNamespace(returncode=1)
+    with pytest.raises(RuntimeError):backup_database(path,run=failed)
+    assert not path.exists() and not path.with_suffix('.manifest.json').exists()
+    path.write_bytes(b'previous validated backup')
+    with pytest.raises(FileExistsError):backup_database(path,run=failed)
+    assert path.read_bytes()==b'previous validated backup'
+
+
+def test_worker_smoke_reads_matching_multi_execution_journal(tmp_path):
+    from scripts.smoke_worker import journal_for
+    state=tmp_path/'state.json';state.write_text('null')
+    directory=tmp_path/'state.json.runs';directory.mkdir()
+    (directory/'one.json').write_text(json.dumps({'task':{'job_id':'one','execution_id':'first'}}))
+    (directory/'two.json').write_text(json.dumps({'task':{'job_id':'two','execution_id':'second'}}))
+    path,value=journal_for(state,'two')
+    assert path.name=='two.json' and value['task']['execution_id']=='second'
+    with pytest.raises(RuntimeError):journal_for(state,'missing')
+
+
+def test_interrupted_setup_stops_before_other_node_changes(tmp_path):
+    from scripts.smoke_fleet_orchestration import Acceptance
+    def never(*a,**kw):pytest.fail('interrupted setup touched platform')
+    a=Acceptance(never,tmp_path,'fleet-test');a.state['nodes']['node']={'stage':'preparing'};a.save()
+    with pytest.raises(RuntimeError,match='reconciliation'):a.prepare()
+
+
+def test_fleet_input_modes_keep_command_episode_contract(tmp_path):
+    from scripts.smoke_fleet_orchestration import Acceptance
+    a=Acceptance(None,tmp_path,'fleet-test')
+    a.state['nodes']={'rtx4090-157':{'pool_id':'pool','slot_id':'server'}}
+    a.state['templates']={'command-docker':'command','client-docker':'client','server-docker':'server'}
+    command=a.body(command=True)
+    assert all(c['episodes']==1 for c in command['cases'])
+    assert command['client']['service_mode']=='none' and 'services' not in command
+    managed=a.body()
+    assert all(c['episodes']==2 for c in managed['cases'])
+    assert managed['client']['service_mode']=='managed' and managed['services'][0]['slot_id']=='server'
+
+
+def test_rollout_completion_requires_all_nodes_and_restore(tmp_path):
+    from scripts.fleet_rollout import complete
+    plan={'targets':[{'node_name':n} for n in TARGETS.values()]}
+    with Checkpoints(tmp_path,'one').locked() as journal:
+        assert not complete(journal,plan)
+        for step in ['backup','control']+[prefix+n for n in TARGETS.values() for prefix in ('drain:','upgrade:')]:
+            journal.begin(step,{});journal.finish(step)
+        record=journal.state['steps']['drain:'+next(iter(TARGETS.values()))]
+        record.update(was_enabled=True,restored=False)
+        assert not complete(journal,plan)
+        record['restored']=True
+        assert complete(journal,plan)
+
+
+def test_rollout_environment_guard_does_not_expose_secrets(monkeypatch):
+    import scripts.fleet_rollout as rollout
+    current={'Config':{'Env':['JWT_SECRET=secret']},'HostConfig':{'PortBindings':{}}}
+    monkeypatch.setattr(rollout,'run',lambda _:json.dumps({'services':{'api':{'environment':{'JWT_SECRET':'changed-secret'},'ports':[]}}}))
+    with pytest.raises(RuntimeError) as e:rollout.check_compose_environment([],current)
+    assert 'secret' not in str(e.value)
+
+
+def test_release_gate_includes_worker_configuration_receipts():
+    from scripts.fleet_release_api import assert_release_ready
+    api,node,_,plan=fake_api(enabled=False)
+    plan.update(target_protocol=10,target_worker='0.12.0',target_agent='1.1.0')
+    node['connection']={'agent':{'status':'online','version':'1.1.0','digest':'release','config_status':'applied'}}
+    ready={'storage':False}
+    def current(path,*args):
+        if path.endswith('/upgrades'):return {'slots':[{'online':True,'protocol_version':10,'software':{'version':'0.12.0','build_digest':'release'}}]}
+        if path.endswith('/storage'):return {'all_applied':ready['storage']}
+        if path.endswith('/runtime'):return {'slots':[{'ready':True}]}
+        if path.endswith('/host-environments'):return {'environments':{}}
+        return api(path,*args)
+    with pytest.raises(RuntimeError,match='storage/runtime'):assert_release_ready(current,plan,'release')
+    ready['storage']=True
+    assert_release_ready(current,plan,'release')

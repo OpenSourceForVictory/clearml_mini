@@ -28,14 +28,14 @@ def checked_run(argv, **kwargs):
         raise RuntimeError('release command failed; retained state requires investigation') from None
 
 
-def backup_database(path, run=checked_run):
+def backup_database(path, run=subprocess.run):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         with os.fdopen(fd, 'wb') as output:
             # Stream, rather than buffering potentially large database contents.
-            result = subprocess.run(['docker', 'exec', 'mini-eval-db-1', 'pg_dump', '-U', 'eval', '-d', 'eval', '-Fc'],
+            result = run(['docker', 'exec', 'mini-eval-db-1', 'pg_dump', '-U', 'eval', '-d', 'eval', '-Fc'],
                                     stdout=output, stderr=subprocess.PIPE, timeout=300)
             if result.returncode: raise RuntimeError('database backup failed')
             output.flush(); os.fsync(output.fileno())

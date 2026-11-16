@@ -13,7 +13,7 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 
 报告原子写入且权限 0600。计划绑定 machine-id、GPU 和挂载信息，执行变更前必须重新盘点比较，不能直接信任历史记录。计划不包含凭据。
 
-发布阶段记录采用同一目录下的机群锁，不同 release ID 也不能同时执行。步骤以输入摘要绑定，完成项可幂等跳过；开始但未完成的步骤必须先核验现场状态，不能盲目重放。所有发布进程须使用同一状态目录。当前 CLI 只提供 inventory/plan，变更执行入口尚在实现。
+发布阶段记录采用同一目录下的机群锁，不同 release ID 也不能同时执行。步骤以输入摘要绑定，完成项可幂等跳过；开始但未完成的步骤必须先核验现场状态，不能盲目重放。所有发布进程须使用同一状态目录。`scripts.fleet_rollout` 提供 check/apply/resume/restore-admission；阶段记录与目标镜像 ID 及计划摘要绑定。
 
 ## 2026-11-16 发布前基线
 
@@ -51,3 +51,32 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 `scripts.fleet_acceptance.Registry` 将测试批次、模板及所有者写入独立清单，重启后复用同一测试 ID。取消和停用操作先检查清单归属及平台实际名称，不接收未登记 ID。模板停用可重复执行；执行与服务清理由平台完成，验收工具不使用裸 PID 杀进程。
 
 故障回归使用隔离 API 数据库与临时 systemd 单元/容器：`HOST_EXECUTION_TEST=1` 配合 `test_host_backend.py`、`test_service_recovery.py`；Agent/资源/存储故障由 `test_agent_faults.py`、`test_agent_integration.py`、`test_resource_reporting.py`、`test_worker_storage.py` 覆盖。它们不是生产 NFS 停机或五机断网验收，报告必须分别标注。
+
+
+## 发布命令
+
+管理员 token 文件为本地 0600 JSON（字段 `token`），不传在命令行，不入库。先执行只读检查：
+
+```bash
+python3 -m scripts.fleet_rollout check --plan .runtime/fleet-release/plan.json --token-file .runtime/fleet-release/auth.json --state-directory .runtime/fleet-release/next-release --release-id next-release --image mini-eval-api:approved-release
+```
+
+检查通过后，将 `check` 改为 `apply` 执行。控制端监听、JWT/数据库配置、资源额度与现有运行配置不一致时拒绝继续；工具不打印敏感配置差异。`resume --reconcile-node 节点名` 只对已有升级回执、指定制品和已成功且就绪的节点完成对账，不重新安装不确定操作。数据库迁移或交换镜像期间发生不确定故障时，需要先检查数据库版本与控制端日志，不能盲目重放。`restore-admission` 也要求目标版本和配置回执全部通过，不会把不确定节点重新放入调度。
+
+发布保持原节点 ID、GPU UUID、NFS 挂载与工作路径。旧 API 镜像和节点升级器生成的 `.mini-eval-backup-<upgrade-id>` 保留。生产已产生新测试记录，不能直接用发布前数据库快照覆盖当前库；恢复旧版本需先排空并确定兼容迁移方案。
+
+## 本次实际发布
+
+2026-11-16：控制端已迁移至 `r841a23`，镜像 `mini-eval-api:fleet-20261116`；五台 Worker 为 0.12.0/协议 10，Agent 为 1.1.0，统一制品摘要 `ac5223fda0175dc815891fecea7a03f76acf0f2cbbb6f0fc4165b7c7ca354de0`。升级后存储、运行环境、宿主机配置回执均已检查，原准入状态恢复。
+
+首次逐节点检查遇到 Agent 注册成功而配置回执尚在途，工具停止后续升级；修正为期限内等待已应用回执，并核验原升级 ID 后继续，没有重复安装。首次旧 Worker 冒烟脚本读取旧单执行 journal，已改为显式隔离状态目录和按任务查找多执行 journal，并重跑成功。
+
+## 真实验收命令
+
+`python3 -m scripts.smoke_fleet_orchestration` 提供 prepare/matrix/soak/cleanup。必须显式给出 token 文件、独立目录和测试 ID。prepare 保存原节点配置，仅增加测试宿主机环境、镜像许可及 .157 的服务角色和端口范围；cleanup 待所属执行清理后按修订号恢复，不覆盖期间管理员修改。
+
+matrix 覆盖四种 host/docker 配对 × 共享/独占服务，每组两个三任务批次；使用真实 HTTP 参数回显和 SDK 逐回合结果。另以真实 CUDA 分配验证五台 GPU；这些测试不代表 RoboTwin 模型效果。
+
+soak 需要独立测试目录、专用外部回显服务地址和私密管理员登录文件以更新 30 分钟有效的 token；至少两小时、三用户、30 个三任务批次，周期记录心跳和排队推进。测试账号使用随机密码，收尾停用。生产 NFS、Docker daemon 和整机网络不做破坏性操作。
+
+`scripts.smoke_fleet_controls` 验证暂停/恢复/取消/单项及批量失败重试；`scripts.smoke_fleet_admission` 验证 CPU/RAM 超额请求拒绝和显存不足排队。CPU/RAM 压力及过期遥测的调度分支由隔离测试覆盖，未用真实机器内存耗尽制造故障。真实浏览器用例 `fleet-production.spec.ts` 必须显式设置 `FLEET_ACCEPTANCE_USERS` 才会运行。
