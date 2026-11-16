@@ -203,3 +203,26 @@ def test_failed_cleaned_service_can_be_stopped_without_recancelling_job(env):
     r=c.post('/api/v1/admin/services/'+instance['id']+'/control',headers=a['admin'],json={'action':'stop','expected_revision':0})
     assert r.status_code==200,r.text
     assert r.json()['state']=='STOPPED' and not r.json()['desired_running']
+
+
+def test_independent_health_port_reuses_time_wait_but_rejects_listener():
+    import socket,pytest
+    from worker.services import check_bind
+    with socket.socket() as business, socket.socket() as listener:
+        business.bind(('127.0.0.1',0));port=business.getsockname()[1]
+        listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        listener.bind(('127.0.0.1',0));health_port=listener.getsockname()[1];listener.listen()
+        service={'address':'127.0.0.1','port':port,'health_port':health_port}
+        business.close()
+        with pytest.raises(RuntimeError,match='already in use'):check_bind(service)
+        with socket.create_connection(('127.0.0.1',health_port)) as peer:
+            accepted,_=listener.accept()
+            accepted.shutdown(socket.SHUT_WR)
+            assert peer.recv(1)==b''
+            accepted.close()
+        listener.close()
+        with socket.socket() as without_reuse:
+            with pytest.raises(OSError):without_reuse.bind(('127.0.0.1',health_port))
+        # Server actively closed the established connection: TIME_WAIT must
+        # not prevent rebinding an otherwise unoccupied health endpoint.
+        check_bind(service)

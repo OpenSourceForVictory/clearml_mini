@@ -15,6 +15,7 @@ def check_bind(service):
             s.bind((service['address'],service['port']))
         if service.get('health_port',service['port'])!=service['port']:
             with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as health_socket:
+                health_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 health_socket.bind((service['address'],service['health_port']))
     except OSError as exc:
         raise RuntimeError('service address is not local or port is already in use') from exc
