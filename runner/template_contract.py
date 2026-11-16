@@ -4,7 +4,7 @@ from .image_runtime import environment, NAME, placeholders
 
 
 def host_config(value):
-    if not isinstance(value, dict) or set(value) - {'environment_name','environment','overridable_env','assets'}:
+    if not isinstance(value, dict) or set(value) - {'environment_name','environment','overridable_env','assets','working_directory'}:
         raise ValueError('invalid host runtime fields')
     name=value.get('environment_name')
     if not isinstance(name,str) or not NAME.fullmatch(name): raise ValueError('host environment_name is required')
@@ -13,7 +13,12 @@ def host_config(value):
     environment(dict.fromkeys(overrides,''))
     if not isinstance(assets,list) or len(assets)>16 or any(not isinstance(k,str) or not NAME.fullmatch(k) for k in assets): raise ValueError('invalid host logical assets')
     for text in env.values(): placeholders(text,assets)
-    return {'environment_name':name,'environment':env,'overridable_env':list(dict.fromkeys(overrides)),'assets':list(dict.fromkeys(assets))}
+    directory=value.get('working_directory')
+    if directory is not None:
+        from pathlib import PurePosixPath
+        if not isinstance(directory,str) or not directory.strip() or len(directory)>2000 or any(c in directory for c in ('\x00','\n','\r')) or '..' in PurePosixPath(directory).parts or '${' in directory:
+            raise ValueError('invalid host working_directory')
+    return {**({'working_directory':directory} if directory is not None else {}),'environment_name':name,'environment':env,'overridable_env':list(dict.fromkeys(overrides)),'assets':list(dict.fromkeys(assets))}
 
 
 def command(value):

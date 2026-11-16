@@ -12,7 +12,7 @@ def main():
          'MINI_EVAL_HEALTH_PORT':str(config.get('health_port',config['port'])),'MINI_EVAL_PORT':str(config['port']),'MINI_EVAL_BIND_HOST':config['bind_host']}
     command=config['template']['command'];cwd=None
     if config['template'].get('execution_mode')=='host':
-        command=config['_resolved_command'];env.update(config['_resolved_environment']);cwd=env['MINI_EVAL_WORK_DIR']
+        command=config['_resolved_command'];env.update(config['_resolved_environment']);cwd=config.get('_resolved_cwd',env['MINI_EVAL_WORK_DIR'])
     else:
         from .image_runtime import resolve
         command,additions,cwd=resolve(config,input_path=inp);env.update(additions)

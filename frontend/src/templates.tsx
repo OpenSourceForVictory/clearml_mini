@@ -47,6 +47,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
  const [readiness,setReadiness]=useState(()=>readinessDraft(source?.readiness));
  const ordinary=kind==='client'&&taskType==='command';
  const [reporting,setReporting]=useState(source?.episode_reporting??true);
+ const [hostDirectory,setHostDirectory]=useState(source?.host_runtime?.working_directory||'');
  const [image,setImage]=useState(source?.image||''),[hostEnvironment,setHostEnvironment]=useState(source?.host_runtime?.environment_name||'');
  const [resources,setResources]=useState<ResourceContract|null>(source?.resource_requirements||null);
  const [parameters,setParameters]=useState(()=>parameterDraft(source?.parameter_schema));
@@ -66,7 +67,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
    validateMappings(bindings,body.parameter_schema,body.command,environment,overridable_env);
    body.platform_bindings=bindings;body.task_type=taskType;
    if(mode==='docker'){body.image=f.get('image');body.runtime={...source?.runtime,interpreter:source?.runtime?.interpreter||'python3',environment,overridable_env,assets:assetMap,work_dir:f.get('work_dir'),output_dir:f.get('output_dir'),mounts:mountValues(mounts)};}
-   else{body.host_runtime={...source?.host_runtime,environment_name:f.get('environment_name'),environment,overridable_env,assets:assets.map(a=>a.name)};}
+   else{body.host_runtime={...source?.host_runtime,environment_name:f.get('environment_name'),environment,overridable_env,assets:assets.map(a=>a.name)};delete body.host_runtime.working_directory;if(hostDirectory)body.host_runtime.working_directory=hostDirectory;}
    if(kind==='server')Object.assign(body,{port:Number(f.get('port')),protocol:f.get('protocol'),health_type:f.get('health_type'),health_path:f.get('health_path'),startup_timeout:Number(f.get('startup_timeout'))});
    if(kind==='server')body.readiness=customReadiness?readiness:null;
    await api('admin/'+kind+'-templates','POST',body);await onSave?.();
@@ -81,7 +82,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
  {kind==='client'&&<Field label="任务类型"><select value={taskType} onChange={e=>setTaskType(e.target.value)}><option value="evaluation">评测任务（回合与评测结果）</option><option value="command">普通命令（按退出码判定）</option></select></Field>}
  <Field label="执行方式"><select value={mode} onChange={e=>setMode(e.target.value)}><option value="docker">Docker 镜像运行</option><option value="host">宿主机运行</option></select></Field>
  {kind==='client'&&<Field label="协议接入方式"><select value={ordinary?'direct':integration} disabled={ordinary} onChange={e=>setIntegration(e.target.value)}><option value="direct">{ordinary?'直接执行业务命令':'业务程序直接实现评测协议'}</option>{!ordinary&&<option value="sdk-command">SDK + 每回合业务命令</option>}</select></Field>}
- {mode==='docker'?<Field label="Docker 镜像"><input name="image" required value={image} onChange={e=>setImage(e.target.value)} placeholder="registry/image:tag 或 digest"/></Field>:<><Field label="节点环境名称"><input name="environment_name" required pattern="[A-Za-z][A-Za-z0-9_]*" value={hostEnvironment} onChange={e=>setHostEnvironment(e.target.value)} placeholder="例如 simulation"/></Field><p>节点需批准并探测此宿主机环境。宿主机模式适合可信业务程序，不提供容器安全隔离。</p></>}
+ {mode==='docker'?<Field label="Docker 镜像"><input name="image" required value={image} onChange={e=>setImage(e.target.value)} placeholder="registry/image:tag 或 digest"/></Field>:<><Field label="节点环境名称"><input name="environment_name" required pattern="[A-Za-z][A-Za-z0-9_]*" value={hostEnvironment} onChange={e=>setHostEnvironment(e.target.value)} placeholder="例如 simulation"/></Field><Field label="业务执行目录"><input value={hostDirectory} onChange={e=>setHostDirectory(e.target.value)} placeholder="留空：任务目录；.：批准代码目录；子目录：例如 eval" maxLength={2000}/></Field><p>执行环境中的 Python 与业务执行目录独立。目录相对于节点批准的代码根目录，也可填写其内部绝对路径；相对程序和配置路径从此目录解析。需要 Worker 协议 13。临时数据和结果仍写平台工作/输出目录。</p><p>节点需批准并探测此宿主机环境。宿主机模式适合可信业务程序，不提供容器安全隔离。</p></>}
  <fieldset><legend>启动命令</legend><CommandEditor value={command} onChange={setCommand}/>
  <CommandMappings kind={kind} bindings={bindings} onBindings={setBindings} parameters={parameters} onParameters={setParameters}/><LaunchPreview command={command} bindings={bindings} parameters={parameters}/></fieldset>{ordinary?<p className="hint">普通命令每项执行一次，退出码 0 为成功，非零为失败。不需要 SDK、回合事件或结果 JSON；不适用于一直运行的服务。命令按程序和参数执行，不自动解释 Shell 管道。</p>:kind==='client'&&<><label><input type="checkbox" name="episode_reporting" checked={reporting||integration==='sdk-command'} disabled={integration==='sdk-command'} onChange={e=>setReporting(e.target.checked)}/>业务程序逐回合上报（SDK 命令模式自动启用）</label><p>SDK 命令每次执行一个回合，通过 MINI_EVAL_RESULT 写入结果；直接协议程序负责回合事件和最终汇总。参数支持 task_name、episode_id、episode_seed、endpoint、work_dir 等占位符。</p></>}
  <EnvironmentEditor rows={environments[mode]} onChange={rows=>setEnvironments({...environments,[mode]:rows})}/>

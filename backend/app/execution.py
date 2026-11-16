@@ -31,7 +31,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 

@@ -49,6 +49,7 @@ def desired(worker):return {'revision':worker.host_revision,'environments':worke
 def blockers(worker,slot,spec,at):
     template=(spec or {}).get('template',{})
     if template.get('execution_mode','docker')!='host':return []
+    if template.get('host_runtime',{}).get('working_directory') is not None and slot.protocol_version<13:return ['业务执行目录需要 Worker 协议 13，请升级节点 Worker']
     if slot.protocol_version<7:return ['宿主机执行需要 Worker v7']
     report=slot.host_report or {}
     if report.get('revision')!=worker.host_revision or report.get('applied_revision')!=worker.host_revision or slot.host_reported_at is None or not timedelta(0)<=at-utc(slot.host_reported_at)<timedelta(seconds=15):return ['宿主机环境配置未生效或报告过期']

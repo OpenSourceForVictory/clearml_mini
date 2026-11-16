@@ -57,7 +57,7 @@ def main():
         if config['template'].get('execution_mode') == 'host':
             command = config.get('_resolved_command', command)
             env.update(config.get('_resolved_environment', {}))
-            cwd = env.get('MINI_EVAL_WORK_DIR')
+            cwd = config.get('_resolved_cwd', env.get('MINI_EVAL_WORK_DIR'))
         from .task_input import build, bind_platform
         config=build(config,env)
         # Publish the normalized input before the user's program starts. Keep

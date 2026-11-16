@@ -32,3 +32,27 @@ systemctl --user status mini-eval-exec-执行ID.service
 `HOST_EXECUTION_TEST=1 .venv/bin/python -m pytest backend/tests/test_host_backend.py -q` 会创建短生命周期用户单元，验证进程树停止、稳定身份恢复、拒绝重复启动、超时、限额与租约失联。
 
 `scripts/smoke_host_runtime.py` 只接受隔离 API `http://127.0.0.1:18090`，配合 `EVAL_ADMIN_PASSWORD`、`STORAGE_TEST_HOST` 运行四组合样本（Docker/host × SDK命令/direct）；使用模拟 GPU 槽位，验证真实容器、宿主机进程、网络协议、逐回合事件和报告，不代表真实模型质量验收。
+
+## 独立业务执行目录（Worker 0.15.0 / 协议 13）
+
+解释器、代码根目录、业务执行目录和平台数据目录分别管理。节点批准环境示例：
+
+```json
+{"simulation":{"python":"/opt/conda/envs/eval/bin/python","code_root":"/data/projects/my_eval"}}
+```
+
+客户端或服务端模板在宿主机模式设置：
+
+```json
+{"execution_mode":"host","host_runtime":{"environment_name":"simulation","working_directory":".","environment":{},"overridable_env":[],"assets":[]},"command":["python","client.py","--config","configs/eval.yaml"]}
+```
+
+这相当于先进入 `/data/projects/my_eval`，再用 `/opt/conda/envs/eval/bin/python` 启动 client.py。平台通过 subprocess 的 cwd 启动，不拼接 shell。`working_directory` 也可为 `evaluation` 等子目录；绝对路径必须处于该节点批准 code_root 内。相对脚本路径基于所选业务目录解析，程序仍必须在批准根目录内。目录必须存在并可读/进入，拒绝 `..`、目录占位符和越界符号链接；跨节点推荐相对路径。
+
+留空不发送该字段，保留旧行为：cwd 为本次任务独立 work，脚本路径从 code_root 解析。配置该字段的任务不能调度到协议低于 13 的节点；预检提示升级 Worker。模板查看和复制新版本保留此字段。
+
+MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用于执行临时数据与产物。多个任务可在同一个业务目录并发，业务程序不要把可变结果写入共享代码目录。Python SDK、SDK 命令包装、直接协议、普通命令及服务端共用目录解析。
+
+验证用例在 `backend/tests/test_host_working_directory.py`：独立 venv Python 与业务目录、相对配置、四种入口、非法路径、缺失目录、越界链接、旧模板默认和旧 Worker 准入。验收范围是通用业务启动，不代表真实仿真资产或模型评测。
+
+本次发布与逐项验证见 [独立执行目录验收](validation/host-working-directory/README.md)。六个在线节点已升级 Worker 0.15.0 / 协议 13。

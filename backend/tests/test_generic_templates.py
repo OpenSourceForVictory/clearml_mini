@@ -30,3 +30,16 @@ def test_mode_validation_and_authority(env):
     assert c.post('/api/v1/admin/client-templates',headers=a['admin'],json={**host,'host_runtime':None}).status_code==400
     r=c.post('/api/v1/admin/client-templates',headers=a['admin'],json={**host,'integration_mode':'sdk-command'})
     assert r.status_code==201 and r.json()['episode_reporting']
+
+
+def test_host_directory_survives_api_registration_and_clone(env):
+    _,c,a=env
+    for kind in ('client','server'):
+        body=definition('host');body['host_runtime']['working_directory']='evaluation'
+        path='/api/v1/admin/'+kind+'-templates'
+        response=c.post(path,headers=a['admin'],json=body)
+        assert response.status_code==201,response.text
+        assert response.json()['host_runtime']['working_directory']=='evaluation'
+        copied=c.post(path+'/'+response.json()['id']+'/clone',headers=a['admin'],json={'version':'2'})
+        assert copied.status_code==201,copied.text
+        assert copied.json()['host_runtime']['working_directory']=='evaluation'

@@ -91,8 +91,14 @@ class HostBackend:
         def expand(text):return TOKEN.sub(lambda m:values.get(m[1],m[0]),text)
         argv=[expand(x) for x in config['template']['command']]
         code_root=Path(profile['code_root']).resolve()
+        business_cwd=directory/'work'
+        if host.get('working_directory') is not None:
+            business_cwd=(code_root/host['working_directory']).resolve()
+            if not business_cwd.is_relative_to(code_root) or not business_cwd.is_dir() or not os.access(business_cwd,os.R_OK|os.X_OK):
+                raise RuntimeError('host working_directory must be an accessible directory inside approved code root')
         def code_path(text):
-            p=(code_root/text).resolve()
+            base=business_cwd if host.get('working_directory') is not None else code_root
+            p=(base/text).resolve()
             if not p.is_relative_to(code_root) or not p.is_file():raise RuntimeError('business program must exist inside approved code root')
             return str(p)
         if argv[0] in ('python','python3',profile['python']):
@@ -114,6 +120,7 @@ class HostBackend:
             env.pop('CUDA_VISIBLE_DEVICES',None)
             # The device policy leaves one accessible card; CANN enumerates it as logical zero.
             env['ASCEND_RT_VISIBLE_DEVICES']='0'
+        config['_resolved_cwd']=str(business_cwd)
         config['_resolved_command']=argv;config['_resolved_environment']=env;config['_resolved_assets']={k:v for k,v in values.items() if k.startswith('assets:')}
         config['template']={**config['template'],'command':argv}
         atomic_json(inp,config)
