@@ -1,7 +1,7 @@
 """Server template registry; execution instances always retain a snapshot."""
 from typing import Literal
 from fastapi import Depends, HTTPException
-from pydantic import BaseModel,ConfigDict,Field,model_validator
+from pydantic import BaseModel,ConfigDict,Field,model_validator,field_validator
 from sqlalchemy import select
 from .clients import TemplateCreate,TemplateState,template_view
 from .core import ClientTemplate,ServerTemplate
@@ -15,6 +15,14 @@ class ServerCreate(TemplateCreate):
     health_path: str = Field(default='/healthz',min_length=1,max_length=500,pattern=r'^/[^\s]*$')
     health_type: Literal['http','tcp']='http'
     startup_timeout: int=Field(default=120,ge=5,le=1800)
+
+    readiness: dict | None = None
+
+    @field_validator('readiness')
+    @classmethod
+    def readiness_config(cls, value):
+        from runner.readiness_contract import validate
+        return validate(value) if value is not None else None
 
     @model_validator(mode='after')
     def service_only(self):
