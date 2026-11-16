@@ -6,6 +6,8 @@
 
 五节点真实 GPU 执行、跨机客户端/服务端的宿主机和容器组合、排队及取消重试已验证。两小时多用户稳定性测试和最终清理尚待完成，详见[本轮验收报告](validation/production-fleet-acceptance/README.md)及[发布与恢复手册](fleet-release.md)。这些结果不代表单台多卡主机、NPU 或完整 RoboTwin 模型评测已验收。
 
+2026-11-16 模板界面已单独更新至 `26be4a0`，API 进程未重启。后续容器重建使用已固定摘要的 `mini-eval-api:template-ui-26be4a0`，必须保留当前镜像与 LAN overlay；详见[界面发布记录](validation/template-authoring-guidance/README.md)。
+
 ## 启停
 
 ```bash
