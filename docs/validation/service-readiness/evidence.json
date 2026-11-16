@@ -1,0 +1,212 @@
+{
+  "batches": [
+    "1bc0e529-4aba-4c5d-8eb1-7011301a58ba",
+    "dc9e93ff-6e39-4173-8875-27f70edcee76",
+    "433e880a-3e3c-48bf-b7ad-2db85a4b54e8"
+  ],
+  "passed": true,
+  "duration_seconds": 63,
+  "observed_states": [
+    "CANCEL_REQUESTED",
+    "HEALTHY",
+    "RESERVED",
+    "STARTING",
+    "STOPPED",
+    "UNHEALTHY"
+  ],
+  "waiting_service_observed": true,
+  "pending_observed": true,
+  "final": {
+    "at": 1794836093.9211674,
+    "batches": [
+      {
+        "id": "1bc0e529-4aba-4c5d-8eb1-7011301a58ba",
+        "cases": [
+          {
+            "case_id": "0",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "9286b2fe-446f-4e0a-aa4d-403461484fb9",
+            "endpoint": "http://192.168.8.151:19402"
+          },
+          {
+            "case_id": "1",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "9286b2fe-446f-4e0a-aa4d-403461484fb9",
+            "endpoint": "http://192.168.8.151:19402"
+          },
+          {
+            "case_id": "2",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "9286b2fe-446f-4e0a-aa4d-403461484fb9",
+            "endpoint": "http://192.168.8.151:19402"
+          }
+        ],
+        "services": [
+          {
+            "id": "17804954-f849-43f6-b711-85ab369d164d",
+            "state": "STOPPED",
+            "health_port": 19403,
+            "health_at": "2026-11-16T13:34:40.291606+00:00",
+            "probe": {
+              "successes": 39,
+              "failures": 0,
+              "phase": "message",
+              "duration_ms": 2,
+              "error_code": null,
+              "ever_ready": true,
+              "kind": "websocket",
+              "mode": "message",
+              "success_threshold": 2,
+              "failure_threshold": 2,
+              "stale_after": 5
+            },
+            "cleanup_pending": false
+          }
+        ]
+      },
+      {
+        "id": "dc9e93ff-6e39-4173-8875-27f70edcee76",
+        "cases": [
+          {
+            "case_id": "0",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "21703ee9-1c08-4155-8b8c-0976009035c1",
+            "endpoint": "http://192.168.8.151:19400"
+          },
+          {
+            "case_id": "1",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "21703ee9-1c08-4155-8b8c-0976009035c1",
+            "endpoint": "http://192.168.8.151:19400"
+          },
+          {
+            "case_id": "2",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "21703ee9-1c08-4155-8b8c-0976009035c1",
+            "endpoint": "http://192.168.8.151:19400"
+          }
+        ],
+        "services": [
+          {
+            "id": "39cb1b72-ebb7-4681-a80f-9214541939b7",
+            "state": "STOPPED",
+            "health_port": 19401,
+            "health_at": "2026-11-16T13:34:37.124602+00:00",
+            "probe": {
+              "successes": 40,
+              "failures": 0,
+              "phase": "message",
+              "duration_ms": 2,
+              "error_code": null,
+              "ever_ready": true,
+              "kind": "websocket",
+              "mode": "message",
+              "success_threshold": 2,
+              "failure_threshold": 2,
+              "stale_after": 5
+            },
+            "cleanup_pending": false
+          }
+        ]
+      },
+      {
+        "id": "433e880a-3e3c-48bf-b7ad-2db85a4b54e8",
+        "cases": [
+          {
+            "case_id": "0",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "5d0b5929-4378-4e11-ba90-c692a524913d",
+            "endpoint": "http://192.168.8.151:19404"
+          },
+          {
+            "case_id": "1",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "5d0b5929-4378-4e11-ba90-c692a524913d",
+            "endpoint": "http://192.168.8.151:19404"
+          },
+          {
+            "case_id": "2",
+            "status": "SUCCEEDED",
+            "waiting_service": false,
+            "service_execution_id": "5d0b5929-4378-4e11-ba90-c692a524913d",
+            "endpoint": "http://192.168.8.151:19404"
+          }
+        ],
+        "services": [
+          {
+            "id": "360e79e4-30f1-4529-8560-795fad1ad652",
+            "state": "STOPPED",
+            "health_port": 19405,
+            "health_at": "2026-11-16T13:34:51.443651+00:00",
+            "probe": {
+              "successes": 27,
+              "failures": 0,
+              "phase": "message",
+              "duration_ms": 1,
+              "error_code": null,
+              "ever_ready": true,
+              "kind": "websocket",
+              "mode": "message",
+              "success_threshold": 2,
+              "failure_threshold": 2,
+              "stale_after": 5
+            },
+            "cleanup_pending": false
+          }
+        ]
+      }
+    ]
+  },
+  "network_fault": {
+    "service_id": "57ae7a41-dad6-4620-b56b-876a02df6356",
+    "isolated_client_failed": true,
+    "normal_client_succeeded": true,
+    "global_state": "HEALTHY",
+    "endpoint": "http://192.168.8.151:19400",
+    "cleaned": true
+  },
+  "database_restore": {
+    "before": [
+      "t063c45",
+      "311"
+    ],
+    "after": [
+      "u174d56",
+      "311"
+    ],
+    "backup_sha256": "a37871191c3964f6fb0bbb1700799cd3bcf7ef5f22d6dba5e681dd3163cc1b32"
+  },
+  "post_release_smoke": {
+    "service_id": "7b97eca3-626d-438b-beb3-e78048de3367",
+    "isolated_client_failed": true,
+    "normal_client_succeeded": true,
+    "global_state": "HEALTHY",
+    "endpoint": "http://192.168.8.151:19400",
+    "cleaned": true
+  },
+  "release_health": {
+    "upgrades": [
+      {
+        "node": "ascend910b3-29",
+        "status": "SUCCEEDED",
+        "enabled": true,
+        "updater_online": true
+      },
+      {
+        "node": "local4090-151",
+        "status": "SUCCEEDED",
+        "enabled": true,
+        "updater_online": true
+      }
+    ],
+    "frontend_asset": "index-1R2V-8LE.js"
+  }
+}
