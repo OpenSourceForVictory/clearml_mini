@@ -296,3 +296,20 @@ def test_forwarded_managed_service_binds_locally_and_advertises_route(env,monkey
     service=healthy(env,st,ss)
     assert service['client_spec']['service']['address']=='127.0.0.1'
     assert claim(env,ct,cs[0])['client_spec']['endpoint']=='http://192.168.8.151:19000'
+
+
+def test_failed_service_batch_cleanup_does_not_block_other_batches(env,monkeypatch):
+    main,c,a=env;st,ss,ct,cs,body=setup(env,monkeypatch)
+    first=submit(env,body,'failed-service-cleanup')
+    service=claim(env,st,ss);assert service
+    finish(env,st,service,'FAILED')
+    response=c.post('/api/v1/batches/'+first['id']+'/control',headers=a['alice'],json={'action':'cancel','expected_revision':0})
+    assert response.status_code==200,response.text
+    second=submit(env,body,'unrelated-next-batch')
+    assert tick(main.SessionLocal)==2
+    tick(main.SessionLocal)  # cleanup is idempotent on subsequent scheduling ticks
+    with main.SessionLocal() as s:
+        old=s.scalar(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==first['id']))
+        assert not old.desired_running and old.auto_stopped
+        assert s.get(Job,old.current_job_id).status=='FAILED'
+        assert s.scalar(select(Run).join(Job).where(Job.batch_id==second['id'],Run.status=='RESERVED'))

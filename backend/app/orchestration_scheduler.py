@@ -171,4 +171,5 @@ def reconcile(s,at):
         for item in s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==orch.batch_id)):
             if item.desired_running:
                 item.desired_running=False;item.auto_stopped=True;item.revision+=1
-                if item.current_job_id:cancel_job(s,s.get(Job,item.current_job_id))
+                job=s.get(Job,item.current_job_id) if item.current_job_id else None
+                if job and job.status not in admission.TERMINAL:cancel_job(s,job)
