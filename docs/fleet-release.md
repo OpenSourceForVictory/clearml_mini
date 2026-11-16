@@ -61,7 +61,7 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 python3 -m scripts.fleet_rollout check --plan .runtime/fleet-release/plan.json --token-file .runtime/fleet-release/auth.json --state-directory .runtime/fleet-release/next-release --release-id next-release --image mini-eval-api:approved-release
 ```
 
-检查通过后，将 `check` 改为 `apply` 执行。控制端监听、JWT/数据库配置、资源额度与现有运行配置不一致时拒绝继续；工具不打印敏感配置差异。`resume --reconcile-node 节点名` 只对已有升级回执、指定制品和已成功且就绪的节点完成对账，不重新安装不确定操作。数据库迁移或交换镜像期间发生不确定故障时，需要先检查数据库版本与控制端日志，不能盲目重放。`restore-admission` 也要求目标版本和配置回执全部通过，不会把不确定节点重新放入调度。
+检查通过后，将 `check` 改为 `apply` 执行。执行时固定本地不可变镜像 ID，标签重新指向其他制品不会改变本次发布输入；没有镜像绑定的旧手工阶段记录不能由新 CLI 自动续跑。控制端监听、JWT/数据库配置、资源额度与现有运行配置不一致时拒绝继续；工具不打印敏感配置差异。`resume --reconcile-node 节点名` 只对已有升级回执、指定制品和已成功且就绪的节点完成对账，不重新安装不确定操作。数据库迁移或交换镜像期间发生不确定故障时，需要先检查数据库版本与控制端日志，不能盲目重放。`restore-admission` 也要求目标版本和配置回执全部通过，不会把不确定节点重新放入调度。
 
 发布保持原节点 ID、GPU UUID、NFS 挂载与工作路径。旧 API 镜像和节点升级器生成的 `.mini-eval-backup-<upgrade-id>` 保留。生产已产生新测试记录，不能直接用发布前数据库快照覆盖当前库；恢复旧版本需先排空并确定兼容迁移方案。
 

@@ -69,15 +69,17 @@ def main():
             assert_release_ready(api,plan,release['id'])
             restore_admission(api,plan,journal);return
         image_id=json.loads(run(['docker','image','inspect',args.image]))[0]['Id']
-        check_image(args.image,plan)
+        check_image(image_id,plan)
         active=json.loads(run(['docker','inspect','mini-eval-api-1']))[0]
         if active['Config']['Labels'].get('com.docker.compose.project')!='mini-eval':raise RuntimeError('unexpected control-plane container identity')
-        overlay=args.state_directory/'image.yml';image_overlay(overlay,args.image)
+        overlay=args.state_directory/'image.yml';image_overlay(overlay,image_id)
         command=compose_command(args.env_file,overlay)
         check_compose_environment(command,active)
         if args.action=='check':
             print('PASS physical identities, mounts, release image, environment and listeners; no platform mutation')
             return
+        if journal.state['steps'] and 'identity' not in journal.state['steps']:
+            raise RuntimeError('legacy checkpoints lack immutable image binding; reconcile explicitly before using this CLI')
         if journal.begin('identity',{'image_id':image_id,'plan':plan}):journal.finish('identity')
         previous=args.state_directory/'previous-deployment.json'
         if not previous.exists():
@@ -95,7 +97,7 @@ def main():
         print('PASS drained',flush=True)
         if journal.begin('backup',{'image_id':image_id}):
             backup=args.state_directory/'release.dump';digest=backup_database(backup)
-            atomic_json(args.state_directory/'release-restore.json',restore_probe(backup,digest,args.image))
+            atomic_json(args.state_directory/'release-restore.json',restore_probe(backup,digest,image_id))
             journal.finish('backup')
         if journal.begin('control',{'image_id':image_id}):
             run(command+['stop','api'])
