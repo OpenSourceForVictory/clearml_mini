@@ -1,6 +1,6 @@
 # 完整运行模板样例
 
-本样例验证平台任务、参数、服务地址和回合结果的连通性，使用 HTTP 回显服务，不代表真实模型质量评测。六份模板在 `frontend/public/template-examples/catalog.json`：客户端 Docker/宿主机 × SDK 每回合命令/直接协议，以及服务端 Docker/宿主机。注册页面可按类型预览并载入，载入后仍须注册，服务不会自动启动。
+本样例验证平台任务、参数、服务地址和回合结果的连通性，使用 HTTP 回显服务，不代表真实模型质量评测。九份模板在 `frontend/public/template-examples/catalog.json`：客户端 Docker/宿主机 × SDK 每回合命令/直接协议，以及服务端 Docker/宿主机。注册页面可按类型预览并载入，载入后仍须注册，服务不会自动启动。
 
 ## 1. 准备环境
 
@@ -37,3 +37,36 @@ docker build -f examples/runtime_templates/Dockerfile -t mini-eval-template-exam
 ## 5. 使用自己的程序
 
 将 echo 请求替换成仿真逻辑，success 必须来自真实业务判定。SDK 命令向 MINI_EVAL_RESULT 写入结果；direct 程序可继承 EvaluationClient。服务端读取 platform.listen，客户端读取 platform.service.endpoint。RoboTwin/Cosmos 等需要资产和模型的示例见 examples/cosmos_robotwin，不要把本回显样例当作真实 RoboTwin 评测。
+
+## 6. 不同目录的 Python 环境与业务代码（新增 cwd 样例）
+
+界面入口：管理设置 → 运行模板 → 客户端模板或服务端模板 → 注册新模板 → 从完整样例开始，选择标题带“独立 Python 环境与业务目录”的样例，再点击“载入样例草稿”。这三份新增样例覆盖 SDK 客户端、直接协议客户端和 HTTP 服务端。
+
+假设项目放在 `/data/projects/clearml_mini`，Python 环境放在 `/opt/venvs/eval`。先在机器上准备 Python 3.11+ 环境及所需依赖；在机器管理的宿主机批准环境中登记：
+
+```json
+{"template_demo_cwd":{"python":"/opt/venvs/eval/bin/python","code_root":"/data/projects/clearml_mini"}}
+```
+
+以上路径是示例，需要换成节点实际路径，完成环境探测后才可调度。节点需要 Worker 协议 13 或以上。模板填写：
+
+| 字段 | 值 |
+|---|---|
+| 执行方式 | 宿主机运行 |
+| 节点环境名称 | template_demo_cwd |
+| 业务执行目录 | examples/runtime_templates |
+| 启动程序 | python3 |
+| 固定参数（SDK 客户端） | episode.py |
+| 固定参数（直接协议客户端） | client.py |
+| 固定参数（服务端） | server.py |
+
+例如 SDK 客户端实际效果相当于：
+
+```bash
+cd /data/projects/clearml_mini/examples/runtime_templates
+/opt/venvs/eval/bin/python episode.py
+```
+
+不用在业务命令里填写 `cd` 或 `conda activate`。平台选用批准环境中的 Python，并提供任务输入、服务地址、回合信息和输出路径；上述 shell 只是解释目录与解释器的对应关系，单独执行时缺少平台输入不能完成评测。通过第 3 节向导发起批次验证。业务和服务端运行需要的 SDK 由平台启动入口提供；批准代码根目录也包含本项目 runner 包。
+
+不同节点可以为同名环境登记不同 Python 路径与代码根目录，模板使用相对子目录即可复用。临时文件和结果写平台工作/输出目录，不写共享业务代码目录。旧样例和已注册模板不受新增样例影响。

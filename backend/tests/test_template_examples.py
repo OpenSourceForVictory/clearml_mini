@@ -17,13 +17,18 @@ EXAMPLES = ROOT / 'examples/runtime_templates'
 CATALOG = ROOT / 'frontend/public/template-examples/catalog.json'
 
 
-def test_all_six_templates_and_downloads_match_contract():
+def test_all_templates_and_downloads_match_contract():
     examples = json.loads(CATALOG.read_text())
-    assert len(examples) == 6
-    assert len({e['id'] for e in examples}) == 6
+    assert len(examples) == 9
+    assert len({e['id'] for e in examples}) == 9
     for example in examples:
         schema = ServerCreate if example['kind'] == 'server' else TemplateCreate
         schema.model_validate(example['definition'])
+        if example['id'].endswith('-cwd'):
+            definition = example['definition']
+            assert definition['host_runtime']['working_directory'] == 'examples/runtime_templates'
+            assert definition['host_runtime']['environment_name'] == 'template_demo_cwd'
+            assert (ROOT / definition['host_runtime']['working_directory'] / definition['command'][1]).is_file()
     for name in ('client.py', 'episode.py', 'server.py', 'Dockerfile', 'README.md'):
         assert (EXAMPLES/name).read_bytes() == (CATALOG.parent/name).read_bytes()
 

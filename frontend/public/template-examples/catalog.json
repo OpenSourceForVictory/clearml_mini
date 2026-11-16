@@ -392,5 +392,199 @@
         ]
       }
     }
+  },
+  {
+    "id": "client-host-sdk-command-cwd",
+    "kind": "client",
+    "title": "客户端 · 宿主机 · SDK 每回合命令 · 独立 Python 环境与业务目录",
+    "definition": {
+      "name": "echo-client-host-sdk-command-cwd",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "sdk-command",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "episode.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo_cwd",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [],
+        "working_directory": "examples/runtime_templates"
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
+      }
+    }
+  },
+  {
+    "id": "client-host-direct-cwd",
+    "kind": "client",
+    "title": "客户端 · 宿主机 · 直接协议 · 独立 Python 环境与业务目录",
+    "definition": {
+      "name": "echo-client-host-direct-cwd",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "client.py"
+      ],
+      "episode_reporting": true,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "scene": {
+            "type": "string",
+            "default": "room",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo_cwd",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [],
+        "working_directory": "examples/runtime_templates"
+      },
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
+      }
+    }
+  },
+  {
+    "id": "server-host-direct-cwd",
+    "kind": "server",
+    "title": "服务端 · 宿主机 · HTTP 回显服务 · 独立 Python 环境与业务目录",
+    "definition": {
+      "name": "echo-server-host-direct-cwd",
+      "version": "v1",
+      "execution_mode": "host",
+      "integration_mode": "direct",
+      "task_type": "evaluation",
+      "command": [
+        "python3",
+        "server.py"
+      ],
+      "episode_reporting": false,
+      "protocols": [
+        "http"
+      ],
+      "endpoint_exclusive": false,
+      "platform_bindings": [],
+      "parameter_schema": {
+        "version": 1,
+        "fields": {
+          "model": {
+            "type": "string",
+            "default": "echo-demo",
+            "overridable": true
+          }
+        }
+      },
+      "host_runtime": {
+        "environment_name": "template_demo_cwd",
+        "environment": {},
+        "overridable_env": [],
+        "assets": [],
+        "working_directory": "examples/runtime_templates"
+      },
+      "port": 8000,
+      "protocol": "http",
+      "health_type": "http",
+      "health_path": "/healthz",
+      "startup_timeout": 30,
+      "resource_requirements": {
+        "version": 1,
+        "cpu": {
+          "minimum": 1,
+          "default": 1
+        },
+        "memory": {
+          "minimum": 1,
+          "default": 1
+        },
+        "accelerator": {
+          "type": "gpu",
+          "mode": "exclusive",
+          "memory": {
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "allow_overrides": [
+          "cpus",
+          "ram_gb",
+          "requested_vram_gb"
+        ]
+      }
+    }
   }
 ]
