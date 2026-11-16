@@ -1,0 +1,361 @@
+{
+  "client_node": "local4090-151",
+  "server_node": "ascend910b3-29",
+  "worker_version": "0.14.2",
+  "batches": [
+    {
+      "id": "7bd00dd4-cbe6-4845-a236-cfebaadd4cec",
+      "cases": [
+        {
+          "job_id": "bbf46706-ecbd-45e1-8923-c1f7f69227d6",
+          "case_id": "0",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "2b957a2b-5ca1-47d7-b22f-10c927a7dcb4",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 40.97603875899222,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 1024,
+            "log_bytes": 1210,
+            "endpoint": "ws://192.168.8.151:19400",
+            "service_instance_id": "b52e23c5-c0af-4279-9d2b-ab19f119e3ac",
+            "service_execution_id": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+            "service_key": "alpha",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "0",
+                "episode_id": 1,
+                "variant": 0
+              },
+              "server_execution": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+              "pid": 3909994,
+              "ws_opened_at": 1794838530.026655,
+              "ws_closed_at": 1794838550.0669973
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "0",
+                "episode_id": 2,
+                "variant": 0
+              },
+              "server_execution": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+              "pid": 3910555,
+              "ws_opened_at": 1794838550.3872192,
+              "ws_closed_at": 1794838570.418004
+            }
+          ]
+        },
+        {
+          "job_id": "0a4c8332-a074-48ba-88fc-5ee5c293d08d",
+          "case_id": "1",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "14212a80-3e7a-49c1-9fd6-e61c3cd0e930",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 40.769692079978995,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 1024,
+            "log_bytes": 1214,
+            "endpoint": "ws://192.168.8.151:19400",
+            "service_instance_id": "b52e23c5-c0af-4279-9d2b-ab19f119e3ac",
+            "service_execution_id": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+            "service_key": "alpha",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "1",
+                "episode_id": 1,
+                "variant": 1
+              },
+              "server_execution": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+              "pid": 3910034,
+              "ws_opened_at": 1794838531.8297126,
+              "ws_closed_at": 1794838551.8632243
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19400",
+              "request": {
+                "case_id": "1",
+                "episode_id": 2,
+                "variant": 1
+              },
+              "server_execution": "361fed3c-1cf3-4324-96b7-853c67dfad5c",
+              "pid": 3910584,
+              "ws_opened_at": 1794838552.2189279,
+              "ws_closed_at": 1794838572.2475655
+            }
+          ]
+        },
+        {
+          "job_id": "3433d060-cb2c-4891-98e1-51b3bdf4eec2",
+          "case_id": "2",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "c0806ff5-2e47-42c5-ae6d-14102b244d71",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 41.12502048094757,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 1024,
+            "log_bytes": 1212,
+            "endpoint": "ws://192.168.8.151:19402",
+            "service_instance_id": "77fde6f9-3edd-48c0-a47c-0171174ba43a",
+            "service_execution_id": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+            "service_key": "beta",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "2",
+                "episode_id": 1,
+                "variant": 2
+              },
+              "server_execution": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+              "pid": 3910060,
+              "ws_opened_at": 1794838533.9781675,
+              "ws_closed_at": 1794838554.0059333
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "2",
+                "episode_id": 2,
+                "variant": 2
+              },
+              "server_execution": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+              "pid": 3910634,
+              "ws_opened_at": 1794838554.6273685,
+              "ws_closed_at": 1794838574.6503491
+            }
+          ]
+        },
+        {
+          "job_id": "757136e5-22c0-403d-a37e-8e052ae5ef89",
+          "case_id": "3",
+          "execution_mode": "host",
+          "attempt": {
+            "id": "9ed30f42-2ce4-40d0-96a4-581f05ef02d9",
+            "attempt": 1,
+            "status": "SUCCEEDED",
+            "metrics": {
+              "runtime": 41.05622144509107,
+              "success_rate": 1.0,
+              "episode_count": 2
+            },
+            "error": null,
+            "cleanup_confirmed": true,
+            "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "reserved_vram_mb": 1024,
+            "log_bytes": 1211,
+            "endpoint": "ws://192.168.8.151:19402",
+            "service_instance_id": "77fde6f9-3edd-48c0-a47c-0171174ba43a",
+            "service_execution_id": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+            "service_key": "beta",
+            "waiting_service": false,
+            "endpoint_mode": "shared",
+            "endpoint_candidates": []
+          },
+          "ws_round_trips": [
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "3",
+                "episode_id": 1,
+                "variant": 0
+              },
+              "server_execution": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+              "pid": 3910175,
+              "ws_opened_at": 1794838536.0944312,
+              "ws_closed_at": 1794838556.1350174
+            },
+            {
+              "ws_verified": true,
+              "endpoint": "ws://192.168.8.151:19402",
+              "request": {
+                "case_id": "3",
+                "episode_id": 2,
+                "variant": 0
+              },
+              "server_execution": "694e1d9e-1713-40e4-a134-7e09bbf9643c",
+              "pid": 3910680,
+              "ws_opened_at": 1794838556.6535726,
+              "ws_closed_at": 1794838576.6945293
+            }
+          ]
+        }
+      ],
+      "services": [
+        {
+          "id": "b52e23c5-c0af-4279-9d2b-ab19f119e3ac",
+          "state": "STOPPED",
+          "endpoint": "ws://192.168.8.151:19400",
+          "health_port": 19401,
+          "cleanup_pending": false,
+          "execution_mode": "host"
+        },
+        {
+          "id": "77fde6f9-3edd-48c0-a47c-0171174ba43a",
+          "state": "STOPPED",
+          "endpoint": "ws://192.168.8.151:19402",
+          "health_port": 19403,
+          "cleanup_pending": false,
+          "execution_mode": "host"
+        }
+      ]
+    }
+  ],
+  "observed_pending": true,
+  "observed_waiting_service": true,
+  "four_client_ws_overlap_seconds": 13.9725661277771,
+  "clients_per_server_execution": {
+    "361fed3c-1cf3-4324-96b7-853c67dfad5c": 2,
+    "694e1d9e-1713-40e4-a134-7e09bbf9643c": 2
+  },
+  "peak_running_clients": 4,
+  "temporary_concurrency": {
+    "global": 6,
+    "per_user": 6,
+    "node": 4,
+    "pool_per_gpu": 4,
+    "client_cpu": 1,
+    "client_ram_gb": 1,
+    "client_vram_gb": 1
+  },
+  "original_concurrency_restored": {
+    "node": 2,
+    "pool_per_gpu": 2
+  },
+  "temporary_host_environment_restored": true,
+  "test_templates_disabled": true,
+  "local_systemd_units_observed": [
+    "  mini-eval-exec-12ca2b34-85a6-4cbf-9b60-d4964c37f1bb.service loaded active running Mini Eval execution 12ca2b34-85a6-4cbf-9b60-d4964c37f1bb",
+    "  mini-eval-exec-5a23bcc1-07da-4525-b4f3-1321be419152.service loaded active running Mini Eval execution 5a23bcc1-07da-4525-b4f3-1321be419152",
+    "  mini-eval-exec-a88ed1fd-2314-4a7c-935f-83d280021b57.service loaded active running Mini Eval execution a88ed1fd-2314-4a7c-935f-83d280021b57",
+    "  mini-eval-exec-d20bf3bf-b69e-4dc6-9044-fdf49ef01f5d.service loaded active running Mini Eval execution d20bf3bf-b69e-4dc6-9044-fdf49ef01f5d"
+  ],
+  "server_systemd_units_observed": [
+    "  mini-eval-exec-361fed3c-1cf3-4324-96b7-853c67dfad5c.service loaded active running Mini Eval execution 361fed3c-1cf3-4324-96b7-853c67dfad5c",
+    "  mini-eval-exec-694e1d9e-1713-40e4-a134-7e09bbf9643c.service loaded active running Mini Eval execution 694e1d9e-1713-40e4-a134-7e09bbf9643c"
+  ],
+  "quota_five_control": {
+    "batch_ids": [
+      "254a5e75-5fbd-4d66-90bc-5e014de5e49c"
+    ],
+    "all_succeeded": true,
+    "peak_running_clients": 3
+  },
+  "global_and_user_quota_restored": [
+    "5",
+    "5"
+  ],
+  "failed_validation_preserved": {
+    "batch_id": "6a715993-f8ed-494a-a29e-ca5511935a33",
+    "cases": [
+      {
+        "case_id": "0",
+        "status": "SUCCEEDED",
+        "job_id": "00f7777c-4fcf-4a17-85d6-19a20fcf4ac6"
+      },
+      {
+        "case_id": "1",
+        "status": "SUCCEEDED",
+        "job_id": "ac3f182f-0933-460e-9ea3-a925c7926a04"
+      },
+      {
+        "case_id": "2",
+        "status": "CANCELLED",
+        "job_id": "38854706-96d0-4b06-a590-1459be178fb2"
+      },
+      {
+        "case_id": "3",
+        "status": "CANCELLED",
+        "job_id": "89b9e30b-c7ea-4ca3-bb72-a0f9569b56f2"
+      }
+    ],
+    "services": [
+      {
+        "id": "0c36ecbe-51dc-49a9-b4d5-50d39090741f",
+        "state": "STOPPED",
+        "error": "service address is not local or port is already in use",
+        "cleanup_pending": false
+      },
+      {
+        "id": "e935cf64-e0b4-4da6-8a2a-83ba7296e290",
+        "state": "STOPPED",
+        "error": "service address is not local or port is already in use",
+        "cleanup_pending": false
+      },
+      {
+        "id": "d895543e-8121-4207-bd77-c7c61e5e67b2",
+        "state": "STOPPED",
+        "error": "service address is not local or port is already in use",
+        "cleanup_pending": false
+      },
+      {
+        "id": "1d93816f-b65e-4b06-ac43-fe53844c655d",
+        "state": "STOPPED",
+        "error": "service address is not local or port is already in use",
+        "cleanup_pending": false
+      },
+      {
+        "id": "c1444410-b756-48e3-9232-b012e5c586bc",
+        "state": "STOPPED",
+        "error": "runner exited with code 0",
+        "cleanup_pending": false
+      }
+    ]
+  },
+  "final_node_holdings": [
+    {
+      "node": "ascend910b3-29",
+      "held_executions": 0
+    },
+    {
+      "node": "local4090-151",
+      "held_executions": 0
+    }
+  ]
+}
