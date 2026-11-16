@@ -79,9 +79,14 @@ def enqueue(s,instance,user):
     resource=instance.resources or {'gpu_mode':instance.gpu_mode,'requested_vram_gb':instance.requested_vram_gb}
     from .job_resources import validate
     validate(pool,resource)
+    network=w.service_network or {}
+    bind_address=instance.address
+    if (network.get('address')==instance.address and
+            network.get('port_start',19000)<=instance.port<=network.get('port_end',19100)):
+        bind_address=network.get('bind_address') or instance.address
     spec={'resource_sources':instance.resource_sources or {},'resources':resource,'workload':'service','contract_version':1,'template':definition,'environment':instance.environment,'parameters':instance.parameters,
           'task_name':instance.name,'seed':0,'endpoint':f"{definition['protocol']}://{instance.address}:{instance.port}",
-          'service':{'address':instance.address,'port':instance.port,'container_port':definition['port'],'protocol':definition['protocol'],'health_type':definition['health_type'],'health_path':definition['health_path'],'startup_timeout':definition['startup_timeout']}}
+          'service':{'address':bind_address,'port':instance.port,'container_port':definition['port'],'protocol':definition['protocol'],'health_type':definition['health_type'],'health_path':definition['health_path'],'startup_timeout':definition['startup_timeout']}}
     job=Job(owner_id=user.id,pool_id=pool.id,title='服务: '+instance.name,benchmark='inference-service',model_ref=definition['name'],episodes=1,client_spec=spec,target_slot_id=slot.id,service_instance_id=instance.id,gpu_mode=instance.gpu_mode,requested_vram_gb=instance.requested_vram_gb,requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'),required_gpu_model=resource.get('required_gpu_model'))
     s.add(job);s.flush();s.add(Run(job_id=job.id,attempt=1));instance.current_job_id=job.id;instance.desired_running=True;instance.health_ready=False;instance.health_at=None;instance.health_error=None
 
@@ -142,7 +147,8 @@ def install(app,db,admin,worker_auth):
         if item.revision!=body.expected_revision:raise HTTPException(409,'service changed; refresh')
         if body.action=='stop':
             item.desired_running=False
-            if item.current_job_id:cancel_job(s,s.get(Job,item.current_job_id))
+            job=s.get(Job,item.current_job_id) if item.current_job_id else None
+            if job and job.status not in TERMINAL:cancel_job(s,job)
         else:
             if held(s,item):raise HTTPException(409,'stop current service and wait for cleanup before starting')
             template=s.get(ServerTemplate,item.template_snapshot['id'])

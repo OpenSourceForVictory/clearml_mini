@@ -285,3 +285,14 @@ def test_unclaimed_server_reservation_expiry_replans_both_sides(env,monkeypatch)
         assert s.get(Job,old_job).status=='CANCELLED'
         held=list(s.scalars(select(Run).where(Run.status=='RESERVED')))
         assert len(held)==2 and sum(r.waiting_service for r in held)==1
+
+
+def test_forwarded_managed_service_binds_locally_and_advertises_route(env,monkeypatch):
+    main,c,a=env;st,ss,ct,cs,body=setup(env,monkeypatch)
+    with main.SessionLocal() as s:
+        w=s.get(Worker,s.get(Slot,ss).worker_id)
+        w.service_network={**w.service_network,'bind_address':'127.0.0.1'};s.commit()
+    submit(env,body)
+    service=healthy(env,st,ss)
+    assert service['client_spec']['service']['address']=='127.0.0.1'
+    assert claim(env,ct,cs[0])['client_spec']['endpoint']=='http://192.168.8.151:19000'

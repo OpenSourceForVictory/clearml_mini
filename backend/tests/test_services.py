@@ -160,3 +160,46 @@ def test_expired_service_keeps_gpu_and_port_until_cleanup(env):
     assert c.post('/api/v1/worker/executions/'+execution+'/cleanup',headers=token).status_code==200
     assert claim(env,token,slot) is not None
     assert c.post('/api/v1/admin/services',headers=a['admin'],json={**body,'name':'after cleanup'}).status_code==201
+
+
+def test_forwarded_service_keeps_public_endpoint_and_private_binding(env):
+    main,c,a=env;token,slot,body=setup(env)
+    node=c.get('/api/v1/admin/nodes',headers=a['admin']).json()[0]
+    path='/api/v1/admin/nodes/'+node['id']+'/service-network'
+    network={'address':body['address'],'bind_address':'127.0.0.1','port_start':19090,'port_end':19100}
+    assert c.put(path,headers=a['admin'],json={'expected_revision':0,'config':network}).status_code==200
+    r=c.post('/api/v1/admin/services',headers=a['admin'],json=body)
+    assert r.status_code==201,r.text
+    assert r.json()['endpoint']=='http://192.168.8.151:19093'
+    # A later network edit cannot rewrite an already queued execution.
+    assert c.put(path,headers=a['admin'],json={'expected_revision':1,'config':{**network,'bind_address':'192.168.0.244'}}).status_code==200
+    task=claim(env,token,slot)
+    assert task['client_spec']['service']['address']=='127.0.0.1'
+    assert task['client_spec']['endpoint']=='http://192.168.8.151:19093'
+
+
+def test_forward_binding_does_not_override_unrelated_standalone_service(env):
+    main,c,a=env;token,slot,body=setup(env)
+    with main.SessionLocal() as s:
+        w=s.get(Worker,s.get(Slot,slot).worker_id)
+        w.service_network={'address':body['address'],'bind_address':'127.0.0.1','port_start':19400,'port_end':19415};s.commit()
+    assert c.post('/api/v1/admin/services',headers=a['admin'],json=body).status_code==201
+    assert claim(env,token,slot)['client_spec']['service']['address']==body['address']
+
+
+def test_service_bind_address_validation():
+    import pytest
+    from backend.app.service_network import Network
+    for address in ('0.0.0.0','::1','224.0.0.1','169.254.1.1','example.com'):
+        with pytest.raises(ValueError):Network(address='192.168.8.151',bind_address=address)
+    assert Network(address='192.168.8.151',bind_address='127.0.0.1').bind_address=='127.0.0.1'
+
+
+def test_failed_cleaned_service_can_be_stopped_without_recancelling_job(env):
+    _,c,a=env;token,slot,body=setup(env)
+    instance=c.post('/api/v1/admin/services',headers=a['admin'],json=body).json()
+    task=claim(env,token,slot)
+    assert c.post('/api/v1/worker/executions/'+task['execution_id']+'/complete',headers=token,json={'status':'FAILED','error':'startup failed'}).status_code==200
+    r=c.post('/api/v1/admin/services/'+instance['id']+'/control',headers=a['admin'],json={'action':'stop','expected_revision':0})
+    assert r.status_code==200,r.text
+    assert r.json()['state']=='STOPPED' and not r.json()['desired_running']

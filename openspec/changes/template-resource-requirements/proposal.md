@@ -25,3 +25,7 @@
 ## Impact
 
 涉及 TemplateCreate/ServerCreate、template_versions、job_resources、batches、orchestrations、services、单任务入口、调度器、设备采样及 Worker 后端、运行模板与提交向导界面。需要兼容数据迁移和跨模块测试；不能只通过前端默认值实现。与 template-authoring-guidance 独立提交和发布，保留当前机群稳定性验收。
+
+## 追加范围
+
+用户要求将不能直接回连本机的 1.95.69.29 纳管为服务端。增加管理员可配置的本地监听/客户端可达地址分离，通过明确维护的 SSH 隧道完成 API 回连和内网推理访问，并验证节点生命周期及实际服务调度。

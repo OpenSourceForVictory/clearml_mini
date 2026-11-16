@@ -51,3 +51,14 @@
 #### Scenario: Maintenance required
 - **WHEN** 节点没有 cgroup v2 或配置文件与平台预期冲突
 - **THEN** 显示明确原因，保留配置，不自动重启节点或修改系统启动参数，不影响独立的 Docker 能力判断
+
+### Requirement: Routed service endpoint
+平台 SHALL 区分管理员配置的本地服务监听地址和客户端可达地址；未设置本地监听地址时保持既有行为。
+
+#### Scenario: Service behind SSH forwarding
+- **WHEN** 节点配置可达地址和不同的本地绑定地址，并部署范围内服务
+- **THEN** Worker 只在本地地址绑定和探测，客户端收到可达地址，当前执行快照不随后续配置变化而改变
+
+#### Scenario: Unrelated standalone address
+- **WHEN** 独立服务地址或端口不属于节点配置的转发范围
+- **THEN** 不套用该转发绑定地址，保留该服务显式配置的地址

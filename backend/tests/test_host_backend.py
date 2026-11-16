@@ -116,3 +116,24 @@ def test_system_launch_preserves_nonroot_manifest_owner(tmp_path,monkeypatch):
     b.start(w.state['task'])
     assert calls==[(owner.st_uid,owner.st_gid)]
     assert json.loads(path.read_text())['started']
+
+
+def test_npu_control_files_do_not_require_access_to_private_recovery_state(tmp_path):
+    w=worker(tmp_path,['python3','business.py']);w.config['accelerator_type']='npu'
+    private=tmp_path/'private';private.mkdir(mode=0o700);w.path=private/'state'
+    b=HostBackend(w);b.root.mkdir(parents=True)
+    (b.root/'stdout.log').write_text('business output')
+    assert not b.root.is_relative_to(private)
+    assert private.stat().st_mode & 0o777==0o700
+    assert HostBackend(w).logs()[0]=='business output'
+    assert not Path(str(w.path)+'.host').exists()
+
+
+def test_npu_existing_control_location_remains_recoverable(tmp_path,monkeypatch):
+    w=worker(tmp_path,['python3','business.py']);w.config['accelerator_type']='npu'
+    legacy=Path(str(w.path)+'.host');legacy.mkdir()
+    (legacy/'launch.json').write_text(json.dumps({'execution_id':w.state['task']['execution_id'],'started':False}))
+    b=HostBackend(w)
+    monkeypatch.setattr(b,'control',lambda *a,**k:SimpleNamespace(returncode=0,stdout='LoadState=not-found'))
+    assert b.inspect(w.state['task']['execution_id'])['State']['Status']=='created'
+    assert b.root==legacy

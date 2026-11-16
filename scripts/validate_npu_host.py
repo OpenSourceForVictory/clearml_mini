@@ -49,14 +49,15 @@ HTTPServer(('127.0.0.1',config['port']),Handler).serve_forever()
  try:
   for index in range(2):
    base=root/str(index);base.mkdir();base.chmod(0o755)
+   private=base/'private';private.mkdir(mode=0o700);state=private/'state'
    for name in ('assets','cache'):(base/name).mkdir()
    config={'accelerator_type':'npu','gpu_index':args.device,'npu_runtime':runtime,'workspace_root':str(base/'work'),'assets_root':str(base/'assets'),'cache_root':str(base/'cache'),'min_free_disk_gb':0}
-   validate_storage(config,base/'state',create=True)
+   validate_storage(config,state,create=True)
    (base/'work').chmod(0o711);(base/'work/runs').chmod(0o711)
    with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
    task={'execution_id':str(uuid.uuid4()),'job_id':'probe-'+str(index),'episodes':1,'timeout_seconds':90,'storage_revision':0,'host_revision':1,'host_profile':profile,'cpus':1,'ram_gb':2,'accelerator_type':'npu','device_index':args.device,'gpu_uuid':ascend_sample(config)['identity'],'gpu_mode':'shared',
     'client_spec':{'contract_version':1,'task_name':'npu-service-probe','workload':'service','service':{'port':port,'address':'127.0.0.1'},'seed':0,'endpoint':'','template':{'execution_mode':'host','host_runtime':{'environment_name':'probe'},'command':['python3','server.py']}}}
-   worker=SimpleNamespace(config=config,path=base/'state',workspace=base/'work',state={'task':task,'host_approval':{'revision':1,'environments':{'probe':profile}}},storage_snapshot={'revision':0},runtime_snapshot={'config':{'assets':{}}})
+   worker=SimpleNamespace(config=config,path=state,workspace=base/'work',state={'task':task,'host_approval':{'revision':1,'environments':{'probe':profile}}},storage_snapshot={'revision':0},runtime_snapshot={'config':{'assets':{}}})
    backend=HostBackend(worker);handles.append((backend,task));backend.create(task)
    launch=json.loads((backend.root/'launch.json').read_text())
    backend.start(task)

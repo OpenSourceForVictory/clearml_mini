@@ -17,8 +17,12 @@ class HostBackend:
     def __init__(self,worker):
         self.worker=worker
         self.system=worker.config.get('accelerator_type')=='npu'
-        self.root=Path(str(worker.path)+'.host')
         self.execution=worker.state['task']['execution_id'] if worker.state else None
+        legacy=Path(str(worker.path)+'.host')
+        # Business UIDs must never traverse the private Worker journal directory.
+        # Existing handles remain recoverable across this layout change.
+        self.root=(Path(worker.workspace)/'runs'/str(uuid.UUID(self.execution))/'host-control'
+                   if self.system and self.execution and not legacy.exists() else legacy)
     def unit(self,execution):return 'mini-eval-exec-'+str(uuid.UUID(execution))+'.service'
     def control(self,*args,check=True):
         p=subprocess.run(['systemctl',*([] if self.system else ['--user']),*args],env=user_environment(),capture_output=True,text=True,timeout=15)
@@ -69,7 +73,9 @@ class HostBackend:
         if task.get('requested_vram_mb'):
             from .client import telemetry
             if telemetry(w.config)['free_vram_mb']<task['requested_vram_mb']+task.get('vram_reserve_mb',0):raise RuntimeError('insufficient free GPU memory')
-        directory=execution_dirs(w.workspace,task['execution_id']);self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
+        directory=execution_dirs(w.workspace,task['execution_id'])
+        if self.root.is_symlink():raise RuntimeError('host control directory must not be a symlink')
+        self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
         values={k:str(config.get(k,'')) for k in ('task_name','episodes','seed','endpoint')}

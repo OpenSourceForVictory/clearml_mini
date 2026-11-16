@@ -1,0 +1,254 @@
+{
+  "node": {
+    "node_name": "ascend910b3-29",
+    "roles": [
+      "server"
+    ],
+    "status": "online",
+    "enabled": true,
+    "held_executions": 0
+  },
+  "online_workers": 8,
+  "pooled_npu_indices": [
+    2,
+    3
+  ],
+  "tunnel_reconnect": {
+    "passed": true,
+    "seconds": 1.33,
+    "same_executions": true
+  },
+  "managed_batches": {
+    "batches": [
+      {
+        "batch_id": "704d054e-bb09-41dd-99b3-e2b9daf5964e",
+        "status": "SUCCEEDED",
+        "cases": [
+          {
+            "job_id": "52eb50e2-ad70-4220-a70d-e1a5fa93a72d",
+            "node": "local4090-151",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "0",
+                  "execution_id": "91258d42-0da9-4eba-aa52-ac4640b23334",
+                  "business": {
+                    "variant": 0,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              },
+              {
+                "verified_input": {
+                  "case_id": "0",
+                  "execution_id": "91258d42-0da9-4eba-aa52-ac4640b23334",
+                  "business": {
+                    "variant": 0,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              }
+            ]
+          },
+          {
+            "job_id": "b46127da-96fc-4016-9431-231155923fff",
+            "node": "rtx4090-157",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "1",
+                  "execution_id": "821a4a31-091b-45fc-82fa-8b945e243ebb",
+                  "business": {
+                    "variant": 1,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              },
+              {
+                "verified_input": {
+                  "case_id": "1",
+                  "execution_id": "821a4a31-091b-45fc-82fa-8b945e243ebb",
+                  "business": {
+                    "variant": 1,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              }
+            ]
+          },
+          {
+            "job_id": "6d86d8f2-5481-4d42-b899-9e36fc1ba2c6",
+            "node": "rtx4090-183",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "2",
+                  "execution_id": "b04d3c53-0790-413f-8a33-2b0f6fee6d51",
+                  "business": {
+                    "variant": 2,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              },
+              {
+                "verified_input": {
+                  "case_id": "2",
+                  "execution_id": "b04d3c53-0790-413f-8a33-2b0f6fee6d51",
+                  "business": {
+                    "variant": 2,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19400",
+                "server_execution": "ab3004dc-b6eb-4398-8eb2-0fff8f97d75c"
+              }
+            ]
+          }
+        ],
+        "service_ids": [
+          "658974f3-32b6-4410-9355-b4831eba6e1a"
+        ],
+        "npu_index": 2,
+        "service_cleanup_confirmed": true
+      },
+      {
+        "batch_id": "930c1949-60c7-41af-af05-2cbd37aa22bf",
+        "status": "SUCCEEDED",
+        "cases": [
+          {
+            "job_id": "beabf630-241b-4939-9966-2a564bfb689d",
+            "node": "rtx3080-182",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "0",
+                  "execution_id": "e68edcff-b8ac-45fb-ba23-e81daeaddb54",
+                  "business": {
+                    "variant": 0,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              },
+              {
+                "verified_input": {
+                  "case_id": "0",
+                  "execution_id": "e68edcff-b8ac-45fb-ba23-e81daeaddb54",
+                  "business": {
+                    "variant": 0,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              }
+            ]
+          },
+          {
+            "job_id": "76e6bf98-90bf-4e4c-9637-cc078f0d0500",
+            "node": "rtx3080-182",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "1",
+                  "execution_id": "e409d457-92bf-44b8-a347-5f6cc7b6b811",
+                  "business": {
+                    "variant": 1,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              },
+              {
+                "verified_input": {
+                  "case_id": "1",
+                  "execution_id": "e409d457-92bf-44b8-a347-5f6cc7b6b811",
+                  "business": {
+                    "variant": 1,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              }
+            ]
+          },
+          {
+            "job_id": "f303e732-bc92-46e4-9b0d-dad1b406c69b",
+            "node": "rtx3080-182",
+            "episodes": 2,
+            "cleanup_confirmed": true,
+            "echoes": [
+              {
+                "verified_input": {
+                  "case_id": "2",
+                  "execution_id": "7c39d92c-2928-4ba7-9899-0cf9fe6c8334",
+                  "business": {
+                    "variant": 2,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              },
+              {
+                "verified_input": {
+                  "case_id": "2",
+                  "execution_id": "7c39d92c-2928-4ba7-9899-0cf9fe6c8334",
+                  "business": {
+                    "variant": 2,
+                    "sleep_seconds": 3
+                  }
+                },
+                "endpoint": "http://192.168.8.151:19401",
+                "server_execution": "1e39212e-01fc-4c20-a694-011f7ed0de4a"
+              }
+            ]
+          }
+        ],
+        "service_ids": [
+          "25ce4e87-da99-4be3-94af-301522e84380"
+        ],
+        "npu_index": 2,
+        "service_cleanup_confirmed": true
+      }
+    ],
+    "peak_healthy_services": 2,
+    "queued_while_running": true
+  },
+  "tests": {
+    "service_orchestration_recovery": {
+      "passed": 29,
+      "skipped": 12
+    },
+    "host_accelerator_limits": {
+      "passed": 29
+    },
+    "frontend": {
+      "passed": 5
+    }
+  },
+  "scope": "CANN allocation and HTTP echo, not model inference quality"
+}

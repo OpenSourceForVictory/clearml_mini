@@ -38,6 +38,6 @@
 
 生产 Compose 使用 `.runtime/resource-contract/release/image.yml` 作为固定镜像 overlay，同时保留 `deploy/compose.yml` 和 `deploy/lan-compose.yml`。发布阶段记录、0600 数据库备份和恢复校验位于 `.runtime/resource-contract/release/`，不入 Git。后续维护应沿用完整 Compose 配置，不能用旧镜像 overlay 覆盖新版本。
 
-NPU 机器仍采用显式批准的系统级执行配置，本次对空闲 NPU 2 复测宿主机双服务共享、异常退出清理和容器 ACL 分配成功；这不是 NPU 节点自动纳管或常驻 Worker 上线的证明。
+上述 GPU 发布阶段的 NPU 验证仅为独立执行探测。随后已完成公网 NPU 节点常驻纳管，详见 [服务端接入](../../ascend-server-node.md) 和 [实机验收记录](npu-enrollment.json)；自动 SSH 向导的通用 NPU 安装仍不在本次范围。
 
 生产跨机器 8 组（16 批、48 个客户端任务）全部通过；3 类 GPU 的 9 个 CUDA 分配任务覆盖五台机器。超额 CPU/RAM 拒绝、显存不足排队和取消清理通过。验收模板已停用，临时节点配置已按修订号恢复，最终五台节点均启用、在线、持有执行为零。脱敏证据见 [production.json](production.json)。

@@ -10,12 +10,23 @@ from .scheduling import lock
 class Network(BaseModel):
     model_config=ConfigDict(extra='forbid')
     address:str
+    bind_address:str|None=None
     port_start:int=Field(default=19000,ge=1024,le=65535)
     port_end:int=Field(default=19100,ge=1024,le=65535)
 
     @field_validator('address')
     @classmethod
     def reachable(cls,value):return Deploy.host(value)
+
+    @field_validator('bind_address')
+    @classmethod
+    def local_address(cls,value):
+        if value is None:return None
+        import ipaddress
+        ip=ipaddress.ip_address(value)
+        if ip.version!=4 or ip.is_unspecified or ip.is_multicast or ip.is_link_local:
+            raise ValueError('use an explicit local IPv4 address, including loopback for forwarding')
+        return str(ip)
 
     @model_validator(mode='after')
     def bounded(self):
