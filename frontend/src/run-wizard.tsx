@@ -10,7 +10,7 @@ export type Case = {case_id:string;task_name:string;episodes:number;seed:number;
 export type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[];client_defaults?:Record<string,unknown>};
 type Reason = {code:string;category:string;message:string;action:string};
 type Preview = {case_checks?:{case_id:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];service_plan?:{key:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];effective_parameters?:{case_id:string;parameters:Record<string,unknown>;sources:Record<string,string>}[];pair_checks?:{case_id:string;pair_ready:boolean}[];endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
-type Trial = {id:string;title:string;status:string;cases:{job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
+type Trial = {id:string;title:string;status:string;cases:{task_type?:string;job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
 const statuses:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'执行完成',FAILED:'执行失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
@@ -33,6 +33,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
   const selectedSuite=suites.find(s=>s.id===suiteId),template=allTemplates.find(t=>t.id===templateId);
+  useEffect(()=>{if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   useEffect(()=>{if(launch){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(launch.suite.template_id);setCases(launch.suite.cases);setStep(0);}},[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
@@ -66,8 +67,9 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='external')validateAddresses();
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
-    return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:parseCases(cases),
-      new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:parseCases(cases),client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
+    const inputCases=parseCases(template.task_type==='command'?cases.map(c=>({...c,episodes:1})):cases);
+    return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
+      new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
       client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
   }
   async function inspect(){
@@ -118,12 +120,13 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       {!suiteId&&<><label><input type="checkbox" checked={saveSuite} onChange={e=>setSaveSuite(e.target.checked)}/>同时保存为可复用集合</label>{saveSuite&&<div className="row"><Field label="新集合名称"><input required value={suiteName} onChange={e=>setSuiteName(e.target.value)}/></Field><Field label="集合版本"><input required value={suiteVersion} onChange={e=>setSuiteVersion(e.target.value)}/></Field></div>}</>}
       {suiteId&&<button type="button" onClick={()=>{setSuiteDefaults(selectedSuite?.client_defaults||{});setSuiteName(selectedSuite?.name||'');setSuiteVersion('');setSuiteId('');setSaveSuite(true)}}>复制集合并修改</button>}
       {suiteId&&<p>使用已发布集合及关联客户端。临时修改请显式切换“自定义清单”。</p>}
-      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId}/>
+      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={template?.task_type==='command'}/>
     </>}
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} disabled={!!suiteId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <Field label="每项总超时秒"><input type="number" required min={1} max={3600} value={draft.timeout_seconds} onChange={e=>update('timeout_seconds',Number(e.target.value))}/></Field></div>
+      {template?.task_type==='command'&&<p className="hint">普通命令：每项执行一次，按退出码判定，不统计评测回合；自定义清单中的回合数不用于重复执行。默认无需推理服务。</p>}
       {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/></>}
       <Field label="启动变量覆盖 JSON"><textarea rows={3} value={draft.environment} onChange={e=>update('environment',e.target.value)}/></Field>
       <p className="hint">仅可覆盖模板允许的变量：{template?.runtime?.overridable_env?.join(', ')||'无'}。请勿填写密码或令牌。</p>
@@ -167,10 +170,10 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         <div className="table-scroll"><table><thead><tr><th>节点 / GPU</th><th>当前状态与操作建议</th></tr></thead><tbody>{preview.nodes.map(n=><tr key={n.slot_id}><td>{n.node_name} / GPU {n.gpu_index}<small>{n.gpu_model}</small></td><td>{n.ready?'当前可接纳单项任务':<><Reasons reasons={n.reasons}/>{!n.reasons.length&&'等待上方平台或用户配额释放'}</>}</td></tr>)}</tbody></table></div>
         <p>环境缺失和资源占用不会阻止合法任务提交排队；环境问题需要管理员处理。</p>
         <button type="button" className="primary" disabled={!preview.can_submit||!!submitted} onClick={()=>void submit()}>{preview.status==='ready'?'提交评测批次':'提交排队'}</button>
-        <details><summary>可选：先试跑一个任务、一个回合</summary>
+        <details><summary>{template?.task_type==='command'?'可选：先试跑一项命令':'可选：先试跑一个任务、一个回合'}</summary>
           <Field label="试跑任务"><select value={trialCase||preview.cases[0]?.case_id} onChange={e=>setTrialCase(e.target.value)}>{preview.cases.map(c=><option key={c.case_id} value={c.case_id}>{c.case_id} / {c.task_name}</option>)}</select></Field>
           <p className="hint">试跑独立排队，不修改集合和正式运行配置，不自动开始正式运行。</p>
-          <button type="button" disabled={!preview.can_submit} onClick={()=>void submit(true)}>提交单回合试跑</button>
+          <button type="button" disabled={!preview.can_submit} onClick={()=>void submit(true)}>{template?.task_type==='command'?'提交命令试跑':'提交单回合试跑'}</button>
         </details>
       </div>}
     </>}
@@ -180,8 +183,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {submitted&&<p role="status">{submitted}{onBatch&&<button onClick={()=>onBatch(submittedId)}>查看已提交批次</button>}</p>}
     {trial&&<section aria-label="试跑进度"><button onClick={()=>onBatch?.(trial.id)}>查看试跑批次</button><h3>{trial.title} · {statuses[trial.status]||trial.status}</h3>
       {trialError&&<p role="alert">试跑状态更新失败：{trialError}，将自动重试。</p>}
-      {trial.cases.map(c=><div key={c.job_id}><p>{statuses[c.status]||c.status} · {c.episode_reporting?`已完成 ${c.progress.completed}/1 回合，目标成功 ${c.progress.successes}`:'客户端未声明回合上报，无法验证回合报告'}</p>{c.error&&<p>{c.error}</p>}<button onClick={()=>onJob(c.job_id)}>试跑详情 / 取消</button></div>)}
-      <p className="hint">试跑只代表所选任务的一个回合，不代表完整集合评测结果。</p>
+      {trial.cases.map(c=><div key={c.job_id}><p>{statuses[c.status]||c.status} · {c.task_type==='command'?'普通命令，按退出码判定执行结果':c.episode_reporting?`已完成 ${c.progress.completed}/1 回合，目标成功 ${c.progress.successes}`:'客户端未声明回合上报，无法验证回合报告'}</p>{c.error&&<p>{c.error}</p>}<button onClick={()=>onJob(c.job_id)}>试跑详情 / 取消</button></div>)}
+      <p className="hint">{trial.cases.length>0&&trial.cases.every(c=>c.task_type==='command')?'试跑只代表所选命令的一次执行，不代表完整集合执行结果。':'试跑只代表所选任务的一个回合，不代表完整集合评测结果。'}</p>
     </section>}
   </section>;
 }
@@ -202,7 +205,7 @@ function parseCases(value:unknown):Case[] {
   });
 }
 
-function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCases:React.Dispatch<React.SetStateAction<Case[]>>;setError:(error:string)=>void;disabled?:boolean}) {
+function CaseEditor({cases,setCases,setError,disabled=false,ordinary=false}:{cases:Case[];setCases:React.Dispatch<React.SetStateAction<Case[]>>;setError:(error:string)=>void;disabled?:boolean;ordinary?:boolean}) {
   function change(i:number,k:keyof Case,value:unknown) {setCases(old=>old.map((c,n)=>n===i?{...c,[k]:value}:c));}
   return <>
         <fieldset disabled={disabled}>
@@ -211,7 +214,7 @@ function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCa
           {cases.map((c,i)=><tr key={i}>
             <td><input aria-label={`第 ${i+1} 项标识`} value={c.case_id} maxLength={100} required onChange={e=>change(i,'case_id',e.target.value)}/></td>
             <td><input aria-label={`第 ${i+1} 项任务名`} value={c.task_name} maxLength={200} required onChange={e=>change(i,'task_name',e.target.value)}/></td>
-            <td><input aria-label={`第 ${i+1} 项回合数`} type="number" min={1} max={10000} required value={c.episodes} onChange={e=>change(i,'episodes',Number(e.target.value))}/></td>
+            <td><input aria-label={`第 ${i+1} 项回合数`} type="number" min={1} max={10000} required disabled={ordinary} value={ordinary?1:c.episodes} onChange={e=>change(i,'episodes',Number(e.target.value))}/></td>
             <td><input aria-label={`第 ${i+1} 项种子`} type="number" min={0} max={2147483647} required value={c.seed} onChange={e=>change(i,'seed',Number(e.target.value))}/></td>
             <td><textarea aria-label={`第 ${i+1} 项参数`} key={JSON.stringify(c.parameters)} defaultValue={JSON.stringify(c.parameters||{})} onBlur={e=>{try{const v=JSON.parse(e.target.value);if(!v||typeof v!=='object'||Array.isArray(v))throw new Error();change(i,'parameters',v);e.target.setCustomValidity('');}catch{e.target.setCustomValidity('参数必须是 JSON 对象');e.target.reportValidity();}}}/></td>
             <td><button type="button" disabled={cases.length===1} onClick={()=>setCases(old=>old.filter((_,n)=>n!==i))}>移除</button></td>
@@ -219,6 +222,6 @@ function CaseEditor({cases,setCases,setError,disabled=false}:{cases:Case[];setCa
         </tbody></table></div>
         <button type="button" disabled={cases.length>=100} onClick={()=>setCases(old=>[...old,{case_id:'case-'+(old.length+1)+'-'+Date.now().toString(36),task_name:'',episodes:3,seed:0,parameters:{}}])}>添加任务</button>
         </fieldset>
-        <p>共 {cases.length} 项、{cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合。每项独立调度；资源不足时保留排队；最大并发是上限。</p>
+        <p>共 {cases.length} 项、{ordinary?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合。{ordinary?'普通命令每项执行一次。':''}每项独立调度；资源不足时保留排队；最大并发是上限。</p>
   </>;
 }

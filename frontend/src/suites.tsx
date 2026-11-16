@@ -2,7 +2,7 @@ import React,{useEffect,useState,useRef,useId} from 'react';
 import {api} from './api';
 import './suite-manager.css';
 type Case={case_id:string;task_name:string;episodes:number;seed:number;parameters:Record<string,unknown>};
-type Template={id:string;name:string;version:string};
+type Template={id:string;name:string;version:string;task_type?:string};
 export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
   versions?:{id:string;version:string;status:string;archived:boolean}[]};
 type Summary=Omit<ManagedSuite,'cases'> & {task_count:number;total_episodes:number;latest_run:null|{id:string;title:string;status:string}};
@@ -32,6 +32,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   const [episodes,setEpisodes]=useState(3),[seed,setSeed]=useState(0),[params,setParams]=useState<Record<string,unknown>>({});
   const [runs,setRuns]=useState<{id:string;title:string;status:string;finished:number;total:number;cases:{job_id:string;task_name:string;status:string;episodes:number;progress:{completed:number;successes:number}}[]}[]>([]),[runPage,setRunPage]=useState(1);
   useEffect(()=>{if(configOpen&&configRef.current?.getClientRects().length)configRef.current.scrollIntoView({block:'start'});},[configOpen,editing?.id]);
+  const ordinary=templates.find(t=>t.id===template)?.task_type==='command';
   const locked=!!editing&&(editing.status==='published'||editing.archived);
   const visible=doc.cases.map((c,i)=>({c,i})).filter(({c})=>(c.task_name+' '+c.case_id).toLowerCase().includes(taskQuery.toLowerCase()));
   async function refresh(){
@@ -51,7 +52,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     catch(e){setError(String(e));}
   }
   async function check(value=doc){
-    const result=await api<Preview>('suites/preview','POST',{content:JSON.stringify({...value,tags:value.tags.map(t=>t.trim()).filter(Boolean)})});setPreview(result);return result;
+    const result=await api<Preview>('suites/preview','POST',{content:JSON.stringify({...value,...(ordinary?{cases:value.cases.map(c=>({...c,episodes:1}))}:{}),tags:value.tags.map(t=>t.trim()).filter(Boolean)})});setPreview(result);return result;
   }
   async function importFile(file:File){
     setBusy(true);setError('');
@@ -140,6 +141,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
             <Field label="集合客户端模板"><select required value={template} onChange={e=>setTemplate(e.target.value)}><option value="">请选择可用客户端</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
             <Field label="集合标签（逗号分隔）"><input value={doc.tags.join(',')} onChange={e=>setDoc({...doc,tags:e.target.value.split(',')})}/></Field>
           </div>
+          {ordinary&&<p className="hint">普通命令集合：每项任务执行一次，不统计评测回合。保存时回合兼容字段固定为 1，业务参数与种子仍可传递。</p>}
           {doc.client&&<p className="hint">导入客户端提示：{doc.client.name} / {doc.client.version}。无法自动匹配时请手动选择。</p>}
           <Field label="集合说明"><textarea maxLength={2000} value={doc.description} onChange={e=>setDoc({...doc,description:e.target.value})}/></Field>
           <label>集合默认业务参数</label><Parameters value={clientDefaults} change={setClientDefaults} label="集合默认业务参数"/>
@@ -151,22 +153,22 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
             <button type="button" disabled={!selected.size} onClick={()=>{setCases(doc.cases.filter((_,i)=>selected.has(i)));setSelected(new Set());}}>仅保留选中任务</button>
             <button type="button" disabled={!selected.size} onClick={()=>{setCases(doc.cases.filter((_,i)=>!selected.has(i)));setSelected(new Set());}}>移除选中任务</button></div>
           <div className="submit-grid">
-            <Field label="批量回合数"><input type="number" min={1} max={10000} value={episodes} onChange={e=>setEpisodes(Number(e.target.value))}/></Field>
+            <Field label="批量回合数"><input type="number" disabled={ordinary} min={1} max={10000} value={ordinary?1:episodes} onChange={e=>setEpisodes(Number(e.target.value))}/></Field>
             <Field label="批量种子"><input type="number" min={0} max={2147483647} value={seed} onChange={e=>setSeed(Number(e.target.value))}/></Field>
             <div><label>批量参数（合并并覆盖同名键）</label><Parameters value={params} change={setParams} label="批量参数"/></div>
           </div>
-          <button type="button" disabled={!selected.size} onClick={()=>setCases(doc.cases.map((c,i)=>selected.has(i)?{...c,episodes,seed,parameters:{...c.parameters,...params}}:c))}>应用到选中 {selected.size} 项</button>
+          <button type="button" disabled={!selected.size} onClick={()=>setCases(doc.cases.map((c,i)=>selected.has(i)?{...c,episodes:ordinary?1:episodes,seed,parameters:{...c.parameters,...params}}:c))}>应用到选中 {selected.size} 项</button>
           <div className="table-scroll suite-task-table"><table><thead><tr><th>选择</th><th>标识 / 任务</th><th>回合 / 种子</th><th>参数</th></tr></thead><tbody>
             {visible.map(({c,i})=><tr key={i}><td><input type="checkbox" aria-label={'选择任务 '+c.task_name} checked={selected.has(i)} onChange={e=>setSelected(old=>{const n=new Set(old);if(e.target.checked)n.add(i);else n.delete(i);return n;})}/></td>
               <td><input aria-label={'任务标识 '+i} value={c.case_id} onChange={e=>setCases(doc.cases.map((x,n)=>n===i?{...x,case_id:e.target.value}:x))}/>
                 <input aria-label={'任务名称 '+i} value={c.task_name} onChange={e=>setCases(doc.cases.map((x,n)=>n===i?{...x,task_name:e.target.value}:x))}/></td>
-              <td><input aria-label={'任务回合 '+i} type="number" min={1} max={10000} value={c.episodes} onChange={e=>setCases(doc.cases.map((x,n)=>n===i?{...x,episodes:Number(e.target.value)}:x))}/>
+              <td><input aria-label={'任务回合 '+i} type="number" disabled={ordinary} min={1} max={10000} value={ordinary?1:c.episodes} onChange={e=>setCases(doc.cases.map((x,n)=>n===i?{...x,episodes:Number(e.target.value)}:x))}/>
                 <input aria-label={'任务种子 '+i} type="number" min={0} max={2147483647} value={c.seed} onChange={e=>setCases(doc.cases.map((x,n)=>n===i?{...x,seed:Number(e.target.value)}:x))}/></td>
               <td><Parameters value={c.parameters} label={'任务参数 '+i} change={v=>setCases(doc.cases.map((x,n)=>n===i?{...x,parameters:v}:x))}/></td></tr>)}
           </tbody></table></div>
-          <button type="button" disabled={doc.cases.length>=100} onClick={()=>setCases([...doc.cases,{case_id:'case-'+Date.now(),task_name:'',episodes:3,seed:0,parameters:{}}])}>添加任务</button>
+          <button type="button" disabled={doc.cases.length>=100} onClick={()=>setCases([...doc.cases,{case_id:'case-'+Date.now(),task_name:'',episodes:ordinary?1:3,seed:0,parameters:{}}])}>添加任务</button>
         </fieldset>
-        <p>共 {doc.cases.length} 项、{doc.cases.reduce((n,c)=>n+c.episodes,0)} 个回合。导入保存不检查资产或推理服务；运行时另行准备。</p>
+        <p>共 {doc.cases.length} 项、{ordinary?0:doc.cases.reduce((n,c)=>n+c.episodes,0)} 个回合。导入保存不检查资产或推理服务；运行时另行准备。</p>
         {!locked&&<div className="row"><button type="button" disabled={busy} onClick={()=>void check().catch(e=>setError(String(e)))}>校验预览</button>
           <button disabled={busy}>保存草稿</button>
           <button type="button" disabled={busy} onClick={e=>{if(e.currentTarget.form?.reportValidity())void save(true,false);}}>发布版本</button>
