@@ -9,4 +9,4 @@
 - [x] 3.1 Execute full isolated suite, record per-directory baseline and honest verification boundaries, validate OpenSpec and commit.
 
 ## Evidence / remaining gap
-833 Python full-suite passes, 121 skips; 231 new cases pass independently; PostgreSQL 22 passes/25 skips; browser 80 passes/9 skips plus 3 isolated real-API management tests. See docs/validation/project-coverage/README.md. Task 2.1 remains open: Worker branches, scripts and two critical groups still fail approved floors. No production deployment.
+833 Python full-suite passes, 121 skips; 231 new cases pass independently; PostgreSQL 22 passes/25 skips; browser 80 passes/9 skips plus 3 isolated real-API management tests. See docs/validation/project-coverage/README.md. Second round: 75 new cases, 129 related regression passes. Worker and all critical groups now meet their floors; task 2.1 remains open because scripts are still 46.03% line / 48.63% branch. Combined Python coverage is 80.59% line / 71.68% branch. No production deployment.
