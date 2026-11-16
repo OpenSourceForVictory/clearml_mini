@@ -463,3 +463,16 @@ def test_release_rejects_image_migration_or_protocol_mismatch(monkeypatch):
     plan={'target_worker':'0.12.0','target_protocol':10,'target_agent':'1.1.0','target_database':'r841a23'}
     with pytest.raises(RuntimeError,match='incompatible'):rollout.check_image('image:1',plan)
     assert len(calls)==1 and calls[0][:5]==['docker','run','--rm','--network','none']
+
+@pytest.mark.parametrize('change',['environment','mount','unchanged'])
+def test_rollout_preserves_onboarding_socket(monkeypatch,change):
+    import scripts.fleet_rollout as rollout
+    env={'ONBOARDING_SOCKET':'/run/onboarding/control.sock'}
+    current={'Config':{'Env':[k+'='+v for k,v in env.items()]},'HostConfig':{'PortBindings':{}},'Mounts':[{'Source':'/host/socket','Destination':'/run/onboarding'}]}
+    desired={'environment':dict(env),'ports':[],'volumes':[{'type':'bind','source':'/host/socket','target':'/run/onboarding'}]}
+    if change=='environment':desired['environment']={}
+    if change=='mount':desired['volumes']=[]
+    monkeypatch.setattr(rollout,'run',lambda _:json.dumps({'services':{'api':desired}}))
+    if change=='unchanged':rollout.check_compose_environment([],current)
+    else:
+        with pytest.raises(RuntimeError):rollout.check_compose_environment([],current)

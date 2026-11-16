@@ -145,3 +145,6 @@ API 仅做管理员授权与有界 Unix socket 转发；独立用户服务执行
 
 ## 节点级 Agent 职责
 用户补充：纳管在每台机器安装节点级 Agent，统一承担平台心跳、主机/GPU/磁盘及程序状态监控、节点配置下发同步、Agent 版本升级、受管程序生命周期和日志；逐 GPU Worker 只负责具体评测执行。控制端 SSH 纳管执行器与节点 Agent 是两个部署角色。应分别展示 Agent 在线/版本、配置同步回执和各 Worker 就绪；业务服务沿用服务实例/资源账本，Agent 不绕过排空或清理规则直接杀任务。此次新增职责通过任务 13 跟踪，不把已有独立升级执行器等同于完整 Agent。
+
+## SSH 执行器部署契约
+平台宿主机以用户 systemd 服务运行 onboarding.server，API 通过单独 Unix socket 目录挂载调用，不挂载状态目录或私钥。Compose 从 ONBOARDING_SOCKET 与 ONBOARDING_SOCKET_DIR 读取配置，发布检查拒绝丢失 socket 环境或修改映射。配置缺失与目标 SSH 认证失败分别诊断。

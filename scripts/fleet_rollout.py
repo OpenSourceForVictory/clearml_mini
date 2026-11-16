@@ -23,13 +23,19 @@ def image_overlay(path,image):
 def check_compose_environment(command,active):
     desired=json.loads(run(command+['config','--format','json']))['services']['api']
     current=dict(x.split('=',1) for x in active['Config']['Env'] if '=' in x)
-    keys=('DATABASE_URL','JWT_SECRET','RUNNER_IMAGE','MAX_ACTIVE_GLOBAL','MAX_ACTIVE_PER_USER',
+    keys=('ONBOARDING_SOCKET','DATABASE_URL','JWT_SECRET','RUNNER_IMAGE','MAX_ACTIVE_GLOBAL','MAX_ACTIVE_PER_USER',
           'MAX_PENDING_PER_USER','MAX_BATCH_BACKLOG_PER_USER','LEASE_SECONDS','LOST_WORKER_GRACE_SECONDS','EXECUTION_TIMEOUT_SECONDS')
     if any(str(desired['environment'].get(k,''))!=current.get(k,'') for k in keys):
         raise RuntimeError('deployment environment changed; reconcile configuration before release')
     ports={(p['host_ip'],str(p['published']),str(p['target'])) for p in desired.get('ports',[])}
     previous={(p['HostIp'],p['HostPort'],key.split('/')[0]) for key,values in active['HostConfig']['PortBindings'].items() for p in values}
     if ports!=previous:raise RuntimeError('deployment listeners changed; refusing release')
+    if current.get('ONBOARDING_SOCKET'):
+        target=str(Path(current['ONBOARDING_SOCKET']).parent)
+        previous_mount=next((m.get('Source') for m in active.get('Mounts',[]) if m.get('Destination')==target),None)
+        desired_mount=next((v.get('source') for v in desired.get('volumes',[]) if v.get('target')==target and v.get('type')=='bind'),None)
+        if not previous_mount or previous_mount!=desired_mount:
+            raise RuntimeError('SSH onboarding socket mount changed; refusing release')
 
 
 def complete(journal, plan):
