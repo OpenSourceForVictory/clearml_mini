@@ -45,3 +45,9 @@ python3 -m scripts.fleet_release plan --inventory .runtime/fleet-release/invento
 本次预演：生产快照从 n407c89 恢复并升级至 r841a23，27 条执行记录保持不变；临时恢复容器已删除。正式迁移前需在排空状态重新生成备份，预演备份不能替代最终备份。
 
 `upgrade_nodes` 要求整个目标集合已停新准入且无持有执行，通过现有升级 API 逐节点发起；每个节点成功后复核所有 Worker 与 Agent 的版本和摘要，才继续下一个。共享存储主机 .157 最后处理。失败、回滚、超时或不确定响应即停止后续节点；不通过删 journal 或取消尚未确认的安装恢复准入。
+
+## 验收对象登记
+
+`scripts.fleet_acceptance.Registry` 将测试批次、模板及所有者写入独立清单，重启后复用同一测试 ID。取消和停用操作先检查清单归属及平台实际名称，不接收未登记 ID。模板停用可重复执行；执行与服务清理由平台完成，验收工具不使用裸 PID 杀进程。
+
+故障回归使用隔离 API 数据库与临时 systemd 单元/容器：`HOST_EXECUTION_TEST=1` 配合 `test_host_backend.py`、`test_service_recovery.py`；Agent/资源/存储故障由 `test_agent_faults.py`、`test_agent_integration.py`、`test_resource_reporting.py`、`test_worker_storage.py` 覆盖。它们不是生产 NFS 停机或五机断网验收，报告必须分别标注。

@@ -36,6 +36,16 @@ def wait(job, statuses, timeout=90):
     raise TimeoutError(f'job {job} did not reach {statuses}')
 
 
+def journal_for(state_path, job_id):
+    paths = [Path(state_path), *Path(str(state_path)+'.runs').glob('*.json')]
+    for path in paths:
+        if not path.is_file(): continue
+        state = json.loads(path.read_text())
+        if state and state.get('task', {}).get('job_id') == job_id:
+            return path, state
+    raise RuntimeError('active execution journal was not found')
+
+
 def main():
     global TOKEN
     TOKEN = api('POST', 'auth/login', {'username': os.environ['ADMIN_USERNAME'], 'password': os.environ['ADMIN_PASSWORD']})['access_token']
@@ -53,6 +63,7 @@ def main():
     process = None
     with tempfile.TemporaryDirectory(prefix='mini-eval-smoke-') as directory:
         path = Path(directory) / 'worker.json'
+        config['state_path'] = str(Path(directory)/'worker-state.json')
         log = open(Path(directory) / 'worker.log', 'w+')
         def start():
             path.write_text(json.dumps(config))
@@ -68,7 +79,7 @@ def main():
             process = start()
             job = submit(20)
             wait(job, {'RUNNING'})
-            state = json.loads(Path(str(path)+'.state').read_text())
+            _, state = journal_for(config['state_path'], job)
             execution = state['task']['execution_id']
             if gpu_index is not None:
                 container = json.loads(subprocess.check_output(['docker', 'inspect', 'mini-eval-'+execution]))[0]
@@ -137,8 +148,8 @@ def main():
             raise
         finally:
             stop()
-            state_path = Path(str(path)+'.state')
-            if state_path.exists():
+            for state_path in [Path(config['state_path']), *Path(config['state_path']+'.runs').glob('*.json')]:
+                if not state_path.is_file(): continue
                 state = json.loads(state_path.read_text())
                 if state:
                     from worker.client import Worker

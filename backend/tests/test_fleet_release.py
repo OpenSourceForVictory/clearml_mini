@@ -240,3 +240,97 @@ def test_upgrade_failure_does_not_touch_next_node(tmp_path):
     with Checkpoints(tmp_path, 'one').locked() as j:
         with pytest.raises(RuntimeError, match='later nodes'): upgrade_nodes(api, plan, j, 'release')
     assert len(calls) == 1
+
+
+def test_acceptance_registry_survives_restart_and_refuses_other_resources(tmp_path):
+    from scripts.fleet_acceptance import Registry
+    path = tmp_path/'registry.json'
+    reg = Registry(path, 'test-run')
+    reg.register('batch', 'one', 'alice', 'test-run-batch')
+    again = Registry(path, 'test-run')
+    assert again.resource('batch', 'one', 'alice')['name'] == 'test-run-batch'
+    with pytest.raises(ValueError): again.resource('batch', 'one', 'bob')
+    with pytest.raises(ValueError): again.resource('batch', 'unknown', 'alice')
+    with pytest.raises(ValueError): again.register('batch', 'other', 'alice', 'production-batch')
+
+
+def test_cleanup_validates_remote_identity_before_mutation(tmp_path):
+    from scripts.fleet_acceptance import Registry
+    reg = Registry(tmp_path/'registry.json', 'test-run')
+    reg.register('batch', 'one', 'alice', 'test-run-batch')
+    def api(path, body=None, method=None):
+        assert body is None, 'unexpected mutation'
+        return {'title': 'production-batch', 'control_revision': 0}
+    with pytest.raises(ValueError): reg.cancel_batch(api, 'one', 'alice')
+
+
+def test_disabled_test_template_cleanup_is_idempotent(tmp_path):
+    from scripts.fleet_acceptance import Registry
+    reg = Registry(tmp_path/'registry.json', 'test-run')
+    reg.register('server-template', 'one', 'admin', 'test-run-server')
+    record = {'id': 'one', 'name': 'test-run-server', 'enabled': True}
+    changes = []
+    def api(path, body=None, method=None):
+        if body is None: return [dict(record)]
+        changes.append(body); record['enabled'] = body['enabled']
+    reg.disable_template(api, 'server', 'one', 'admin')
+    reg.disable_template(api, 'server', 'one', 'admin')
+    assert len(changes) == 1
+
+
+def test_acceptance_resubmits_same_key_after_lost_response(tmp_path):
+    from scripts.smoke_fleet_orchestration import Acceptance
+    calls=[]
+    def api(path,body=None,method=None,idempotency_key=None):
+        calls.append((body,idempotency_key))
+        if len(calls)==1:raise RuntimeError('response lost')
+        return {'id':'batch'}
+    acceptance=Acceptance(api,tmp_path,'fleet-test')
+    with pytest.raises(RuntimeError):acceptance.submit('case',{'cases':[]})
+    recovered=Acceptance(api,tmp_path,'fleet-test')
+    assert recovered.submit('case',{'cases':[]})=='batch'
+    assert calls[0]==calls[1]
+    assert recovered.registry.resource('batch','batch','admin')
+    with pytest.raises(ValueError):recovered.submit('case',{'cases':[{}]})
+
+
+def test_fleet_business_programs_are_bounded_and_syntax_valid():
+    from scripts.fleet_probe_programs import SERVER,CLIENT,COMMAND
+    for source in (SERVER,CLIENT,COMMAND):
+        assert len(source)<2000
+        compile(source,'fleet-probe','exec')
+
+
+def test_upgrade_waits_for_agent_config_after_success(tmp_path,monkeypatch):
+    import scripts.fleet_release_api as release
+    api,node,_,plan=fake_api(enabled=False)
+    plan.update(target_protocol=10,target_worker='0.12.0',target_agent='1.1.0')
+    calls=[];checks=[]
+    def upgraded(path,body=None,method=None):
+        if path=='admin/nodes':return [node]
+        if body:calls.append(body);return {'id':'upgrade'}
+        return {'revision':0,'updater_online':True,'history':[{'id':'upgrade','status':'SUCCEEDED'}]}
+    def ready(*args):
+        checks.append(True)
+        if len(checks)==1:raise RuntimeError('Agent config heartbeat pending')
+    monkeypatch.setattr(release,'assert_release_ready',ready)
+    with Checkpoints(tmp_path,'one').locked() as j:
+        release.upgrade_nodes(upgraded,plan,j,'release',sleep=lambda _:None)
+        assert j.state['steps']['upgrade:'+node['node_name']]['status']=='done'
+    assert len(calls)==1 and len(checks)==2
+
+
+def test_reconcile_only_exact_successful_upgrade(tmp_path,monkeypatch):
+    import scripts.fleet_release_api as release
+    api,node,_,plan=fake_api(enabled=False)
+    operation={'id':'known','status':'SUCCEEDED','release_id':'wrong'}
+    def current(path,*args):
+        return {'history':[operation]} if path.endswith('/upgrades') else api(path,*args)
+    monkeypatch.setattr(release,'assert_release_ready',lambda *args:None)
+    with Checkpoints(tmp_path,'one').locked() as j:
+        step='upgrade:'+node['node_name'];j.begin(step,{'release_id':'release'})
+        j.state['steps'][step]['upgrade_id']='known'
+        with pytest.raises(RuntimeError):release.reconcile_upgrade(current,plan,j,node['node_name'],'release')
+        operation['release_id']='release'
+        release.reconcile_upgrade(current,plan,j,node['node_name'],'release')
+        assert j.state['steps'][step]['status']=='done'

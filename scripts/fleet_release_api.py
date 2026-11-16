@@ -16,8 +16,9 @@ class API:
         self.base = base.rstrip('/') + '/api/v1/'
         self.token = token
 
-    def __call__(self, path, body=None, method=None):
+    def __call__(self, path, body=None, method=None, idempotency_key=None):
         headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.token}
+        if idempotency_key: headers['Idempotency-Key'] = idempotency_key
         request = urllib.request.Request(self.base + path, data=None if body is None else json.dumps(body).encode(),
                                          headers=headers, method=method)
         try:
@@ -123,8 +124,30 @@ def upgrade_nodes(api, plan, journal, release_id, timeout=300, clock=time.monoto
             actual = next((i for i in status['history'] if i['id'] == operation['id']), None)
             if actual is None or actual['status'] in ('FAILED', 'CANCELLED', 'ROLLING_BACK'):
                 raise RuntimeError('node upgrade failed; later nodes were not touched')
-            if actual['status'] == 'SUCCEEDED': break
+            if actual['status'] == 'SUCCEEDED':
+                try:
+                    assert_release_ready(api, {**plan, 'targets': [target]}, release_id)
+                except RuntimeError:
+                    pass  # Agent registration can precede its applied-config heartbeat.
+                else:
+                    break
             if clock() >= until: raise TimeoutError('node upgrade timed out; reconcile before continuing')
             sleep(min(2, max(0, until-clock())))
-        assert_release_ready(api, {**plan, 'targets': [target]}, release_id)
         journal.finish(step)
+
+
+def reconcile_upgrade(api, plan, journal, name, release_id):
+    """Only finish a known successful operation; never repeat an uncertain mutation."""
+    if journal.state is None: raise RuntimeError('release lock required')
+    target = next(t for t in plan['targets'] if t['node_name'] == name)
+    node = node_map(api, {**plan, 'targets': [target]})[name]
+    step = 'upgrade:' + name
+    record = journal.state['steps'][step]
+    operation = record.get('upgrade_id')
+    if not operation: raise RuntimeError('missing operation receipt; reconcile manually')
+    history = api('admin/nodes/' + node['id'] + '/upgrades')['history']
+    actual = next((x for x in history if x['id'] == operation), None)
+    if not actual or actual['status'] != 'SUCCEEDED' or actual['release_id'] != release_id:
+        raise RuntimeError('recorded upgrade has not succeeded')
+    assert_release_ready(api, {**plan, 'targets': [target]}, release_id)
+    journal.finish(step)
