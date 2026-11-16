@@ -150,6 +150,8 @@ def install(app,db,admin,worker_auth):
             job=s.get(Job,item.current_job_id) if item.current_job_id else None
             if job and job.status not in TERMINAL:cancel_job(s,job)
         else:
+            from .batch_deletion import assert_live_batch
+            assert_live_batch(s, item.orchestration_batch_id)
             if held(s,item):raise HTTPException(409,'stop current service and wait for cleanup before starting')
             template=s.get(ServerTemplate,item.template_snapshot['id'])
             if not template or not template.enabled or template.archived:raise HTTPException(409,'service template is disabled or archived')

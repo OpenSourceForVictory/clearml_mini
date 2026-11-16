@@ -5,9 +5,7 @@ import {BatchDetail} from './batch-detail';
 import {usePoll} from './poll';
 import {RunWizard, type Template, type Suite} from './run-wizard';
 
-type Batch = {scheduling_paused?:boolean;id:string;title:string;status:string;total:number;succeeded:number;finished:number;total_episodes:number;
-  cases:{job_id:string;case_id:string;task_name:string;episodes:number;seed:number;status:string;attempt:number;error:string|null;run_id:string;episode_reporting:boolean;progress:{completed:number;successes:number;errors:number;success_rate:number|null}}[]};
-const labels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
+import {BatchHistory,type Batch} from './batch-history';
 function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
@@ -15,9 +13,11 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
 
 export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaunch=null}:{initialLaunch?:{suite:Suite}|null;pageView?:'wizard'|'records';admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
+  const [loading,setLoading]=useState(true);
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(initialLaunch);
   useEffect(()=>{if(initialLaunch)setLaunch(initialLaunch)},[initialLaunch]);
+  const deletedIds=useRef(new Set<string>());
   const [compareIds,setCompareIds]=useState<string[]>([]);
   const [compareRoute,setCompareRoute]=useState(()=>location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);
   const batchFilters=useRef<Record<string,{status:string;reason:string;query:string}>>({});
@@ -26,14 +26,15 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
   const openBatch=(id:string)=>{location.hash='/cs/batches/'+id;};
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);
+    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));
   };
   useEffect(()=>{
+    setLoading(true);
     let active=true,timer:ReturnType<typeof setTimeout>;
     async function load(){try{
       const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b);setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
-    }catch(e){if(active)setError(String(e));}finally{if(active)timer=setTimeout(load,2000);}}
+      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
+    }catch(e){if(active)setError(String(e));}finally{if(active){setLoading(false);timer=setTimeout(load,2000);}}}
     if(!batchId&&!compareRoute.length)void load();return()=>{active=false;clearTimeout(timer);};
   },[page,launch,batchId,compareRoute.join()]);
   return <>
@@ -41,10 +42,7 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
     {error&&<p className="error" role="alert">{error}</p>}
     <div hidden={!!batchId||!!compareRoute.length}><div hidden={pageView==='records'}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/></div>
-    <section hidden={pageView==='wizard'} className="panel"><h2>批次进度</h2><p>选择两个批次比较结果（已选 {compareIds.length}/2，可跨页选择）。</p><button disabled={compareIds.length!==2} onClick={()=>{location.hash="/cs/compare/"+compareIds.join("/");}}>比较所选批次</button><button disabled={!compareIds.length} onClick={()=>setCompareIds([])}>清空比较选择</button>{!batches.length&&<p>尚无评测批次。</p>}
-      {batches.map(b=><div key={b.id}><label><input type="checkbox" aria-label={"比较选择 "+b.title} checked={compareIds.includes(b.id)} disabled={compareIds.length>=2&&!compareIds.includes(b.id)} onChange={e=>setCompareIds(old=>e.target.checked?[...old,b.id]:old.filter(x=>x!==b.id))}/>加入比较</label><h3>{b.title} · {labels[b.status]}{b.scheduling_paused?' · 调度已暂停':''} · 已成功 {b.succeeded}/{b.total}</h3><p className="hint">已结束 {b.finished}/{b.total}，计划 {b.total_episodes} 个回合。</p><button onClick={()=>openBatch(b.id)}>查看批次</button></div>)}
-      <div className="pagination"><button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20} onClick={()=>setPage(p=>p+1)}>下一页</button></div>
-    </section>
+    <div hidden={pageView==='wizard'}><BatchHistory batches={batches} page={page} loading={loading} error={error} compareIds={compareIds} onCompareChange={setCompareIds} onOpen={openBatch} onPage={p=>{setBatches([]);setPage(p);}} onDeleted={id=>{deletedIds.current.add(id);setCompareIds(old=>old.filter(x=>x!==id));setBatches(old=>old.filter(x=>x.id!==id));if(batches.length===1&&page>1)setPage(page-1);else void refresh().catch(e=>setError(String(e)));}}/></div>
     </div>
     {compareRoute.length===2&&<BatchComparison left={compareRoute[0]} right={compareRoute[1]} onBack={()=>{location.hash='/cs/results';}}/>}
     {batchId&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onBack={()=>{location.hash='/cs/results';}} onJob={setSelected}/>}

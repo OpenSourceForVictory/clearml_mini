@@ -109,7 +109,7 @@ def compile_submission(s,body,user):
 
 def owned(s,identity,user):
     batch=s.get(EvaluationBatch,identity);orch=s.get(EvaluationOrchestration,identity)
-    if not batch or not orch or (batch.owner_id!=user.id and user.role!='admin'):raise HTTPException(404,'orchestration not found')
+    if not batch or batch.deleted_at or not orch or (batch.owner_id!=user.id and user.role!='admin'):raise HTTPException(404,'orchestration not found')
     return batch,orch
 
 
@@ -153,6 +153,7 @@ def install(app,db,current):
         fingerprint=digest(body)
         old=s.scalar(select(EvaluationBatch).where(EvaluationBatch.owner_id==user.id,EvaluationBatch.idempotency_key==idempotency_key))
         if old:
+            if old.deleted_at:raise HTTPException(409,'batch has been deleted')
             orch=s.get(EvaluationOrchestration,old.id)
             if not orch or orch.request_digest!=fingerprint:raise HTTPException(409,'idempotency key already used for a different submission')
             return view(s,old)

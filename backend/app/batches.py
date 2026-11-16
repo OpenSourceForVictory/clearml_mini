@@ -207,6 +207,7 @@ def install(app, db, current):
             old = s.scalar(select(EvaluationBatch).where(EvaluationBatch.owner_id == user.id,
                                                         EvaluationBatch.idempotency_key == idempotency_key))
             if old:
+                if old.deleted_at: raise HTTPException(409, 'batch has been deleted')
                 return batch_view(s, old)
         pool, cases, configs = resolve_batch(s, body, user)
         batch = persist_batch(s,body,user,pool,cases,configs,idempotency_key)
@@ -215,12 +216,19 @@ def install(app, db, current):
 
     @app.get('/api/v1/batches')
     def batches(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
-        q = select(EvaluationBatch).where(EvaluationBatch.owner_id == user.id).order_by(EvaluationBatch.created_at.desc())
+        q = select(EvaluationBatch).where(EvaluationBatch.owner_id == user.id, EvaluationBatch.deleted_at.is_(None)).order_by(EvaluationBatch.created_at.desc(), EvaluationBatch.id.desc())
         return [batch_view(s, b) for b in s.scalars(q.offset((page-1)*20).limit(20))]
+
+    @app.delete('/api/v1/batches/{batch_id}')
+    def delete_batch(batch_id: str, user=Depends(current), s: Session = Depends(db)):
+        from .batch_deletion import remove
+        result = remove(s, batch_id, user)
+        s.commit()
+        return result
 
     @app.get('/api/v1/batches/{batch_id}')
     def detail(batch_id: str, user=Depends(current), s: Session = Depends(db)):
         b = s.get(EvaluationBatch, batch_id)
-        if not b or (b.owner_id != user.id and user.role != 'admin'):
+        if not b or b.deleted_at or (b.owner_id != user.id and user.role != 'admin'):
             raise HTTPException(404, 'batch not found')
         return batch_view(s, b)

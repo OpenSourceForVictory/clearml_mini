@@ -7,6 +7,8 @@ from .scheduling import TERMINAL
 
 
 def retry_job(s, job, expected_run_id=None, allowed=('FAILED', 'CANCELLED', 'TIMED_OUT')):
+    from .batch_deletion import assert_live_job
+    assert_live_job(s, job)
     if expected_run_id is not None and job.runs[-1].id != expected_run_id:
         raise HTTPException(409, 'attempt changed')
     if job.status not in allowed:

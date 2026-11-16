@@ -39,7 +39,7 @@ SKIP = {
 
 def owned(s, identity, user):
     batch = s.get(EvaluationBatch, identity)
-    if not batch or (batch.owner_id != user.id and user.role != 'admin'):
+    if not batch or batch.deleted_at or (batch.owner_id != user.id and user.role != 'admin'):
         raise HTTPException(404, 'batch not found')
     return batch
 

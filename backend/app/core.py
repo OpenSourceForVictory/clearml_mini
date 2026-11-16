@@ -334,6 +334,7 @@ class RunArtifact(Base):
 
 
 class EvaluationBatch(Base):
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     __tablename__ = 'evaluation_batches'
     __table_args__ = (UniqueConstraint('owner_id', 'idempotency_key'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
