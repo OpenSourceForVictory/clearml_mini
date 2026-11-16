@@ -29,7 +29,8 @@ async function setup(page:Page){
   const wizard=page.getByRole('region',{name:'集合运行向导'});
   await wizard.getByLabel('选择已保存集合').selectOption('suite');await wizard.getByLabel('批次名称',{exact:true}).fill('Full run');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
-  await expect(wizard.getByLabel('客户端模板',{exact:true})).toBeDisabled();
+  await expect(wizard.getByLabel('客户端模板',{exact:true})).toHaveValue('t');
+  await expect(wizard.getByLabel('客户端模板',{exact:true}).locator('option')).toHaveCount(2);
   await wizard.getByLabel('启动变量覆盖 JSON',{exact:true}).fill('{"MODE":"test"}');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');

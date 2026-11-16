@@ -1,0 +1,34 @@
+# 全量测试补测记录
+
+本轮使用 OpenSpec `project-coverage-baseline`。验收目标仍为每个 Python 目录行 ≥80%、分支 ≥70%，关键功能行 ≥90%、分支 ≥80%；未达标项不标记完成。
+
+## 验证范围
+
+- Python 全量回归在 Git `cabd7a7` 的隔离副本中加入本轮测试、协议枚举、SDK 打包和纳管错误分类修复执行，不混入另一个未完成的集合 N:N 关联变更。
+- 新增 231 个 Python 参数化用例集中复跑通过，涵盖执行入口、Worker 恢复、日志/回合游标、systemd 生命周期、SSH/Unix socket、环境探测、构建、部署与观察脚本，以及覆盖率算法。
+- PostgreSQL 使用独立临时容器与 tmpfs 数据目录，22 项通过、25 项未开启的验收跳过。与生产数据库无连接。
+- 浏览器既有全量回归 80 项通过、9 项需要专门环境的测试跳过。修正了批次服务详情页签和客户端模板选择器的过时断言。
+- 另建临时 SQLite 数据库和回环地址 API，真实界面/API 集合测试 2 项通过，包含 RoboTwin 子集、发布/复制/导入导出/归档恢复、YAML 错误校验；更新了过时导航定位。
+- 新增真实界面/API 模板注册测试 1 项通过，覆盖客户端/服务端 × Docker/宿主机四种组合，检查类型化业务参数和注册结果持久化。
+- TypeScript 类型检查与独立目录前端构建通过，OpenSpec strict 校验通过。
+
+不同命令存在重复执行，以上通过数不能直接求和作为唯一测试数。SQLite 界面测试验证管理流程；不代表迁移兼容性、真机安装、NPU/GPU 共享隔离或模型质量评测。未统计前端行/分支覆盖率。
+
+## 失败证据与修复
+
+1. 初始隔离 Python 全量：675 passed、121 skipped、4 failed。失败用例是 `test_enrollment::test_reenrollment_identity_all_gpu_and_agent_gate`、`test_enrollment::test_wrong_agent_digest_and_revocation_never_ready`、`test_ssh_onboarding::test_new_node_only_planned_gpus_register_and_all_components_gate` 和 `test_integration_bundle::test_download_matches_sources_and_runs_without_repository`。前 3 项触发 API 协议 14 枚举遗漏（422），最后一项是 SDK 包与源码不一致。补齐注册契约、打包清单并重新生成 SDK 后，相关回归通过。
+2. `test_onboarding_probes::test_control_response_bounds_and_redacted_errors[oversize]` 首次失败：期待 `control_response_limit`，实际 `control_api_unreachable`。原因是业务拒绝异常继承 `ValueError`，被通用分支再次捕获。显式保留拒绝异常后，纳管相关 50 项回归通过。
+3. 首次浏览器回归 72 passed、9 skipped、8 failed：7 项向导测试仍期待模板选择器不可编辑，1 项服务状态测试未打开服务详情页签。修正测试与现行交互一致后全量通过。
+4. 新增真接口模板测试首次等待错误的字符串默认值字段标签。字符串使用“默认值”，其他类型使用“默认值（JSON）”；修正定位后四种注册组合通过，没有修改产品行为迁就测试。
+
+原始测试日志和覆盖数据保留在本机 `.runtime/project-coverage/`，不纳入 Git；本目录保存不含运行凭据的验证摘要。
+
+## 最终测量（本轮补测后的基线，尚未全量达标）
+
+修复后的隔离全量 Python 回归：**833 passed、121 skipped、0 failed**，耗时约 11 分 35 秒；随后另跑全部新增 231 项测试，补入全量启动后新增的用例。合并同一生产源码版本的全量、补测和 PostgreSQL 覆盖数据，见 [目录与功能报告](coverage-summary.md)。不把旧版修复前的覆盖数据混入最终报告。
+
+Python 行覆盖率从初始 72.26% 提高到 **78.75%**，分支从 62.02% 提高到 **69.13%**。初始 140 文件、最终 142 文件（新增覆盖率工具也计入分母），不是完全相同的分母。
+
+已达目录门槛：backend/app、node_agent、runner、onboarding。未达标：Worker 分支 64.67%；scripts 行 44.24%、分支 46.74%。关键功能中纳管升级分支 78.92%、业务执行与结果行 85.38% / 分支 72.85% 仍低于 90% / 80% 要求。**门禁如实返回失败，OpenSpec 补齐门槛任务保持未完成；不能称全量测试覆盖已达标。**
+
+运行模板注册管理、集合与编排、评测结果与批次管理均达到各自 80% / 70% 门槛；调度与资源达到关键功能 90% / 80% 门槛。剩余补测优先级为 Worker 分支与恢复控制流、节点升级边界、运维/真机验收脚本。临时测试 API 和 PostgreSQL 容器已停止，未部署生产变更。

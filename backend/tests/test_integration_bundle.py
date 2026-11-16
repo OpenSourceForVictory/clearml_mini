@@ -12,6 +12,7 @@ def test_download_matches_sources_and_runs_without_repository(tmp_path):
     assert rebuilt.read_bytes() == OUTPUT.read_bytes(), 'Regenerate SDK download after source changes'
     extracted = tmp_path/'isolated'
     with ZipFile(rebuilt) as archive:
+        assert 'runner/process_command.py' in archive.namelist()
         assert all(not Path(n).is_absolute() and '..' not in Path(n).parts for n in archive.namelist())
         archive.extractall(extracted)
     env = dict(os.environ)

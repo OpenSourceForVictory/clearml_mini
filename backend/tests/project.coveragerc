@@ -1,0 +1,11 @@
+[run]
+branch = True
+relative_files = True
+source = backend/app,worker,node_agent,runner,onboarding,scripts
+
+[report]
+show_missing = True
+precision = 2
+
+[html]
+title = Mini Eval Python coverage

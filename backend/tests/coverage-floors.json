@@ -1,0 +1,58 @@
+{
+  "directories": {
+    "backend/app": {
+      "line": 80,
+      "branch": 70
+    },
+    "worker": {
+      "line": 80,
+      "branch": 70
+    },
+    "node_agent": {
+      "line": 80,
+      "branch": 70
+    },
+    "runner": {
+      "line": 80,
+      "branch": 70
+    },
+    "onboarding": {
+      "line": 80,
+      "branch": 70
+    },
+    "scripts": {
+      "line": 80,
+      "branch": 70
+    }
+  },
+  "functions": {
+    "调度与资源": {
+      "line": 90,
+      "branch": 80
+    },
+    "节点纳管与升级": {
+      "line": 90,
+      "branch": 80
+    },
+    "业务执行与结果": {
+      "line": 90,
+      "branch": 80
+    },
+    "节点监控": {
+      "line": 80,
+      "branch": 70
+    },
+    "任务集合与编排": {
+      "line": 80,
+      "branch": 70
+    },
+    "运行模板注册管理": {
+      "line": 80,
+      "branch": 70
+    },
+    "评测结果与批次管理": {
+      "line": 80,
+      "branch": 70
+    }
+  }
+}

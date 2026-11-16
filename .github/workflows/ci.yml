@@ -30,9 +30,15 @@ jobs:
         with: {python-version: '3.11'}
       - uses: actions/setup-node@v4
         with: {node-version: '24', cache: npm, cache-dependency-path: frontend/package-lock.json}
-      - run: pip install -r backend/requirements.txt
+      - run: pip install -r backend/requirements.txt -r backend/tests/requirements-coverage.txt
       - run: alembic -c backend/alembic.ini upgrade head && alembic -c backend/alembic.ini check
-      - run: python -m pytest -q backend/tests
+      - run: python -m scripts.test_coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-coverage
+          path: coverage-artifacts/python
+          include-hidden-files: true
       - run: npx --yes @fission-ai/openspec@1.15.0 validate --all
       - run: npm ci && npm run build
         working-directory: frontend

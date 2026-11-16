@@ -13,6 +13,7 @@ test('owned batch shows task service generation, logs and revisioned stop',async
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/batches/b');
+ await page.getByRole('button',{name:'服务端与关联',exact:true}).click();
  const panel=page.getByRole('region',{name:'客户端与服务关系'});
  await expect(panel).toContainText('generation-1');await expect(panel).toContainText('等待服务健康');
  await panel.getByRole('button',{name:'查看 Model service 日志'}).click();await expect(panel).toContainText('model loaded');

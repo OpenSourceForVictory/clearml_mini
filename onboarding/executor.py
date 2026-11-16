@@ -30,6 +30,7 @@ class Control:
                 payload=r.read(4*1024*1024+1)
                 if len(payload)>4*1024*1024:raise Rejected('control_response_limit')
                 return json.loads(payload)
+        except Rejected:raise
         except urllib.error.HTTPError as exc:raise Rejected('control_api_rejected_'+str(exc.code)) from None
         except (OSError,ValueError):raise Rejected('control_api_unreachable') from None
 

@@ -54,12 +54,17 @@ python scripts/install_worker.py --config worker-node-0.json --instance gpu0 --s
 ```bash
 # Python 3.11+，安装 backend/requirements.txt 后
 python -m pytest -q backend/tests
+# 目录与功能覆盖率：同时运行完整 Python 测试并检查门槛
+pip install -r backend/tests/requirements-coverage.txt
+python -m scripts.test_coverage
 # PostgreSQL 测试需在独立测试库上先运行迁移，并设置 TEST_DATABASE_URL
 alembic -c backend/alembic.ini upgrade head
 alembic -c backend/alembic.ini check
 # 前端构建，Node 24
 cd frontend && npm ci && npm run build
 ```
+
+覆盖率要求：目录行 ≥80%、分支 ≥70%；关键功能行 ≥90%、分支 ≥80%。当前是否达标以报告为准，详见 [测试覆盖率规范](docs/code-coverage.md)。
 
 真实 Docker smoke：在隔离测试部署上设置 `EVAL_API_URL`、`ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 后，运行 `python -m scripts.smoke_worker`。模拟机群测试运行 `python -m scripts.smoke_farm`。脚本创建测试用户、资源池和任务，不能对生产数据库运行。
 

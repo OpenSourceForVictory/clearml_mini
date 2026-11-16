@@ -116,3 +116,10 @@ def test_docker_real_command_matrix(tmp_path,mode,argv):
     assert result.returncode==0,result.stderr
     assert 'success_rate' in result.stdout
     if mode=='sdk-command':assert result.stdout.count('"status":"COMPLETED"')==2
+
+
+def test_current_worker_protocol_is_accepted_by_registration_contract():
+    from backend.app.execution import Register
+    from worker.version import PROTOCOL_VERSION
+    registration=Register(gpu_index=0,gpu_uuid='test',gpu_model='test',vram_gb=0,protocol_version=PROTOCOL_VERSION)
+    assert registration.protocol_version==PROTOCOL_VERSION
