@@ -48,8 +48,21 @@ class StorageReport(BaseModel):
         return value
 
 
-def desired(worker):
-    return {'revision': worker.storage_revision, 'config': worker.storage_config}
+OVERRIDES = 'slot_storage_overrides'
+
+
+def base_config(worker):
+    return worker.storage_config
+
+
+def slot_config(worker, slot):
+    return (worker.connection or {}).get(OVERRIDES, {}).get(slot.id)
+
+
+def desired(worker, slot=None):
+    config = slot_config(worker, slot) if slot else None
+    return {'revision': worker.storage_revision,
+            'config': config if config is not None else base_config(worker)}
 
 
 def held(s, slot):
@@ -78,8 +91,9 @@ def acknowledge(s, worker, slot, report):
             raise HTTPException(409, 'storage acknowledgement revision mismatch')
         if slot.storage_applied_revision != report.revision and held(s, slot):
             raise HTTPException(409, 'storage switch must wait for execution cleanup')
-        if worker.storage_config:
-            expected = dict(worker.storage_config)
+        config = desired(worker, slot)['config']
+        if config:
+            expected = dict(config)
             expected['workspace_root'] += '/slots/' + slot.id
             if report.effective.model_dump() != expected:
                 raise HTTPException(409, 'effective storage differs from desired configuration')
@@ -102,7 +116,8 @@ def view(s, worker):
             status = 'pending'
         else:
             status = report.get('status', 'pending')
-        slots.append({'slot_id': slot.id, 'gpu_index': slot.gpu_index, 'status': status,
+        slots.append({'slot_id': slot.id, 'gpu_index': slot.gpu_index, 'accelerator_type': slot.accelerator_type,
+            'config': slot_config(worker, slot), 'status': status,
             'applied_revision': slot.storage_applied_revision, 'report': report,
             'reported_at': slot.storage_reported_at})
     return {'worker_id': worker.id, **desired(worker), 'slots': slots,
@@ -116,6 +131,13 @@ def install(app, db, admin):
             raise HTTPException(404, 'node not found')
         return w
 
+    def release_reserved(s, slot_ids):
+        for run in s.scalars(select(Run).where(Run.slot_id.in_(slot_ids), Run.status == 'RESERVED')):
+            transition(s, run, 'PENDING', 'storage configuration changed before claim')
+            run.slot_id = run.execution_id = run.queue_name = run.reservation_expires_at = run.reserved_at = None
+            run.reserved_vram_mb = run.reserved_cpu = run.reserved_ram_gb = 0
+            run.allocation_index = 0
+
     @app.get('/api/v1/admin/nodes/{worker_id}/storage')
     def get_storage(worker_id: str, user=Depends(admin), s=Depends(db)):
         return view(s, machine(s, worker_id))
@@ -127,12 +149,31 @@ def install(app, db, admin):
         if body.expected_revision != w.storage_revision:
             raise HTTPException(409, 'storage configuration changed; reload before saving')
         w.storage_revision += 1
-        w.storage_config = body.config.model_dump() if body.config else None
+        w.storage_config=body.config.model_dump() if body.config else None
         ids = select(Slot.id).where(Slot.worker_id == w.id)
-        for run in s.scalars(select(Run).where(Run.slot_id.in_(ids), Run.status == 'RESERVED')):
-            transition(s, run, 'PENDING', 'storage configuration changed before claim')
-            run.slot_id = run.execution_id = run.queue_name = run.reservation_expires_at = run.reserved_at = None
-            run.reserved_vram_mb = run.reserved_cpu = run.reserved_ram_gb = 0
-            run.allocation_index = 0
+        release_reserved(s, ids)
         s.commit()
         return view(s, w)
+
+    @app.put('/api/v1/admin/nodes/{worker_id}/storage/slots/{slot_id}')
+    def put_slot_storage(worker_id: str, slot_id: str, body: StorageUpdate, user=Depends(admin), s=Depends(db)):
+        lock(s)
+        w = machine(s, worker_id)
+        slot=s.get(Slot,slot_id)
+        if not slot or slot.worker_id!=w.id or getattr(slot, 'deleted_at', None):
+            raise HTTPException(404, 'device not found on this machine')
+        if body.expected_revision != w.storage_revision:
+            raise HTTPException(409, 'storage configuration changed; reload before saving')
+        overrides=dict((w.connection or {}).get(OVERRIDES, {}))
+        if body.config:
+            overrides[slot_id]=body.config.model_dump()
+        else:
+            overrides.pop(slot_id,None)
+        connection=dict(w.connection or {})
+        if overrides:connection[OVERRIDES]=overrides
+        else:connection.pop(OVERRIDES,None)
+        w.connection=connection or None
+        w.storage_revision+=1
+        release_reserved(s,[slot_id])
+        s.commit()
+        return view(s,w)

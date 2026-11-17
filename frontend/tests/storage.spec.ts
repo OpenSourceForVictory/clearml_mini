@@ -4,7 +4,7 @@ async function setup(page: Page, role='admin') {
   let value:any={revision:1,config:{workspace_root:'/srv/work',assets_root:'/srv/assets',cache_root:'/srv/cache',min_free_disk_gb:2},all_applied:false,slots:[
     {slot_id:'s1',gpu_index:0,status:'applied',applied_revision:1,reported_at:'2026-10-30',report:{effective:{workspace_root:'/srv/work/slots/s1',assets_root:'/srv/assets',cache_root:'/srv/cache',min_free_disk_gb:2},capacity:{workspace:1024}}},
     {slot_id:'s2',gpu_index:1,status:'waiting',applied_revision:0,report:{}}]};
-  let submitted:any;
+  let submitted:any,submittedPath='';
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','ui-test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');
@@ -15,16 +15,54 @@ async function setup(page: Page, role='admin') {
     else if(path==='admin/nodes/node/storage') {
       if(route.request().method()==='PUT') {
         submitted=route.request().postDataJSON();
+        submittedPath=path;
         if(submitted.expected_revision!==value.revision) {await route.fulfill({status:409,json:{detail:'storage configuration changed; reload before saving'}});return;}
         value={...value,revision:value.revision+1,config:submitted.config};
       }
       body=value;
     }
+    else if(path.startsWith('admin/nodes/node/storage/slots/')) {
+      submitted=route.request().postDataJSON();submittedPath=path;
+      if(submitted.expected_revision!==value.revision){await route.fulfill({status:409,json:{detail:'storage configuration changed; reload before saving'}});return;}
+      const slotId=path.split('/').at(-1);
+      value={...value,revision:value.revision+1,slots:value.slots.map((slot:any)=>slot.slot_id===slotId?{...slot,config:submitted.config}:slot)};
+      body=value;
+    }
     await route.fulfill({json:body});
   });
   await page.goto('/');
-  return {change:(update:any)=>{value={...value,...update};},submitted:()=>submitted};
+  return {change:(update:any)=>{value={...value,...update};},submitted:()=>submitted,submittedPath:()=>submittedPath};
 }
+
+test('each device edits its own directory without using GPU 0 as machine default',async({page})=>{
+  const state=await setup(page);
+  const base={assets_root:'/srv/assets',cache_root:'/srv/cache',min_free_disk_gb:2};
+  state.change({config:null,slots:[
+    {slot_id:'s1',gpu_index:0,status:'applied',applied_revision:1,report:{effective:{...base,workspace_root:'/srv/work/gpu0'}}},
+    {slot_id:'s2',gpu_index:1,status:'applied',applied_revision:1,report:{effective:{...base,workspace_root:'/srv/work/gpu1'}}}]});
+  await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByRole('tab',{name:'工作目录与资产',exact:true}).click();
+  await page.getByText('host 存储配置',{exact:true}).click();
+  await expect(page.getByLabel('host 工作基目录',{exact:true})).toHaveValue('');
+  await page.getByText('修改GPU 1目录').click();
+  await expect(page.getByLabel('GPU 1 工作基目录')).toHaveValue('/srv/work/gpu1');
+  await page.getByRole('button',{name:'采用建议工作目录'}).click();
+  await expect(page.getByLabel('GPU 1 工作基目录')).toHaveValue('/srv/work/host/gpu1');
+  await page.getByRole('button',{name:'采用建议工作目录'}).click();
+  await expect(page.getByLabel('GPU 1 工作基目录')).toHaveValue('/srv/work/host/gpu1');
+  await page.getByRole('button',{name:'保存GPU 1目录'}).click();
+  await expect(page.getByText('此设备目录已保存，等待 Worker 确认。')).toBeVisible();
+  expect(state.submittedPath()).toBe('admin/nodes/node/storage/slots/s2');
+  expect(state.submitted().config.workspace_root).toBe('/srv/work/host/gpu1');
+  await expect(page.getByLabel('host 工作基目录',{exact:true})).toHaveValue('');
+  await page.getByText('修改GPU 0目录').click();
+  await expect(page.getByLabel('GPU 0 工作基目录')).toHaveValue('/srv/work/gpu0');
+  await page.getByLabel('GPU 0 工作基目录').fill('/srv/work/host/gpu0');
+  state.change({revision:3});
+  await expect(page.getByText(/期望版本 3/)).toBeVisible({timeout:10000});
+  await page.getByRole('button',{name:'保存GPU 0目录'}).click();
+  expect(state.submitted().expected_revision).toBe(2);
+  await expect(page.getByRole('alert').filter({hasText:'storage configuration changed'})).toBeVisible();
+});
 
 test('storage drafts survive polling, conflict is visible, restore is versioned',async({page})=>{
   const state=await setup(page);

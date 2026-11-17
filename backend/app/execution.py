@@ -350,7 +350,7 @@ def install(app, db, current):
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
         return {'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
-                'host': host_environments.desired(worker), 'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker), 'storage_busy': storage_protocol.held(s, slot)}
+                'host': host_environments.desired(worker), 'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker, slot), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):

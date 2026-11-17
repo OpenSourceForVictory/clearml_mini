@@ -30,6 +30,8 @@
 
 宿主机 cwd：`runner/template_contract.py` 校验 `host_runtime.working_directory`；`worker/host_backend.py` 基于批准 code_root 解析 `_resolved_cwd`，客户端入口、服务入口和 command_sdk 都需消费它。保留 work/output 目录语义。新字段要求 Worker 协议 13，检查 scheduling 与 host_environments 两处准入；不修改旧模板默认 cwd。验证见 backend/tests/test_host_working_directory.py 和 docs/host-execution.md。
 
+多设备存储设置：backend/app/storage.py 从 Worker.connection 的 slot_storage_overrides 解析每卡覆盖，整机默认保留 Worker.storage_config 原形；execution.heartbeat 按槽位下发，旧 Worker 协议 v4 仍使用 `/slots/<slot_id>`。frontend/src/storage.tsx 不能用第 0 卡实际目录预填整机表单，每卡编辑与版本冲突独立处理。操作见 docs/worker-setup.md；回归 test_storage.py、storage.spec.ts。回退旧 API 时覆盖不再参与调度，应先恢复新 API。
+
 独立解释器与业务目录的可载入样例：frontend/public/template-examples/catalog.json 中三个 `-cwd` 样例；机器环境 `template_demo_cwd` 指定 Python 与 code_root，模板 working_directory 指向 examples/runtime_templates。准备说明通过注册模板页面下载 README.md（源 examples/runtime_templates/README.md）。
 
 批次详情布局由 frontend/src/batch-detail.tsx 与 batch-detail.css 管理；参数与服务页按首次访问加载并保留组件状态。修改页签需回归 batch-monitoring、batch-controls、batch-reports、config-pages 浏览器用例，确保筛选、补跑尝试快照和控制版本不变。

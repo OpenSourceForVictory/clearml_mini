@@ -100,3 +100,32 @@ def test_per_card_stale_ack_offline_and_disk_recovery(env):
         slot=s.get(Slot,slots[0]);slot.storage_reported_at=now()-timedelta(seconds=20);s.commit()
     data=c.get(path,headers=auth['admin']).json()
     assert data['slots'][0]['status']=='offline' and not data['all_applied']
+
+
+def test_independent_device_storage_preserves_machine_defaults_and_revisions(env):
+    main,c,auth=env
+    token,slots,path=setup(env,2)
+    other={**CONFIG,'workspace_root':'/srv/eval/node-a/gpu1'}
+    slot_path=f'{path}/slots/{slots[1]}'
+    assert c.put(slot_path,headers=auth['alice'],json={'expected_revision':0,'config':other}).status_code==403
+    assert c.put(path+'/slots/missing',headers=auth['admin'],json={'expected_revision':0,'config':other}).status_code==404
+    result=c.put(slot_path,headers=auth['admin'],json={'expected_revision':0,'config':other})
+    assert result.status_code==200,result.text
+    data=result.json()
+    assert data['revision']==1 and data['config'] is None
+    assert data['slots'][0]['config'] is None and data['slots'][1]['config']==other
+    assert c.put(slot_path,headers=auth['admin'],json={'expected_revision':0,'config':other}).status_code==409
+    for slot,expected in ((slots[0],None),(slots[1],other)):
+        reply=c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':slot}).json()
+        assert reply['storage']=={'revision':1,'config':expected}
+    assert report(env,token,slots[0],config=CONFIG).status_code==200
+    assert report(env,token,slots[1],config=CONFIG).status_code==409
+    assert report(env,token,slots[1],config=other).status_code==200
+    assert save(env,path,1,CONFIG).status_code==200
+    reply=c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':slots[1]}).json()
+    assert reply['storage']['config']==other
+    assert c.put(slot_path,headers=auth['admin'],json={'expected_revision':2,'config':None}).status_code==200
+    reply=c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':slots[1]}).json()
+    assert reply['storage']['config']==CONFIG
+    with main.SessionLocal() as s:
+        assert s.scalar(select(Node)).storage_config==CONFIG
