@@ -139,6 +139,10 @@ def install(app,db,admin):
     def confirm(identity:str,request:Request,user=Depends(admin)):
         return executor('/confirm',{'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')})
 
+    @app.post('/api/v1/admin/ssh-onboarding/{identity}/verify')
+    def verify(identity:str,request:Request,user=Depends(admin)):
+        return executor('/verify',{'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')})
+
     @app.post('/api/v1/admin/ssh-onboarding/{identity}/cancel')
     def cancel(identity:str,user=Depends(admin)):
         return executor('/cancel',{'actor':user.id,'id':identity})

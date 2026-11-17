@@ -39,6 +39,8 @@ class Operations:
     def __init__(self,root,api_url,remote_factory=Remote,clock=time.time):
         self.root=Path(root);self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.api_url=api_url;self.remote_factory=remote_factory;self.clock=clock
+        self.reconnect_timeout=int(os.environ.get("ONBOARDING_RECONNECT_TIMEOUT_SECONDS","300"))
+        if not 30 <= self.reconnect_timeout <= 1800:raise ValueError("ONBOARDING_RECONNECT_TIMEOUT_SECONDS must be 30..1800")
         self.lock=threading.RLock();self.jobs={};self.secrets={};self.pool=ThreadPoolExecutor(max_workers=2)
         for path in self.root.glob('*.json'):
             value=json.loads(path.read_text())
@@ -224,7 +226,7 @@ class Operations:
                     remote.run([plan['python'],'-c',extract,remote_dir,package['sha256']])
                     self.update(identity,stage='IDENTITY')
                     credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
-                    node_id=credential['id'];self.update(identity,node_id=node_id)
+                    node_id=credential['id'];self.update(identity,node_id=node_id,installation_revision=credential['revision'])
                     credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=[form['mode']],pool_id=None,mock=False)
                     credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
                     remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
@@ -253,15 +255,37 @@ class Operations:
                 finally:
                     try:remote.run(['rm','-rf','--',remote_dir],timeout=20)
                     except Exception:self.update(identity,cleanup_warning=True)
-            self.update(identity,'VERIFYING','RECONNECT')
-            until=time.monotonic()+120
+            self.update(identity,verification_available=True)
+            self.verify(identity,secret['authorization'])
+        except Exception as error:self.fail(identity,error)
+
+    def retry_verification(self,identity,actor,authorization):
+        with self.lock:
+            job=self.own(identity,actor)
+            if job.get('kind')=='cleanup' or not job.get('verification_available'):raise Rejected('verification_not_available')
+            if job['state'] in ('VERIFYING','SUCCEEDED'):return copy.deepcopy(job)
+            if job['state'] not in ('FAILED','INTERRUPTED'):raise Rejected('verification_not_available')
+            if any(x['id']!=identity and x['state'] in ACTIVE and (x.get('node_id')==job['node_id'] or x['form']['node_name']==job['form']['node_name']) for x in self.jobs.values()):raise Rejected('target_has_active_operation')
+            self.update(identity,'VERIFYING','RECONNECT',error=None)
+            self.pool.submit(self.verify,identity,authorization)
+            return copy.deepcopy(job)
+
+    def verify(self,identity,authorization):
+        try:
+            job=self.jobs[identity];node_id=job['node_id']
+            control=Control(self.api_url,authorization)
+            self.update(identity,'VERIFYING','RECONNECT',verification_timeout_seconds=self.reconnect_timeout,verification_started_at=self.clock())
+            until=time.monotonic()+self.reconnect_timeout
             while time.monotonic()<until:
                 status=control.call('admin/nodes/'+node_id+'/enrollment')
                 self.update(identity,reconnect=status)
-                if status['ready']:
-                    control.call('admin/nodes/'+node_id+'/enrollment/complete',{'expected_revision':status['revision']})
-                    self.update(identity,'SUCCEEDED','COMPLETE');return
+                expected=job['installation_revision']
+                if status.get('release_id')!=job['release_id'] or status['revision'] != expected+(1 if status['state']=='COMPLETE' else 0):
+                    raise Rejected('installation_changed_repeat_check')
                 if status['state']=='COMPLETE':self.update(identity,'SUCCEEDED','COMPLETE');return
+                if status['ready']:
+                    control.call('admin/nodes/'+node_id+'/enrollment/complete',{'expected_revision':expected})
+                    self.update(identity,'SUCCEEDED','COMPLETE');return
                 time.sleep(2)
             raise Rejected('component_reconnect_timeout')
         except Exception as error:self.fail(identity,error)

@@ -57,3 +57,28 @@ test('existing custom layout shows preserved path and rejects incomplete layout'
  await expect(page.getByText('旧安装布局遗漏或重复设备配置，不能覆盖安装')).toBeVisible();
  await expect(page.getByRole('button',{name:'确认计划并自动纳管'})).toHaveCount(0);
 });
+
+test('timed out installation resumes verification without SSH credentials',async({page})=>{
+ let verified=false;
+ let operation:any={id:'resume',state:'FAILED',stage:'RECONNECT',error:'component_reconnect_timeout',form:{node_name:'resume-node',host:'host'},verification_available:true,verification_timeout_seconds:300,reconnect:{slots:[{id:'slot',gpu_index:0,ready:true,probe_ready:false}],node_agent_ready:true,updater_ready:false}};
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={username:'admin',role:'admin'};
+  if(p==='admin/ssh-onboarding')data={available:true,operations:[operation]};
+  if(p==='admin/ssh-onboarding/resume/verify'){
+   expect(route.request().headers()['authorization']).toBe('Bearer test');
+   expect(route.request().postData()).toBeNull();
+   verified=true;operation={...operation,state:'SUCCEEDED',stage:'COMPLETE',error:null};data=operation;
+  }
+  if(p==='admin/ssh-onboarding/check'||p.endsWith('/confirm'))throw Error('must not reinstall');
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();
+ await page.getByRole('button',{name:'注册新机器',exact:true}).click();
+ await expect(page.getByText('探测依赖未就绪',{exact:false})).toBeVisible();
+ await expect(page.getByText('每次回连验收最多等待 300 秒。',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'继续回连验收',exact:true}).click();
+ await expect(page.getByText('纳管完成。可在资源池管理中分配 GPU。',{exact:true})).toBeVisible();
+ expect(verified).toBeTruthy();
+});

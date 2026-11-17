@@ -11,7 +11,7 @@ from sqlalchemy import select
 from .core import Worker, Slot, now
 from .administration import Revision, audit
 from .scheduling import lock, utc, seconds
-from .worker_upgrades import build_release, updater_online, BLOCKING
+from .worker_upgrades import build_release, updater_online, BLOCKING, installation_capabilities
 
 
 def pending(w):
@@ -45,10 +45,10 @@ def progress(s, w):
         ready = bool(fresh and software.get('build_digest') == record.get('release_id')
                      and slot.protocol_version == record.get('protocol_version')
                      and software.get('version') == record.get('version')
-                     and set(software.get('capabilities',[])) == set(record.get('capabilities',[]))
+                     and installation_capabilities(software.get('capabilities',[]), record.get('capabilities',[]))
                      and slot.last_seen_at and record.get('started_at')
                      and utc(slot.last_seen_at).isoformat() >= record['started_at'])
-        checks.append({'id':slot.id, 'gpu_index':slot.gpu_index, 'ready':ready})
+        checks.append({'id':slot.id, 'gpu_index':slot.gpu_index, 'ready':ready, 'probe_ready':'service_readiness_v1' in software.get('capabilities',[])})
     agent = updater_online(w) and record.get('agent_seen_digest') == record.get('agent_digest') and bool(record.get('agent_digest'))
     identities = ({x['id'] for x in checks} == set(record['slot_ids'])) if record.get('slot_ids') else ({(x.gpu_index,x.gpu_uuid) for x in slots} == {(x['index'],x['uuid']) for x in record.get('expected_devices',[])})
     from .node_agents import record as agent_record, fresh
@@ -56,7 +56,7 @@ def progress(s, w):
     node_agent_ready=bool(fresh(node_agent) and node_agent.get('digest')==record.get('release_id'))
     ready = bool((not record.get('node_agent_required') or node_agent_ready) and not w.revoked_at and pending(w) and checks and identities
                  and all(x['ready'] for x in checks) and agent)
-    return {'state':record.get('state'), 'revision':w.management_revision,
+    return {'state':record.get('state'), 'revision':w.management_revision, 'release_id':record.get('release_id'),
             'slots':checks, 'updater_ready':bool(agent), 'node_agent_ready':node_agent_ready, 'ready':ready}
 
 

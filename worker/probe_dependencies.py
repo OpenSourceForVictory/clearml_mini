@@ -5,6 +5,50 @@ from pathlib import Path
 import subprocess
 import sys
 import fcntl
+import logging
+import threading
+
+LOG = logging.getLogger("mini-eval-worker")
+
+def pip_failure(stderr):
+    # Never log pip output: package indexes/proxies can include credentials.
+    message=(stderr or b'').decode(errors='replace').lower() if isinstance(stderr,bytes) else str(stderr or '').lower()
+    for needles,reason in [
+        (('permission denied','errno 13'),'permission_denied'),
+        (('no space left','errno 28'),'disk_full'),
+        (('certificate_verify_failed','certificate verify failed'),'tls_certificate_failed'),
+        (('proxyerror','cannot connect to proxy'),'proxy_failed'),
+        (('name or service not known','temporary failure in name resolution'),'dns_failed'),
+        (('timed out','readtimeout'),'network_timeout'),
+        (('no matching distribution','requires a different python'),'package_or_python_incompatible')]:
+        if any(x in message for x in needles):return reason
+    return 'pip_install_failed'
+
+
+def activate():
+    root=Path(__file__).resolve().parents[2]/(".mini-eval-probes-"+str(sys.version_info.major)+"."+str(sys.version_info.minor))
+    if str(root) not in sys.path:sys.path.insert(0,str(root))
+    return root
+
+def start():
+    activate()
+    def prepare():
+        LOG.info("service probe dependencies: preparing in background; worker reporting continues")
+        try:
+            ensure()
+            LOG.info("service probe dependencies: ready")
+        except subprocess.TimeoutExpired:
+            LOG.warning("service probe dependencies unavailable: pip_install_timeout; readiness templates remain blocked")
+        except subprocess.CalledProcessError as exc:
+            LOG.warning("service probe dependencies unavailable: %s exit=%s; readiness templates remain blocked",pip_failure(exc.stderr),exc.returncode)
+        except PermissionError:
+            LOG.warning("service probe dependencies unavailable: dependency_path_permission_denied; readiness templates remain blocked")
+        except (OSError,RuntimeError) as exc:
+            LOG.warning("service probe dependencies unavailable: preparation_failed type=%s; readiness templates remain blocked",type(exc).__name__)
+    thread=threading.Thread(target=prepare,daemon=True,name="probe-dependencies")
+    thread.start()
+    return thread
+
 
 PACKAGES=('aiohttp==3.14.5','aiodns==3.6.1','async-timeout==5.0.1')
 
@@ -17,15 +61,14 @@ def ready():
 
 
 def ensure():
-    root=Path(__file__).resolve().parents[2]/('.mini-eval-probes-'+str(sys.version_info.major)+'.'+str(sys.version_info.minor))
-    sys.path.insert(0,str(root))
+    root=activate()
     if ready():return
     with root.with_suffix('.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         if ready():return
         # Fixed arguments, no template-supplied package names or index URLs.
         subprocess.run([*pip_command(root.parent),'install','--disable-pip-version-check','--target',str(root),'--upgrade',*PACKAGES],
-                       check=True,timeout=120,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                       check=True,timeout=120,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         importlib.invalidate_caches()
         if not ready():raise RuntimeError('probe dependencies unavailable; prepare fixed packages before enrollment')
 

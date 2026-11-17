@@ -97,3 +97,44 @@ Docker-only 纳管不运行宿主机 systemd 限制探针；只要求 Docker dae
 SSH 残留清理复用执行器的主机指纹确认、临时凭据和目标互斥机制，以 `kind=cleanup` 区分操作。检查与确认均校验平台机器 revision；实际清理前取得平台 RUNNING 许可，阻止删除/重新纳管。远端结果先落到执行器脱敏记录，再上报 API；若回报认证失败，管理员刷新列表会从专用 socket 核对结果，不能由浏览器伪造成功。执行器重启导致未确认操作时保留 FAILED 状态，重新检查后才能重试。清理结果在平台确认前不自动过期；确认后沿用操作记录保留策略。结果不明时应核对备份清单。
 
 此功能更新涉及 API、前端、数据库迁移和 onboarding 执行器；只刷新浏览器或只重启 API 不会更新独立执行器代码。无需全节点升级或重新纳管。
+
+## 回连超时与可选探测依赖
+
+回连验收默认等待 300 秒，每 2 秒检查一次。执行器环境变量 `ONBOARDING_RECONNECT_TIMEOUT_SECONDS` 可设为 30–1800 的整数；Compose 默认传入 300，修改后需重建执行器容器以加载配置。安装脚本的远程命令超时仍单独计算，回连窗口从安装结束后开始。
+
+Worker 启动时在后台准备固定的 aiohttp、aiodns、async-timeout 依赖，注册和心跳不等待 pip 或安装锁。日志标记 preparing / ready；失败报告权限、磁盘、DNS、代理、证书、包/Python 不兼容、pip 退出码、安装超时或异常类型，不记录可能含凭据的 pip 原始输出。失败后本进程不自动循环安装，修复网络/权限后在合适维护窗口重启对应 Worker 可重试。界面按设备显示探测能力是否就绪；没有探测依赖不阻止回连/版本验收，但需要该能力的服务模板仍被业务准入拦截。后台准备成功后通过心跳更新能力，无需再次纳管。
+
+安装完成但回连超时，或执行器在回连阶段重启后，可在原操作点击“继续回连验收”。只查询平台状态并尝试完成原安装，不重新连接 SSH、不覆盖配置、不轮换节点 token；使用当前登录凭据。节点修订或发布摘要已经改变则拒绝旧操作。仍处于安装中或旧版本没有保存可继续信息的操作不显示此按钮。
+
+`worker iteration failed` 与 `execution data maintenance deferred` 后若堆栈在 HTTP `getresponse()` 报 `TimeoutError`，表示等待 API 响应超过 Worker 的 5 秒请求超时。它与 300 秒纳管验收窗口不同；延长验收不会修复代理、API 或数据库阻塞。先在节点用不带凭据的 `/healthz` 直连测试，再检查服务进程代理及相同时间的 API 请求/数据库等待日志；健康接口正常不代表心跳写入正常。Agent 是权威遥测来源时还需检查 Agent，遥测有效期仍为 15 秒，不因本次变更放宽。
+
+发布需同步 API、执行器、UI 和节点 Worker；只改执行器无法消除旧 Worker 的启动等待。未在用户节点实际验证前不得宣称现场超时已恢复。
+
+### 现场 HTTP 超时的最小检查
+
+以下命令由能访问现场的运维人员执行，平台地址替换成 Worker 实际使用的入口；不需要节点 token。
+
+```bash
+curl --noproxy '*' --connect-timeout 5 --max-time 15 -sS -o /dev/null \
+  -w 'HTTP=%{http_code} connect=%{time_connect}s first_byte=%{time_starttransfer}s total=%{time_total}s\n' \
+  http://平台IP:端口/healthz
+curl --noproxy '*' --connect-timeout 5 --max-time 15 -sS -o /dev/null \
+  -w 'HTTP=%{http_code} connect=%{time_connect}s first_byte=%{time_starttransfer}s total=%{time_total}s\n' \
+  http://平台IP:端口/readyz
+```
+
+`/healthz` 只确认 API 进程存活；`/readyz` 会执行数据库查询，仍不保证心跳事务无锁等待。若前者快、后者慢，优先检查数据库连接/负载；若两者都快，继续对照同一时刻的心跳请求与 Worker 服务进程代理配置。不要直接公开 `systemctl show Environment` 或 `/proc/PID/environ`，其中可能含凭据。
+
+数据库管理员可使用现有授权连接执行只读检查，不输出 SQL 文本或连接密码：
+
+```sql
+SELECT pid, state, wait_event_type, wait_event,
+       now() - query_start AS query_age,
+       now() - xact_start AS transaction_age,
+       pg_blocking_pids(pid) AS blocking_pids
+FROM pg_stat_activity
+WHERE datname = current_database() AND pid <> pg_backend_pid()
+ORDER BY xact_start NULLS LAST;
+```
+
+Worker 心跳经过调度事务锁；数据维护 control 会锁定节点记录。二者超时可以是数据库等待的表现，也可能发生在代理/网络层，不能仅凭客户端栈确定。先定位等待来源，不以强改状态、删除恢复记录或批量终止数据库事务代替修复。

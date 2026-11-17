@@ -42,6 +42,8 @@ services:
   onboarding:
     restart: unless-stopped
     image: mini-eval-onboarding:dev
+    environment:
+      ONBOARDING_RECONNECT_TIMEOUT_SECONDS: ${ONBOARDING_RECONNECT_TIMEOUT_SECONDS:-300}
     build:
       context: ..
       dockerfile: onboarding/Dockerfile

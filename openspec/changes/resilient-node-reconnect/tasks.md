@@ -1,0 +1,3 @@
+- [x] 1. Implement nonblocking dependency preparation, capability updates and compatible enrollment/upgrade checks.
+- [x] 2. Add configurable verification timeout and guarded retry API/UI with component progress.
+- [x] 3. Add regression tests, sync guides and Skill, run full coverage and frontend checks and commit.

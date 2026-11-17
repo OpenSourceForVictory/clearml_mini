@@ -63,7 +63,7 @@ def test_install_recovery_edges(operations,monkeypatch,mode):
     class Control(OriginalControl):
         def call(self,path,body=None):
             if path.endswith('/enrollment') and mode in ('already-complete','reconnect-timeout'):
-                return {'ready':False,'state':'COMPLETE' if mode=='already-complete' else 'INSTALLING','revision':1}
+                return {'ready':False,'state':'COMPLETE' if mode=='already-complete' else 'INSTALLING','revision':2 if mode=='already-complete' else 1,'release_id':ops.jobs[identity]['release_id']}
             return super().call(path,body)
     monkeypatch.setattr(executor,'Control',Control)
     job=ops.start('admin',form(fingerprint='SHA256:'+'A'*43),'Bearer fixture');identity=job['id']

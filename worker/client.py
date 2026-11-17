@@ -642,7 +642,8 @@ class Worker:
                 if once and had_task and not self.children:
                     return
                 self.control.adopt()
-                body = {'slot_id': self.slot_id, **self.control.report()}
+                body = {'slot_id': self.slot_id, **self.control.report(),
+                        'software': {**metadata(),'probe_references':probe_references(self.config)}}
                 reply = self.api.post('worker/heartbeat', body)
                 self.control.source = reply.get('resource_source', 'worker')
                 # Never claim while background configuration can change paths.
@@ -680,11 +681,9 @@ def main():
     parser.add_argument('--config', required=True)
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
-    from .probe_dependencies import ensure
-    try:ensure()
-    except (OSError,subprocess.SubprocessError,RuntimeError):
-        LOG.warning('service probe dependencies unavailable; new readiness templates will be blocked')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    from .probe_dependencies import start
+    start()
     path = Path(args.config).resolve()
     config = json.loads(path.read_text())
     config['_config_path'] = str(path)

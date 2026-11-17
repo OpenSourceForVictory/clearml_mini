@@ -64,3 +64,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 机器删除与 SSH 残留清理：administration.removable、ssh_onboarding、onboarding/cleanup.py；docs/node-reenrollment.md、ssh-onboarding-executor.md。Worker/Slot.deleted_at 保留历史，迁移 w396f78 的部分唯一索引释放存活身份；新增资源查询必须过滤软删除，历史查询保留原 ID。清理仅标准 root 安装，计划二次比对、平台许可、私有备份 manifest 与执行器结果核对；不可依据客户端提交的成功状态解除锁定。检查/确认传递当前登录令牌，不持久化凭据。测试 test_node_removal.py、test_node_cleanup.py、node-removal.spec.ts；模拟 SSH 不代表真机清理验收。
 
 计算资源角色视图：main.workers 的可选 role=client/server 与 main.tsx Resources 页签；普通用户保留 total/online 汇总权限，管理员明细含 roles。双角色全量去重，无 Worker 的旧设备默认 client。操作见 docs/gpu-scheduling.md；回归 test_resource_roles.py、resource-roles.spec.ts。资源池列表不按角色过滤，页面说明其为全平台可用池。
+
+回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software，enrollment/worker_upgrades 仅豁免可选 service_readiness_v1 版本验收，业务准入保持能力门槛。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。

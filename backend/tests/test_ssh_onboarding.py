@@ -77,7 +77,7 @@ def operations(tmp_path,monkeypatch):
             if path=='admin/health':return {'runner_image':'runner'}
             if path=='admin/node-installation-bundle':return package
             if path=='admin/ssh-enrollment/begin':return {'id':'n','node_name':'ssh-test','token':'SECRET-WORKER','revision':1}
-            if path.endswith('/enrollment'):return {'state':'INSTALLING','ready':True,'revision':1,'slots':[],'updater_ready':True}
+            if path.endswith('/enrollment'):return {'state':'INSTALLING','ready':True,'revision':1,'release_id':package['release_id'],'slots':[],'updater_ready':True}
             return {}
     class Remote:
         def __init__(self,f):self.f=f

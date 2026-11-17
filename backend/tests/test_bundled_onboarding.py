@@ -17,7 +17,8 @@ def test_default_deployment_is_self_contained_and_legacy_compatible():
     assert api['depends_on']['onboarding']['condition']=='service_healthy'
     assert executor['restart']=='unless-stopped'
     assert not executor.get('ports') and not executor.get('privileged')
-    assert not executor.get('environment') and not executor.get('depends_on')
+    assert executor['environment']=={'ONBOARDING_RECONNECT_TIMEOUT_SECONDS':'${ONBOARDING_RECONNECT_TIMEOUT_SECONDS:-300}'}
+    assert not executor.get('depends_on')
     assert 'onboarding_socket:/run/mini-eval-managed-onboarding:ro' in api['volumes']
     assert any('ONBOARDING_SOCKET_DIR' in x for x in api['volumes'])
     assert not any('onboarding_state' in x or 'docker.sock' in x for x in api['volumes'])

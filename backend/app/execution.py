@@ -51,6 +51,7 @@ class Claim(BaseModel):
 
 
 class Heartbeat(BaseModel):
+    software: worker_upgrades.Software | None = None
     slot_id: str
     execution_id: Optional[str] = None
     started: bool = True
@@ -324,6 +325,8 @@ def install(app, db, current):
                 transition(s, run, 'RUNNING')
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             cancel = run.status == 'CANCEL_REQUESTED'
+        if not body.execution_id and body.software is not None:
+            slot.software = body.software.model_dump()
         if not body.execution_id and body.storage is not None:
             storage_protocol.acknowledge(s, worker, slot, body.storage)
         if not body.execution_id and body.runtime is not None:

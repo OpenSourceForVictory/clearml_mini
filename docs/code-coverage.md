@@ -66,3 +66,5 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 旧布局纳管的 `scripts/node_layout.py` 同时纳入 scripts 目录与“节点纳管与升级”关键功能统计，沿用原 90%/80% 门槛。若同名测试模块导致收集冲突，可设置 `PYTEST_ADDOPTS=--import-mode=importlib` 再运行原覆盖命令；不排除测试，保留首次失败报告。
 
 机器删除与远程清理补测见 [验证记录](validation/node-removal/README.md)：`test_node_removal.py`、`test_node_cleanup.py` 检查身份重用、历史保留、清理回执和权限/失败路径；`test_resource_roles.py` 检查双角色计数与普通用户汇总权限。`onboarding/cleanup.py` 自动纳入现有“节点纳管与升级”统计。Agent 并发落盘测试在插桩与磁盘负载下原 5 秒等待不足，使用共享 30 秒截止时间，保留所有状态和持久化断言；没有调整覆盖率门槛。
+
+回连恢复新增 `test_reconnect_resilience.py`，覆盖后台依赖阻塞/失败分类、心跳能力更新、可选能力与验收边界、超时配置、当前凭据继续验收、旧修订/发布拒绝及执行器重启恢复。部署测试严格校验新增超时变量白名单，仍禁止暴露端口/特权/无关依赖。完整记录见 [回连恢复验证](validation/resilient-node-reconnect/README.md)。

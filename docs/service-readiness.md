@@ -74,3 +74,5 @@ MINI_EVAL_PORT=8000 MODEL_LOAD_SECONDS=2 python examples/services/readiness_serv
 WebSocket 连接后会主动发送当前状态，也响应 `{"type":"health"}`。可分别验证“只接收”和“先发送”模式；没有依赖 RoboTwin 或评测 SDK。独立健康端口由 `MINI_EVAL_HEALTH_PORT` 指定，业务与健康监听都会启动。
 
 安装引导采用 [pip 官方文档的 zip 应用方式](https://pip.pypa.io/en/stable/installation/)，并锁定引导版本及文件摘要。
+
+Worker 探测依赖在后台准备，不阻塞注册心跳；依赖就绪后心跳更新 `service_readiness_v1` 能力，依赖失败仍阻止需要该能力的服务任务。节点纳管及升级版本验收不再要求此可选能力。排查和重试见 [回连超时与依赖准备](node-reenrollment.md#回连超时与可选探测依赖)。

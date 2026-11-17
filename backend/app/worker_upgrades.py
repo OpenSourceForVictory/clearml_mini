@@ -15,6 +15,11 @@ from .administration import audit,release_reservations
 
 BLOCKING={'DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'}
 
+def installation_capabilities(actual, expected):
+    # Optional probes gate business admission, not installation identity.
+    optional={'service_readiness_v1'}
+    return set(actual)-optional == set(expected)-optional
+
 
 class Software(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -154,7 +159,7 @@ def install(app,db,admin,worker_auth):
             agent=record(worker)
             if agent and (not fresh(agent) or agent.get('digest')!=r.id):
                 raise HTTPException(409,'waiting for node Agent to report target release')
-            if {x.id for x in devices}!=set(i.slot_ids) or not all(online(x) and (x.software or {}).get('build_digest')==r.id and x.software.get('version')==r.version and x.protocol_version==r.protocol_version and set(x.software.get('capabilities',[]))==set(r.capabilities) for x in devices):
+            if {x.id for x in devices}!=set(i.slot_ids) or not all(online(x) and (x.software or {}).get('build_digest')==r.id and x.software.get('version')==r.version and x.protocol_version==r.protocol_version and installation_capabilities(x.software.get('capabilities',[]),r.capabilities) for x in devices):
                 raise HTTPException(409,'waiting for every GPU worker to report target release')
         if body.status=='FAILED' and body.error is None:raise HTTPException(400,'failure reason is required')
         worker.updater_seen_at=now();transition(worker,i,body.status,body.error);s.commit();return item_view(i)

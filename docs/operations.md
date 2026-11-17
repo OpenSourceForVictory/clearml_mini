@@ -34,6 +34,7 @@ Compose 项目名固定为 `mini-eval`。常驻服务只有 `api`、`db`；`migr
 | MAX_ACTIVE_GLOBAL | 2 | 全局活动尝试上限，包含预留和取消中 |
 | MAX_ACTIVE_PER_USER | 2 | 每用户活动尝试上限 |
 | MAX_PENDING_PER_USER | 20 | 每用户排队任务上限 |
+| ONBOARDING_RECONNECT_TIMEOUT_SECONDS | 300 | 安装完成后的回连等待秒数，30–1800；配置在 onboarding 执行器，需重建容器加载 |
 | WORKER_TTL_SECONDS | 30 | 槽位停止新准入的心跳时限 |
 | LEASE_SECONDS | 30 | 已认领执行的租约 |
 | LOST_WORKER_GRACE_SECONDS | 30 | 租约过期后的服务端宽限期 |

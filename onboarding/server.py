@@ -30,6 +30,7 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path=='/cleanup-ack':value=ops.acknowledge_cleanup(body['id'],actor)
             elif self.path=='/cleanup-check':value=ops.start(actor,body['form'],body['authorization'],'cleanup')
             elif self.path=='/check':value=ops.start(actor,body['form'],body['authorization'])
+            elif self.path=='/verify':value=ops.retry_verification(body['id'],actor,body['authorization'])
             elif self.path=='/confirm':value=ops.confirm(body['id'],actor,body.get('authorization'))
             elif self.path=='/trust':value=ops.trust(body['id'],actor,body['fingerprint'],body.get('authorization'))
             elif self.path=='/cancel':value=ops.cancel(body['id'],actor)
