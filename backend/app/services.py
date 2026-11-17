@@ -194,7 +194,8 @@ def install(app,db,admin,worker_auth):
 
     @app.post('/api/v1/worker/executions/{execution}/service-probe-session')
     def session(execution:str,worker=Depends(worker_auth),s=Depends(db)):
-        lock(s)
+        from .scheduling import fast_lock
+        fast_lock(s)
         run=s.scalar(select(Run).where(Run.execution_id==execution))
         slot=s.get(Slot,run.slot_id) if run and run.slot_id else None
         if not slot or slot.worker_id!=worker.id:raise HTTPException(404,'execution not found')
@@ -208,13 +209,15 @@ def install(app,db,admin,worker_auth):
 
     @app.post('/api/v1/worker/executions/{execution}/service-health')
     def health(execution:str,body:Health,worker=Depends(worker_auth),s=Depends(db)):
-        lock(s);run=s.scalar(select(Run).where(Run.execution_id==execution))
+        run=s.scalar(select(Run).where(Run.execution_id==execution))
         slot=s.get(Slot,run.slot_id) if run and run.slot_id else None
         if not slot or slot.worker_id!=worker.id:raise HTTPException(404,'execution not found')
         if run.status not in ('STARTING','RUNNING','CANCEL_REQUESTED') or not run.lease_expires_at or utc(run.lease_expires_at)<=now():raise HTTPException(409,'execution lease is no longer valid')
         job=s.get(Job,run.job_id)
         item=s.get(ServiceInstance,job.service_instance_id) if job and job.service_instance_id else None
         if not item or item.current_job_id!=job.id:raise HTTPException(409,'service execution no longer current')
+        s.refresh(item, with_for_update=True)
+        if item.current_job_id!=job.id:raise HTTPException(409,'service execution no longer current')
         if item.template_snapshot.get('readiness'):
             from .service_readiness import accept
             outcome=accept(item,body)

@@ -4,6 +4,7 @@ import os
 import threading
 from datetime import timedelta, timezone
 from sqlalchemy import or_, select, text
+from fastapi import HTTPException
 from . import endpoints
 from .core import EvaluationBatch, Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
 
@@ -32,6 +33,12 @@ def lock(s, wait=True):
         s.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': LOCK_ID})
         return True
     return s.scalar(text('SELECT pg_try_advisory_xact_lock(:key)'), {'key': LOCK_ID})
+
+
+def fast_lock(s):
+    """High-frequency reports must release their connection instead of queuing on admission."""
+    if not lock(s, wait=False):
+        raise HTTPException(503, 'control plane busy; retry shortly', headers={'Retry-After':'1'})
 
 
 def transition(s, run, status, message=None):

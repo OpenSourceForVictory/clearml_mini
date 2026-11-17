@@ -34,6 +34,8 @@
 
 GPU/NPU 共享与双执行环境纳管：frontend/src/ssh-onboarding.tsx 选择 preserve/enabled/disabled，经 onboarding/contracts.py、executor.py 写入安装凭据；scripts/install_system_node.py 新安装默认关闭，scripts/install_node.py 重新纳管默认保留、显式选择时仅更新本地 gpu_runtime.allow_shared 或 npu_runtime.allow_shared 并沿原回滚恢复。onboarding/probe.py 只展示逐卡布尔值，不暴露完整配置。Worker 在注册时由 accelerators.capabilities 转为 gpu:*:shared 或 npu:*:shared 能力，普通心跳不传原字段。操作与手工定位见 docs/root-managed-host.md，回归 test_system_node_installer.py、test_node_installation.py、test_ssh_onboarding.py、ssh-onboarding.spec.ts。
 
+心跳连接池争用：backend/app/execution.py 空闲心跳、node_agents.py 采样和 services.py 健康探测更新最新数据库状态，不排队等待 scheduling.py 全局锁；同节点/服务通过数据库行锁保护序号与配置。携带执行租约的心跳用 fast_lock 快速失败 503，保留状态转换互斥；探测会话启动仍用全局锁。见 docs/operations.md 和 docs/validation/heartbeat-db-contention/README.md；回归 test_heartbeat_contention.py、test_service_readiness.py、test_node_agents.py。
+
 独立解释器与业务目录的可载入样例：frontend/public/template-examples/catalog.json 中三个 `-cwd` 样例；机器环境 `template_demo_cwd` 指定 Python 与 code_root，模板 working_directory 指向 examples/runtime_templates。准备说明通过注册模板页面下载 README.md（源 examples/runtime_templates/README.md）。
 
 批次详情布局由 frontend/src/batch-detail.tsx 与 batch-detail.css 管理；参数与服务页按首次访问加载并保留组件状态。修改页签需回归 batch-monitoring、batch-controls、batch-reports、config-pages 浏览器用例，确保筛选、补跑尝试快照和控制版本不变。

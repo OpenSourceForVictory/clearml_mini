@@ -169,7 +169,7 @@ def install(app, db, admin, worker_auth):
 
     @app.post('/api/v1/agent/heartbeat')
     def heartbeat(body: Heartbeat, w=Depends(worker_auth), s=Depends(db)):
-        lock(s); s.refresh(w); r = record(w)
+        s.refresh(w, with_for_update=True); r = record(w)
         if r.get('session') != body.session: raise HTTPException(409, 'agent session superseded')
         if body.sequence <= r.get('sequence', 0): return response(s, w, r)
         if body.applied_revision > r['revision']: raise HTTPException(409, 'unknown configuration revision')

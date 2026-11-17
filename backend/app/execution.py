@@ -311,9 +311,12 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
-        lock(s)
+        if body.execution_id:
+            from .scheduling import fast_lock
+            fast_lock(s)  # Lease and run status still participate in scheduling transitions.
+        s.refresh(worker, with_for_update=True)
         slot = slot_for(s, body.slot_id, worker)
-        s.refresh(worker)
+        s.refresh(slot, with_for_update=True)
         cancel = False
         if body.execution_id:
             run = run_for(s, body.execution_id, worker)

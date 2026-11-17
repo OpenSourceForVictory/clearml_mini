@@ -48,6 +48,7 @@ Compose 项目名固定为 `mini-eval`。常驻服务只有 `api`、`db`；`migr
 
 - `/healthz`：API 进程存活；Compose 使用它做健康检查。
 - `/readyz`：数据库可访问。
+- Worker 空闲心跳、Agent 采样和服务健康探测只覆盖数据库中的最新状态与时间戳，不逐次写节点文件，也不等待全局调度锁。同一节点或服务的并发上报按记录串行；携带执行租约的 Worker 心跳仍需协调调度，锁忙会快速返回 503（`Retry-After: 1`），由 Worker 重试。若出现大量 503、数据库连接池超时或五秒 HTTP 超时，检查 PostgreSQL 活动事务和等待事件、API 日志及调度慢操作；不要靠无限增大连接池掩盖长事务，也不要删除执行记录。
 - 管理员调用 `/api/v1/admin/health` 查看调度器最近成功 tick 的时间及隔离槽位数；超过 10 秒未更新应检查 API 日志。
 - Web「计算资源」查看心跳，「管理设置」查看机器额度；普通用户只能看到槽位数量汇总。
 - `docker compose -p mini-eval -f deploy/compose.yml logs --tail=200 api` 查看控制节点错误；执行时使用与启动一致的 `--env-file`。
