@@ -123,9 +123,14 @@ class HostBackend:
         if account:env['HOME']=account.pw_dir
         if npu:
             account,device,cann_env=npu
+            original_paths={key:env.get(key,'') for key in ('PATH','LD_LIBRARY_PATH')}
             env.update(cann_env)
+            for key,original in original_paths.items():
+                if original and cann_env.get(key):env[key]=cann_env[key]+':'+original
             env['HOME']=account.pw_dir
             env['PYTHONPATH']=platform_root+':'+str(code_root)+(':'+cann_env['PYTHONPATH'] if cann_env.get('PYTHONPATH') else '')
+            from .npu_host import installed_environment
+            env.update(installed_environment(account,env))
             env.pop('CUDA_VISIBLE_DEVICES',None)
             # The device policy leaves one accessible card; CANN enumerates it as logical zero.
             env['ASCEND_RT_VISIBLE_DEVICES']='0'

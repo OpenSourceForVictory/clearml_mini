@@ -18,17 +18,22 @@ def probe(profile,config=None):
     if not python.is_absolute() or not python.is_file() or not os.access(python,os.X_OK):raise ValueError('approved Python executable is missing')
     if not root.is_absolute() or not root.is_dir() or not os.access(root,os.R_OK|os.X_OK):raise ValueError('approved code root is missing')
     account=None
+    environment=None
     if config and (config.get('host_execution') or os.geteuid()==0):
         if config.get('accelerator_type')=='npu':
-            from .npu_host import settings
-            account=settings(config)[0]
+            from .npu_host import settings,installed_environment
+            account,_,approved_env=settings(config)
+            environment={'PATH':str(python.parent)+':/usr/local/bin:/usr/bin:/bin',
+                         'HOME':account.pw_dir,'LANG':'C.UTF-8',**approved_env}
+            environment.update(installed_environment(account,environment))
         else:
             from .host_identity import settings
             account=settings(config)
         from .host_identity import check_paths
         check_paths(account,[('Python',str(python),os.R_OK|os.X_OK),('code root',str(root),os.R_OK|os.X_OK)])
     identity={'user':account.pw_uid,'group':account.pw_gid,'extra_groups':os.getgrouplist(account.pw_name,account.pw_gid),'cwd':'/'} if account else {}
-    subprocess.run([str(python),'-c','import sys; assert sys.version_info >= (3,10)'],check=True,timeout=5,capture_output=True,**identity)
+    subprocess.run([str(python),'-c','import sys; assert sys.version_info >= (3,10)'],check=True,timeout=5,capture_output=True,
+                   **({'env':environment} if environment is not None else {}),**identity)
     if config and config.get('accelerator_type')=='npu':
         from .npu_host import probe as npu_probe
         npu_probe(config)

@@ -115,6 +115,7 @@ def eligibility_codes(slot, pool, job, held, at):
         return ['disk_capacity']
     if runtime_mismatch(slot, job):return ['client_runtime']
     template=(job.client_spec or {}).get('template',{})
+    mode=template.get('execution_mode','docker')
     if job.client_spec and job.client_spec['template'].get('execution_mode', 'docker') == 'docker' and (slot.protocol_version < 3 or
                             job.client_spec['template']['image'] not in (slot.client_images or [])):
         return ['client_image']

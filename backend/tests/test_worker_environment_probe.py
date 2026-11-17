@@ -23,10 +23,11 @@ def test_invalid_paths_fail_before_execution(monkeypatch,profile,field,value):
 @pytest.mark.parametrize('kind',['cpu','npu'])
 def test_approved_identity_used_for_python_probe(monkeypatch,profile,kind):
     from worker import host_identity,npu_host
-    account=SimpleNamespace(pw_uid=1234,pw_gid=2345,pw_name='business')
+    account=SimpleNamespace(pw_uid=1234,pw_gid=2345,pw_name='business',pw_dir='/home/business')
     checks=[];runs=[];verified=[]
     monkeypatch.setattr(host_identity,'settings',lambda config:account)
-    monkeypatch.setattr(npu_host,'settings',lambda config:(account,{}))
+    monkeypatch.setattr(npu_host,'settings',lambda config:(account,'/dev/davinci3',{'LD_LIBRARY_PATH':'/approved/lib'}))
+    monkeypatch.setattr(npu_host,'installed_environment',lambda account,base:{'LD_LIBRARY_PATH':base['LD_LIBRARY_PATH']+':/installed/lib'})
     monkeypatch.setattr(host_identity,'check_paths',lambda *a:checks.append(a))
     monkeypatch.setattr(envs.os,'getgrouplist',lambda *a:[2345,3456])
     monkeypatch.setattr(envs.subprocess,'run',lambda *a,**kw:runs.append((a,kw)))
@@ -37,6 +38,7 @@ def test_approved_identity_used_for_python_probe(monkeypatch,profile,kind):
     assert checks[0][0] is account and len(checks[0][1])==2
     assert runs[0][1]['user']==1234 and runs[0][1]['extra_groups']==[2345,3456]
     assert runs[0][1]['cwd']=='/' and runs[0][1]['timeout']==5
+    if kind=='npu':assert runs[0][1]['env']['LD_LIBRARY_PATH']=='/approved/lib:/installed/lib'
     assert verified==[config if kind=='npu' else account]
 
 

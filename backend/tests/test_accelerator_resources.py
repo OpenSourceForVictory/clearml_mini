@@ -17,6 +17,17 @@ def test_npu_backend_gates(kind,backends,protocol,expected):
  if not expected:assert eligibility_codes(slot,N(),job,[],now())==['telemetry_stale']
 
 
+def test_npu_host_backend_requires_matching_capability():
+ slot=N(disk_min_free_mb=None,protocol_version=14,execution_modes=['host'],accelerator_type='npu',
+        accelerator_backends=['npu:docker:exclusive'],telemetry_at=now(),free_vram_mb=40000,
+        gpu_utilization=0)
+ job=N(client_spec={'template':{'execution_mode':'host'},'resources':{'accelerator_type':'npu'}},
+       required_gpu_model=None,gpu_mode='exclusive',requested_vram_gb=0)
+ assert eligibility_codes(slot,N(),job,[],now())==['accelerator_backend']
+ slot.accelerator_backends.append('npu:host:exclusive')
+ assert eligibility_codes(slot,N(),job,[],now())==[]
+
+
 def test_ascend_docker_only_assigned_device_and_readonly_driver(monkeypatch):
  monkeypatch.setattr(accelerators,'approved',lambda cfg:({'allow_shared':False},'/dev/davinci2'))
  monkeypatch.setattr(accelerators,'ascend_sample',lambda cfg:{'identity':'ascend:test:0'})

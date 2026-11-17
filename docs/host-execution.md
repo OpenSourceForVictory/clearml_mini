@@ -51,6 +51,8 @@ systemctl --user status mini-eval-exec-执行ID.service
 
 这相当于先进入 `/data/projects/my_eval`，再用 `/opt/conda/envs/eval/bin/python` 启动 client.py。平台通过 subprocess 的 cwd 启动，不拼接 shell。`working_directory` 也可为 `evaluation` 等子目录；绝对路径必须处于该节点批准 code_root 内。相对脚本路径基于所选业务目录解析，程序仍必须在批准根目录内。目录必须存在并可读/进入，拒绝 `..`、目录占位符和越界符号链接；跨节点推荐相对路径。
 
+NPU 宿主机任务会在批准的业务账号下加载该节点已安装的 CANN `set_env.sh`，把 CANN 库路径加入业务环境；模板中配置的业务 `LD_LIBRARY_PATH` 目录也保留。标准安装无需逐卡填写 CANN 路径，非标准安装可由节点管理员显式批准 `ASCEND_HOME_PATH`。这不等于继承 SSH 登录 shell 或 root Worker 的环境；Docker 任务仍依赖镜像内环境。脚本存在但加载失败会使宿主机环境探测显示不可用；缺少标准脚本时沿用旧的显式批准配置。
+
 留空不发送该字段，保留旧行为：cwd 为本次任务独立 work，脚本路径从 code_root 解析。配置该字段的任务不能调度到协议低于 13 的节点；预检提示升级 Worker。模板查看和复制新版本保留此字段。
 
 MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用于执行临时数据与产物。多个任务可在同一个业务目录并发，业务程序不要把可变结果写入共享代码目录。Python SDK、SDK 命令包装、直接协议、普通命令及服务端共用目录解析。

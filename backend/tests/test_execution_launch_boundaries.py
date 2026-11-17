@@ -50,9 +50,12 @@ def test_managed_identity_and_device_environment(tmp_path,monkeypatch,accelerato
     if accelerator.startswith('npu'):
         task['accelerator_type']='npu';w.config['accelerator_type']='npu'
         monkeypatch.setattr('worker.accelerators.assignment',lambda *a:None)
+        runtime['environment']={'LD_LIBRARY_PATH':'/business/lib'}
         env={'LD_LIBRARY_PATH':'/cann/lib'}
         if accelerator=='npu':env['PYTHONPATH']='/cann/python'
         monkeypatch.setattr('worker.npu_host.settings',lambda *a:(account,'/dev/davinci3',env))
+        monkeypatch.setattr('worker.npu_host.installed_environment',
+                            lambda account,base:{'LD_LIBRARY_PATH':'/installed/lib:'+base['LD_LIBRARY_PATH']})
     host.create(task)
     launch=json.loads((host.root/'launch.json').read_text())
     config=json.loads(Path(launch['environment']['MINI_EVAL_INPUT']).read_text())
@@ -67,6 +70,7 @@ def test_managed_identity_and_device_environment(tmp_path,monkeypatch,accelerato
         assert launch['npu_device']=='/dev/davinci3'
         assert 'CUDA_VISIBLE_DEVICES' not in launch['environment']
         assert launch['environment']['ASCEND_RT_VISIBLE_DEVICES']=='0'
+        assert launch['environment']['LD_LIBRARY_PATH']=='/installed/lib:/cann/lib:/business/lib'
         assert launch['environment']['PYTHONPATH'].endswith(':/cann/python')==(accelerator=='npu')
     else:assert 'ASCEND_RT_VISIBLE_DEVICES' not in launch['environment']
 

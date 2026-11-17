@@ -13,6 +13,42 @@ import sys
 import uuid
 from .accelerators import approved, COMMON
 
+CANN_ENV_KEYS=frozenset({'PATH','LD_LIBRARY_PATH','PYTHONPATH','ASCEND_HOME_PATH',
+                         'ASCEND_OPP_PATH','ASCEND_AICPU_PATH','ASCEND_TOOLKIT_HOME'})
+CANN_SETUP_FILES=(Path('/usr/local/Ascend/cann/set_env.sh'),
+                  Path('/usr/local/Ascend/ascend-toolkit/set_env.sh'))
+
+
+def installed_environment(account, base):
+    """Load the installed CANN setup as the business user, not the root Worker."""
+    home=base.get('ASCEND_HOME_PATH','')
+    candidates=([Path(home)/'set_env.sh'] if home and Path(home).is_absolute() else [])
+    candidates += [Path(account.pw_dir)/'Ascend/cann/set_env.sh',*CANN_SETUP_FILES]
+    script=next((path for path in candidates if path.is_file()),None)
+    if script is None:return {}
+    try:
+        result=subprocess.run(
+            ['/bin/bash','--noprofile','--norc','-c',
+             'set -e; source "$1" >/dev/null; /usr/bin/env -0',
+             'cann-setup',str(script)],
+            env=base,cwd='/',user=account.pw_uid,group=account.pw_gid,
+            extra_groups=os.getgrouplist(account.pw_name,account.pw_gid),
+            capture_output=True,check=True,timeout=10)
+    except (OSError,subprocess.SubprocessError) as exc:
+        raise RuntimeError('installed CANN environment setup failed; check set_env.sh access and installation') from exc
+    values={}
+    for entry in result.stdout.split(b'\0'):
+        if b'=' not in entry:continue
+        key,value=entry.split(b'=',1)
+        try:
+            name=key.decode('ascii')
+            if name in CANN_ENV_KEYS:values[name]=value.decode('utf-8')
+        except UnicodeError as exc:
+            raise RuntimeError('installed CANN environment contains invalid text') from exc
+    if not values.get('LD_LIBRARY_PATH'):
+        raise RuntimeError('installed CANN environment has no LD_LIBRARY_PATH')
+    return values
+
 
 def settings(config):
     profile,device=approved(config)

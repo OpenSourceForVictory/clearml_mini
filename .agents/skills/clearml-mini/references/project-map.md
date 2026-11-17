@@ -53,6 +53,10 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动
 
 统一 root 纳管/普通业务身份：docs/root-managed-host.md；scripts/install_system_node.py 创建系统服务与 mini-eval，worker/host_identity.py 负责身份/权限/资源检查。host_execution 是节点批准配置，模板不能覆盖；旧用户服务升级保留身份。覆盖率门槛见 backend/tests/managed-host.coveragerc，真实测试需 MANAGED_HOST_TEST=1 和隔离 systemd 环境。
 
+NPU 宿主机 CANN 环境：worker/npu_host.py 的 installed_environment 按节点批准的 ASCEND_HOME_PATH、业务账号 ~/Ascend/cann 和系统标准目录发现 set_env.sh，以业务账号加载，只转发允许的 CANN/PATH 变量；worker/host_backend.py 保留模板业务库目录并设置逻辑设备 0，worker/host_environments.py 在批准环境探测时复用加载逻辑。没有脚本时沿用节点显式配置，发现脚本却加载失败时关闭准入；Docker 不使用这条路径。操作见 docs/host-execution.md、root-managed-host.md，验证边界见 docs/validation/auto-cann-host-environment/README.md；回归 test_npu_cann_environment.py、test_worker_environment_probe.py、test_execution_launch_boundaries.py。
+
+NPU/共享 GPU 后端准入：backend/app/scheduling.py 的 eligibility_codes 从模板获取 execution_mode，再与 `npu:{mode}:{gpu_mode}` 或 `gpu:{mode}:shared` 能力匹配；不得引用 runtime_mismatch 的局部 mode。回归 test_accelerator_resources.py，失败证据见 docs/validation/auto-cann-host-environment/README.md。
+
 通用命令（Worker 0.17.0 / 协议 14）：docs/generic-commands.md、host-execution.md。host_runtime/runtime.command_mode=exec，缺省 legacy；runner/process_command.py 在最终参数/环境绑定后按业务身份解析程序，cs_entry/service_entry/command_sdk 共用。宿主机 exec 缺省 cwd 为 code_root，平台入口使用 Worker Python；Docker working_directory 独立于 work/output，平台 interpreter 可为绝对 Python 路径。调度检查 image_runtime、host_environments 与 scheduling，旧节点拒绝新字段。测试 backend/tests/test_generic_commands.py，Docker 显式启用，验证边界不是模型评测。界面指南与模板示例必须同步。
 
 项目覆盖率：docs/code-coverage.md；backend/tests/project.coveragerc 固定 Python 六目录分母，coverage-floors.json 固定目录 80/70 与关键功能 90/80 门槛。scripts/test_coverage.py 全量测试并保留失败报告；scripts/coverage_report.py 按计数加权聚合目录/重叠功能。CI 测试或门槛不通过均失败；不允许删除低覆盖文件或降低门槛规避。前端未插桩和未合并的子进程单独注明，不称为全项目 100%。工作区有未完成特性时隔离验证，保留并披露原工作区失败。
