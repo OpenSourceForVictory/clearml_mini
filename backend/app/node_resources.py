@@ -62,19 +62,20 @@ def apply_resources(s, w):
 
 
 def host_codes(w, pool, cpu, ram, at=None, pending_ram=0):
+    if not pool.cpu_per_job and not pool.ram_gb_per_job:return []
     if not resource_source(w): return []
     values = resource_values(w, 'host', at)
     if values is None: return ['node_telemetry_stale']
     try:
-        cores = number(values, 'cpu_count', 10000)
-        total = number(values, 'memory_total_mb', 102400000)
-        available = number(values, 'memory_available_mb', total)
+        cores = number(values, 'cpu_count', 10000) if pool.cpu_per_job else None
+        total = number(values, 'memory_total_mb', 102400000) if pool.ram_gb_per_job else None
+        available = number(values, 'memory_available_mb', total) if pool.ram_gb_per_job else None
     except (KeyError, TypeError, ValueError): return ['node_telemetry_stale']
     codes = []
-    if cpu + pool.cpu_per_job > cores: codes.append('node_cpu')
+    if pool.cpu_per_job and cpu + pool.cpu_per_job > cores: codes.append('node_cpu')
     # The sample includes external processes. Without per-task usage attribution,
     # charge all platform commitments against it, including running tasks.
-    if ((ram + pool.ram_gb_per_job) * 1024 > total
+    if pool.ram_gb_per_job and ((ram + pool.ram_gb_per_job) * 1024 > total
             or (ram + pool.ram_gb_per_job) * 1024 > available):
         codes.append('node_ram')
     return codes

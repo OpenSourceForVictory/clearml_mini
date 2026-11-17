@@ -1,0 +1,6 @@
+- [x] Allow zero pool defaults and remove the pool-as-ceiling rejection during resource resolution.
+- [x] Apply effective CPU/memory requests to preflight, ordinary scheduling, and client/service pair scheduling.
+- [x] Omit Docker and systemd CPU/memory quotas for zero-value axes while preserving other controls.
+- [x] Add targeted normal, boundary, and failure-path tests for scheduling, telemetry, and runtime launch.
+- [x] Update the interface guide, operator docs, and project Skill reference.
+- [x] Run targeted backend/frontend checks and validate this OpenSpec change.

@@ -106,8 +106,8 @@ class PoolCreate(PoolPolicy):
     name: str = Field(min_length=1, max_length=100)
     gpu_model: str = Field(default='*', min_length=1, max_length=100)
     min_vram_gb: int = Field(default=0, ge=0, le=10000)
-    cpu_per_job: int = Field(default=1, ge=1, le=10000)
-    ram_gb_per_job: int = Field(default=1, ge=1, le=100000)
+    cpu_per_job: int = Field(default=1, ge=0, le=10000)
+    ram_gb_per_job: int = Field(default=1, ge=0, le=100000)
 
 
 class Enabled(BaseModel):

@@ -185,8 +185,8 @@ def node_codes(worker, pool, count, cpu, ram, pending_ram=0):
     from .node_resources import host_codes
     result = host_codes(worker, pool, cpu, ram, pending_ram=pending_ram)
     if count >= worker.max_concurrent: result.append('node_concurrency')
-    if cpu + pool.cpu_per_job > worker.cpu_capacity: result.append('node_cpu')
-    if ram + pool.ram_gb_per_job > worker.ram_gb_capacity: result.append('node_ram')
+    if pool.cpu_per_job and cpu + pool.cpu_per_job > worker.cpu_capacity and 'node_cpu' not in result: result.append('node_cpu')
+    if pool.ram_gb_per_job and ram + pool.ram_gb_per_job > worker.ram_gb_capacity and 'node_ram' not in result: result.append('node_ram')
     return result
 
 

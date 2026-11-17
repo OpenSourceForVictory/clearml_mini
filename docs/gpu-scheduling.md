@@ -13,7 +13,7 @@ GPU 独占表示一张卡同时只运行一个平台任务，池内其他卡仍�
 - `vram_reserve_gb` 默认 2，给驱动、桌面和其他进程留下安全余量。
 - `max_gpu_utilization` 默认 90：采样值达到阈值时停止新共享准入，不抢占已有任务。
 
-`PATCH /api/v1/admin/pools/{id}` 提交上述四项完整策略。`PATCH /api/v1/admin/nodes/{id}` 可调整 `max_concurrent`、`cpu_capacity`、`ram_gb_capacity` 或 `enabled`，未提交项保留。节点并发也须至少为 2；每个任务仍受到池中 CPU/RAM 配额及全局/用户限制。降低额度不会中断执行，当前执行的资源快照持续计费。
+`PATCH /api/v1/admin/pools/{id}` 提交上述四项完整策略。`PATCH /api/v1/admin/nodes/{id}` 可调整 `max_concurrent`、`cpu_capacity`、`ram_gb_capacity` 或 `enabled`，未提交项保留。节点并发也须至少为 2；池中 CPU/RAM 数值只作未申请时的默认值；模板或提交的明确申请可高于默认值，调度按实际申请检查节点配置容量、Agent 主机采样和已有预约。默认值设为 0 且任务未申请时，该项不预约、不设置运行额度；节点并发及全局/用户限制仍生效。降低额度不会中断执行，当前执行的资源快照持续计费。
 
 将空闲卡移入同一个池：修改对应 Worker 配置的 `pool_id` 并重启。存在活动或未确认清理的执行时，API 拒绝迁移。GPU UUID 和节点身份不能被其他 Worker 冒用。
 

@@ -11,6 +11,23 @@ def test_v1_never_claims_host_ready(tmp_path, monkeypatch):
     assert limits.verify_host()['reason']=='cgroup_v2_required'
 
 
+def test_unlimited_task_checks_pids_without_requiring_cpu_or_memory_quota(tmp_path,monkeypatch):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    (tmp_path/'cgroup.controllers').write_text('cpu memory pids')
+    group=tmp_path/'job';group.mkdir()
+    (group/'cpu.max').write_text('max 100000')
+    (group/'memory.max').write_text('max')
+    (group/'pids.max').write_text('256')
+    limits.verify_group('/job',0,0)
+    with pytest.raises(ValueError,match='cpu_limit_not_enforced'):
+        limits.verify_group('/job',1,0)
+    with pytest.raises(ValueError,match='memory_limit_not_enforced'):
+        limits.verify_group('/job',0,1024)
+    (group/'pids.max').write_text('max')
+    with pytest.raises(ValueError,match='pids_limit_not_enforced'):
+        limits.verify_group('/job',0,0)
+
+
 def test_missing_delegation_is_repairable(tmp_path, monkeypatch):
     (tmp_path/'cgroup.controllers').write_text('cpu memory pids')
     (tmp_path/'user').mkdir();(tmp_path/'user/cgroup.controllers').write_text('memory pids')

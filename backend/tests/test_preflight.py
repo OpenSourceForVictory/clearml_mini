@@ -150,6 +150,22 @@ def test_node_limits(env,field,value,code):
     assert tick(main.SessionLocal)==0
 
 
+def test_zero_pool_defaults_do_not_block_preflight_or_reservation(env):
+    main,c,auth=env;body,sid=setup(env)
+    with main.SessionLocal() as s:
+        pool=s.get(Pool,body['pool_id'])
+        pool.cpu_per_job=pool.ram_gb_per_job=0
+        worker=s.get(Worker,s.get(Slot,sid).worker_id)
+        worker.cpu_capacity=worker.ram_gb_capacity=0
+        s.commit()
+    result=check(env,body)
+    assert result['status']=='ready'
+    assert not {'node_cpu','node_ram'} & {r['code'] for r in result['nodes'][0]['reasons']}
+    submitted=c.post('/api/v1/batches',headers=auth['alice'],json=body)
+    assert submitted.status_code==201,submitted.text
+    assert tick(main.SessionLocal)>0
+
+
 def test_busy_global_user_endpoint_and_cleanup(env,monkeypatch):
     main,c,auth=env;body,sid=setup(env)
     monkeypatch.setenv('MAX_ACTIVE_GLOBAL','1');monkeypatch.setenv('MAX_ACTIVE_PER_USER','1')

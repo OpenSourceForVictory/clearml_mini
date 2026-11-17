@@ -44,7 +44,15 @@ for(const model of ['*','virtual']) test('pool creation makes NPU support explic
  await page.getByLabel('名称',{exact:true}).fill('accelerator-pool');
  await page.getByLabel('设备类型').selectOption(model);
  await page.getByLabel('允许加速设备共享').check();
+ if(model==='*'){
+  await page.getByLabel('未申请时 CPU 不限制').check();
+  await page.getByLabel('未申请时内存不限制').check();
+  await expect(page.getByLabel('默认每任务 CPU 核')).toBeDisabled();
+  await expect(page.getByLabel('默认每任务内存 GiB')).toBeDisabled();
+ }
  await page.getByRole('button',{name:'保存资源池',exact:true}).click();
  await expect.poll(()=>submitted?.gpu_model).toBe(model);
  expect(submitted.allow_shared).toBe(true);
+ expect(submitted.cpu_per_job).toBe(model==='*'?0:1);
+ expect(submitted.ram_gb_per_job).toBe(model==='*'?0:1);
 });

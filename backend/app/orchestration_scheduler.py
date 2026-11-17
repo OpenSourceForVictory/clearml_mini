@@ -59,8 +59,8 @@ class Planner:
             p=self.pools[job.pool_id];w=self.workers[slot.worker_id];r=budget(p,job)
             result=[]
             if job.required_gpu_model and slot.gpu_model!=job.required_gpu_model:result.append(side+'设备型号不匹配')
-            if r.cpu_per_job>w.cpu_capacity:result.append(side+'单项 CPU 超过节点容量')
-            if r.ram_gb_per_job>w.ram_gb_capacity:result.append(side+'单项内存超过节点容量')
+            if r.cpu_per_job and r.cpu_per_job>w.cpu_capacity:result.append(side+'单项 CPU 超过节点容量')
+            if r.ram_gb_per_job and r.ram_gb_per_job>w.ram_gb_capacity:result.append(side+'单项内存超过节点容量')
             if job.requested_vram_gb and job.requested_vram_gb*1024>slot.vram_mb-p.vram_reserve_gb*1024:
                 result.append(side+'单项设备内存超过卡容量')
             return result

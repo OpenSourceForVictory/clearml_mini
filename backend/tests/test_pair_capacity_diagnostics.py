@@ -67,3 +67,31 @@ def test_pair_capacity_same_node_joint_budget(field,value,reason):
     planner,client,definition=scenario(same_node=True)
     setattr(planner.workers['s'],field,value)
     assert planner.structural_pair_diagnosis(client,definition)==(False,[reason])
+
+
+def test_same_node_pair_uses_requested_resources_not_pool_defaults_as_ceiling():
+    planner,client,definition=scenario(same_node=True)
+    for pool in planner.pools.values():
+        pool.cpu_per_job=pool.ram_gb_per_job=0
+    planner.workers['s'].cpu_capacity=planner.workers['s'].ram_gb_capacity=1
+    assert planner.structural_pair_diagnosis(client,definition)==(True,[])
+    client.requested_cpu=2
+    assert planner.structural_pair_diagnosis(client,definition)==(False,['客户端单项 CPU 超过节点容量'])
+
+
+@pytest.mark.parametrize('client_cpu,server_cpu,client_ram,server_ram,expected',[
+    (0,0,0,0,[]),
+    (3,2,0,0,['同机双方 CPU 申请之和超过节点容量']),
+    (0,0,3,2,['同机双方内存申请之和超过节点容量']),
+    (2,2,2,2,[]),
+])
+def test_same_node_pair_sums_effective_requests(client_cpu,server_cpu,client_ram,server_ram,expected):
+    planner,client,definition=scenario(same_node=True)
+    for pool in planner.pools.values():
+        pool.cpu_per_job=pool.ram_gb_per_job=0
+    planner.workers['s'].cpu_capacity=planner.workers['s'].ram_gb_capacity=4
+    client.requested_cpu=client_cpu or None
+    client.requested_ram_gb=client_ram or None
+    definition['resources']['cpus']=server_cpu or None
+    definition['resources']['ram_gb']=server_ram or None
+    assert planner.structural_pair_diagnosis(client,definition)==(not expected,expected)

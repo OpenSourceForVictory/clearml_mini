@@ -48,6 +48,23 @@ def test_agent_source_identity_and_legacy_rollback(env):
     assert r.json()['resource_source']=='worker';check(30000)
 
 
+def test_agent_host_cpu_memory_sample_reaches_scheduler_database(env):
+    from backend.app.node_resources import resource_values
+    from backend.app.job_resources import budget
+    from backend.app.scheduling import node_codes
+    main,c,_=env;pool,slots,tokens=setup_gpu(env,1);token=tokens[0]
+    session=register(c,token);values=samples()
+    values['host']['values'].update(cpu_count=6,cpu_utilization=37,memory_total_mb=16384,memory_available_mb=6144)
+    beat(c,token,session,samples=values)
+    with main.SessionLocal() as s:
+        worker=s.get(Worker,s.get(Slot,slots[0]).worker_id)
+        host=resource_values(worker,'host')
+        assert host['cpu_count']==6 and host['cpu_utilization']==37
+        assert host['memory_total_mb']==16384 and host['memory_available_mb']==6144
+        request=SimpleNamespace(cpu_per_job=7,ram_gb_per_job=7)
+        assert node_codes(worker,request,0,0,0)==['node_cpu','node_ram']
+
+
 @pytest.mark.parametrize('fault',['memory','cpu','stale','failed','future','missing'])
 def test_host_resource_failures_stop_admission(env,fault):
     main,c,_=env;pool,slots,tokens=setup_gpu(env,1);token=tokens[0]

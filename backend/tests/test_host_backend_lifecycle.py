@@ -48,6 +48,21 @@ def test_stop_requires_confirmed_exit(backend,monkeypatch,stuck):
     assert calls==[('stop',host.unit(execution))]
 
 
+@pytest.mark.parametrize('cpus,ram_gb',[ (0,0), (0,3), (2,0) ])
+def test_host_unlimited_axes_omit_selected_systemd_quotas(backend,monkeypatch,cpus,ram_gb):
+    from worker import resource_limits
+    host,execution=backend
+    (host.root/'launch.json').write_text(json.dumps({'started':False,'execution_id':execution}))
+    commands=[];verified=[]
+    monkeypatch.setattr('worker.host_backend.subprocess.run',lambda argv,**kwargs:(commands.append(argv) or SimpleNamespace(returncode=0,stderr='')))
+    monkeypatch.setattr(host,'control',lambda *a,**kw:SimpleNamespace(stdout='/test-group'))
+    monkeypatch.setattr(resource_limits,'verify_group',lambda *a:verified.append(a))
+    host.start({'execution_id':execution,'cpus':cpus,'ram_gb':ram_gb,'timeout_seconds':60})
+    assert any('CPUQuota=' in value for value in commands[0])==bool(cpus)
+    assert any('MemoryMax=' in value for value in commands[0])==bool(ram_gb)
+    assert verified==[('/test-group',cpus,ram_gb*1024**3)]
+
+
 def test_remove_preserves_logs_and_bounded_read(backend,monkeypatch):
     host,execution=backend;calls=[]
     monkeypatch.setattr(host,'stop',lambda e:calls.append(e))

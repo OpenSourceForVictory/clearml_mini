@@ -46,6 +46,18 @@ def test_client_mounts_resources_and_literal_input(container,runtime):
     assert json.loads((worker.workspace/'runs'/task['execution_id']/'input.json').read_text())==inputs[0]
 
 
+@pytest.mark.parametrize('cpus,ram_gb,missing',[ (0,0,('--cpus','--memory')), (0,4,('--cpus',)), (2,0,('--memory',)) ])
+def test_unlimited_container_axes_omit_only_selected_limits(container,cpus,ram_gb,missing):
+    worker,task,calls,_=container
+    task.update(cpus=cpus,ram_gb=ram_gb)
+    worker.create(task)
+    create=calls[0]
+    assert all(option not in create for option in missing)
+    assert '--pids-limit' in create
+    if cpus:assert create[create.index('--cpus')+1]==str(cpus)
+    if ram_gb:assert create[create.index('--memory')+1]==str(ram_gb)+'g'
+
+
 @pytest.mark.parametrize('mutation,match',[
     ({'storage_revision':1},'storage revision'),({'image':'unapproved'},'not approved'),
     ({'client_spec':{'contract_version':-1,'template':{'image':'client:1'}}},'contract')])

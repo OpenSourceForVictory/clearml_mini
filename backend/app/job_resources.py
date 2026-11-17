@@ -29,8 +29,6 @@ class Request(BaseModel):
 
 
 def validate(pool,request):
-    if request.get('cpus',pool.cpu_per_job)>pool.cpu_per_job or request.get('ram_gb',pool.ram_gb_per_job)>pool.ram_gb_per_job:
-        raise HTTPException(400,'CPU/RAM request exceeds resource pool per-task budget')
     shared=request.get('gpu_mode','exclusive')=='shared';vram=request.get('requested_vram_gb',0)
     if shared and (not pool.allow_shared or vram<1):raise HTTPException(400,'shared jobs require an enabled pool and positive VRAM request')
     if pool.gpu_model=='virtual' and (shared or vram):raise HTTPException(400,'virtual pools do not allocate GPU memory')

@@ -85,8 +85,8 @@ class PoolUpdate(BaseModel):
     vram_reserve_gb: int | None = Field(default=None, ge=0, le=10000)
     max_gpu_utilization: int | None = Field(default=None, ge=1, le=100)
     min_vram_gb: int | None = Field(default=None, ge=0, le=10000)
-    cpu_per_job: int | None = Field(default=None, ge=1, le=10000)
-    ram_gb_per_job: int | None = Field(default=None, ge=1, le=100000)
+    cpu_per_job: int | None = Field(default=None, ge=0, le=10000)
+    ram_gb_per_job: int | None = Field(default=None, ge=0, le=100000)
 
 
 def update_pool(s, identity, body, user):

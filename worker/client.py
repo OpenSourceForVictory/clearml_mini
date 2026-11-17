@@ -207,8 +207,10 @@ class Worker:
         args = ['create', '--name', self.name(task['execution_id']),
                 '--label', 'mini-eval.execution=' + task['execution_id'], '--label', 'mini-eval.slot=' + self.slot_id,
                 '--network', 'bridge' if cs else 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-                '--pids-limit', '256', '--cpus', str(task['cpus']), '--memory', str(task['ram_gb'])+'g',
+                '--pids-limit', '256',
                 '--log-driver', 'json-file', '--log-opt', 'max-size=1m', '--log-opt', 'max-file=1']
+        if task['cpus']:args.extend(['--cpus',str(task['cpus'])])
+        if task['ram_gb']:args.extend(['--memory',str(task['ram_gb'])+'g'])
         if is_service(task):
             service = task['client_spec']['service']
             args.extend(['--publish', f"{service['address']}:{service['port']}:{service['container_port']}"])

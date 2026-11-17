@@ -79,8 +79,8 @@ def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
             return (CGROUP_ROOT/controller/path.lstrip('/')/name).read_text().strip()
         quota=read('cpu','cpu.cfs_quota_us');period=read('cpu','cpu.cfs_period_us')
         memory=read('memory','memory.limit_in_bytes');tasks=read('pids','pids.max')
-    if quota=='max' or int(quota)<=0 or int(quota)>cpus*int(period):raise ValueError('cpu_limit_not_enforced')
-    if memory=='max' or not 0<int(memory)<=memory_bytes:raise ValueError('memory_limit_not_enforced')
+    if cpus and (quota=='max' or int(quota)<=0 or int(quota)>cpus*int(period)):raise ValueError('cpu_limit_not_enforced')
+    if memory_bytes and (memory=='max' or not 0<int(memory)<=memory_bytes):raise ValueError('memory_limit_not_enforced')
     if tasks=='max' or not 0<int(tasks)<=pids:raise ValueError('pids_limit_not_enforced')
 
 
