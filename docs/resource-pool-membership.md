@@ -64,3 +64,11 @@ Content-Type: application/json
 ~~~bash
 MIGRATION_TEST_DATABASE_URL=postgresql+psycopg://... python3 -m scripts.check_membership_migration
 ~~~
+
+## GPU / NPU 资源池界面
+
+新增资源池的“物理加速设备（GPU / NPU，允许不同型号）”对应通用物理池（接口 gpu_model 为 *），不是 GPU 专用池。成员分配可以加入已登记 NPU；如需专用 NPU 池，只加入 NPU 成员。当前没有强制成员只能为 NPU 的池类型字段。任务模板的 accelerator_type 与设备类型严格匹配，池名不能替代此要求。模拟设备与物理设备继续分池。
+
+修正前界面误写“物理 GPU”，容易被理解为不能接纳 NPU；本次修正文案与指南，不改变成员准入和调度策略，不涉及节点升级。
+
+本次验证：administration 浏览器测试 3 项通过（包含物理/模拟池创建请求），成员管理与加速设备测试 14 项通过，TypeScript 和 OpenSpec strict 校验通过。浏览器使用模拟 API，未在生产创建资源池，也未进行全量覆盖率统计。

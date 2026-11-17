@@ -1,0 +1,2 @@
+- [x] 1. Clarify pool labels and synchronize user guide, operations and Skill reference.
+- [x] 2. Verify physical/simulated creation and related membership/scheduling tests.
