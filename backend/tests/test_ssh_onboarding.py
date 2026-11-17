@@ -13,6 +13,20 @@ def form(**kw):
     return dict(host='127.0.0.1',port=22,username='test',node_name='ssh-test',api_url='http://127.0.0.1:18093',mode='host',gpus='all',password='SECRET-PASSWORD',request_id='request-one',**kw)
 
 
+def test_npu_sharing_form_is_explicit_and_gpu_cannot_set_it():
+    assert validate(form(accelerator_type='npu'))['npu_sharing']=='preserve'
+    assert validate(form(accelerator_type='npu',npu_sharing='enabled'))['npu_sharing']=='enabled'
+    for choice in ('enabled','disabled','unexpected'):
+        with pytest.raises(Rejected):validate(form(npu_sharing=choice))
+
+
+def test_gpu_sharing_and_dual_execution_mode():
+    assert validate({**form(gpu_sharing='enabled'),'mode':'both'})['mode']=='both'
+    assert validate(form(gpu_sharing='disabled'))['gpu_sharing']=='disabled'
+    for choice in ('unexpected', 'enabled'):
+        with pytest.raises(Rejected):validate(form(accelerator_type='npu',gpu_sharing=choice))
+
+
 def wait(fn):
     for _ in range(200):
         if value:=fn():return value

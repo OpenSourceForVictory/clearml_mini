@@ -27,7 +27,14 @@ def approved(config):
 
 
 def capabilities(config):
-    if config.get('accelerator_type','gpu')!='npu':return []
+    if config.get('accelerator_type','gpu')!='npu':
+        profile=config.get('gpu_runtime')
+        if not isinstance(profile,dict):return []  # Legacy GPU nodes retain their existing pool policy.
+        modes=config.get('execution_modes',['docker','host'])
+        result=[f'gpu:{mode}:exclusive' for mode in ('docker','host') if mode in modes]
+        if profile.get('allow_shared') is True:
+            result.extend(f'gpu:{mode}:shared' for mode in ('docker','host') if mode in modes)
+        return result
     try:
         profile,_=approved(config)
         result=['npu:docker:exclusive'] if 'docker' in config.get('execution_modes',['docker','host']) else []

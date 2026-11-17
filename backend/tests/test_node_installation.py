@@ -40,12 +40,57 @@ def test_complete_replace_preserves_local_settings_and_old_service(tmp_path,monk
     assert json.loads((u.app/'.worker-release.json').read_text())['sha256']==r.id
 
 
+@pytest.mark.parametrize('choice,expected',[('preserve',True),('disabled',False),('enabled',True)])
+def test_reenrollment_changes_npu_sharing_only_when_selected(tmp_path,monkeypatch,choice,expected):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    original=json.loads(path.read_text())
+    original.update(accelerator_type='npu',npu_runtime={'approved':True,'allow_shared':True,'host':{'approved':True,'user':'business'}})
+    path.write_text(json.dumps(original))
+    u.values[0]=original
+    install_node.replace_existing(u.config,{**new,'accelerator_type':'npu','npu_sharing':choice})
+    actual=json.loads(path.read_text())
+    assert actual['npu_runtime']['allow_shared'] is expected
+    assert actual['npu_runtime']['host']==original['npu_runtime']['host']
+    assert actual['token']==new['token']
+
+
+def test_reenrollment_rejects_unapproved_npu_sharing_before_stop(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    old=path.read_bytes();actions=[]
+    monkeypatch.setattr(install_node,'control_updater',lambda *a,**kw:actions.append(a))
+    with pytest.raises(ValueError,match='approved NPU'):
+        install_node.replace_existing(u.config,{**new,'accelerator_type':'npu','npu_sharing':'enabled'})
+    assert not actions and path.read_bytes()==old
+
+
+@pytest.mark.parametrize('choice,expected',[('preserve',None),('disabled',False),('enabled',True)])
+def test_reenrollment_gpu_sharing_preserves_or_changes_local_policy(tmp_path,monkeypatch,choice,expected):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    original=json.loads(path.read_text())
+    install_node.replace_existing(u.config,{**new,'accelerator_type':'gpu','gpu_sharing':choice})
+    actual=json.loads(path.read_text())
+    assert (actual.get('gpu_runtime') or {}).get('allow_shared') is expected
+    assert actual['token']==new['token']
+    assert actual.get('execution_modes')==original.get('execution_modes')
+
+
 def test_install_failure_restores_code_and_credentials(tmp_path,monkeypatch):
     u,path,new,_=setup(tmp_path,monkeypatch);original=path.read_bytes();code=(u.app/'worker/client.py').read_bytes()
     monkeypatch.setattr(install_node,'install_updater',lambda *a:(_ for _ in ()).throw(ValueError('failed')))
     with pytest.raises(ValueError):install_node.replace_existing(u.config,new)
     assert json.loads(path.read_bytes())==json.loads(original)
     assert (u.app/'worker/client.py').read_bytes()==code
+
+
+def test_failed_npu_sharing_change_restores_original_approval(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    original=json.loads(path.read_text())
+    original.update(accelerator_type='npu',npu_runtime={'approved':True,'allow_shared':True,'host':{'approved':True,'user':'business'}})
+    path.write_text(json.dumps(original));u.values[0]=original
+    monkeypatch.setattr(install_node,'install_updater',lambda *a:(_ for _ in ()).throw(RuntimeError('injected failure')))
+    with pytest.raises(RuntimeError,match='injected failure'):
+        install_node.replace_existing(u.config,{**new,'accelerator_type':'npu','npu_sharing':'disabled'})
+    assert json.loads(path.read_text())==original
 
 
 def test_local_journal_blocks_replacement(tmp_path,monkeypatch):

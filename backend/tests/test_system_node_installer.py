@@ -57,11 +57,25 @@ def test_multicard_private_config_and_system_services(setup,kind):
         assert 'User=root\n' in (units/service['name']).read_text()
         assert '\nWorkingDirectory='+result['app_dir']+'\n' in (units/service['name']).read_text()
         assert (Path(value['workspace_root'])/'cache').stat().st_mode&0o777==0o700
-        if kind=='npu':assert value['npu_runtime']['host']['user']=='mini-eval'
+        if kind=='npu':
+            assert value['npu_runtime']['host']['user']=='mini-eval'
+            assert value['npu_runtime']['allow_shared'] is False
+        else:
+            assert value['gpu_runtime']['allow_shared'] is False
     assert calls[-2:]==[['worker','enable'],['worker','start']]
     before={p:p.read_bytes() for p in units.iterdir()}
     with pytest.raises(ValueError,match='re-enrollment'):m.install(credential,'all')
     assert all(p.read_bytes()==data for p,data in before.items())
+
+
+def test_gpu_sharing_and_both_execution_modes_are_installed(setup):
+    credential,calls,_,_=setup
+    result=m.install({**credential,'execution_modes':['host','docker'],'gpu_sharing':'enabled'},'all')
+    assert ['docker','info'] in calls
+    for path in result['config_paths']:
+        config=json.loads(Path(path).read_text())
+        assert config['execution_modes']==['host','docker']
+        assert config['gpu_runtime']['allow_shared'] is True
 
 
 def test_failure_rolls_back_new_units_but_retains_business_data(setup,monkeypatch):
@@ -110,6 +124,12 @@ def test_docker_prerequisite_checks(setup):
     m.install(credential,'all')
     assert ['docker','info'] in calls
     assert not any(c[:2]==['docker','image'] or c[:2]==['docker','pull'] or c[:2]==['docker','build'] for c in calls)
+
+
+def test_npu_sharing_requires_explicit_installer_choice(setup):
+    credential,_,_,_=setup
+    result=m.install({**credential,'accelerator_type':'npu','npu_sharing':'enabled'},'all')
+    assert all(json.loads(Path(p).read_text())['npu_runtime']['allow_shared'] is True for p in result['config_paths'])
 
 @pytest.mark.parametrize('issue',['uid','gid','home','privileged','range','nonroot'])
 def test_account_rejection_before_mutation(monkeypatch,issue):

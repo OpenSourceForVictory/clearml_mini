@@ -173,6 +173,8 @@ class Worker:
             self.save()
 
     def create(self, task):
+        if task.get('accelerator_type','gpu')=='gpu' and task.get('gpu_mode')=='shared' and isinstance(self.config.get('gpu_runtime'),dict) and self.config['gpu_runtime'].get('allow_shared') is not True:
+            raise RuntimeError('GPU shared execution is not approved')
         if is_service(task): check_bind(task['client_spec']['service'])
         if self.host_mode(): return HostBackend(self).create(task)
         if task.get('storage_revision', 0) != self.storage_snapshot['revision']:

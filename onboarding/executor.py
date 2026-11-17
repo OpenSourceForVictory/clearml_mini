@@ -116,7 +116,7 @@ class Operations:
         if not isinstance(plan,dict) or not isinstance(plan.get('issues'),list):raise Rejected('invalid_probe_response')
         if plan['services'] and plan['services'][0]['scope']=='system' and plan.get('uid')!=0:
             if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('sudo_permission_required')
-        if form['mode']=='host' and not plan['issues']:
+        if form['mode'] in ('host','both') and not plan['issues']:
             limits=self.host_resources(remote,form)
             plan['resource_limits']=limits
             if not limits['ready']:
@@ -124,7 +124,7 @@ class Operations:
                     if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('resource_delegation_requires_sudo')
                     else:plan['resource_repair_required']=True
                 else:plan['issues'].append(limits.get('reason','runtime_limits_not_enforced'))
-        if form['mode']=='docker':
+        if form['mode'] in ('docker','both'):
             from .docker_prepare import guidance
             plan['runner_image_help']=guidance(runner_image,plan.get('runner_image_ready',False))
         if plan['free_disk_gb']<.1:plan['issues'].append('insufficient_installation_disk')
@@ -227,8 +227,8 @@ class Operations:
                     self.update(identity,stage='IDENTITY')
                     credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
                     node_id=credential['id'];self.update(identity,node_id=node_id,installation_revision=credential['revision'])
-                    credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=[form['mode']],pool_id=None,mock=False)
-                    credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
+                    credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=['host','docker'] if form['mode']=='both' else [form['mode']],pool_id=None,mock=False)
+                    credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000),npu_sharing=form.get('npu_sharing','preserve'),gpu_sharing=form.get('gpu_sharing','preserve'))
                     remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
                     args=[plan['python'],'-B',remote_dir+'/scripts/install_node.py','--credential',remote_dir+'/credential.json']
                     if plan.get('installation'):
@@ -245,7 +245,7 @@ class Operations:
                         env=['env','XDG_RUNTIME_DIR=/run/user/'+str(plan['uid']),
                              'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(plan['uid'])+'/bus']
                         remote.run(env+['systemctl','--user','daemon-reexec'],timeout=30)
-                    if form['mode']=='host':
+                    if form['mode'] in ('host','both'):
                         self.update(identity,stage='RESOURCE_VERIFY')
                         limits=self.host_resources(remote,form)
                         self.update(identity,resource_limits=limits)

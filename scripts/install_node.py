@@ -86,6 +86,17 @@ def replace_existing(layout, credential, checked_snapshot=None):
     indices = remote.get('gpu_indices', [])
     if sorted(indices) != sorted(v.get('gpu_index',0) for v in updater.values):
         raise ValueError('all original GPU instances must be included')
+    sharing=credential.get('npu_sharing','preserve')
+    if sharing not in ('preserve','enabled','disabled'):raise ValueError('invalid NPU sharing choice')
+    gpu_sharing=credential.get('gpu_sharing','preserve')
+    if gpu_sharing not in ('preserve','enabled','disabled'):raise ValueError('invalid GPU sharing choice')
+    if sharing!='preserve' and (credential.get('accelerator_type')!='npu' or any(
+            v.get('accelerator_type')!='npu' or v.get('npu_runtime',{}).get('approved') is not True
+            for v in updater.values)):
+        raise ValueError('NPU sharing change requires approved NPU configurations')
+    if gpu_sharing!='preserve' and (credential.get('accelerator_type')!='gpu' or any(
+            v.get('accelerator_type','gpu')!='gpu' for v in updater.values)):
+        raise ValueError('GPU sharing change requires GPU configurations')
     digest = (ROOT/'release.sha256').read_text().strip()
     if remote.get('release_id') != digest: raise ValueError('download the bundle for the current re-enrollment operation')
     auxiliary=[]
@@ -116,8 +127,13 @@ def replace_existing(layout, credential, checked_snapshot=None):
             os.replace(stage, updater.app)
             for path, previous in zip(updater.configs, updater.values):
                 owner = path.stat()
-                # Preserve every node-local setting, replacing only connection credentials.
-                atomic(path, {**previous, 'api_url':credential['api_url'], 'token':credential['token']})
+                # Preserve node-local settings unless the administrator explicitly changes sharing.
+                updated={**previous, 'api_url':credential['api_url'], 'token':credential['token']}
+                if sharing!='preserve':
+                    updated['npu_runtime']={**previous['npu_runtime'],'allow_shared':sharing=='enabled'}
+                if gpu_sharing!='preserve':
+                    updated['gpu_runtime']={**previous.get('gpu_runtime',{}),'allow_shared':gpu_sharing=='enabled'}
+                atomic(path, updated)
                 os.chown(path, owner.st_uid, owner.st_gid)
         install_updater(layout, system)
         updater.control('enable')

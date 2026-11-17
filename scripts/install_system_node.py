@@ -63,6 +63,10 @@ def _install(credential,selection,instance='gpu'):
     if not re.fullmatch(r'[a-zA-Z0-9_-]+',instance):raise ValueError('invalid instance name')
     kind=credential.get('accelerator_type','gpu')
     if kind not in ('gpu','npu'):raise ValueError('unsupported accelerator type')
+    if credential.get('npu_sharing','preserve') not in ('preserve','enabled','disabled'):
+        raise ValueError('invalid NPU sharing choice')
+    if credential.get('gpu_sharing','preserve') not in ('preserve','enabled','disabled'):
+        raise ValueError('invalid GPU sharing choice')
     if credential.get('execution_modes') != ['host']:
         subprocess.run(['docker','info'],check=True,capture_output=True,timeout=30)
     acc=account(int(credential.get('business_uid',29000)),int(credential.get('business_gid',29000)))
@@ -75,7 +79,9 @@ def _install(credential,selection,instance='gpu'):
     if len(indices)!=len(set(indices)):raise ValueError('duplicate device index')
     config={**credential,'host_execution':{'approved':True,'user':acc.pw_name,'uid':acc.pw_uid,'gid':acc.pw_gid},'workspace_root':str(WORKSPACES)}
     if kind=='npu':
-        config['npu_runtime']={'approved':True,'allow_shared':True,'host':{'approved':True,'user':acc.pw_name,'environment':{}}}
+        config['npu_runtime']={'approved':True,'allow_shared':credential.get('npu_sharing')=='enabled','host':{'approved':True,'user':acc.pw_name,'environment':{}}}
+    else:
+        config['gpu_runtime']={'allow_shared':credential.get('gpu_sharing')=='enabled'}
     planned=plan(config,instance,selection,indices,CONTROL)
     for name,_,value in planned:
         if (UNIT_DIR/('mini-eval-worker-managed-'+name+'.service')).exists():raise ValueError('managed Worker unit already exists')

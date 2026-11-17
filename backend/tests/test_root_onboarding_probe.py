@@ -86,6 +86,14 @@ def test_docker_v1_missing_runner_is_preparation_not_rejection(environment,monke
     assert not any('pull' in c or 'build' in c for c in calls)
 
 
+def test_both_execution_modes_probe_docker_and_expose_gpu_policy(environment):
+    options,calls,*_=environment
+    result=probe.collect({**options,'mode':'both','runner_image':'runner'})
+    assert result['issues']==[]
+    assert ['docker','info'] in calls
+    assert ['docker','image','inspect','runner'] in calls
+
+
 def test_custom_layout_probe_preserves_business_user_and_services(environment):
     import json
     options,_,home,_=environment
@@ -96,6 +104,24 @@ def test_custom_layout_probe_preserves_business_user_and_services(environment):
     assert result['issues']==[] and result['existing']
     assert result['business_user']=='original-business' and result['installation']==installation
     assert result['services']==installation['layout']['services']
+
+
+def test_existing_npu_probe_shows_sharing_without_full_config(environment,monkeypatch):
+    import json
+    options,_,home,_=environment
+    path=home/'npu.json'
+    path.write_text(json.dumps({'node_name':'fresh','gpu_index':0,'accelerator_type':'npu',
+        'state_path':str(home/'state.json'),'token':'PRIVATE',
+        'npu_runtime':{'approved':True,'allow_shared':True,'host':{'user':'business'}}}))
+    installation={'layout':{'config_paths':[str(path)],'services':[{'scope':'system','name':'worker.service'}]},'fingerprint':'hash'}
+    options.update(gpus='0',node_id='original',accelerator_type='npu',runner_image='runner',
+        ascend_source=Path('node_agent/ascend.py').read_text(),layout_source='def discover(*a): return '+repr(installation))
+    mapping='0 0 0 Ascend 910B\n'
+    info='HBM-Usage(MB) AICore(%)\n| 0 910B | OK | 0 |\n| 0 | 0000:01:00.0 | 0 0/100 0/65536 |\n'
+    monkeypatch.setattr(probe.subprocess,'run',lambda argv,**kw:N(returncode=0,stdout=mapping if '-m' in argv else info))
+    result=probe.collect(options)
+    assert result['configs'][0]['npu_sharing'] is True
+    assert 'PRIVATE' not in json.dumps(result)
 
 
 @pytest.mark.parametrize('error',['existing_layout_untrusted','upgrade_journal_pending','private secret'])

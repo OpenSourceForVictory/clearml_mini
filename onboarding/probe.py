@@ -39,7 +39,10 @@ def collect(options):
     for p in paths:
         v=json.loads(p.read_text())
         if not isinstance(v,dict) or 'state_path' not in v:continue
-        configs.append({'path':str(p),'node_name':v.get('node_name'),'gpu_index':v.get('gpu_index',0),'mock':v.get('mock',False),'gpu_uuid':('mock:'+v.get('node_name','')+':'+str(v.get('gpu_index',0))) if v.get('mock') else None})
+        configs.append({'path':str(p),'node_name':v.get('node_name'),'gpu_index':v.get('gpu_index',0),'mock':v.get('mock',False),'gpu_uuid':('mock:'+v.get('node_name','')+':'+str(v.get('gpu_index',0))) if v.get('mock') else None,
+                        'npu_sharing':v.get('npu_runtime',{}).get('allow_shared') is True if v.get('accelerator_type')=='npu' else None,
+                        'gpu_sharing':v.get('gpu_runtime',{}).get('allow_shared') is True if v.get('accelerator_type','gpu')=='gpu' and isinstance(v.get('gpu_runtime'),dict) else None,
+                        'execution_modes':v.get('execution_modes',['docker','host'])})
         installed_identity=v.get('host_execution') or {'user':v.get('npu_runtime',{}).get('host',{}).get('user')}
         if v.get('accelerator_type','gpu')!=options.get('accelerator_type','gpu'):issues.append('accelerator_type_conflict')
         state=Path(v['state_path'])
@@ -104,7 +107,7 @@ def collect(options):
                 if getattr(fn(name),attr)!=number:issues.append('business_identity_conflict')
             except KeyError:pass
     runner_ready=True
-    if options['mode']=='docker':
+    if options['mode'] in ('docker','both'):
         if run(['docker','info'])[0]:issues.append('docker_unavailable')
         elif run(['docker','image','inspect',options['runner_image']])[0]:runner_ready=False
     try:

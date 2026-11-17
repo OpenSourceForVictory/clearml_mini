@@ -35,6 +35,23 @@ def test_unapproved_npu_cannot_advertise_backend():
  with pytest.raises(RuntimeError):accelerators.approved({'accelerator_type':'npu'})
 
 
+def test_gpu_sharing_capability_respects_node_approval():
+ cfg={'accelerator_type':'gpu','execution_modes':['host','docker'],'gpu_runtime':{'allow_shared':False}}
+ assert accelerators.capabilities(cfg)==['gpu:docker:exclusive','gpu:host:exclusive']
+ cfg['gpu_runtime']['allow_shared']=True
+ assert set(accelerators.capabilities(cfg))=={'gpu:docker:exclusive','gpu:host:exclusive','gpu:docker:shared','gpu:host:shared'}
+ assert accelerators.capabilities({'accelerator_type':'gpu'})==[]
+
+
+def test_gpu_shared_scheduling_requires_explicit_backend_when_advertised():
+ slot=N(disk_min_free_mb=None,protocol_version=14,execution_modes=['docker'],client_images=['img'],accelerator_type='gpu',accelerator_backends=['gpu:docker:exclusive'],gpu_model='RTX',telemetry_at=now(),vram_mb=48000,free_vram_mb=40000,gpu_utilization=0)
+ job=N(client_spec={'template':{'image':'img'},'resources':{'accelerator_type':'gpu'}},required_gpu_model=None,gpu_mode='shared',requested_vram_gb=4)
+ pool=N(allow_shared=True,max_tasks_per_gpu=4,vram_reserve_gb=1,max_gpu_utilization=100)
+ assert eligibility_codes(slot,pool,job,[],now())==['accelerator_backend']
+ slot.accelerator_backends.append('gpu:docker:shared')
+ assert eligibility_codes(slot,pool,job,[],now())==[]
+
+
 def test_npu_host_properties_never_allow_other_cards_or_root(monkeypatch):
  from worker import npu_host
  monkeypatch.setattr(npu_host,'approved',lambda cfg:({'host':{'approved':True,'user':'service'}},'/dev/davinci2'))

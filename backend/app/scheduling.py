@@ -107,6 +107,8 @@ def eligibility_codes(slot, pool, job, held, at):
         capability=f'npu:{mode}:{job.gpu_mode}'
         if slot.protocol_version<11 or capability not in (getattr(slot,'accelerator_backends',None) or []):return ['accelerator_backend']
         if not telemetry_fresh(slot,at):return ['telemetry_stale']
+    if requested_type=='gpu' and job.gpu_mode=='shared' and getattr(slot,'accelerator_backends',None):
+        if f'gpu:{mode}:shared' not in slot.accelerator_backends:return ['accelerator_backend']
     if job.required_gpu_model and slot.gpu_model != job.required_gpu_model:
         return ['gpu_model']
     requested = job.requested_vram_gb * 1024
