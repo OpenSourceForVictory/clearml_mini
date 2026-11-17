@@ -41,10 +41,11 @@ async function setup(page:Page){
 
 test('preflight names client environment and per-card server blockers',async({page})=>{
  const {wizard,setServerChecks,setClientReasons}=await setup(page);
- setClientReasons([{code:'client_runtime',category:'environment',message:'客户端宿主机环境「robotwin」未就绪：该设备未启用宿主机执行',action:'请管理员检查 Worker'}]);
+ setClientReasons([{code:'client_runtime',category:'environment',message:'客户端宿主机环境「robotwin」未就绪：该设备未启用宿主机执行',action:'请管理员检查 Worker'},{code:'client_image',category:'environment',message:'客户端容器镜像「client:1」已批准，但节点上没有该镜像',action:'请在该节点检查业务镜像'}]);
  setServerChecks([{key:'model',pool_name:'Server GPUs',status:'waiting_resources',reasons:[],nodes:[{slot_id:'server-0',node_name:'server-1',gpu_index:1,gpu_model:'H100',ready:false,reasons:[{code:'gpu_busy',category:'resource',message:'GPU 已占用或达到共享任务上限',action:'等待现有任务释放资源'}]}]}]);
  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
  await expect(wizard.getByText('客户端宿主机环境「robotwin」未就绪：该设备未启用宿主机执行',{exact:false})).toBeVisible();
+ await expect(wizard.getByText('客户端容器镜像「client:1」已批准，但节点上没有该镜像',{exact:false})).toBeVisible();
  const server=wizard.getByRole('region',{name:'服务端 model 候选设备'});
  await expect(server).toContainText('资源池 Server GPUs');
  await expect(server).toContainText('server-1 / 设备 1');

@@ -98,6 +98,48 @@ def test_client_runtime_version_reason_names_host_environment():
     assert runtime_mismatch(slot,job)=='客户端宿主机环境「robotwin」的业务执行目录需要 Worker 协议 13（当前 12）'
 
 
+def test_preflight_distinguishes_unapproved_missing_and_failed_images(env):
+    main,_,_=env;body,sid=setup(env)
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,sid);worker=s.get(Worker,slot.worker_id)
+        worker.runtime_config={'images':[],'assets':{},'directories':{}}
+        slot.client_images=[]
+        s.commit()
+    assert '未在该节点的容器环境中批准' in check(env,body)['nodes'][0]['reasons'][0]['message']
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,sid);worker=s.get(Worker,slot.worker_id)
+        worker.runtime_config={'images':['approved:cs'],'assets':{},'directories':{}}
+        slot.runtime_report={'effective':{'images':['approved:cs']},'images':{'approved:cs':{'ready':False,'error':'Error: No such image: approved:cs'}}}
+        s.commit()
+    reasons=check(env,body)['nodes'][0]['reasons']
+    assert len([r for r in reasons if r['code']=='client_image'])==1
+    assert '节点上没有该镜像' in reasons[0]['message']
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,sid)
+        slot.runtime_report={'effective':{'images':['approved:cs']},'images':{'approved:cs':{'ready':False,'error':'private /srv/secret'}}}
+        s.commit()
+    text=str(check(env,body))
+    assert '节点镜像检查失败' in text and '/srv/secret' not in text
+
+
+def test_preflight_names_pending_runtime_and_host_environment():
+    from types import SimpleNamespace as N
+    from backend.app.preflight import slot_reason,blocker_reason
+    job=N(client_spec={'template':{'execution_mode':'host','host_runtime':{'environment_name':'robotwin'}}})
+    worker=N(runtime_revision=2,runtime_config={},host_environments={})
+    slot=N(runtime_report={'revision':1,'applied_revision':1})
+    assert '尚未应用最新运行环境配置' in slot_reason('runtime_pending',slot,job,worker)['message']
+    slot.runtime_report={'revision':2,'applied_revision':2}
+    assert '报告缺失或已过期' in slot_reason('runtime_pending',slot,job,worker)['message']
+    result=blocker_reason('宿主机环境未批准或不可用: robotwin',worker,slot,job)
+    assert 'robotwin' in result['message'] and '未在节点宿主机环境中批准' in result['message']
+    worker.host_environments={'robotwin':{}}
+    assert '节点检查未通过' in blocker_reason('宿主机环境未批准或不可用: robotwin',worker,slot,job)['message']
+    worker.runtime_config={'images':[],'assets':{'dataset':'/private/path'}}
+    asset=blocker_reason('逻辑资产未就绪: dataset',worker,slot,job)
+    assert '逻辑资产「dataset」节点检查未通过' in asset['message'] and '/private/path' not in str(asset)
+
+
 @pytest.mark.parametrize('field,value,code', [('max_concurrent',0,'node_concurrency'), ('cpu_capacity',0,'node_cpu'), ('ram_gb_capacity',0,'node_ram')])
 def test_node_limits(env,field,value,code):
     main,c,auth=env;body,sid=setup(env)

@@ -82,6 +82,8 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 
 提交预检的逐卡原因：scheduling.runtime_mismatch 与 preflight.slot_reason 给出客户端/服务端所需宿主机环境名或容器镜像及 Worker 能力差异；orchestrations.diagnose_service 复用 DiagnosticContext，对托管服务候选设备追加服务网络/端口检查，预检 `server_checks` 与批次详情 `scheduling` 同口径。run-wizard.tsx 在预检确认显示服务端节点/设备和原因；无服务端角色成员时不把客户端卡误列为候选。操作见 docs/gpu-scheduling.md；回归 test_preflight.py、test_orchestrations.py、run-wizard.spec.ts。
 
+客户端环境错误细化：preflight.image_reason/blocker_reason 只利用 Worker 批准配置和已保存检查报告，将镜像、宿主机环境、逻辑资产区分为未批准、节点缺镜像、检查失败或未上报；不转发报告原始 error/path。runtime_pending 区分配置版本未应用与报告缺失/过期。界面继续用逐卡 Reasons 渲染行动建议；操作及边界见 docs/gpu-scheduling.md、docs/user-guidance.md，回归 test_preflight.py 与 run-wizard.spec.ts。
+
 GPU 遥测新鲜度：main.workers 管理员明细调用 scheduling.telemetry_fresh，与任务准入统一检查样本位于过去 15 秒内且显存/利用率齐全；未来时间戳不得显示新鲜。主机采样是独立指标。操作见 docs/gpu-scheduling.md；回归 test_resource_roles.py。
 
 回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software，enrollment/worker_upgrades 仅豁免可选 service_readiness_v1 版本验收，业务准入保持能力门槛。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。

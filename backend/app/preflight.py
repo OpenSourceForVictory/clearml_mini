@@ -59,11 +59,47 @@ def runtime_label(job):
     return f'{side}容器镜像「{template.get("image","未指定")}」'
 
 
-def slot_reason(code, slot, job):
+def image_reason(slot, job, worker):
+    image=(job.client_spec or {}).get('template',{}).get('image','未指定')
+    label=runtime_label(job)
+    configured=(worker.runtime_config or {}).get('images',[]) if worker else []
+    report=slot.runtime_report or {}
+    effective=(report.get('effective') or {}).get('images',[])
+    item=(report.get('images') or {}).get(image) or {}
+    if worker and worker.runtime_config is not None and image not in configured:
+        return reason('client_image', f'{label}未在该节点的容器环境中批准') | {'action':'请管理员在机器管理的容器环境中批准该业务镜像'}
+    if image in effective and item.get('ready') is False:
+        error=(item.get('error') or '').lower()
+        detail='节点上没有该镜像' if 'no such image' in error or 'image not known' in error else '节点镜像检查失败'
+        return reason('client_image', f'{label}已批准，但{detail}') | {'action':'请在该节点检查业务镜像，并到机器管理的容器环境查看检查结果'}
+    return reason('client_image', f'{label}尚未被该节点上报为可用') | {'action':'请核对节点业务镜像、容器环境批准及 Worker 心跳'}
+
+
+def slot_reason(code, slot, job, worker=None):
     if code=='client_runtime':return reason(code, admission.runtime_mismatch(slot,job))
-    if code=='runtime_pending':return reason(code, f'{runtime_label(job)}：节点运行配置未生效或报告已过期')
-    if code=='client_image':return reason(code, f'{runtime_label(job)}未批准或未就绪')
+    if code=='runtime_pending':
+        report=slot.runtime_report or {}
+        pending=worker and (report.get('revision')!=worker.runtime_revision or report.get('applied_revision')!=worker.runtime_revision)
+        detail='节点尚未应用最新运行环境配置' if pending else '节点运行环境报告缺失或已过期'
+        return reason(code, f'{runtime_label(job)}：{detail}')
+    if code=='client_image':return image_reason(slot,job,worker)
     return reason(code)
+
+
+def blocker_reason(message, worker, slot, job):
+    label=runtime_label(job)
+    if message=='所需镜像未批准或未就绪':return image_reason(slot,job,worker)
+    if message.startswith('逻辑资产未就绪: '):
+        name=message.partition(': ')[2]
+        configured=(worker.runtime_config or {}).get('assets',{}) if worker else {}
+        detail='未在节点容器环境中批准' if worker and worker.runtime_config is not None and name not in configured else '节点检查未通过'
+        return reason('client_runtime',f'{label}所需逻辑资产「{name}」{detail}') | {'action':'请管理员在机器管理的容器环境中检查该逻辑资产'}
+    if message.startswith('宿主机环境未批准或不可用: '):
+        name=message.partition(': ')[2]
+        approved=name in (worker.host_environments or {})
+        detail='未在节点宿主机环境中批准' if not approved else '节点检查未通过'
+        return reason('client_runtime',f'{label}{detail}') | {'action':'请管理员在机器管理的宿主机环境中检查配置与回执'}
+    return reason('client_runtime',f'{label}：{message}')
 
 
 class DiagnosticContext:
@@ -106,9 +142,11 @@ class DiagnosticContext:
             local += admission.eligibility_codes(slot, pool, job, held, self.at)
             from .job_resources import budget
             local += admission.node_codes(worker, budget(pool,job), len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held), sum(r.reserved_ram_gb for r in node_held if r.started_at is None))
-            reasons = [slot_reason(code,slot,job) for code in dict.fromkeys(local)]
+            reasons = [slot_reason(code,slot,job,worker) for code in dict.fromkeys(local)]
             for message in image_runtime.blockers(worker, slot, job.client_spec, self.at):
-                if message not in [r['message'] for r in reasons]: reasons.append(reason('client_runtime', message))
+                detail=blocker_reason(message,worker,slot,job)
+                if detail['message'] not in [r['message'] for r in reasons] and not (detail['code']=='client_image' and any(r['code']=='client_image' for r in reasons)):
+                    reasons.append(detail)
             nodes.append(dict(slot_id=slot.id, node_name=slot.node_name, gpu_index=slot.gpu_index,
                               gpu_model=slot.gpu_model, ready=not reasons and not codes, reasons=reasons))
         if not nodes: codes.append('no_nodes')
