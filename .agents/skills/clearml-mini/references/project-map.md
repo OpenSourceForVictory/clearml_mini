@@ -48,3 +48,5 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；API 需要 ONBOARDING
 执行与恢复补测：test_worker_service_execution.py（健康探测、租约 watchdog、完成上报）、test_onboarding_recovery_edges.py（恢复身份、取消、凭据过期）、test_worker_bootstrap_transport.py（启动清理、传输）、test_execution_launch_boundaries.py（身份、端口、产物续租）、test_fleet_rollout_cli.py（发布检查点重入与排空前拒绝）。这些边界模拟测试不替代 systemd / GPU / NPU 真机验收；各目录当前门禁状态见最新验证记录。
 
 运维验收驱动器补测见 docs/code-coverage.md 与 docs/validation/project-coverage/README.md：双机脚本必须在启动监听前拒绝非隔离 API；smoke_worker_upgrades 使用当前版本元信息构造临时旧版本，不能继续写死 0.10.0。test_migration_driver_scripts.py 需 MIGRATION_DRIVER_TEST_URL 指向一次性 PostgreSQL 服务器，并为每个用例创建/删除专用数据库。虚拟时间 soak 和模拟 SSH/Docker 结果不能写成真实稳定性或硬件验收。
+
+集合可用客户端模板：在集合管理中勾选；PUT /api/v1/suites/{id}/client-templates 独立更新（owner/revision 校验，至少一个）。suite_client_templates 保存多选，template_id 保留兼容默认；迁移 v285e67 回填旧集合。向导、批次与编排校验所选模板属于集合；更新不修改历史快照。操作见 docs/suite-management.md，回归见 backend/tests/test_suite_template_relations.py。不提供额外关系管理入口。

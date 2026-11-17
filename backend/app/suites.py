@@ -44,10 +44,27 @@ class Copy(BaseModel):
     version:str=Field(min_length=1,max_length=100)
 
 
+class Relations(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    expected_revision:int=Field(ge=0)
+    template_ids:list[str]=Field(min_length=1,max_length=32)
+
+    @field_validator('template_ids')
+    @classmethod
+    def valid_ids(cls,value):
+        if any(not x or len(x)>36 for x in value) or len(set(value))!=len(value):raise ValueError('template IDs must be distinct')
+        return value
+
+
 def validate(s, body, user, exclude=None):
-    template = s.get(ClientTemplate, body.template_id)
-    if not template or not template.enabled or template.archived or template.status!='published' or (template.owner_id is not None and template.owner_id != user.id):
-        raise HTTPException(400, 'unknown or disabled client template')
+    templates=[]
+    for identity in body.template_ids:
+        template=s.get(ClientTemplate,identity)
+        if not template or not template.enabled or template.archived or template.status!='published' or (template.owner_id is not None and template.owner_id != user.id):
+            raise HTTPException(400, 'unknown or disabled client template')
+        templates.append(template)
+    if len({t.task_type for t in templates})!=1:
+        raise HTTPException(400,'related templates must use the same task type')
     q = select(EvaluationSuite.id).where(EvaluationSuite.owner_id==user.id, EvaluationSuite.name==body.name, EvaluationSuite.version==body.version)
     if exclude:
         q = q.where(EvaluationSuite.id != exclude)
@@ -55,11 +72,14 @@ def validate(s, body, user, exclude=None):
         raise HTTPException(409, 'suite version already exists')
     try:
         json_tree([c.model_dump() for c in body.cases])
-        if template.parameter_schema is not None:
-            from runner.parameter_contract import resolve_layers
-            for case in body.cases:
-                try: resolve_layers(template.parameter_schema,[('suite',body.client_defaults),('case',case.parameters)])
-                except ValueError as exc: raise ValueError(f'case {case.case_id}: {exc}') from exc
+        for template in templates:
+            if template.task_type=='command' and any(c.episodes!=1 for c in body.cases):
+                raise ValueError('ordinary commands require episodes=1')
+            if template.parameter_schema is not None:
+                from runner.parameter_contract import resolve_layers
+                for case in body.cases:
+                    try: resolve_layers(template.parameter_schema,[('suite',body.client_defaults),('case',case.parameters)])
+                    except ValueError as exc: raise ValueError(f'template {template.name}/{template.version}, case {case.case_id}: {exc}') from exc
     except ValueError as e:
         raise HTTPException(400, str(e))
 
@@ -87,10 +107,17 @@ def install(app, db, current):
                 s.scalars(select(EvaluationSuite).where(EvaluationSuite.owner_id==user.id))
                 if digest(x.cases)==result['content_hash']][:20]
             hint = result['document'].get('client')
-            templates = list(s.scalars(select(ClientTemplate).where(ClientTemplate.enabled,
+            templates = list(s.scalars(select(ClientTemplate).where(ClientTemplate.enabled, ClientTemplate.status=='published', ClientTemplate.archived.is_(False),
                 (ClientTemplate.owner_id.is_(None)) | (ClientTemplate.owner_id==user.id))))
             matches = [t.id for t in templates if hint and t.name==hint['name'] and t.version==hint['version']]
             result['template_id'] = matches[0] if len(matches)==1 else None
+            hints=result['document'].get('clients') or ([hint] if hint else [])
+            result['template_ids']=[];result['unmatched_clients']=[]
+            for item in hints:
+                found=[t.id for t in templates if t.name==item['name'] and t.version==item['version'] and t.status=='published' and not t.archived]
+                if len(found)==1:result['template_ids'].append(found[0])
+                else:result['unmatched_clients'].append(item)
+            result['template_ids']=list(dict.fromkeys(result['template_ids']))
         return result
 
     @app.get('/api/v1/suites/manage')
@@ -100,14 +127,13 @@ def install(app, db, current):
         query = select(EvaluationSuite).where(EvaluationSuite.owner_id==user.id)
         if q:
             query=query.where(EvaluationSuite.name.icontains(q, autoescape=True))
-        if template_id:
-            query=query.where(EvaluationSuite.template_id==template_id)
         if state!='all':
             query=query.where(EvaluationSuite.archived.is_(state=='archived'))
         if state in ('draft','published'):
             query=query.where(EvaluationSuite.status==state)
         # JSON tag comparison remains portable to SQLite; filter before paging.
         rows=list(s.scalars(query.order_by(EvaluationSuite.created_at.desc(),EvaluationSuite.id)))
+        if template_id:rows=[x for x in rows if template_id in x.template_ids]
         if tag:
             rows=[x for x in rows if tag in x.tags]
         items=[]
@@ -126,11 +152,21 @@ def install(app, db, current):
         s.add(suite);s.commit()
         return suite_view(suite)
 
+    @app.put('/api/v1/suites/{id}/client-templates')
+    def relationships(id:str,body:Relations,user=Depends(current),s=Depends(db)):
+        lock(s);x=owned(s,id,user);revision(x,body.expected_revision)
+        if x.archived:raise HTTPException(409,'restore suite before changing client templates')
+        fields={k:getattr(x,k) for k in SuiteWrite.model_fields}
+        fields.update(template_ids=body.template_ids,template_id=body.template_ids[0])
+        validate(s,SuiteWrite(**fields),user,id)
+        x.template_id=body.template_ids[0];x.template_ids=body.template_ids
+        x.revision+=1;s.commit();return suite_view(x)
+
     @app.get('/api/v1/suites/{id}/export')
     def export(id:str,user=Depends(current),s=Depends(db)):
         x=owned(s,id,user);t=s.get(ClientTemplate,x.template_id)
         return dict(schema_version=1,name=x.name,version=x.version,description=x.description,tags=x.tags,source=x.source,
-                    client={'name':t.name,'version':t.version},defaults={'parameters':x.client_defaults},cases=x.cases)
+                    client={'name':t.name,'version':t.version},clients=[{'name':v.name,'version':v.version} for identity in x.template_ids if (v:=s.get(ClientTemplate,identity))],defaults={'parameters':x.client_defaults},cases=x.cases)
 
     @app.post('/api/v1/suites/{id}/clone',status_code=201)
     def clone(id:str,body:Copy,user=Depends(current),s=Depends(db)):

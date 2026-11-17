@@ -59,12 +59,17 @@ class SuiteCreate(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str = Field(min_length=1, max_length=200)
     version: str = Field(min_length=1, max_length=100)
-    template_id: str
+    template_id: str = ''
+    template_ids: list[str] | None = Field(default=None, min_length=1, max_length=32)
     cases: list[Case] = Field(min_length=1, max_length=100)
     client_defaults: dict = Field(default_factory=dict)
 
     @model_validator(mode='after')
     def unique_cases(self):
+        if self.template_ids is None:self.template_ids=[self.template_id]
+        if not self.template_id:self.template_id=self.template_ids[0]
+        if any(not x or len(x)>36 for x in self.template_ids) or len(set(self.template_ids))!=len(self.template_ids) or self.template_id not in self.template_ids:
+            raise ValueError('select distinct available templates and a default in that list')
         if len({c.case_id for c in self.cases}) != len(self.cases):
             raise ValueError('duplicate case_id in manifest')
         for c in self.cases:
@@ -74,7 +79,7 @@ class SuiteCreate(BaseModel):
 
 
 def suite_view(suite):
-    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source','client_defaults')}
+    return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'template_ids', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source','client_defaults')}
 
 
 def batch_view(s, batch, jobs=None, progresses=None):
@@ -113,7 +118,7 @@ def resolve_batch(s, body, user, initial_defaults=None):
             raise HTTPException(404, 'suite not found')
         if suite.status != 'published' or suite.archived:
             raise HTTPException(409, 'suite must be published and not archived')
-        if body.cases or body.client.template_id != suite.template_id:
+        if body.cases or body.client.template_id not in suite.template_ids:
             raise HTTPException(400, 'suite run must use saved cases and client template')
         cases = [Case.model_validate({**c,'resources':{k:v for k,v in c.get('resources',{}).items() if v is not None}}) for c in suite.cases]
         defaults=suite.client_defaults

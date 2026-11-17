@@ -20,7 +20,7 @@ test('RoboTwin subset, drafts, publish, copies, export and archive through real 
   await page.getByRole('button',{name:'应用到选中 3 项'}).click();
   await expect(page.getByText(/共 3 项、6 个回合/)).toBeVisible();
   await page.getByLabel('集合名称',{exact:true}).fill(name);
-  await page.getByLabel('集合客户端模板',{exact:true}).selectOption(template);
+  await page.getByTestId('suite-client-'+template).check();
   await page.getByLabel('集合标签（逗号分隔）').fill('smoke,robotwin');
   await page.getByRole('button',{name:'保存草稿',exact:true}).click();
   await expect(page.getByRole('status')).toHaveText('草稿已保存。');
@@ -46,7 +46,7 @@ test('RoboTwin subset, drafts, publish, copies, export and archive through real 
   await expect(page.getByRole('status')).toHaveText('草稿已删除。');
   await page.getByLabel('导入集合 JSON / YAML',{exact:true}).setInputFiles({name:'roundtrip.json',mimeType:'application/json',buffer:Buffer.from(text)});
   await expect(page.getByText(/发现相同任务内容/)).toBeVisible();
-  await expect(page.getByLabel('集合客户端模板',{exact:true})).toHaveValue(template);
+  await expect(page.getByTestId('suite-client-'+template)).toBeChecked();
   // Finish with the original published test suite archived.
   const all=await request.get(base+'/api/v1/suites/manage?q='+name,{headers});
   for(const s of (await all.json()).items)await request.post(base+'/api/v1/suites/'+s.id+'/actions',{headers,data:{action:'archive',expected_revision:s.revision}});

@@ -282,6 +282,24 @@ class EvaluationSuite(Base):
     cases: Mapped[list] = mapped_column(JSON_TYPE)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
+    template_links: Mapped[list[SuiteClientTemplate]] = relationship(cascade='all, delete-orphan', lazy='selectin')
+
+    @property
+    def template_ids(self):
+        ids=[x.template_id for x in self.template_links]
+        return [self.template_id]+sorted(x for x in ids if x!=self.template_id)
+
+    @template_ids.setter
+    def template_ids(self, ids):
+        existing={x.template_id:x for x in self.template_links}
+        self.template_links=[existing[x] if x in existing else SuiteClientTemplate(template_id=x) for x in ids]
+
+
+class SuiteClientTemplate(Base):
+    __tablename__ = 'suite_client_templates'
+    suite_id: Mapped[str] = mapped_column(ForeignKey('evaluation_suites.id', ondelete='CASCADE'), primary_key=True)
+    template_id: Mapped[str] = mapped_column(ForeignKey('client_templates.id'), primary_key=True, index=True)
+
 
 class EpisodeRecord(Base):
     __tablename__ = 'episode_records'

@@ -48,7 +48,7 @@ class Submit(BatchSubmit):
     @model_validator(mode='after')
     def exclusive_sources(self):
         if self.new_suite and (self.suite_id or self.cases):raise ValueError('choose exactly one suite source')
-        if self.new_suite and self.new_suite.template_id!=self.client.template_id:raise ValueError('new suite must use selected client template')
+        if self.new_suite and self.client.template_id not in self.new_suite.template_ids:raise ValueError('new suite must use selected client template')
         if (self.client.service_mode=='managed')!=bool(self.services):raise ValueError('managed mode requires service definitions; other modes cannot deploy services')
         if len({x.key for x in self.services})!=len(self.services):raise ValueError('duplicate logical service key')
         return self

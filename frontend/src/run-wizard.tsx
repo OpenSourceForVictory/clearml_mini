@@ -7,7 +7,7 @@ import {TemplateCopy,CopyTemplate} from './template-copy';
 
 export type Template = {resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
 export type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>;service_keys?:string[];resources?:Record<string,unknown>};
-export type Suite = {id:string;name:string;version:string;template_id:string;cases:Case[];client_defaults?:Record<string,unknown>};
+export type Suite = {id:string;name:string;version:string;template_id:string;template_ids?:string[];cases:Case[];client_defaults?:Record<string,unknown>};
 type Reason = {code:string;category:string;message:string;action:string};
 type Preview = {case_checks?:{case_id:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];service_plan?:{key:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];effective_parameters?:{case_id:string;parameters:Record<string,unknown>;sources:Record<string,string>}[];pair_checks?:{case_id:string;pair_ready:boolean}[];endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:{slot_id:string;node_name:string;gpu_index:number;gpu_model:string;ready:boolean;reasons:Reason[]}[]};
 type Trial = {id:string;title:string;status:string;cases:{task_type?:string;job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
@@ -32,10 +32,11 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const [submittedId,setSubmittedId]=useState('');
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
-  const selectedSuite=suites.find(s=>s.id===suiteId),template=allTemplates.find(t=>t.id===templateId);
+  const selectedSuite=suites.find(s=>s.id===suiteId)||(launch?.suite.id===suiteId?launch.suite:undefined),template=allTemplates.find(t=>t.id===templateId);
   useEffect(()=>{if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
-  useEffect(()=>{if(launch){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(launch.suite.template_id);setCases(launch.suite.cases);setStep(0);}},[launch]);
+  function availableTemplate(s:Suite){return (s.template_ids||[s.template_id]).find(id=>allTemplates.some(t=>t.id===id))||s.template_id;}
+  useEffect(()=>{if(launch){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
   useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
   useEffect(()=>{
@@ -45,7 +46,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     void poll();const timer=setInterval(poll,2000);return()=>{active=false;clearInterval(timer);};
   },[trial?.id]);
   const update=(key:keyof typeof initial,value:string|number)=>setDraft(d=>({...d,[key]:value}));
-  function chooseSuite(id:string){setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(s.template_id);}}
+  function chooseSuite(id:string){setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
   function validateAddresses(){
     const keys=new Set<string>();
     for(const [i,e] of addresses.entries()){
@@ -123,7 +124,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={template?.task_type==='command'}/>
     </>}
     {step===1&&<><div className="submit-grid">
-      <Field label="客户端模板"><select required value={templateId} disabled={!!suiteId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
+      <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <Field label="每项总超时秒"><input type="number" required min={1} max={3600} value={draft.timeout_seconds} onChange={e=>update('timeout_seconds',Number(e.target.value))}/></Field></div>
       {template?.task_type==='command'&&<p className="hint">普通命令：每项执行一次，按退出码判定，不统计评测回合；自定义清单中的回合数不用于重复执行。默认无需推理服务。</p>}

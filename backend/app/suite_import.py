@@ -97,6 +97,7 @@ class Document(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=20)
     source: str = Field(default='', max_length=1000)
     client: ClientHint | None = None
+    clients: list[ClientHint] = Field(default_factory=list,max_length=32)
     defaults: Defaults = Field(default_factory=Defaults)
     cases: list = Field(min_length=1, max_length=100)
 

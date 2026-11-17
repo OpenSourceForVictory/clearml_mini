@@ -3,11 +3,11 @@ import {api} from './api';
 import './suite-manager.css';
 type Case={case_id:string;task_name:string;episodes:number;seed:number;parameters:Record<string,unknown>};
 type Template={id:string;name:string;version:string;task_type?:string};
-export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
+export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;template_ids?:string[];cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
   versions?:{id:string;version:string;status:string;archived:boolean}[]};
 type Summary=Omit<ManagedSuite,'cases'> & {task_count:number;total_episodes:number;latest_run:null|{id:string;title:string;status:string}};
-type Doc={schema_version:number;name:string;version:string;description:string;tags:string[];source:string;client?:{name:string;version:string};cases:Case[]};
-type Preview={valid:boolean;errors:{field:string;message:string}[];document?:Doc;task_count:number;total_episodes:number;template_id?:string;duplicates?:{id:string;name:string;version:string}[]};
+type Doc={schema_version:number;name:string;version:string;description:string;tags:string[];source:string;client?:{name:string;version:string};clients?:{name:string;version:string}[];cases:Case[]};
+type Preview={valid:boolean;errors:{field:string;message:string}[];document?:Doc;task_count:number;total_episodes:number;template_id?:string;template_ids?:string[];unmatched_clients?:{name:string;version:string}[];duplicates?:{id:string;name:string;version:string}[]};
 const empty=():Doc=>({schema_version:1,name:'',version:'1',description:'',tags:[],source:'',cases:[]});
 function Field({label,children}:{label:string;children:React.ReactNode}){
   const id=React.useId();return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
@@ -25,6 +25,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   const configRef=useRef<HTMLElement>(null),configId=useId();
   const [list,setList]=useState<Summary[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1);
   const [q,setQ]=useState(''),[tag,setTag]=useState(''),[client,setClient]=useState(''),[state,setState]=useState('active');
+  const [related,setRelated]=useState<string[]>([]);
   const [clientDefaults,setClientDefaults]=useState<Record<string,unknown>>({});
   const [doc,setDoc]=useState<Doc>(empty),[template,setTemplate]=useState(''),[editing,setEditing]=useState<ManagedSuite|null>(null);
   const [selected,setSelected]=useState<Set<number>>(new Set()),[taskQuery,setTaskQuery]=useState('');
@@ -44,11 +45,11 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   useEffect(()=>{let live=true;setRuns([]);if(editing)void api<typeof runs>('suites/'+editing.id+'/runs?page='+runPage).then(r=>{if(live)setRuns(r);}).catch(e=>{if(live)setError(String(e));});return()=>{live=false;};},[editing?.id,runPage]);
   function reset(value:Doc=empty(),t='',defaults:Record<string,unknown>={}){
     setConfigStarted(true);setConfigOpen(true);setClientDefaults(defaults);
-    setDoc(value);setTemplate(t);setEditing(null);setSelected(new Set());setPreview(null);setMessage('');setError('');setTaskQuery('');setRunPage(1);
+    setDoc(value);setTemplate(t);setRelated(t?[t]:[]);setEditing(null);setSelected(new Set());setPreview(null);setMessage('');setError('');setTaskQuery('');setRunPage(1);
   }
   function setCases(cases:Case[]){setDoc(old=>({...old,cases}));setPreview(null);}
   async function load(id:string){
-    try{const s=await api<ManagedSuite>('suites/'+id);reset({schema_version:1,name:s.name,version:s.version,description:s.description,tags:s.tags,source:s.source,cases:s.cases},s.template_id,s.client_defaults||{});setEditing(s);}
+    try{const s=await api<ManagedSuite>('suites/'+id);reset({schema_version:1,name:s.name,version:s.version,description:s.description,tags:s.tags,source:s.source,cases:s.cases},s.template_id,s.client_defaults||{});setEditing(s);setRelated(s.template_ids||[s.template_id]);}
     catch(e){setError(String(e));}
   }
   async function check(value=doc){
@@ -58,7 +59,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     setBusy(true);setError('');
     try{if(file.size>1048576)throw Error('文件不能超过 1 MiB');
       const result=await api<Preview>('suites/preview','POST',{content:await file.text()});setPreview(result);setConfigStarted(true);setConfigOpen(true);
-      if(result.valid&&result.document){reset(result.document,result.template_id||'');setPreview(result);setMessage('文件已载入预览，尚未保存。请确认客户端及任务。');}
+      if(result.valid&&result.document){reset(result.document,result.template_id||result.template_ids?.[0]||'');setRelated(result.template_ids?.length?result.template_ids:result.template_id?[result.template_id]:[]);setPreview(result);setMessage('文件已载入预览，尚未保存。请确认客户端及任务。'+(result.unmatched_clients?.length?'未匹配模板：'+result.unmatched_clients.map(t=>t.name+'/'+t.version).join('、')+'，请手动选择可用版本。':''));}
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
   async function preset(){
@@ -71,12 +72,20 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     try{
       const result=await check();if(!result.valid||!result.document)return;
       if(!template)throw Error('请选择当前账号可用的客户端模板');
-      const {schema_version,client:hint,...values}=result.document;
-      const body={...values,client_defaults:clientDefaults,template_id:template,status:published?'published':'draft',...(editing?{expected_revision:editing.revision}:{})};
+      const {schema_version,client:hint,clients:hints,...values}=result.document;
+      const body={...values,client_defaults:clientDefaults,template_id:template,template_ids:related.length?related:[template],status:published?'published':'draft',...(editing?{expected_revision:editing.revision}:{})};
       const saved=await api<ManagedSuite>('suites'+(editing?'/'+editing.id:''),editing?'PUT':'POST',body);
       setEditing(saved);setDoc({...result.document,cases:saved.cases});setMessage(published?'集合版本已发布。':'草稿已保存。');
       await refresh();onSaved();if(run)onRun(saved);
     }catch(e){setError(String(e));}finally{setBusy(false);}
+  }
+  async function saveRelations(){
+    if(!editing)return;setBusy(true);setError('');
+    try{
+      const ids=template&&related.includes(template)?[template,...related.filter(x=>x!==template)]:related;
+      const saved=await api<ManagedSuite>('suites/'+editing.id+'/client-templates','PUT',{expected_revision:editing.revision,template_ids:ids});
+      setEditing(saved);setTemplate(saved.template_id);setRelated(saved.template_ids||[saved.template_id]);setMessage('可用客户端模板已保存，任务清单和已有运行不变。');await refresh();onSaved();
+    }catch(e){setError(String(e));}finally{setBusy(false)}
   }
   async function action(action:string){
     if(!editing)return;setBusy(true);setError('');
@@ -93,6 +102,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   }
   function copy(newVersion:boolean){
     const old=editing;reset({...doc,name:newVersion?doc.name:doc.name+' 副本',version:newVersion?doc.version+'-next':'1'},template,clientDefaults);
+    setRelated([...related]);
     setMessage(newVersion?'已复制为新版本草稿，请确认版本号。':'已复制到新集合草稿，尚未保存。');
     if(old)setSelected(new Set());
   }
@@ -112,7 +122,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
       </div>
       <div className="suite-list-scroll" role="region" aria-label="集合列表，可横向滚动" tabIndex={0}><table className="suite-list"><thead><tr><th scope="col">集合名称 / 版本</th><th scope="col">状态</th><th scope="col">客户端模板</th><th scope="col">任务 / 回合</th><th scope="col">最近运行</th><th scope="col">操作</th></tr></thead>
         <tbody>{list.map(s=><tr key={s.id} aria-label={'集合 '+s.name+' / '+s.version}><th scope="row"><span className="suite-ellipsis suite-name" title={s.name}>{s.name}</span><small className="suite-ellipsis" title={s.version+' · '+s.tags.join('、')}>{s.version}{s.tags.length?' · '+s.tags.join('、'):''}</small></th><td><span className={'suite-status '+(s.archived?'archived':s.status)}>{s.archived?'已归档':s.status==='draft'?'草稿':'已发布'}</span></td>
-          <td><span className="suite-ellipsis" title={templates.find(t=>t.id===s.template_id)?.name||s.template_id}>{templates.find(t=>t.id===s.template_id)?.name||'模板不可用'}</span><small>{templates.find(t=>t.id===s.template_id)?.version||'—'}</small></td>
+          <td><span className="suite-ellipsis" title={templates.find(t=>t.id===s.template_id)?.name||s.template_id}>{(s.template_ids||[s.template_id]).map(id=>{const t=templates.find(t=>t.id===id);return t?t.name+' / '+t.version:'模板不可用'}).join('、')}</span><small>{(s.template_ids||[s.template_id]).length} 个可用模板</small></td>
           <td>{s.task_count} 项 / {s.total_episodes} 回合</td><td><span className="suite-ellipsis" title={s.latest_run?.title}>{s.latest_run?.title||'尚未运行'}</span>{s.latest_run&&<small>{({PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',CANCELLED:'已取消'} as Record<string,string>)[s.latest_run.status]||s.latest_run.status}</small>}</td>
           <td><button aria-label={'查看 '+s.name+' / '+s.version} disabled={busy} onClick={()=>{if(editing?.id===s.id){setConfigOpen(true);setConfigStarted(true);}else void load(s.id);}}>查看配置</button></td></tr>)}</tbody></table></div>
       {!list.length&&<p>没有符合条件的集合。</p>}
@@ -128,17 +138,21 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
           <button disabled={busy} onClick={()=>void action(editing.archived?'restore':'archive')}>{editing.archived?'恢复集合':'归档集合'}</button>
           {editing.status==='draft'&&<button disabled={busy} onClick={()=>{if(window.confirm('删除此草稿？此操作不可恢复。'))void action('delete');}}>删除草稿</button>}
           <button disabled={busy} onClick={()=>{if(window.confirm('重新载入将放弃本页未保存修改，继续？'))void load(editing.id);}}>重新载入最新版本</button>
-          {editing.status==='published'&&!editing.archived&&<button className="primary" disabled={!templates.some(t=>t.id===editing.template_id)} onClick={()=>onRun(editing)}>运行此集合</button>}
+          {editing.status==='published'&&!editing.archived&&<button className="primary" disabled={!templates.some(t=>(editing.template_ids||[editing.template_id]).includes(t.id))} onClick={()=>onRun(editing)}>运行此集合</button>}
         </div>
         {!!editing.versions?.length&&<p>同名版本：{editing.versions.map(v=><button key={v.id} onClick={()=>void load(v.id)}>{v.version}{v.archived?'（归档）':''}</button>)}</p>}
       </>}
       {locked&&<p className="hint">已发布或归档的清单只读。编辑内容请创建新版本；归档草稿可以恢复后修改。</p>}
+      <section aria-label="可用客户端模板" className="panel">
+        <h3>可用客户端模板</h3><p>勾选此集合允许使用的客户端模板，运行时选择其中一个。至少保留一个；保存时检查参数兼容性，业务是否实现任务名仍需试跑确认。</p>
+        <fieldset disabled={busy||!!editing?.archived}>{[...templates,...related.filter(id=>!templates.some(t=>t.id===id)).map(id=>({id,name:'不可用模板',version:id}))].map(t=><label key={t.id} style={{display:'block',margin:'8px 0'}}><input data-testid={'suite-client-'+t.id} type="checkbox" checked={related.includes(t.id)} onChange={e=>{const next=e.target.checked?[...related,t.id]:related.filter(id=>id!==t.id);setRelated(next);if(!next.includes(template))setTemplate(next[0]||'')}}/> {t.name} / {t.version}</label>)}</fieldset>
+        {editing&&<><button type="button" disabled={busy||editing.archived||!related.length} onClick={()=>void saveRelations()}>保存可用客户端模板</button><p className="hint">已发布集合也可修改可用模板。此按钮仅保存模板选择，不保存下方任务清单或其他草稿修改。</p></>}
+      </section>
       <form onSubmit={e=>{e.preventDefault();void save(false,false);}}>
         <fieldset disabled={locked||busy}>
           <div className="submit-grid">
             <Field label="集合名称"><input required maxLength={200} value={doc.name} onChange={e=>setDoc({...doc,name:e.target.value})}/></Field>
             <Field label="集合版本"><input required maxLength={100} value={doc.version} onChange={e=>setDoc({...doc,version:e.target.value})}/></Field>
-            <Field label="集合客户端模板"><select required value={template} onChange={e=>setTemplate(e.target.value)}><option value="">请选择可用客户端</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
             <Field label="集合标签（逗号分隔）"><input value={doc.tags.join(',')} onChange={e=>setDoc({...doc,tags:e.target.value.split(',')})}/></Field>
           </div>
           {ordinary&&<p className="hint">普通命令集合：每项任务执行一次，不统计评测回合。保存时回合兼容字段固定为 1，业务参数与种子仍可传递。</p>}

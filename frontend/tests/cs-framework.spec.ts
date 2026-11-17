@@ -16,7 +16,7 @@ test('save reusable suite and run with concurrency; view partial episode results
   await page.getByRole('button',{name:'登录',exact:true}).click();
   await page.getByRole('button',{name:'管理设置',exact:true}).click();
   await page.getByRole('tab',{name:'评测集合管理',exact:true}).click();
-  await page.getByRole('tabpanel',{name:'评测集合管理',exact:true}).getByRole('combobox',{name:'集合客户端模板',exact:true}).selectOption(t.id);
+  await page.getByRole('tabpanel',{name:'评测集合管理',exact:true}).getByTestId('suite-client-'+t.id).check();
   await page.getByLabel('集合名称',{exact:true}).fill('browser-suite-'+Date.now());
   for(let i=0;i<2;i++){
     await page.getByRole('tabpanel',{name:'评测集合管理',exact:true}).getByRole('button',{name:'添加任务',exact:true}).click();
