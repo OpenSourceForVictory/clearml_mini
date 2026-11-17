@@ -40,3 +40,17 @@ issues: [existing_installation_requires_identity_migration]
 定向分支覆盖测量范围为 onboarding/docker_prepare.py、worker/resource_limits.py、worker/host_identity.py，综合 coverage 指标 93%；这不是全项目覆盖率。首次回归保留旧 v2-only 断言失败，更新断言后重跑通过；补测过程中出现测试文本转义错误，修正后重新收集执行。原始报告保留于 .runtime/cgroup-final-tests*.log 与 .runtime/cgroup-coverage.json。
 
 本变更未增加旧自定义目录迁移能力，原 NPU 节点预检阻塞继续保留，不能把 cgroup 探针成功或控制面发布当成重新纳管成功。
+
+## 本机控制面发布验收
+
+代码 9a79e9a 已发布到本机 18000：API 镜像 mini-eval-api:cgroup-0171，独立容器执行器 mini-eval-onboarding:cgroup-0171；保留现有显式 socket 路由，同时重启实际接入的用户级 mini-eval-onboarding.service。发布前无活动/待清理执行、无活动纳管操作；备份数据库、镜像身份和 Compose overlay，未修改 schema、机器账号或节点程序。
+
+API 与执行器健康检查通过；通过真实 API 下载节点包验证 SHA-256、Worker 0.17.1、runner 构建材料及 root 探针源码。部署环境文件中的登录密码与当前账号不匹配（401），没有重置账号；后续管理接口验收使用仅在内存保存的五分钟维护凭据，不将其记录或提交。
+
+通过已发布 API 的 SSH 环境检查接口，以 root、已有 Python 3.12 和全部八张 NPU 对真实节点执行重新纳管预检：
+- 返回 cgroup_mode=v1-or-hybrid、device_count=8。
+- 状态 CHECK_FAILED，唯一原因 existing_installation_requires_identity_migration。
+- 不再返回 cgroup_v2_required。
+- 未确认安装、未轮换节点凭据、未替换节点服务；该旧目录的完整重新纳管仍未通过。
+
+镜像内的容器执行器也确认已移除 root 的 v2-only 拦截；此节点实际预检经过的是保留的宿主机执行器 socket。原始结果和回退材料仅保存于 .runtime/cgroup-release/。其他机器上的独立平台部署未同步，不能认为复制仓库或本机发布会更新它们。
