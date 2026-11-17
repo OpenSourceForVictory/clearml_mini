@@ -52,6 +52,20 @@ def test_gpu_shared_scheduling_requires_explicit_backend_when_advertised():
  assert eligibility_codes(slot,pool,job,[],now())==[]
 
 
+@pytest.mark.parametrize('kind',['gpu','npu'])
+def test_external_device_memory_is_not_reallocated_to_shared_tasks(kind):
+ slot=N(disk_min_free_mb=None,protocol_version=14,execution_modes=['docker'],client_images=['img'],accelerator_type=kind,
+        accelerator_backends=[f'{kind}:docker:shared'],gpu_model='device',telemetry_at=now(),vram_mb=48*1024,
+        free_vram_mb=28*1024,gpu_utilization=10)
+ job=N(client_spec={'template':{'image':'img'},'resources':{'accelerator_type':kind}},required_gpu_model=None,
+       gpu_mode='shared',requested_vram_gb=20)
+ held=[N(exclusive=False,reserved_vram_mb=20*1024,started_at=now())]
+ pool=N(allow_shared=True,max_tasks_per_gpu=4,vram_reserve_gb=0,max_gpu_utilization=100)
+ assert eligibility_codes(slot,pool,job,held,now())==['vram_busy']
+ slot.free_vram_mb=48*1024
+ assert eligibility_codes(slot,pool,job,held,now())==[]
+
+
 def test_npu_host_properties_never_allow_other_cards_or_root(monkeypatch):
  from worker import npu_host
  monkeypatch.setattr(npu_host,'approved',lambda cfg:({'host':{'approved':True,'user':'service'}},'/dev/davinci2'))

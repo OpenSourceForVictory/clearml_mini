@@ -134,11 +134,12 @@ def eligibility_codes(slot, pool, job, held, at):
     margin = pool.vram_reserve_gb * 1024
     if requested > slot.vram_mb - margin:
         return ['vram_capacity']
-    if requested + sum(r.reserved_vram_mb for r in held) > slot.vram_mb - margin:
+    committed = requested + sum(r.reserved_vram_mb for r in held)
+    if committed > slot.vram_mb - margin:
         return ['vram_busy']
-    # RUNNING telemetry already includes actual usage. Unstarted reservations do not.
-    starting = sum(r.reserved_vram_mb for r in held if r.started_at is None)
-    if requested + starting > slot.free_vram_mb - margin:
+    # Without per-task usage attribution, free memory can also belong to external
+    # processes. Charge all platform reservations against observed free memory.
+    if committed > slot.free_vram_mb - margin:
         return ['vram_busy']
     return [] if job.gpu_mode == 'exclusive' or slot.gpu_utilization < pool.max_gpu_utilization else ['gpu_utilization']
 

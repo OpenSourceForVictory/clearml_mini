@@ -246,16 +246,18 @@ def test_mixed_vendor_inventory_preserved_without_admitting_npu_as_gpu(env):
         assert slot.free_vram_mb==40000
 
 
-def test_host_memory_uses_both_budget_and_unstarted_reservations():
+def test_host_memory_accounts_for_external_use_and_all_platform_reservations():
     from backend.app.node_agents import host_codes
     from backend.app.core import now
     values=samples()
     values['host']['values']['memory_available_mb']=2048
     worker=SimpleNamespace(connection={'agent':{'resource_protocol':1,'seen_at':now().isoformat(),'samples':values}})
     pool=SimpleNamespace(cpu_per_job=1,ram_gb_per_job=1)
-    assert host_codes(worker,pool,1,4,pending_ram=0)==[]  # running usage already in available
+    assert host_codes(worker,pool,1,4,pending_ram=0)==['node_ram']
     assert host_codes(worker,pool,1,4,pending_ram=2)==['node_ram']
     assert host_codes(worker,pool,1,32,pending_ram=0)==['node_ram']
+    values['host']['values']['memory_available_mb']=8192
+    assert host_codes(worker,pool,1,4,pending_ram=0)==[]
 
 
 def test_worker_supervisor_heartbeats_while_storage_probe_is_blocked(tmp_path,monkeypatch):

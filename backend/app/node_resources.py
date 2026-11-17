@@ -71,9 +71,9 @@ def host_codes(w, pool, cpu, ram, at=None, pending_ram=0):
     except (KeyError, TypeError, ValueError): return ['node_telemetry_stale']
     codes = []
     if cpu + pool.cpu_per_job > cores: codes.append('node_cpu')
-    # Total commitments protect the capacity budget. Actual available memory
-    # already reflects running allocations; add only unstarted reservations.
+    # The sample includes external processes. Without per-task usage attribution,
+    # charge all platform commitments against it, including running tasks.
     if ((ram + pool.ram_gb_per_job) * 1024 > total
-            or (pending_ram + pool.ram_gb_per_job) * 1024 > available):
+            or (ram + pool.ram_gb_per_job) * 1024 > available):
         codes.append('node_ram')
     return codes

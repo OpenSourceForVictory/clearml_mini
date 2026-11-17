@@ -119,6 +119,26 @@ def test_telemetry_stale_high_usage_and_low_memory(env):
     assert tick(main.SessionLocal) == 0
 
 
+def test_running_reservation_and_external_memory_block_second_share(env):
+    main, c, _ = env
+    pool, slots, tokens = setup_gpu(env, 1)
+    first = submit_gpu(env, pool, requested_vram_gb=20)
+    assert tick(main.SessionLocal) == 1
+    task = c.post(f'/api/v1/worker/slots/{slots[0]}/claim', headers=tokens[0]).json()['task']
+    assert task['job_id'] == first
+    assert c.post('/api/v1/worker/heartbeat', headers=tokens[0], json={
+        'slot_id': slots[0], 'execution_id': task['execution_id'], 'started': True}).status_code == 200
+    assert c.post('/api/v1/worker/heartbeat', headers=tokens[0], json={
+        'slot_id': slots[0], 'telemetry': {'free_vram_mb': 28*1024, 'gpu_utilization': 10}}).status_code == 200
+    second = submit_gpu(env, pool, requested_vram_gb=20)
+    assert tick(main.SessionLocal) == 0
+    with main.SessionLocal() as s:
+        assert s.get(Job, second).status == 'PENDING'
+    assert c.post('/api/v1/worker/heartbeat', headers=tokens[0], json={
+        'slot_id': slots[0], 'telemetry': {'free_vram_mb': 48*1024, 'gpu_utilization': 10}}).status_code == 200
+    assert tick(main.SessionLocal) == 1
+
+
 def test_low_utilization_preferred_and_starting_memory_charged(env, monkeypatch):
     main, c, _ = env
     pool, slots, tokens = setup_gpu(env)

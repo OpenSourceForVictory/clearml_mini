@@ -11,9 +11,12 @@
 | SDK 与直接协议 | runner/sdk.py、command_sdk.py、episode_contract.py、cs_entry.py；examples/integration | Worker 事件解析、API 回合校验、final 和退出码 |
 | 机器和节点程序 | frontend/src/administration.tsx、node-agent.tsx、ssh-onboarding.tsx；docs/node-agent.md、node-reenrollment.md | 心跳/遥测、期望与生效配置、排空、升级 |
 | 资源池和调度 | backend/app/scheduling.py、job_resources.py、node_resources.py、orchestration_scheduler.py；docs/gpu-scheduling.md、resource-pool-membership.md | 服务/客户端共同预约、CPU/RAM/显存、准入与清理 |
+
 | 服务运行和探测 | runner/service_entry.py、readiness_contract.py；frontend/src/readiness-editor.tsx；docs/service-readiness.md | 端口、网络、就绪门槛、服务代次及客户端关联 |
 | 宿主机和容器目录 | docs/host-execution.md、directory-mounts.md、worker-setup.md | approved 环境、cgroup 委派、挂载能力、磁盘门槛 |
 | 运行结果 | frontend/src/batch-history.tsx、batch-detail.tsx；docs/batch-monitoring.md、batch-reports.md | 重试历史、真实回合分母、取消与删除语义 |
+
+非平台资源占用准入：scheduling.eligibility_codes 与 node_resources.host_codes 分别以设备显存、主机内存的总量及最新实测剩余量限制新申请加全部未清理平台预约。没有按任务实际用量归因时，此规则会重复计入已运行任务的实际占用，偏向安全；不要将 `total-free-reserved` 解释成精确的非平台用量。待分配任务在 PENDING 队列中，尚无具体卡位预约。预检和调度共用准入，Worker 启动前仍复查设备剩余量。见 docs/gpu-scheduling.md、docs/template-resource-requirements.md；回归 test_gpu_sharing.py、test_accelerator_resources.py、test_resource_reporting.py。
 
 ## 验证与发布
 
