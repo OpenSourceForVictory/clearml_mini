@@ -27,3 +27,10 @@
 #### Scenario: Docker 模板
 - **WHEN** 模板使用 Docker 执行
 - **THEN** 不读取宿主机登录环境，镜像环境行为保持不变
+
+### Requirement: 节点组件升级范围可见
+升级界面 SHALL 明确 Worker、Runner 和 Agent 的更新范围，不把节点程序升级描述成业务镜像或驱动升级。
+
+#### Scenario: Runner 更新说明
+- **WHEN** 用户查看节点版本升级
+- **THEN** 页面说明宿主机 Runner 和新容器平台适配器随节点包更新，旧镜像内置 Runner 需另行重建；Agent 仅在已配置托管时一并更新

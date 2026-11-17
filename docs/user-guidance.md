@@ -73,3 +73,5 @@
 计算资源指南增加全部、客户端、服务端分类与双角色去重说明；普通用户仍只看计数，管理员查看角色明细。验证见 [资源角色视图记录](validation/resource-role-views/README.md)。
 
 机器指南新增后台探测依赖、300 秒回连窗口和“继续回连验收”说明，详见 [节点重新纳管](node-reenrollment.md#回连超时与可选探测依赖)。
+
+版本升级帮助明确节点组件包覆盖 Worker、Runner 和已配置托管的 Agent，区分平台容器适配器与旧镜像内置 Runner；界面和升级操作用例见 worker-upgrades.spec.ts。

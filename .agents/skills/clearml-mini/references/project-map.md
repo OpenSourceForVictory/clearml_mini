@@ -107,3 +107,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software，enrollment/worker_upgrades 仅豁免可选 service_readiness_v1 版本验收，业务准入保持能力门槛。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。
 
 宿主机首次握手恢复（Worker 0.18.1）：client.execute 在 started=false 的首次心跳 503 时有界重试，原租约与停止信号持续有效；调度 tick 对已读取候选报告采用读取完成时刻检查，显式 at 保持固定，未来和过期数据仍拒绝。回归 test_worker_execution_recovery.py、test_worker_service_execution.py、test_scheduling.py、test_freshness.py；现场证据见 host-shell-episode-launch 验证记录。
+
+节点组件升级界面：worker-upgrades.tsx 统一说明 Worker/Runner/Agent；发布标签沿用 Worker 版本，Runner 无独立版本，Agent 托管有条件。运行适配器复制新版 Runner，旧镜像内置 Runner 需重建。见 docs/worker-upgrades.md、指南 upgrades、worker-upgrades.spec.ts；不要把节点升级描述成镜像或驱动更新。

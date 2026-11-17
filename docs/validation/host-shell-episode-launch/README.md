@@ -51,3 +51,5 @@ OpenSpec：`host-shell-episode-launch`。本次在仓库代码上运行定向测
 核心恢复、Worker service、scheduling、freshness 定向插桩 65 passed。使用项目 coveragerc，原始局部报告 `/tmp/host-handshake-coverage.json`：worker/client.py 行 375/637、分支 112/266；scheduling.py 行 221/268、分支 73/128。未运行全仓库门禁，未合并子进程；不宣称项目覆盖率门槛达标。
 
 共享调度、编排、Worker 升级与宿主机 shell/episode 扩展回归：55 passed（134 秒）；与核心组相互独立，本轮两组共 120 项通过。
+
+组件升级界面说明补充：单独列出 Worker、Runner、Agent 更新范围，区分宿主机 Runner、容器运行适配器和旧镜像内置 Runner；Agent 托管条件、版本标签与发布摘要语义明确。TypeScript 检查、生产构建及升级流程 Playwright 1 项通过（mock 接口）；前端未插桩，不宣称覆盖率。镜像 component-upgrade-ui-20261118 仅更新界面，无数据库或节点程序变更。
