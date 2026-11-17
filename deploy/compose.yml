@@ -39,6 +39,23 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  onboarding:
+    restart: unless-stopped
+    image: mini-eval-onboarding:dev
+    build:
+      context: ..
+      dockerfile: onboarding/Dockerfile
+    volumes:
+      - onboarding_socket:/run/mini-eval-managed-onboarding
+      - onboarding_state:/var/lib/mini-eval-onboarding
+    healthcheck:
+      test: ["CMD", "python", "-m", "onboarding.healthcheck", "/run/mini-eval-managed-onboarding/control.sock"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
   api:
     restart: unless-stopped
     image: mini-eval-api:dev
@@ -50,7 +67,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       RUNNER_IMAGE: ${RUNNER_IMAGE:-mini-eval-runner:dev}
       ROBOTWIN_RENDER_ENABLED: ${ROBOTWIN_RENDER_ENABLED:-0}
-      ONBOARDING_SOCKET: ${ONBOARDING_SOCKET:-}
+      ONBOARDING_SOCKET: ${ONBOARDING_SOCKET:-/run/mini-eval-managed-onboarding/control.sock}
       MAX_ACTIVE_GLOBAL: ${MAX_ACTIVE_GLOBAL:-2}
       MAX_ACTIVE_PER_USER: ${MAX_ACTIVE_PER_USER:-2}
       MAX_PENDING_PER_USER: ${MAX_PENDING_PER_USER:-20}
@@ -59,6 +76,7 @@ services:
       LOST_WORKER_GRACE_SECONDS: ${LOST_WORKER_GRACE_SECONDS:-30}
       EXECUTION_TIMEOUT_SECONDS: ${EXECUTION_TIMEOUT_SECONDS:-3600}
     volumes:
+      - onboarding_socket:/run/mini-eval-managed-onboarding:ro
       - "${ONBOARDING_SOCKET_DIR:-../.runtime/onboarding-socket}:/run/mini-eval-onboarding"
     ports:
       - "${API_BIND_HOST:-127.0.0.1}:${API_BIND_PORT:-8000}:8000"
@@ -67,7 +85,11 @@ services:
       interval: 5s
       retries: 10
     depends_on:
+      onboarding:
+        condition: service_healthy
       bootstrap:
         condition: service_completed_successfully
 volumes:
+  onboarding_socket:
+  onboarding_state:
   pgdata:

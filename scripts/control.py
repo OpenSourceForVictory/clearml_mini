@@ -52,7 +52,7 @@ def main():
         env.write_text('\n'.join(lines)+f'\nAPI_BIND_HOST={host}\n')
     command = compose() + ['--env-file', str(env), '-p', 'mini-eval', '-f', str(ROOT / 'deploy/compose.yml')]
     if args.action == 'up':
-        subprocess.run(command + ['build', 'api'], check=True, cwd=ROOT)
+        subprocess.run(command + ['build', 'api', 'onboarding'], check=True, cwd=ROOT)
         subprocess.run(command + ['up', '-d', '--wait'], check=True, cwd=ROOT)
         print(f'Control node ready. Open the API_BIND_PORT configured in {env}.')
     elif args.action == 'down':

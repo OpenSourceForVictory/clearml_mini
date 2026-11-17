@@ -18,3 +18,25 @@ test('SSH wizard checks identity then environment before installing and shows re
  await page.reload();await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'注册新机器',exact:true}).click();await expect(page.getByText('等待组件回连',{exact:true})).toBeVisible();
  operation={...operation,state:'SUCCEEDED',stage:'COMPLETE'};await expect(page.getByText('纳管完成。可在资源池管理中分配 GPU。',{exact:true})).toBeVisible({timeout:7000});
 });
+
+test('executor disconnect disables checks and reconnect preserves form',async({page})=>{
+ let ready=true;
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');
+  if(p==='admin/ssh-onboarding'){
+   await route.fulfill({status:ready?200:503,json:ready?{available:true,operations:[]}:{detail:'SSH onboarding executor is unavailable'}});return;
+  }
+  await route.fulfill({json:p==='auth/me'?{username:'admin',role:'admin'}:[]});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'注册新机器',exact:true}).click();
+ await expect(page.getByRole('button',{name:'检查连接与环境',exact:true})).toBeEnabled();
+ await page.getByLabel('SSH 机器名称').fill('keep-my-node');
+ ready=false;await page.getByRole('button',{name:'重新检测纳管服务'}).click();
+ await expect(page.getByRole('button',{name:'检查连接与环境',exact:true})).toBeDisabled();
+ await expect(page.getByText('暂时无法连接纳管服务，平台正在自动重新检测；已填写信息保留。')).toBeVisible();
+ ready=true;
+ await expect(page.getByRole('button',{name:'检查连接与环境',exact:true})).toBeEnabled({timeout:7000});
+ await expect(page.getByLabel('SSH 机器名称')).toHaveValue('keep-my-node');
+ await expect(page.getByText('暂时无法连接纳管服务，平台正在自动重新检测；已填写信息保留。')).toHaveCount(0);
+});

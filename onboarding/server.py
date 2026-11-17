@@ -25,7 +25,8 @@ class Handler(BaseHTTPRequestHandler):
             if not 0<length<=65536:raise Rejected('executor_request_too_large')
             body=json.loads(self.rfile.read(length));actor=body['actor'];ops=self.server.operations
             if not isinstance(actor,str) or not actor:raise Rejected('actor_required')
-            if self.path=='/list':value=ops.list(actor)
+            if self.path=='/health':value={'ready':True}
+            elif self.path=='/list':value=ops.list(actor)
             elif self.path=='/check':value=ops.start(actor,body['form'],body['authorization'])
             elif self.path=='/confirm':value=ops.confirm(body['id'],actor)
             elif self.path=='/trust':value=ops.trust(body['id'],actor,body['fingerprint'])

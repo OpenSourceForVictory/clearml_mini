@@ -41,7 +41,7 @@ def test_bootstrap_update_and_stop_preserve_data(deployment,capsys):
     original=dict(line.split('=',1) for line in env.read_text().splitlines())
     assert original['API_BIND_HOST']=='[::1]' and original['API_BIND_PORT']=='18000'
     assert original['ADMIN_PASSWORD'] not in capsys.readouterr().out
-    assert calls[0][0][-2:]==['build','api'] and calls[1][0][-3:]==['up','-d','--wait']
+    assert calls[0][0][-3:]==['build','api','onboarding'] and calls[1][0][-3:]==['up','-d','--wait']
     invoke('up','--port','18001','--bind-host','127.0.0.1')
     updated=dict(line.split('=',1) for line in env.read_text().splitlines())
     assert updated['ADMIN_PASSWORD']==original['ADMIN_PASSWORD'] and updated['API_BIND_PORT']=='18001'
