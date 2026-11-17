@@ -37,6 +37,24 @@ test('choose platform and business parameters; reject duplicate targets before s
  await rows.nth(1).getByLabel('程序接收的参数名').fill('--scene');await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
  expect(writes[0].body.platform_bindings).toEqual([{source:'task.task_name',target:'argv',name:'--task',encoding:'literal'}]);expect(writes[0].body.parameter_schema.fields.scene.binding).toMatchObject({target:'argv',name:'--scene'});
 });
+test('existing business binding remains selectable and opens its mapping without duplication',async({page})=>{
+ const writes=await setup(page);await page.getByRole('button',{name:'复制新版本',exact:true}).click();await page.getByLabel('版本',{exact:true}).fill('2');
+ const picker=page.getByLabel('选择要传递的参数');await picker.selectOption({label:'scene（已映射）'});
+ await page.getByRole('button',{name:'查看已有映射'}).click();
+ const mapped=page.getByRole('group',{name:/参数映射 .*业务参数：scene/});await expect(mapped).toBeFocused();
+ await mapped.getByLabel('程序接收的参数名').fill('SCENE_NAME');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.parameter_schema.fields.scene.binding).toMatchObject({target:'env',name:'SCENE_NAME'});
+ expect(writes[0].body.platform_bindings).toHaveLength(1);
+});
+test('business mapping picker explains why no business fields are available',async({page})=>{
+ await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await expect(page.getByText('要映射业务参数，请先在上方“业务参数”中启用类型化业务参数并添加字段。')).toBeVisible();
+ await page.getByLabel('启用类型化业务参数').check();
+ await expect(page.getByText('请先在上方添加业务字段并填写字段名称。')).toBeVisible();
+ await page.getByRole('button',{name:'添加业务字段'}).click();await page.getByLabel('字段名称',{exact:true}).fill('scene');
+ await expect(page.getByLabel('选择要传递的参数').locator('option',{hasText:'scene'})).toHaveCount(1);
+});
 test('directory selection and host/server explanations work at narrow width',async({page})=>{
  await setup(page);await page.setViewportSize({width:390,height:844});await page.getByRole('tab',{name:'注册新模板',exact:true}).click();await page.getByRole('button',{name:'添加目录挂载'}).click();
  await page.getByLabel('挂载 1 来源类型').selectOption('assets');await page.getByLabel('挂载 1 逻辑名称').fill('dataset');await expect(page.getByLabel('只读挂载 1')).toBeDisabled();

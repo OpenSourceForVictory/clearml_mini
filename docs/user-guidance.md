@@ -6,6 +6,8 @@
 
 内容唯一源为 `frontend/src/guide-content.ts`，呈现为 `user-guide.tsx`；顶层页面在 `main.tsx`，管理分类在 `administration.tsx`，嵌套功能页由 `navigation.tsx` 与 `functionGuideTopics` 显式映射。模板表单、服务实例提供专用入口。
 
+模板“业务参数”需先启用类型化字段并填写字段名称，才会出现在“动态参数映射”的业务参数列表。已有绑定仍可选择，并定位到下方的现有映射编辑，不会复制第二份；模板环境变量直接传给业务程序，不作为业务字段来源。具体操作见[运行模板注册说明](runtime-templates.md)。
+
 注册机器时的共享批准说明与实际表单同步：SSH 纳管在认证字段前显示 GPU/NPU 类型、设备编号和共享选择；手动接入先选择设备类型及共享批准，再生成并下载含对应字段的节点凭据。针对性验证包括 `ssh-onboarding.spec.ts`、`memberships.spec.ts`（mock API 浏览器流程）和系统安装器共享字段用例；这些用例不代表真实 GPU/NPU 节点安装或业务任务验收。完整项目覆盖率本次未运行。
 
 提交预检确认页现列出客户端所需宿主机逻辑环境或容器镜像，以及托管服务的资源池和服务端逐卡阻塞原因。`run-wizard.spec.ts` 使用 mock API 验证显示和建议；`test_preflight.py`、`test_orchestrations.py` 验证只读诊断及节点原因，不代表真实服务部署、GPU/NPU 负载或模型评测。完整覆盖率仍需按项目统一口径另行运行。
