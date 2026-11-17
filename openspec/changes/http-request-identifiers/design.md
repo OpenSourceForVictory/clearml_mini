@@ -1,0 +1,1 @@
+保留原生 UUID 优先路径，回退使用浏览器 getRandomValues 生成 16 字节并设置 RFC UUID v4 版本/variant 位。请求 ID 用于幂等与关联，不是认证令牌。运行向导保留请求体未变化时复用 ID 的原语义。浏览器测试明确删除 randomUUID 验证 SSH 请求实际发出，并回归向导重试。

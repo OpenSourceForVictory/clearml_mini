@@ -1,3 +1,4 @@
+import {requestId} from './request-id';
 import React, {useEffect, useRef, useState} from 'react';
 import {ResourceContract,ResourceRequest} from './resource-requirements';
 import {api} from './api';
@@ -88,7 +89,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       const selected=preview.cases.find(c=>c.case_id===trialCase)||preview.cases[0];
       const payload=isTrial?{...full,title:('[试跑] '+(selectedSuite?selectedSuite.name+'/'+selectedSuite.version+' ':'')+draft.title).slice(0,200),suite_id:null,new_suite:null,max_concurrent:1,cases:[{...selected,episodes:1}]}:full;
       const kind=isTrial?'trial':'full',serialized=JSON.stringify(payload);
-      if(keys.current[kind]?.body!==serialized)keys.current[kind]={body:serialized,value:crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()};
+      if(keys.current[kind]?.body!==serialized)keys.current[kind]={body:serialized,value:requestId()};
       // The POST revalidates under the existing transaction; inspection reserves nothing.
       const b=await api<Trial>('orchestrations','POST',payload,{'Idempotency-Key':keys.current[kind].value});
       if(isTrial){setTrial(b);setTrialError('');}else if(seq===sequence.current){setSubmitted('已提交：'+b.title+'。可在下方批次进度查看。');setSubmittedId(b.id);}

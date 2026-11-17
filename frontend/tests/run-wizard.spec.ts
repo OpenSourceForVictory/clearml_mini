@@ -101,7 +101,8 @@ test('late inspection from a previous suite handoff is discarded',async({page})=
 });
 
 
-test('lost submission response reuses the original idempotency key',async({page})=>{
+for(const nativeUUID of [true,false]) test('lost response reuses idempotency key; native UUID='+nativeUUID,async({page})=>{
+  if(!nativeUUID)await page.addInitScript(()=>Object.defineProperty(crypto,'randomUUID',{value:undefined,configurable:true}));
   const {wizard,requests,loseNextResponse}=await setup(page);
   await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();loseNextResponse();
   await wizard.getByRole('button',{name:'提交排队',exact:true}).click();

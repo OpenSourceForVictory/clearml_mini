@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
-test('SSH wizard checks identity then environment before installing and shows recovery',async({page})=>{
+for (const nativeUUID of [true,false]) test('SSH wizard identity, installation and recovery; native UUID='+nativeUUID,async({page})=>{
+ if(!nativeUUID)await page.addInitScript(()=>Object.defineProperty(crypto,'randomUUID',{value:undefined,configurable:true}));
  let operation:any=null;let check:any;
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -11,7 +12,7 @@ test('SSH wizard checks identity then environment before installing and shows re
  await route.fulfill({json:data});});
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'注册新机器',exact:true}).click();
  await page.getByLabel('SSH 机器名称').fill('new-node');await page.getByLabel('SSH 主机地址').fill('192.168.8.157');await expect(page.getByLabel('SSH 用户名')).toHaveValue('root');await page.getByLabel('加速设备类型').selectOption('npu');await page.getByLabel('SSH 密码',{exact:true}).fill('private-password');await page.getByLabel('节点访问平台的 API 地址').fill('http://192.168.8.151:18000');
- await page.getByRole('button',{name:'检查连接与环境',exact:true}).click();await expect.poll(()=>check?.password).toBe('private-password');expect(check.username).toBe('root');expect(check.accelerator_type).toBe('npu');expect(check.business_uid).toBe(29000);expect(check.business_gid).toBe(29000);await expect(page.getByLabel('SSH 密码',{exact:true})).toHaveValue('');
+ await page.getByRole('button',{name:'检查连接与环境',exact:true}).click();await expect.poll(()=>check?.password).toBe('private-password');expect(check.request_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(check.username).toBe('root');expect(check.accelerator_type).toBe('npu');expect(check.business_uid).toBe(29000);expect(check.business_gid).toBe(29000);await expect(page.getByLabel('SSH 密码',{exact:true})).toHaveValue('');
  await expect(page.getByRole('button',{name:'确认计划并自动纳管'})).toHaveCount(0);
  await page.getByRole('button',{name:'确认此主机指纹并检查环境'}).click();await expect(page.getByText('检查通过，等待安装',{exact:true})).toBeVisible();
  await expect(page.getByText('管理身份：root · 宿主机业务：mini-eval · UID/GID 29000/29000')).toBeVisible();await page.getByRole('button',{name:'确认计划并自动纳管'}).click();await expect(page.getByText('升级执行器：等待回连',{exact:true})).toBeVisible();

@@ -71,3 +71,8 @@ ONBOARDING_SOCKET_DIR=/home/platform/.local/share/mini-eval-onboarding/socket
 回归：113 项后端测试、2 项浏览器测试、1 项真实容器集成测试通过。新 healthcheck 模块行与分支覆盖率均 100%，不表示全仓库覆盖率。首次故障注入在容器内发送信号未终止 PID 1；docker kill 又被当前 Docker 视为手动停止，最终改用严格限定隔离容器的宿主 PID 故障注入，验证自动恢复。失败原因保留于 .runtime/bundled-onboarding-test/first-failure.txt。
 
 可重复集成测试位于 backend/tests/integration/test_bundled_onboarding.py：仅在明确设置 BUNDLED_ONBOARDING_TEST=1、BUNDLED_ONBOARDING_TEST_DIRECTORY（含私有 test.env）、BUNDLED_ONBOARDING_SSH_HOST 并准备 mini-eval-onboarding-test 隔离 Compose 项目（API 18194）时运行。测试会停止并异常终止该隔离执行器，严格验证 Compose 项目身份，不可指向生产。正常 CI 默认跳过此真机测试。隔离数据库及容器验收后删除，发布备份位于 .runtime/bundled-onboarding-release/，均不入库。
+
+## HTTP 浏览器兼容性修复
+通过 HTTP IP 地址访问时，浏览器可能不提供 crypto.randomUUID，旧注册页面会在发送 SSH 检查请求前报错。前端现统一生成请求 UUID，缺少原生方法时使用 getRandomValues；不需要用户调整浏览器开关。运行向导也使用相同方法，并保持失败重试复用幂等键。验证包含禁用 randomUUID 后完整注册界面流程及向导回归，不代表目标节点实际安装验证。其他机器需重新构建 API 镜像中的前端后才生效，仅重启旧镜像无效。
+
+此修复验证：17 项独立浏览器场景通过，TypeScript/Vite 构建通过；模拟禁用原生 UUID，不宣称在无法访问的远端浏览器完成验收。本次提交未自动更新远端部署。

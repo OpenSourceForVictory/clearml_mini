@@ -1,3 +1,4 @@
+import {requestId} from './request-id';
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
 import {Field} from './form-fields';
@@ -19,7 +20,7 @@ export function SSHOnboarding({nodeId,nodeName,revision=0,role='client',onChange
  function field(key:keyof typeof form,label:string,type='text',required=true){return <Field label={label}><input type={type} required={required} value={form[key]} autoComplete={type==='password'?'off':undefined} onChange={e=>setForm({...form,[key]:e.target.value})}/></Field>}
  return <section aria-label="SSH 自动纳管"><h3>SSH 自动纳管</h3><p>检查环境 → 确认主机与安装计划 → 自动部署节点 Agent、Worker、SDK 和升级执行器 → 验证回连。</p>
  {error&&<p role="alert" className="error">{error}</p>}<p role="status">{available?'纳管服务已就绪，可直接检查并注册机器。':connectionError||'正在检测纳管服务…'}</p><button type="button" onClick={()=>void refresh()}>重新检测纳管服务</button>
- <form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{const op=await api<Operation>('admin/ssh-onboarding/check','POST',{...form,password:auth==='password'?form.password:'',private_key:auth==='key'?form.private_key:'',port:Number(form.port),business_uid:Number(form.business_uid),business_gid:Number(form.business_gid),...(nodeId?{node_id:nodeId}:{}),expected_revision:revision,roles:[role],request_id:crypto.randomUUID()});setSelected(op.id);setForm({...form,password:'',private_key:'',passphrase:'',sudo_password:''});await refresh()}catch(e){setError(String(e))}finally{setBusy(false)}}}>
+ <form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{const op=await api<Operation>('admin/ssh-onboarding/check','POST',{...form,password:auth==='password'?form.password:'',private_key:auth==='key'?form.private_key:'',port:Number(form.port),business_uid:Number(form.business_uid),business_gid:Number(form.business_gid),...(nodeId?{node_id:nodeId}:{}),expected_revision:revision,roles:[role],request_id:requestId()});setSelected(op.id);setForm({...form,password:'',private_key:'',passphrase:'',sudo_password:''});await refresh()}catch(e){setError(String(e))}finally{setBusy(false)}}}>
  <fieldset disabled={busy||!!current&&active.has(current.state)}><legend>连接与运行环境</legend>
  <div className="row">{nodeId?<p>原机器：{nodeName}</p>:field('node_name','SSH 机器名称')}{field('host','SSH 主机地址')}{field('port','SSH 端口','number')}{field('username','SSH 用户名')}</div>
  <Field label="SSH 认证方式"><select value={auth} onChange={e=>setAuth(e.target.value)}><option value="password">密码</option><option value="key">私钥</option></select></Field>
