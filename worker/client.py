@@ -443,6 +443,11 @@ class Worker:
                 except (urllib.error.URLError, TimeoutError):
                     time.sleep(.5)
                     continue  # Watchdog enforces the existing deadline during transient outages.
+                except APIError as exc:
+                    if exc.status != 503:
+                        raise
+                    time.sleep(.5)
+                    continue  # Control-plane lock contention is transient; keep the live unit.
                 deadline[0] = requested_at + reply['lease_seconds'] - 2
                 if reply['cancel']:
                     self.stop_container(execution)

@@ -84,6 +84,32 @@ def test_transport_failure_stops_execution_but_retains_recovery_journal(executio
     assert events==[('stop',task['execution_id'])]
 
 
+def test_transient_control_busy_heartbeat_keeps_existing_execution(execution,monkeypatch):
+    worker,task,events=execution
+    heartbeats=0
+    original=worker.api.post
+    def post(path,body=None):
+        nonlocal heartbeats
+        if path=='worker/heartbeat':
+            heartbeats+=1
+            if heartbeats==2:raise client.APIError(503,'control plane busy; retry shortly')
+        return original(path,body)
+    worker.api.post=post
+    inspections=0
+    def inspect(_):
+        nonlocal inspections
+        inspections+=1
+        if inspections==1:return {'State':{'Status':'created','Running':False,'ExitCode':0}}
+        return {'State':{'Status':'exited','Running':False,'ExitCode':0}}
+    monkeypatch.setattr(worker,'inspect',inspect)
+    monkeypatch.setattr(client.time,'sleep',lambda _:None)
+    worker.execute(task)
+    assert heartbeats>=3
+    assert len([p for p,_ in events if p=='create'])==0
+    assert any(p.endswith('/complete') for p,_ in events)
+    assert worker.state is None
+
+
 @pytest.mark.parametrize('mode,expected',[('docker','Docker container'),('host','host unit')])
 def test_missing_running_container_is_never_recreated(execution,monkeypatch,mode,expected):
     worker,task,events=execution;task['status']='RUNNING'
