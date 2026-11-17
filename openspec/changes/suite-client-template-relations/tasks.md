@@ -2,4 +2,4 @@
 - [x] 2. Keep availability editing in collection management with checkboxes; let the wizard select one allowed template; support copy/import/export/filter.
 - [x] 3. Test API, UI, migration and historical snapshot invariants; update guides and Skill.
 - [x] 4. Commit the scoped implementation and validation record.
-- [ ] 5. Release follow-up: back up, deploy migration/API/frontend and verify. Not performed in this development turn; no Worker upgrade required.
+- [x] 5. Back up, restore and test migration in isolated PostgreSQL; deploy migration/API/frontend and verify live API/browser. Released 2026-11-17; no Worker upgrade required. See docs/suite-management-validation.md.
