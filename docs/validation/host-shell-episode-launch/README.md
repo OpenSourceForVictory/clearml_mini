@@ -14,3 +14,24 @@ OpenSpec：`host-shell-episode-launch`。本次在仓库代码上运行定向测
 平台端到端 NPU 验证：29 号节点在现有批准环境下以 `HwHiAiUser` 和模板 `environment_source=login` 启动宿主机服务，分配 NPU 2。服务 `878093ff-c59f-487b-a501-d325b9e02641`、任务 `c340d4ca-56cf-4f36-b7ee-9de38921d219` 的日志包含 `NPU_LOGIN_SERVICE_READY`，实际 `torch_npu` 张量计算通过，健康状态到达 HEALTHY。随后通过平台停止，状态 STOPPED、`cleanup_pending=false`；模板已归档、节点临时程序已删除。该节点现有服务网络配置的公告地址与节点真实本地地址不同，本次仅验证节点本地健康探测，未宣称跨节点客户端可连接。
 
 真实节点程序不是模型评测；GPU 可见 UUID 不构成硬隔离。NPU 逐回合 direct/普通命令/SDK 的业务进程链路使用临时程序验证，但未在 NPU 服务端角色节点通过 API 提交客户端逐回合任务；GPU 端到端只覆盖普通命令模式。完整三模式 API 端到端与全量覆盖率仍未验收。
+
+## 宿主机范围完整复测（2026-11-18，追加）
+
+本轮按用户要求扩大宿主机业务执行测试范围，不运行全仓库测试。没有修改业务实现或再次部署。
+
+- 宿主机 backend/lifecycle/environments/working-directory/managed-host/supervisor-output、shell/episode、parameter-contract、command-sdk/generic/command-tasks、SDK reporting、Worker service/execution recovery、service readiness 与 launch boundaries：242 passed / 70 skipped。
+- 显式开启 `HOST_EXECUTION_TEST=1` 后，`test_host_backend.py` 与 `test_host_working_directory.py`：28 passed（含上组跳过的 7 项，不能与上组简单相加）。服务 recovery/readiness execution 仅选择 host：17 passed / 17 deselected，使用真实 systemd 进程、模拟 API 边界，不是平台端到端。
+- `test_execution.py`、`test_services.py`、`test_service_readiness.py`、`test_accelerator_resources.py`：37 passed；`test_npu_cann_environment.py` 与 `test_task_input.py`：27 passed。一次测试命令误用了不存在的 `test_npu_host.py`，pytest 返回 4、没有运行测试，随后修正列表。
+- 仍未开启独立 root 测试账号的 5 项 managed-host 用例、24 项 Docker generic matrix 以及服务 Docker 对照项；不能声称所有现场矩阵通过。已有 Docker 兼容单元回归通过不等于本轮完整 Docker 真机验收。
+
+真实 GPU runner 矩阵：以当前批准账号读取真实登录 shell 导出环境，将其传入业务子进程；direct、普通命令、sdk-command 每种 2 回合，均执行真实 CUDA 张量平方计算，并断言 HOME、模板业务变量、指定 GPU UUID 和业务 argv 映射。三种模式全部通过。该检查使用独立临时输入与 runner 入口，不经过平台调度或 Worker systemd，不冒充平台端到端。单元测试另覆盖参数 JSON、seed、业务返回缺失/非法/非零退出、设备变量优先级、登录环境超时及非法输出。
+
+平台 NPU 服务：`373966d6-b775-4e0e-b965-5ebfffd96176`，任务 `2a0468eb-ee78-4c64-8c69-b7fe2a16329e`，通过自动调度启动。日志 `HOST_NPU_VERIFIED uid=1001 visible=0 tensor=ok env=ok`，确认批准业务账号 HwHiAiUser、登录 CANN 环境、模板变量和真实 torch_npu 张量运算；HEALTHY 后通过平台停止，STOPPED 且 cleanup_pending=false。当前实现只允许访问获分配的物理卡，业务使用逻辑卡 0；本轮未额外抓取 systemd DeviceAllow 作为物理卡隔离的新证据。
+
+保留两次 NPU 测试布置失败：任务 `ce8e4fb9-1a0e-42c6-a478-8c5234561292` 在启动前因新上传脚本不可读被正确拒绝，只修正该临时文件为 0644；任务 `c206b986-d6ca-4f04-a799-968f1c980023` 因测试把 ASCEND_RT_VISIBLE_DEVICES 错断言为物理编号 2 而失败，修正为实现使用的逻辑编号 0 后通过。未修改业务账号、CANN 安装或全局权限。
+
+平台 GPU 客户端未通过：第一次任务 `2e3e4478-a811-4e7a-9f85-b07cc9eab0ac` 漏填 `command_mode=exec`，绝对 Python 路径被旧脚本模式的 approved-code-root 检查拒绝。修正测试模板后任务 `fdfb68cd-810f-4d1d-b062-e0d9a10f918d` 仍需手工 tick 才领取，随后首次 `worker/heartbeat`（started=false）收到 HTTP 503，在 client.py execute 初始握手处中断；最后 FAILED，错误为 `worker confirmed container stopped`，cleanup_confirmed=true。不能据此确认平台端到端业务参数传递成功。自动领取和首次握手 503 恢复是未解决问题。
+
+所有本轮平台测试模板已归档，NPU 临时业务脚本已删除；结束时查询活动或未清理 evaluation_runs 为 0。
+
+覆盖率补充：以 `backend/tests/project.coveragerc` 对 shell/episode、host lifecycle、parameter contract、CANN、task input 定向插桩，102 passed。局部原始报告 `/tmp/host-verify-coverage.json`；host_identity 行 48/75、分支 18/34，host_backend 行 169/223、分支 59/106，parameter_contract 行 148/151、分支 68/78。未合并业务子进程，host_episode 显示行 0/56、分支 0/14。该局部报告不能替代 `python -m scripts.test_coverage` 的全仓库目录/关键功能门禁，也未证明达到 80/70 或 90/80 要求。
