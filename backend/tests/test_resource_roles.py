@@ -1,5 +1,7 @@
 from backend.tests.test_execution import env,node
 from backend.app.core import Worker,Slot
+from backend.app.core import now
+from datetime import timedelta
 from sqlalchemy import select
 
 
@@ -26,3 +28,22 @@ def test_legacy_unassociated_slot_defaults_to_client(env):
         s.add(Slot(node_name='legacy',gpu_index=0,queue_name='legacy'));s.commit()
     assert c.get('/api/v1/workers?role=server',headers=a['alice']).json()['total']==0
     assert c.get('/api/v1/workers?role=client',headers=a['alice']).json()['total']==1
+
+
+def test_resource_page_telemetry_fresh_matches_scheduler(env):
+    main,c,a=env
+    _,slots=node(env,name='freshness')
+    slot_id=slots[0]
+    for sampled,free,utilization,expected in (
+        (now()-timedelta(seconds=2),1024,10,True),
+        (now()-timedelta(seconds=16),1024,10,False),
+        (now()+timedelta(minutes=2),1024,10,False),
+        (now(),None,None,False),
+    ):
+        with main.SessionLocal() as s:
+            slot=s.get(Slot,slot_id)
+            slot.telemetry_at=sampled;slot.free_vram_mb=free;slot.gpu_utilization=utilization
+            s.commit()
+        result=c.get('/api/v1/workers',headers=a['admin'])
+        assert result.status_code==200,result.text
+        assert next(x for x in result.json() if x['id']==slot_id)['telemetry_fresh'] is expected

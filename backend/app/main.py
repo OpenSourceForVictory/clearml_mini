@@ -18,7 +18,7 @@ from sqlalchemy import func, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
-from .scheduling import lock, loop, online, transition, TERMINAL, ACTIVE, utc
+from .scheduling import lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE, utc
 from .execution import install
 from .clients import ClientRequest, snapshot, install as install_clients
 from .batches import install as install_batches
@@ -187,7 +187,7 @@ def workers(user: User = Depends(current), s: Session = Depends(db), role: Liter
                  'gpu_utilization': x.gpu_utilization, 'telemetry_at': x.telemetry_at,
                  'disk_free_mb': x.disk_free_mb, 'disk_min_free_mb': x.disk_min_free_mb,
                  'disk_fresh': bool(x.disk_at and datetime.now(timezone.utc)-utc(x.disk_at) < timedelta(seconds=15)),
-                 'telemetry_fresh': bool(x.telemetry_at and datetime.now(timezone.utc)-utc(x.telemetry_at) < timedelta(seconds=15)),
+                 'telemetry_fresh': telemetry_fresh(x, datetime.now(timezone.utc)),
                  'protocol_version': x.protocol_version,
                  'active_tasks': sum(r.slot_id == x.id for r in held),
                  'reserved_vram_mb': sum(r.reserved_vram_mb for r in held if r.slot_id == x.id)} for x in slots]

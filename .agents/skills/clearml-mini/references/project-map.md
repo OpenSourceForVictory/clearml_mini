@@ -67,4 +67,6 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 
 托管服务联合容量诊断：orchestration_scheduler.Planner.structural_pair_diagnosis 保持 True/False/None 三态，compile_submission 在所有候选服务均为结构性 False 时返回任务、服务、客户端/服务端池名与配置限制；不将瞬时占用或缺少候选角色误判成永久冲突。前端向导直接显示 API detail，界面指南 wizard 与 docs/gpu-scheduling.md 说明排查顺序；回归 test_pair_capacity_diagnostics.py 和 test_orchestrations.py。
 
+GPU 遥测新鲜度：main.workers 管理员明细调用 scheduling.telemetry_fresh，与任务准入统一检查样本位于过去 15 秒内且显存/利用率齐全；未来时间戳不得显示新鲜。主机采样是独立指标。操作见 docs/gpu-scheduling.md；回归 test_resource_roles.py。
+
 回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software，enrollment/worker_upgrades 仅豁免可选 service_readiness_v1 版本验收，业务准入保持能力门槛。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。
