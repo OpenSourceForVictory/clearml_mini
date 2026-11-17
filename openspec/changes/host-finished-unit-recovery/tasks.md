@@ -1,0 +1,4 @@
+- [x] Recover confirmed host exit when the systemd unit has been unloaded.
+- [x] Keep missing/inconsistent execution state fail-closed and distinguish host from Docker errors.
+- [x] Add targeted lifecycle and Worker recovery tests.
+- [x] Update host operation guidance and Skill reference, run targeted validation, then commit.

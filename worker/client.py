@@ -403,7 +403,8 @@ class Worker:
                 container = self.inspect(execution)
                 if not container:
                     if self.state['created'] or task['status'] == 'RUNNING':
-                        raise RuntimeError('previously created container is missing; refusing duplicate execution')
+                        kind = 'host unit' if self.host_mode() else 'Docker container'
+                        raise RuntimeError(f'previously created {kind} is missing; refusing duplicate execution')
                     # Crash before create is safe to fail; never recreate an uncertain execution.
                     self.state['created'] = True
                     self.save()

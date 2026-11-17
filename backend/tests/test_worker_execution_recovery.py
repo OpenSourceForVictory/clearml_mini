@@ -84,13 +84,15 @@ def test_transport_failure_stops_execution_but_retains_recovery_journal(executio
     assert events==[('stop',task['execution_id'])]
 
 
-def test_missing_running_container_is_never_recreated(execution,monkeypatch):
+@pytest.mark.parametrize('mode,expected',[('docker','Docker container'),('host','host unit')])
+def test_missing_running_container_is_never_recreated(execution,monkeypatch,mode,expected):
     worker,task,events=execution;task['status']='RUNNING'
+    if mode=='host':task['client_spec']={'template':{'execution_mode':'host'}}
     monkeypatch.setattr(worker,'inspect',lambda e:None)
     worker.execute(task)
     assert not any(p=='create' for p,b in events)
     completion=next(b for p,b in events if p.endswith('/complete'))
-    assert completion['status']=='FAILED' and 'refusing duplicate' in completion['error']
+    assert completion['status']=='FAILED' and expected in completion['error'] and 'refusing duplicate' in completion['error']
 
 
 def test_rejected_failure_completion_uses_cleanup(execution,monkeypatch):

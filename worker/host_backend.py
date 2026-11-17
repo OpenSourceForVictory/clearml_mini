@@ -37,6 +37,10 @@ class HostBackend:
                 launch=json.loads((self.root/'launch.json').read_text())
                 if launch['execution_id']!=execution:raise RuntimeError('host execution identity mismatch')
                 if not launch.get('started'):return {'State':{'Status':'created','Running':False,'ExitCode':0}}
+                if (self.root/'exit.json').exists():
+                    code=json.loads((self.root/'exit.json').read_text()).get('code')
+                    if type(code) is not int:raise RuntimeError('invalid host execution exit record')
+                    return {'State':{'Status':'exited','Running':False,'ExitCode':code,'Recovered':True}}
             return None
         if p.returncode:raise RuntimeError('cannot inspect host unit: '+p.stderr[-500:])
         if values.get('Description')!='Mini Eval execution '+execution:raise RuntimeError('host unit identity mismatch')
@@ -46,7 +50,7 @@ class HostBackend:
         return {'State':{'Status':'running' if running else 'exited','Running':running,'ExitCode':code}}
     def stop(self,execution):
         item=self.inspect(execution)
-        if item and item['State']['Status']!='created':
+        if item and item['State']['Status']!='created' and not item['State'].get('Recovered'):
             self.control('stop',self.unit(execution))
             item=self.inspect(execution)
             if item and item['State']['Running']:raise RuntimeError('host execution has not stopped')

@@ -17,24 +17,28 @@ def backend(tmp_path):
     return backend,execution
 
 
-@pytest.mark.parametrize('mode',['absent','created','started','wrong-marker','running','exited','wrong-unit','daemon-failure','exit-record'])
+@pytest.mark.parametrize('mode',['absent','created','started','finished','invalid-exit','wrong-marker','running','exited','wrong-unit','daemon-failure','exit-record'])
 def test_inspect_identity_and_recovery(backend,monkeypatch,mode):
     host,execution=backend
-    missing=mode in ('absent','created','started','wrong-marker')
-    if mode in ('created','started','wrong-marker'):
+    missing=mode in ('absent','created','started','finished','invalid-exit','wrong-marker')
+    if mode in ('created','started','finished','invalid-exit','wrong-marker'):
         (host.root/'launch.json').write_text(json.dumps({'execution_id':'wrong' if mode=='wrong-marker' else execution,'started':mode=='started'}))
+    if mode in ('finished','invalid-exit'):
+        (host.root/'launch.json').write_text(json.dumps({'execution_id':execution,'started':True}))
+        (host.root/'exit.json').write_text(json.dumps({'code':7 if mode=='finished' else 'bad'}))
     if mode=='exit-record':(host.root/'exit.json').write_text('{"code":7}')
     response='LoadState=not-found\n' if missing else '\n'.join([
         'LoadState=loaded','Description=Mini Eval execution '+('wrong' if mode=='wrong-unit' else execution),
         'ActiveState=active','SubState='+('running' if mode=='running' else 'dead'),'ExecMainStatus=0'])
     monkeypatch.setattr(host,'control',lambda *a,**kw:SimpleNamespace(stdout=response,stderr='offline',returncode=int(mode=='daemon-failure')))
-    if mode in ('wrong-marker','wrong-unit','daemon-failure'):
+    if mode in ('wrong-marker','wrong-unit','daemon-failure','invalid-exit'):
         with pytest.raises(RuntimeError):host.inspect(execution)
     elif mode in ('absent','started'):assert host.inspect(execution) is None
     else:
         state=host.inspect(execution)['State']
         assert state['Status']==('created' if mode=='created' else 'running' if mode=='running' else 'exited')
-        assert state['ExitCode']==(7 if mode=='exit-record' else 0)
+        assert state['ExitCode']==(7 if mode in ('exit-record','finished') else 0)
+        assert state.get('Recovered',False)==(mode=='finished')
 
 
 @pytest.mark.parametrize('stuck',[True,False])
@@ -46,6 +50,15 @@ def test_stop_requires_confirmed_exit(backend,monkeypatch,stuck):
         with pytest.raises(RuntimeError,match='has not stopped'):host.stop(execution)
     else:host.stop(execution)
     assert calls==[('stop',host.unit(execution))]
+
+
+def test_stop_of_finished_unloaded_unit_does_not_restart_or_stop(backend,monkeypatch):
+    host,execution=backend;calls=[]
+    (host.root/'launch.json').write_text(json.dumps({'execution_id':execution,'started':True}))
+    (host.root/'exit.json').write_text('{"code":0}')
+    monkeypatch.setattr(host,'control',lambda *a,**kw:(calls.append(a) or SimpleNamespace(stdout='LoadState=not-found\n',returncode=0)))
+    host.stop(execution)
+    assert calls==[('show',host.unit(execution),'--property=LoadState,Description,ActiveState,SubState,ExecMainStatus')]
 
 
 @pytest.mark.parametrize('cpus,ram_gb',[ (0,0), (0,3), (2,0) ])
