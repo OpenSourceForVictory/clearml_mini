@@ -10,6 +10,8 @@
 
 节点需要 Worker v7、可用的 systemd 用户管理器、linger 与 cgroup v2。平台通过带版本的 `/admin/nodes/{id}/host-environments` 配置和 Worker 探测回执决定准入；缺失环境、旧 Worker 或过期报告不会启动 host 任务。修改环境不会改变已有执行快照。
 
+宿主机环境回执有效期为 60 秒，仍要求 Worker 在线、配置版本匹配且该环境探测为就绪。检查失败会立即拒绝新任务，不会因延长回执窗口而被视作成功；执行中的任务保持原快照。
+
 Worker 的 `execution_modes` 可设置 `["host"]`，只运行宿主机任务并跳过 Docker 存储探测；默认同时支持 Docker/host，Docker 镜像仍需批准。宿主机检查目录读写，不承诺资产只读隔离；这是可信业务程序运行方式，不能替代容器或多用户安全沙箱。
 
 ## 生命周期

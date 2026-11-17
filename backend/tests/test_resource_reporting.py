@@ -54,7 +54,7 @@ def test_host_resource_failures_stop_admission(env,fault):
     session=register(c,token);values=samples()
     if fault=='memory':values['host']['values']['memory_available_mb']=512
     if fault=='cpu':values['host']['values']['cpu_count']=0
-    if fault=='stale':values['host']['sampled_at']-=20
+    if fault=='stale':values['host']['sampled_at']-=46
     if fault=='future':values['host']['sampled_at']+=60
     if fault=='failed':values['host']['status']='failed'
     if fault=='missing':values.pop('host')
@@ -70,12 +70,12 @@ def test_host_resource_failures_stop_admission(env,fault):
 
 def test_sample_age_is_not_renewed_by_repeated_heartbeats(env):
     main,c,_=env;_,slots,tokens=setup_gpu(env,1);token=tokens[0]
-    session=register(c,token);values=samples();values['gpu']['sampled_at']-=10
+    session=register(c,token);values=samples();values['gpu']['sampled_at']-=30
     beat(c,token,session,samples=values)
     with main.SessionLocal() as s:first=s.get(Slot,slots[0]).telemetry_at
     beat(c,token,session,2,values)
     with main.SessionLocal() as s:assert s.get(Slot,slots[0]).telemetry_at==first
-    values['gpu']['sampled_at']-=10;beat(c,token,session,3,values)
+    values['gpu']['sampled_at']-=20;beat(c,token,session,3,values)
     with main.SessionLocal() as s:assert s.get(Slot,slots[0]).telemetry_at is None
 
 

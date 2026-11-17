@@ -1,12 +1,12 @@
 """Administrator intent and slot acknowledgement, serialized by scheduler lock."""
-from datetime import timedelta
 from pathlib import PurePosixPath
 from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select, or_
 from .core import Worker, Slot, Run, now
-from .scheduling import lock, online, transition, utc
+from .scheduling import lock, online, transition
+from .freshness import ENVIRONMENT_REPORT_SECONDS, recent
 
 
 class StorageConfig(BaseModel):
@@ -76,8 +76,7 @@ def ready(worker, slot, at):
     report = slot.storage_report or {}
     return (slot.protocol_version >= 4 and slot.storage_applied_revision == worker.storage_revision
             and report.get('revision') == worker.storage_revision and report.get('status') == 'applied'
-            and slot.storage_reported_at is not None
-            and timedelta(0) <= at - utc(slot.storage_reported_at) < timedelta(seconds=15))
+            and recent(slot.storage_reported_at, at, ENVIRONMENT_REPORT_SECONDS))
 
 
 def acknowledge(s, worker, slot, report):
@@ -110,7 +109,7 @@ def view(s, worker):
             status = 'offline'
         elif slot.protocol_version < 4:
             status = 'upgrade_required' if worker.storage_revision else 'local'
-        elif not slot.storage_reported_at or (now()-utc(slot.storage_reported_at)).total_seconds() >= 15:
+        elif not recent(slot.storage_reported_at, now(), ENVIRONMENT_REPORT_SECONDS):
             status = 'offline'
         elif report.get('revision') != worker.storage_revision:
             status = 'pending'

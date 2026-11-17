@@ -36,7 +36,8 @@ def test_resource_page_telemetry_fresh_matches_scheduler(env):
     slot_id=slots[0]
     for sampled,free,utilization,expected in (
         (now()-timedelta(seconds=2),1024,10,True),
-        (now()-timedelta(seconds=16),1024,10,False),
+        (now()-timedelta(seconds=30),1024,10,True),
+        (now()-timedelta(seconds=46),1024,10,False),
         (now()+timedelta(minutes=2),1024,10,False),
         (now(),None,None,False),
     ):
@@ -47,3 +48,9 @@ def test_resource_page_telemetry_fresh_matches_scheduler(env):
         result=c.get('/api/v1/workers',headers=a['admin'])
         assert result.status_code==200,result.text
         assert next(x for x in result.json() if x['id']==slot_id)['telemetry_fresh'] is expected
+    for age,expected in ((30,True),(46,False),(-2,False)):
+        with main.SessionLocal() as s:
+            s.get(Slot,slot_id).disk_at=now()-timedelta(seconds=age)
+            s.commit()
+        rows=c.get('/api/v1/workers',headers=a['admin']).json()
+        assert next(x for x in rows if x['id']==slot_id)['disk_fresh'] is expected

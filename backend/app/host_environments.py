@@ -1,11 +1,11 @@
 """Administrator-approved host environments and versioned readiness."""
-from datetime import timedelta
 from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,field_validator
 from sqlalchemy import select
 from .core import Worker,Slot,now
 from .storage import StorageConfig
-from .scheduling import lock,utc,online
+from .scheduling import lock,online
+from .freshness import ENVIRONMENT_REPORT_SECONDS, recent
 from .administration import audit,release_reservations
 from runner.image_runtime import NAME
 
@@ -53,7 +53,7 @@ def blockers(worker,slot,spec,at):
     if template.get('host_runtime',{}).get('working_directory') is not None and slot.protocol_version<13:return ['业务执行目录需要 Worker 协议 13，请升级节点 Worker']
     if slot.protocol_version<7:return ['宿主机执行需要 Worker v7']
     report=slot.host_report or {}
-    if report.get('revision')!=worker.host_revision or report.get('applied_revision')!=worker.host_revision or slot.host_reported_at is None or not timedelta(0)<=at-utc(slot.host_reported_at)<timedelta(seconds=15):return ['宿主机环境配置未生效或报告过期']
+    if report.get('revision')!=worker.host_revision or report.get('applied_revision')!=worker.host_revision or not recent(slot.host_reported_at,at,ENVIRONMENT_REPORT_SECONDS):return ['宿主机环境配置未生效或报告过期']
     name=template['host_runtime']['environment_name']
     if name not in (worker.host_environments or {}) or not report.get('environments',{}).get(name,{}).get('ready'):return ['宿主机环境未批准或不可用: '+name]
     resources=(slot.runtime_report or {}).get('assets',{})

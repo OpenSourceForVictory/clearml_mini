@@ -3,7 +3,8 @@ from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, or_
 from .core import Slot, Pool, Worker, Run, Job, MembershipAudit, now
-from .scheduling import lock, online, transition, utc, ACTIVE
+from .scheduling import lock, online, transition, ACTIVE
+from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 from . import storage, image_runtime
 
 
@@ -69,7 +70,7 @@ def view(s, slot):
     if worker and not image_runtime.ready(worker, slot, now()):
         reasons.append('runtime_pending')
     if slot.disk_min_free_mb is not None:
-        if slot.disk_at is None or not 0 <= (now()-utc(slot.disk_at)).total_seconds() < 15:
+        if not recent(slot.disk_at, now(), RESOURCE_SAMPLE_SECONDS):
             reasons.append('disk_unknown')
         elif slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb:
             reasons.append('disk_full')

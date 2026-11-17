@@ -97,7 +97,7 @@ def test_per_card_stale_ack_offline_and_disk_recovery(env):
     assert tick(main.SessionLocal)==1
     # A fresh execution heartbeat cannot refresh stale supervisor storage status.
     with main.SessionLocal() as s:
-        slot=s.get(Slot,slots[0]);slot.storage_reported_at=now()-timedelta(seconds=20);s.commit()
+        slot=s.get(Slot,slots[0]);slot.storage_reported_at=now()-timedelta(seconds=61);s.commit()
     data=c.get(path,headers=auth['admin']).json()
     assert data['slots'][0]['status']=='offline' and not data['all_applied']
 

@@ -16,6 +16,7 @@ from . import storage as storage_protocol
 from . import memberships, image_runtime, endpoints, host_environments, worker_upgrades
 from .core import EvaluationBatch, Job, Pool, Run, RunArtifact, RunLog, Slot, User, Worker, now
 from .scheduling import ACTIVE, TERMINAL, lock, online, seconds, transition, utc, execution_timeout
+from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 from runner.cs_contract import MAX_ARTIFACT_BYTES, MAX_ARTIFACT_TOTAL, MAX_ARTIFACT_COUNT, artifact_name
 
 MAX_LOG_BYTES = 262144
@@ -387,7 +388,7 @@ def install(app, db, current):
             if not memberships.ready(slot) or not storage_protocol.ready(worker, slot, now()):
                 return {'task': None, 'cleanup': []}
             if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
-                    or slot.disk_at is None or (now()-utc(slot.disk_at)).total_seconds() >= 15):
+                    or not recent(slot.disk_at, now(), RESOURCE_SAMPLE_SECONDS)):
                 return {'task': None, 'cleanup': []}
             if node_agents.resource_source(worker):
                 from types import SimpleNamespace

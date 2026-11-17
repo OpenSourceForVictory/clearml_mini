@@ -94,7 +94,7 @@ def test_readiness_reservations_claim_drain_and_recovery(env):
     assert tick(main.SessionLocal)==1
     # Expired reports prevent claim, even for an already reserved task.
     with main.SessionLocal() as s:
-        s.get(Slot,slot).runtime_reported_at=now()-timedelta(seconds=20);s.commit()
+        s.get(Slot,slot).runtime_reported_at=now()-timedelta(seconds=61);s.commit()
     claim=lambda:c.post(f'/api/v1/worker/slots/{slot}/claim',headers=token).json()['task']
     assert claim() is None
     heartbeat(report);task=claim();assert task['runtime_revision']==2

@@ -7,6 +7,7 @@ from sqlalchemy import or_, select, text
 from fastapi import HTTPException
 from . import endpoints
 from .core import EvaluationBatch, Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
+from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 
 ACTIVE = ('RESERVED', 'STARTING', 'RUNNING', 'CANCEL_REQUESTED')
 TERMINAL = ('SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT')
@@ -79,9 +80,8 @@ def reconcile(s, at):
 
 
 def telemetry_fresh(slot, at):
-    return (slot.telemetry_at is not None and slot.free_vram_mb is not None
-            and slot.gpu_utilization is not None
-            and timedelta(0) <= at - utc(slot.telemetry_at) < timedelta(seconds=15))
+    return (slot.free_vram_mb is not None and slot.gpu_utilization is not None
+            and recent(slot.telemetry_at, at, RESOURCE_SAMPLE_SECONDS))
 
 
 
@@ -111,7 +111,7 @@ def runtime_mismatch(slot, job):
 def eligibility_codes(slot, pool, job, held, at):
     """Ordered admission failures shared by scheduler and read-only preflight."""
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
-            or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
+            or not recent(slot.disk_at, at, RESOURCE_SAMPLE_SECONDS)):
         return ['disk_capacity']
     if runtime_mismatch(slot, job):return ['client_runtime']
     template=(job.client_spec or {}).get('template',{})

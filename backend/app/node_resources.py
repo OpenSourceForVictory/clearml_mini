@@ -3,6 +3,7 @@ import math
 from datetime import datetime, timezone
 from sqlalchemy import select
 from .core import Slot, now
+from .freshness import RESOURCE_SAMPLE_SECONDS
 
 
 def record(w):
@@ -28,7 +29,7 @@ def resource_values(w, kind, at=None):
     sample = r.get('samples', {}).get(kind, {})
     try:
         age = at.timestamp() - sample['sampled_at']
-        if (not fresh(r) or sample['status'] != 'ok' or not 0 <= age < 15): return None
+        if (not fresh(r) or sample['status'] != 'ok' or not 0 <= age < RESOURCE_SAMPLE_SECONDS): return None
         return sample['values']
     except (KeyError, TypeError, ValueError): return None
 

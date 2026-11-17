@@ -185,7 +185,7 @@ def test_workspace_disk_admission_recovery_and_stale_telemetry(env):
     assert tick(main.SessionLocal) == 0
     c.post('/api/v1/worker/heartbeat', headers=token, json={'slot_id': slots[0], 'disk': {'free_mb': 8192, 'min_free_mb': 2048}})
     with main.SessionLocal() as s:
-        s.get(Slot, slots[0]).disk_at = now()-timedelta(seconds=20); s.commit()
+        s.get(Slot, slots[0]).disk_at = now()-timedelta(seconds=46); s.commit()
     assert tick(main.SessionLocal) == 0
     c.post('/api/v1/worker/heartbeat', headers=token, json={'slot_id': slots[0], 'disk': {'free_mb': 8192, 'min_free_mb': 2048}})
     assert tick(main.SessionLocal) == 1

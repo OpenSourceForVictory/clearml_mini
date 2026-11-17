@@ -106,7 +106,7 @@ Worker 启动时在后台准备固定的 aiohttp、aiodns、async-timeout 依赖
 
 安装完成但回连超时，或执行器在回连阶段重启后，可在原操作点击“继续回连验收”。只查询平台状态并尝试完成原安装，不重新连接 SSH、不覆盖配置、不轮换节点 token；使用当前登录凭据。节点修订或发布摘要已经改变则拒绝旧操作。仍处于安装中或旧版本没有保存可继续信息的操作不显示此按钮。
 
-`worker iteration failed` 与 `execution data maintenance deferred` 后若堆栈在 HTTP `getresponse()` 报 `TimeoutError`，表示等待 API 响应超过 Worker 的 5 秒请求超时。它与 300 秒纳管验收窗口不同；延长验收不会修复代理、API 或数据库阻塞。先在节点用不带凭据的 `/healthz` 直连测试，再检查服务进程代理及相同时间的 API 请求/数据库等待日志；健康接口正常不代表心跳写入正常。Agent 是权威遥测来源时还需检查 Agent，遥测有效期仍为 15 秒，不因本次变更放宽。
+`worker iteration failed` 与 `execution data maintenance deferred` 后若堆栈在 HTTP `getresponse()` 报 `TimeoutError`，表示等待 API 响应超过 Worker 的 5 秒请求超时。它与 300 秒纳管验收窗口不同；延长验收不会修复代理、API 或数据库阻塞。先在节点用不带凭据的 `/healthz` 直连测试，再检查服务进程代理及相同时间的 API 请求/数据库等待日志；健康接口正常不代表心跳写入正常。Agent 是权威遥测来源时还需检查 Agent，资源遥测有效期现为 45 秒；该时间与回连窗口和 Worker HTTP 请求超时分别判断。
 
 发布需同步 API、执行器、UI 和节点 Worker；只改执行器无法消除旧 Worker 的启动等待。未在用户节点实际验证前不得宣称现场超时已恢复。
 

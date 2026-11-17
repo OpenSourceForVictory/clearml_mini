@@ -114,7 +114,7 @@ def test_telemetry_stale_high_usage_and_low_memory(env):
     with main.SessionLocal() as s:
         slot = s.get(Slot, slots[0])
         slot.free_vram_mb, slot.gpu_utilization = 48*1024, 0
-        slot.telemetry_at = now()-timedelta(seconds=16)
+        slot.telemetry_at = now()-timedelta(seconds=46)
         s.commit()
     assert tick(main.SessionLocal) == 0
 

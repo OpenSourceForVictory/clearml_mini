@@ -1,11 +1,11 @@
 """Versioned administrator intent and per-resource worker readiness."""
 import re
-from datetime import timedelta
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from .core import Worker, Slot, Run, Job, now
-from .scheduling import lock, transition, utc, online
+from .scheduling import lock, transition, online
+from .freshness import ENVIRONMENT_REPORT_SECONDS, recent
 from .storage import held, StorageConfig
 from runner.image_runtime import NAME
 
@@ -78,8 +78,7 @@ def ready(worker, slot, at):
         return not worker.runtime_revision
     r = slot.runtime_report or {}
     return (r.get('revision') == worker.runtime_revision == r.get('applied_revision')
-            and slot.runtime_reported_at is not None
-            and timedelta(0) <= at-utc(slot.runtime_reported_at) < timedelta(seconds=15))
+            and recent(slot.runtime_reported_at, at, ENVIRONMENT_REPORT_SECONDS))
 
 
 def blockers(worker, slot, spec, at):

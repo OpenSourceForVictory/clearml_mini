@@ -4,7 +4,7 @@ import os
 import threading
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Literal, Optional
 import jwt
 from argon2 import PasswordHasher
@@ -18,7 +18,8 @@ from sqlalchemy import func, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
-from .scheduling import lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE, utc
+from .scheduling import lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE
+from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 from .execution import install
 from .clients import ClientRequest, snapshot, install as install_clients
 from .batches import install as install_batches
@@ -186,7 +187,7 @@ def workers(user: User = Depends(current), s: Session = Depends(db), role: Liter
                  'accelerator_type':x.accelerator_type,'accelerator_backends':x.accelerator_backends,'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,
                  'gpu_utilization': x.gpu_utilization, 'telemetry_at': x.telemetry_at,
                  'disk_free_mb': x.disk_free_mb, 'disk_min_free_mb': x.disk_min_free_mb,
-                 'disk_fresh': bool(x.disk_at and datetime.now(timezone.utc)-utc(x.disk_at) < timedelta(seconds=15)),
+                 'disk_fresh': recent(x.disk_at, datetime.now(timezone.utc), RESOURCE_SAMPLE_SECONDS),
                  'telemetry_fresh': telemetry_fresh(x, datetime.now(timezone.utc)),
                  'protocol_version': x.protocol_version,
                  'active_tasks': sum(r.slot_id == x.id for r in held),
