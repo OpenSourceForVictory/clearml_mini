@@ -32,7 +32,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
@@ -503,7 +503,7 @@ def install(app, db, current):
         if body.status == 'SUCCEEDED' and job.client_spec and job.client_spec['template'].get('episode_reporting'):
             from .episodes import progress
             p = progress(s, run)
-            if p['completed'] != job.episodes or abs(p['success_rate'] - body.metrics.success_rate) > 1e-9:
+            if p['completed'] != job.episodes or (not command and abs(p['success_rate'] - body.metrics.success_rate) > 1e-9):
                 raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
         status = 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else body.status
         run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' and body.metrics else None

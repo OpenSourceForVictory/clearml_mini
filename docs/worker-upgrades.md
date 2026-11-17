@@ -1,5 +1,7 @@
 # Worker 版本与升级管理
 
+宿主机登录环境来源与客户端逐回合启动需要 Worker 0.18.0 / 协议 15。控制端在模板准入和调度时检查协议；旧节点继续运行旧模板，不能领取使用新字段的模板。发布包随控制端包含新的 `runner/host_episode.py`，节点升级后按每卡回连的软件版本、协议与摘要确认生效。操作与现场验证边界见 [宿主机执行](host-execution.md)及[验证记录](validation/host-shell-episode-launch/README.md)。
+
 入口：管理设置 → 机器管理 → 查看配置 → **Worker 版本与升级**。
 
 软件版本、协议版本和发布摘要分别展示到每个 GPU 实例。`worker/version.py` 是开发维护入口：`SOFTWARE_VERSION` 标识软件发布，`PROTOCOL_VERSION` 表示通信能力，`CAPABILITIES` 描述功能。协议版本并非可编辑的节点配置；升级应更换实际程序，不能手工修改数据库版本号。旧 Worker 未报告软件版本时显示“未知”，不根据协议号推测。

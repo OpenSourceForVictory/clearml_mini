@@ -6,7 +6,7 @@ import {BusinessValues,ParameterSchema,ValuesDraft,parseValues} from './business
 import {ManagedServices,ServerTemplate,newService,servicePayload} from './managed-services';
 import {TemplateCopy,CopyTemplate} from './template-copy';
 
-export type Template = {resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
+export type Template = {resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;host_runtime?:{episode_launch?:string;overridable_env?:string[]}|null;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
 export type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>;service_keys?:string[];resources?:Record<string,unknown>};
 export type Suite = {id:string;name:string;version:string;template_id:string;template_ids?:string[];cases:Case[];client_defaults?:Record<string,unknown>};
 type Reason = {code:string;category:string;message:string;action:string};
@@ -35,6 +35,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
   const selectedSuite=suites.find(s=>s.id===suiteId)||(launch?.suite.id===suiteId?launch.suite:undefined),template=allTemplates.find(t=>t.id===templateId);
+  const ordinaryOnce=template?.task_type==='command'&&!(template.execution_mode==='host'&&template.host_runtime?.episode_launch==='per_episode');
   useEffect(()=>{if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   function availableTemplate(s:Suite){return (s.template_ids||[s.template_id]).find(id=>allTemplates.some(t=>t.id===id))||s.template_id;}
@@ -70,7 +71,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='external')validateAddresses();
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
-    const inputCases=parseCases(template.task_type==='command'?cases.map(c=>({...c,episodes:1})):cases);
+    const inputCases=parseCases(ordinaryOnce?cases.map(c=>({...c,episodes:1})):cases);
     return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
       new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
       client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
@@ -105,7 +106,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         if(!template)throw Error('请选择可用的客户端模板');
         parseValues(template.parameter_schema,values);
         const env=JSON.parse(draft.environment);if(!env||Array.isArray(env)||typeof env!=='object'||Object.values(env).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
-        if(Object.keys(env).some(k=>!template.runtime?.overridable_env.includes(k)))throw Error('启动变量包含模板未允许覆盖的键');
+        if(Object.keys(env).some(k=>!(template.runtime||template.host_runtime)?.overridable_env?.includes(k)))throw Error('启动变量包含模板未允许覆盖的键');
       }
       if(step===2){if(serviceMode==='external')validateAddresses();if(serviceMode==='managed')servicePayload(serviceRows,servers,draft.pool_id);if(serviceMode==='none'&&template?.task_type!=='command')throw Error('请选择普通命令模板');}
       setStep(s=>Math.min(4,s+1));if(step===3)void inspect();
@@ -123,16 +124,16 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       {!suiteId&&<><label><input type="checkbox" checked={saveSuite} onChange={e=>setSaveSuite(e.target.checked)}/>同时保存为可复用集合</label>{saveSuite&&<div className="row"><Field label="新集合名称"><input required value={suiteName} onChange={e=>setSuiteName(e.target.value)}/></Field><Field label="集合版本"><input required value={suiteVersion} onChange={e=>setSuiteVersion(e.target.value)}/></Field></div>}</>}
       {suiteId&&<button type="button" onClick={()=>{setSuiteDefaults(selectedSuite?.client_defaults||{});setSuiteName(selectedSuite?.name||'');setSuiteVersion('');setSuiteId('');setSaveSuite(true)}}>复制集合并修改</button>}
       {suiteId&&<p>使用已发布集合及关联客户端。临时修改请显式切换“自定义清单”。</p>}
-      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={template?.task_type==='command'}/>
+      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={ordinaryOnce}/>
     </>}
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <Field label="每项总超时秒"><input type="number" required min={1} max={3600} value={draft.timeout_seconds} onChange={e=>update('timeout_seconds',Number(e.target.value))}/></Field></div>
-      {template?.task_type==='command'&&<p className="hint">普通命令：每项执行一次，按退出码判定，不统计评测回合；自定义清单中的回合数不用于重复执行。默认无需推理服务。</p>}
+      {template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
       {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/></>}
       <Field label="启动变量覆盖 JSON"><textarea rows={3} value={draft.environment} onChange={e=>update('environment',e.target.value)}/></Field>
-      <p className="hint">仅可覆盖模板允许的变量：{template?.runtime?.overridable_env?.join(', ')||'无'}。请勿填写密码或令牌。</p>
+      <p className="hint">仅可覆盖模板允许的变量：{(template?.runtime||template?.host_runtime)?.overridable_env?.join(', ')||'无'}。请勿填写密码或令牌。</p>
     </>}
     {step===2&&<><Field label="服务来源"><select value={serviceMode} onChange={e=>setServiceMode(e.target.value as typeof serviceMode)}><option value="external">提供外部服务地址</option><option value="managed">平台启动服务端模板</option><option value="none">无需服务（普通批处理）</option></select></Field>
       {serviceMode==='external'&&<>      <div aria-label="候选地址列表">{addresses.map((address,i)=><div key={i}>
@@ -157,7 +158,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {step===4&&<>
       <h3>确认运行配置</h3><dl className="run-summary">
         <dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:'自定义清单'}</dd>
-        <dt>任务与回合</dt><dd>{cases.length} 项任务，{template?.task_type==='command'?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
+        <dt>任务与回合</dt><dd>{cases.length} 项任务，{ordinaryOnce?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
         <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{serviceMode==='managed'?serviceRows.map(s=><p key={s.key}>{s.key} · {servers.find(t=>t.id===s.template_id)?.name} · {s.mode==='exclusive'?'独占':'共享'} · 自动地址</p>):serviceMode==='none'?'无需服务':addresses.map((e,i)=><p key={i}>{e.url} · {e.mode==='exclusive'?'独占':'共享'}</p>)}</dd>
         <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {template?.resource_requirements?'按模板及本次覆盖申请':(draft.gpu_mode==='shared'?'共享':'独占')+' · 每项 '+draft.requested_vram_gb+' GiB'} · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
         <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项 {draft.timeout_seconds} 秒</dd>
@@ -187,7 +188,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {submitted&&<p role="status">{submitted}{onBatch&&<button onClick={()=>onBatch(submittedId)}>查看已提交批次</button>}</p>}
     {trial&&<section aria-label="试跑进度"><button onClick={()=>onBatch?.(trial.id)}>查看试跑批次</button><h3>{trial.title} · {statuses[trial.status]||trial.status}</h3>
       {trialError&&<p role="alert">试跑状态更新失败：{trialError}，将自动重试。</p>}
-      {trial.cases.map(c=><div key={c.job_id}><p>{statuses[c.status]||c.status} · {c.task_type==='command'?'普通命令，按退出码判定执行结果':c.episode_reporting?`已完成 ${c.progress.completed}/1 回合，目标成功 ${c.progress.successes}`:'客户端未声明回合上报，无法验证回合报告'}</p>{c.error&&<p>{c.error}</p>}<button onClick={()=>onJob(c.job_id)}>试跑详情 / 取消</button></div>)}
+      {trial.cases.map(c=><div key={c.job_id}><p>{statuses[c.status]||c.status} · {c.task_type==='command'?(c.episode_reporting?`普通命令已完成 ${c.progress.completed}/1 回合`:'普通命令，按退出码判定执行结果'):c.episode_reporting?`已完成 ${c.progress.completed}/1 回合，目标成功 ${c.progress.successes}`:'客户端未声明回合上报，无法验证回合报告'}</p>{c.error&&<p>{c.error}</p>}<button onClick={()=>onJob(c.job_id)}>试跑详情 / 取消</button></div>)}
       <p className="hint">{trial.cases.length>0&&trial.cases.every(c=>c.task_type==='command')?'试跑只代表所选命令的一次执行，不代表完整集合执行结果。':'试跑只代表所选任务的一个回合，不代表完整集合评测结果。'}</p>
     </section>}
   </section>;

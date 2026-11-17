@@ -58,7 +58,7 @@ def report(s, batch, at):
         reporting = template.get('episode_reporting', False)
         command=template.get('task_type')=='command'
         done, successes, errors = counts.get(run.id, (0, 0, 0)) if reporting else (0, 0, 0)
-        definition = dict(task_name=spec['task_name'], seed=spec['seed'], episodes=0 if command else job.episodes,
+        definition = dict(task_name=spec['task_name'], seed=spec['seed'], episodes=0 if command and not reporting else job.episodes,
                           parameters_digest=digest(spec.get('parameters', {})))
         config = dict(pool_id=job.pool_id, gpu_mode=job.gpu_mode,
                       requested_vram_gb=job.requested_vram_gb, required_gpu_model=job.required_gpu_model,
@@ -66,20 +66,21 @@ def report(s, batch, at):
                       image=template['image'], environment_digest=digest({
                           'runtime': (template.get('runtime') or {}).get('environment', {}),
                           'overrides': spec.get('environment', {})}))
-        cases.append(dict(job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,
+        cases.append(dict(job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,task_type=template.get('task_type','evaluation'),
                           status=job.status, **definition, definition_digest=digest(definition), config=config,
                           episode_reporting=reporting, completed_episodes=done, successes=successes,
-                          goal_failures=done-successes, episode_errors=errors,
-                          success_rate=successes/done if done else None,
-                          partial=(job.status!='SUCCEEDED') if command else (not reporting or done != job.episodes or errors > 0 or job.status != 'SUCCEEDED')))
+                          goal_failures=0 if command else done-successes, episode_errors=errors,
+                          success_rate=None if command else successes/done if done else None,
+                          partial=(job.status!='SUCCEEDED' or (reporting and done!=job.episodes)) if command else (not reporting or done != job.episodes or errors > 0 or job.status != 'SUCCEEDED')))
     done = sum(c['completed_episodes'] for c in cases)
-    successes = sum(c['successes'] for c in cases)
+    successes = sum(c['successes'] for c in cases if c['task_type']!='command')
+    evaluated_done=sum(c['completed_episodes'] for c in cases if c['task_type']!='command')
     summary = dict(total_tasks=len(cases), planned_episodes=sum(c['episodes'] for c in cases),
                    completed_episodes=done, successes=successes,
-                   goal_failures=done-successes, episode_errors=sum(c['episode_errors'] for c in cases),
+                   goal_failures=evaluated_done-successes, episode_errors=sum(c['episode_errors'] for c in cases),
                    reporting_tasks=sum(c['episode_reporting'] for c in cases),
                    unreported_tasks=sum(not c['episode_reporting'] for c in cases),
-                   partial=any(c['partial'] for c in cases), success_rate=successes/done if done else None)
+                   partial=any(c['partial'] for c in cases), success_rate=successes/evaluated_done if evaluated_done else None)
     states = [c['status'] for c in cases]
     status = ('SUCCEEDED' if states and all(x == 'SUCCEEDED' for x in states) else
               'RUNNING' if any(x in ACTIVE for x in states) else

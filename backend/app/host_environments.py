@@ -49,6 +49,9 @@ def desired(worker):return {'revision':worker.host_revision,'environments':worke
 def blockers(worker,slot,spec,at):
     template=(spec or {}).get('template',{})
     if template.get('execution_mode','docker')!='host':return []
+    settings=template.get('host_runtime') or {}
+    if slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
+        return ['宿主机登录环境与逐回合启动需要 Worker 协议 15，请升级节点 Worker']
     if 'command_mode' in template.get('host_runtime',{}) and slot.protocol_version<14:return ['通用命令需要 Worker 协议 14，请升级节点 Worker']
     if template.get('host_runtime',{}).get('working_directory') is not None and slot.protocol_version<13:return ['业务执行目录需要 Worker 协议 13，请升级节点 Worker']
     if slot.protocol_version<7:return ['宿主机执行需要 Worker v7']

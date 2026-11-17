@@ -73,7 +73,8 @@ def validate(s, body, user, exclude=None):
     try:
         json_tree([c.model_dump() for c in body.cases])
         for template in templates:
-            if template.task_type=='command' and any(c.episodes!=1 for c in body.cases):
+            from .clients import host_episode_launch
+            if template.task_type=='command' and not host_episode_launch({'execution_mode':template.execution_mode,'host_runtime':template.host_runtime}) and any(c.episodes!=1 for c in body.cases):
                 raise ValueError('ordinary commands require episodes=1')
             if template.parameter_schema is not None:
                 from runner.parameter_contract import resolve_layers

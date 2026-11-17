@@ -77,9 +77,21 @@ def main():
             env.update(additions)
         if config['template'].get('integration_mode') == 'sdk-command':
             command = [sys.executable, '-m', 'runner.command_sdk']
+        host_runtime=config['template'].get('host_runtime') or {}
+        if (config['template'].get('execution_mode')=='host'
+                and host_runtime.get('episode_launch')=='per_episode'
+                and config['template'].get('integration_mode')!='sdk-command'):
+            from .host_episode import main as run_host_episodes
+            run_host_episodes(config,command,cwd,env)
+            return
         from .process_command import for_template
         command=for_template(config['template'],command,cwd,env)
-        code = subprocess.call(command, env=env, cwd=cwd)
+        # Keep the SDK wrapper on the controlled platform environment; it
+        # applies the business environment only to per-episode subprocesses.
+        launch_env=(dict(os.environ) if config['template'].get('execution_mode')=='host'
+                    and config['template'].get('integration_mode')=='sdk-command' else env)
+        launch_env.update(MINI_EVAL_INPUT=input_path,MINI_EVAL_OUTPUT_DIR=output_dir)
+        code = subprocess.call(command, env=launch_env, cwd=cwd)
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:
         # Never print response payloads or authentication data from the remote service.

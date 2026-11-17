@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import uuid
+import pwd
 from .host_environments import probe,user_environment
 from .storage import atomic_json
 from .workspace import execution_dirs,validate_storage,disk_status
@@ -131,10 +132,19 @@ class HostBackend:
             argv[0]=code_path(argv[0])
             if not os.access(argv[0],os.X_OK):raise RuntimeError('business program is not executable')
         platform_root=str(Path(__file__).resolve().parent.parent)
-        env={'PATH':str(Path(profile['python']).parent)+':/usr/local/bin:/usr/bin:/bin','HOME':str(Path.home()),'LANG':'C.UTF-8','PYTHONUNBUFFERED':'1','PYTHONPATH':platform_root+':'+str(code_root),
+        env={}
+        if host.get('environment_source')=='login':
+            from .host_identity import login_environment
+            env.update(login_environment(account or pwd.getpwuid(os.geteuid())))
+        login_path=env.get('PATH','/usr/local/bin:/usr/bin:/bin')
+        login_pythonpath=env.get('PYTHONPATH','')
+        env.update({'PATH':str(Path(profile['python']).parent)+':'+login_path,
+             'HOME':account.pw_dir if account else str(Path.home()),'LANG':env.get('LANG','C.UTF-8'),
+             'PYTHONUNBUFFERED':'1','PYTHONPATH':platform_root+':'+str(code_root)+(':'+login_pythonpath if login_pythonpath else ''),
              'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_WORK_DIR':values['work_dir'],'MINI_EVAL_OUTPUT_DIR':values['output_dir'],
-             'MINI_EVAL_ASSETS_DIR':w.config['assets_root'],'MINI_EVAL_CACHE_DIR':w.config['cache_root']}
+             'MINI_EVAL_ASSETS_DIR':w.config['assets_root'],'MINI_EVAL_CACHE_DIR':w.config['cache_root']})
         env.update({k:expand(v) for k,v in {**host['environment'],**task_env}.items()})
+        env['PWD']=str(business_cwd)
         if account:env['HOME']=account.pw_dir
         if npu:
             account,device,cann_env=npu
@@ -143,7 +153,7 @@ class HostBackend:
             for key,original in original_paths.items():
                 if original and cann_env.get(key):env[key]=cann_env[key]+':'+original
             env['HOME']=account.pw_dir
-            env['PYTHONPATH']=platform_root+':'+str(code_root)+(':'+cann_env['PYTHONPATH'] if cann_env.get('PYTHONPATH') else '')
+            env['PYTHONPATH']=platform_root+':'+str(code_root)+(':'+cann_env['PYTHONPATH'] if cann_env.get('PYTHONPATH') else '')+(':'+login_pythonpath if login_pythonpath else '')
             from .npu_host import installed_environment
             env.update(installed_environment(account,env))
             env.pop('CUDA_VISIBLE_DEVICES',None)
@@ -156,7 +166,14 @@ class HostBackend:
         config['template']={**config['template'],'command':argv}
         atomic_json(inp,config)
         module='runner.service_entry' if config.get('workload') == 'service' else 'runner.cs_entry'
-        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[sys.executable if generic else profile['python'],'-m',module],'environment':env,'cwd':values['work_dir']}
+        # The supervisor and platform entrypoint start with controlled values;
+        # only the business subprocess receives the login environment.
+        platform_env={key:env[key] for key in ('HOME','LANG','PYTHONUNBUFFERED','MINI_EVAL_INPUT','MINI_EVAL_WORK_DIR','MINI_EVAL_OUTPUT_DIR','MINI_EVAL_ASSETS_DIR','MINI_EVAL_CACHE_DIR')}
+        platform_env.update(PATH=str(Path(profile['python']).parent)+':/usr/local/bin:/usr/bin:/bin',
+                            PYTHONPATH=platform_root+':'+str(code_root))
+        login_source=host.get('environment_source')=='login'
+        platform_python=sys.executable if generic or login_source else profile['python']
+        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[platform_python,'-m',module],'environment':platform_env if login_source else env,'cwd':values['work_dir']}
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
         if account:
@@ -171,7 +188,7 @@ class HostBackend:
                 owner=parent.stat()
                 if owner.st_uid==0:parent.chmod(owner.st_mode | 0o011)
             from .host_identity import check_paths
-            paths=[('platform Python',sys.executable if generic else profile['python'],os.R_OK|os.X_OK),('Python',profile['python'],os.R_OK|os.X_OK),('code root',str(code_root),os.R_OK|os.X_OK),
+            paths=[('platform Python',platform_python,os.R_OK|os.X_OK),('Python',profile['python'],os.R_OK|os.X_OK),('code root',str(code_root),os.R_OK|os.X_OK),
                    ('business cwd',str(business_cwd),os.R_OK|os.X_OK),('platform code',platform_root,os.R_OK|os.X_OK),
                    ('work directory',values['work_dir'],os.R_OK|os.W_OK|os.X_OK),('output directory',values['output_dir'],os.R_OK|os.W_OK|os.X_OK),
                    ('cache directory',w.config['cache_root'],os.R_OK|os.W_OK|os.X_OK)]

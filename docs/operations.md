@@ -1,5 +1,7 @@
 # 部署与运维
 
+2026-11-18 宿主机登录环境与逐回合启动发布：控制端镜像 `mini-eval-api:host-shell-episode-20261118`，数据库版本 `w396f78` 无迁移。29 号 NPU 节点与本机 GPU 节点升级 Worker 0.18.0 / 协议 15；其他节点保持旧版本，登录环境或逐回合模板会按协议门槛排除旧节点。发布、备份、真实任务及清理边界见 [验证记录](validation/host-shell-episode-launch/README.md)。
+
 默认平台部署现包含 SSH 纳管执行器：scripts/control.py up 同时构建 API 与 onboarding 镜像，Compose 自动启动、健康检查和连接。复制项目到新机器后按正常平台部署即可，平台用户无需另装执行器或配置 socket。机器注册与恢复均通过界面操作。详细架构与旧宿主机部署兼容见 [SSH 纳管执行器](ssh-onboarding-executor.md)。
 
 

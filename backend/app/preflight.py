@@ -169,6 +169,6 @@ def inspect_batch(s, body, user, pool, cases, configs):
         checks.append({'case_id':case.case_id,'resources':request,'resource_sources':spec.get('resource_sources',{}),**context.inspect(job,user,pool)})
     primary={k:v for k,v in checks[0].items() if k!='case_id'}
     return dict(**primary,case_checks=checks,can_submit=True,
-                task_count=len(cases), total_episodes=sum(c.episodes for c,spec in zip(cases,configs) if spec['template'].get('task_type')!='command'), max_concurrent=body.max_concurrent,
+                task_count=len(cases), total_episodes=sum(c.episodes for c,spec in zip(cases,configs) if spec['template'].get('task_type')!='command' or spec['template'].get('episode_reporting')), max_concurrent=body.max_concurrent,
                 cases=[c.model_dump() for c in cases],
                 note='检查不预留资源；服务连通和客户端执行需要实际试跑验证。')

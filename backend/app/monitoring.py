@@ -62,15 +62,17 @@ def monitor(s, batch):
     pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.id.in_({j.pool_id for j in jobs})))}
     reporting = [c for c in result['cases'] if c['episode_reporting']]
     completed = sum(c['progress']['completed'] for c in reporting)
-    successes = sum(c['progress']['successes'] for c in reporting)
+    evaluated=[c for c in reporting if c['task_type']!='command']
+    evaluated_completed=sum(c['progress']['completed'] for c in evaluated)
+    successes = sum(c['progress']['successes'] for c in evaluated)
     result.update(checked_at=context.at, summary=dict(states=dict(Counter(j.status for j in jobs)),
         cancel_requested_tasks=sum(j.status == 'CANCEL_REQUESTED' for j in jobs),
         cleanup_pending_tasks=sum(not j.runs[-1].cleanup_confirmed and j.status in ('CANCEL_REQUESTED', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT') for j in jobs),
-        completed_episodes=completed, successes=successes, goal_failures=completed-successes,
+        completed_episodes=completed, successes=successes, goal_failures=evaluated_completed-successes,
         episode_errors=sum(c['progress']['errors'] for c in reporting),
         execution_failures=sum(j.status in ('FAILED', 'TIMED_OUT') for j in jobs),
         reporting_tasks=len(reporting), unreported_tasks=sum(not c['episode_reporting'] and c['task_type']!='command' for c in result['cases']),
-        success_rate=successes/completed if completed else None))
+        success_rate=successes/evaluated_completed if evaluated_completed else None))
     for case, job in zip(result['cases'], jobs):
         run = job.runs[-1]
         slot = context.slots.get(run.slot_id)

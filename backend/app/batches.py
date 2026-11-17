@@ -99,9 +99,9 @@ def batch_view(s, batch, jobs=None, progresses=None):
         status = 'CANCELLED'
     return {'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
-            'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command'),
+            'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command' or j.client_spec['template'].get('episode_reporting')),
             'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
-                       'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' else j.episodes, 'status': j.status,
+                       'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' and not j.client_spec['template'].get('episode_reporting') else j.episodes, 'status': j.status,
                        'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
                        'episode_reporting': j.client_spec['template'].get('episode_reporting', False),
@@ -143,7 +143,8 @@ def resolve_batch(s, body, user, initial_defaults=None):
         try: configs.append(snapshot(s, config, user.id))
         except HTTPException as exc:
             raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
-        if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1:
+        from .clients import host_episode_launch
+        if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1 and not host_episode_launch(configs[-1]['template']):
             raise HTTPException(400,f'case {case.case_id}: ordinary commands require episodes=1; they do not report episodes')
         from .job_resources import resolve,explicit,submission
         resource,sources=resolve(pool,configs[-1]['template'],('submission',submission(body)),('case',explicit(case.resources)))

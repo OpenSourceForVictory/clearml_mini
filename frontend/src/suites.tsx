@@ -2,7 +2,7 @@ import React,{useEffect,useState,useRef,useId} from 'react';
 import {api} from './api';
 import './suite-manager.css';
 type Case={case_id:string;task_name:string;episodes:number;seed:number;parameters:Record<string,unknown>};
-type Template={id:string;name:string;version:string;task_type?:string};
+type Template={id:string;name:string;version:string;task_type?:string;execution_mode?:string;host_runtime?:{episode_launch?:string}|null};
 export type ManagedSuite={client_defaults?:Record<string,unknown>;id:string;name:string;version:string;template_id:string;template_ids?:string[];cases:Case[];description:string;tags:string[];source:string;status:'draft'|'published';archived:boolean;revision:number;
   versions?:{id:string;version:string;status:string;archived:boolean}[]};
 type Summary=Omit<ManagedSuite,'cases'> & {task_count:number;total_episodes:number;latest_run:null|{id:string;title:string;status:string}};
@@ -33,7 +33,8 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   const [episodes,setEpisodes]=useState(3),[seed,setSeed]=useState(0),[params,setParams]=useState<Record<string,unknown>>({});
   const [runs,setRuns]=useState<{id:string;title:string;status:string;finished:number;total:number;cases:{job_id:string;task_name:string;status:string;episodes:number;progress:{completed:number;successes:number}}[]}[]>([]),[runPage,setRunPage]=useState(1);
   useEffect(()=>{if(configOpen&&configRef.current?.getClientRects().length)configRef.current.scrollIntoView({block:'start'});},[configOpen,editing?.id]);
-  const ordinary=templates.find(t=>t.id===template)?.task_type==='command';
+  const selectedTemplate=templates.find(t=>t.id===template);
+  const ordinary=selectedTemplate?.task_type==='command'&&!(selectedTemplate.execution_mode==='host'&&selectedTemplate.host_runtime?.episode_launch==='per_episode');
   const locked=!!editing&&(editing.status==='published'||editing.archived);
   const visible=doc.cases.map((c,i)=>({c,i})).filter(({c})=>(c.task_name+' '+c.case_id).toLowerCase().includes(taskQuery.toLowerCase()));
   async function refresh(){
@@ -155,7 +156,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
             <Field label="集合版本"><input required maxLength={100} value={doc.version} onChange={e=>setDoc({...doc,version:e.target.value})}/></Field>
             <Field label="集合标签（逗号分隔）"><input value={doc.tags.join(',')} onChange={e=>setDoc({...doc,tags:e.target.value.split(',')})}/></Field>
           </div>
-          {ordinary&&<p className="hint">普通命令集合：每项任务执行一次，不统计评测回合。保存时回合兼容字段固定为 1，业务参数与种子仍可传递。</p>}
+          {selectedTemplate?.task_type==='command'&&<p className="hint">{ordinary?'普通命令集合：每项任务执行一次，回合兼容字段固定为 1。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}业务参数与种子会传递；不计算评测目标成功率。</p>}
           {doc.client&&<p className="hint">导入客户端提示：{doc.client.name} / {doc.client.version}。无法自动匹配时请手动选择。</p>}
           <Field label="集合说明"><textarea maxLength={2000} value={doc.description} onChange={e=>setDoc({...doc,description:e.target.value})}/></Field>
           <label>集合默认业务参数</label><Parameters value={clientDefaults} change={setClientDefaults} label="集合默认业务参数"/>

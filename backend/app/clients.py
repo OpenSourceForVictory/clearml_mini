@@ -38,9 +38,8 @@ class TemplateCreate(BaseModel):
         from runner.template_contract import host_config
         from runner.task_input import validate_combined
         validate_combined(self.parameter_schema,self.platform_bindings)
-        if self.task_type=='command':
-            if self.episode_reporting or self.integration_mode!='direct':
-                raise ValueError('ordinary commands do not use episode reporting')
+        if self.task_type=='command' and self.integration_mode!='direct':
+            raise ValueError('ordinary commands use direct command execution')
         if (self.platform_bindings or self.task_type=='command') and self.execution_mode=='docker' and self.runtime is None:
             self.runtime={}
         if self.parameter_schema is not None:
@@ -57,6 +56,12 @@ class TemplateCreate(BaseModel):
         if self.integration_mode == 'sdk-command':
             self.episode_reporting = True
             if self.execution_mode == 'docker' and self.runtime is None: self.runtime = {}
+        host_episodes=self.execution_mode=='host' and self.host_runtime.get('episode_launch')=='per_episode'
+        if self.task_type=='command':
+            if self.episode_reporting and not host_episodes:
+                raise ValueError('ordinary commands do not use episode reporting without host per-episode launch')
+            self.episode_reporting=host_episodes
+        elif host_episodes:self.episode_reporting=True
         if self.runtime is not None:
             self.runtime = image_runtime.validate(self.runtime, self.command)
         if self.parameter_schema is not None:
@@ -144,6 +149,11 @@ class ClientRequest(BaseModel):
 
 def template_view(t):
     return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements')}
+
+
+def host_episode_launch(template):
+    return (template.get('execution_mode')=='host'
+            and (template.get('host_runtime') or {}).get('episode_launch')=='per_episode')
 
 
 def snapshot(s, body, owner_id=None):

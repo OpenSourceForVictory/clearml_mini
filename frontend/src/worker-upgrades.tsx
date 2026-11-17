@@ -5,7 +5,7 @@ type Release={id:string;version:string;protocol_version:number;capabilities:stri
 type Operation={id:string;release_id:string;status:string;error:string|null;created_at:string};
 type Info={revision:number;state:string|null;updater_online:boolean;slots:{id:string;gpu_index:number;online:boolean;protocol_version:number;software:{version:string;build_digest:string|null;capabilities:string[]}|null}[];history:Operation[]};
 const states:Record<string,string>={DRAINING:'等待全机任务排空',APPLYING:'安装中',VERIFYING:'等待全部 GPU 回连',ROLLING_BACK:'恢复旧版本中',SUCCEEDED:'升级成功',FAILED:'升级失败（暂停接单）',CANCELLED:'已取消'};
-const capabilities:Record<string,string>={docker:'Docker 执行',host:'宿主机执行',episode_reporting:'逐回合上报',typed_parameters:'类型化参数',directory_mounts:'通用目录挂载',inference_services:'推理服务'};
+const capabilities:Record<string,string>={docker:'Docker 执行',host:'宿主机执行',episode_reporting:'逐回合上报',typed_parameters:'类型化参数',directory_mounts:'通用目录挂载',inference_services:'推理服务',host_login_environment:'宿主机登录环境',host_episode_launch:'宿主机逐回合启动'};
 export function WorkerUpgrades({id}:{id:string}){
  const [info,setInfo]=useState<Info|null>(null),[releases,setReleases]=useState<Release[]>([]),[selected,setSelected]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const refresh=async()=>{const [i,r]=await Promise.all([api<Info>('admin/nodes/'+id+'/upgrades'),api<Release[]>('admin/worker-releases')]);if(Array.isArray(i.slots))setInfo(i);setReleases(r)};

@@ -5,6 +5,46 @@ from pathlib import Path
 import pwd
 import subprocess
 import uuid
+import re
+
+_ENV_NAME=re.compile(rb'[A-Za-z_][A-Za-z0-9_]*\Z')
+_ENV_MARKER=b'\0MINI_EVAL_LOGIN_ENV\0'
+
+
+def login_environment(account):
+    """Capture exported login variables under the approved business identity."""
+    shell=account.pw_shell
+    if not shell or not Path(shell).is_absolute() or not os.access(shell,os.X_OK):
+        raise RuntimeError('business account login shell is unavailable')
+    seed={'HOME':account.pw_dir,'USER':account.pw_name,'LOGNAME':account.pw_name,
+          'SHELL':shell,'PATH':'/usr/local/bin:/usr/bin:/bin','LANG':'C.UTF-8','TERM':'dumb'}
+    identity=({'user':account.pw_uid,'group':account.pw_gid,
+               'extra_groups':os.getgrouplist(account.pw_name,account.pw_gid)}
+              if os.geteuid()==0 else {})
+    if os.geteuid()!=0 and os.geteuid()!=account.pw_uid:
+        raise RuntimeError('business account login environment requires the approved identity')
+    try:
+        result=subprocess.run(['-'+Path(shell).name,'-c',
+                               "printf '\\0MINI_EVAL_LOGIN_ENV\\0'; /usr/bin/env -0"],
+            executable=shell,env=seed,cwd=account.pw_dir,stdin=subprocess.DEVNULL,
+            capture_output=True,timeout=10,**identity)
+    except (OSError,subprocess.SubprocessError) as exc:
+        raise RuntimeError('business account login environment could not be loaded') from exc
+    if result.returncode or _ENV_MARKER not in result.stdout:
+        raise RuntimeError('business account login environment could not be loaded')
+    raw=result.stdout.split(_ENV_MARKER,1)[1]
+    if len(raw)>131072 or not raw.endswith(b'\0'):
+        raise RuntimeError('business account login environment is invalid or too large')
+    values={}
+    for entry in raw[:-1].split(b'\0'):
+        if b'=' not in entry:raise RuntimeError('business account login environment is invalid')
+        key,value=entry.split(b'=',1)
+        if not _ENV_NAME.fullmatch(key) or len(value)>16384:
+            raise RuntimeError('business account login environment is invalid')
+        try:values[key.decode('ascii')]=value.decode('utf-8')
+        except UnicodeError as exc:
+            raise RuntimeError('business account login environment is invalid') from exc
+    return values
 
 
 def settings(config):

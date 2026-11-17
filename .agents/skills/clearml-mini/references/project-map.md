@@ -1,5 +1,7 @@
 # 实现与操作索引
 
+宿主机登录环境与逐回合启动（Worker 协议 15）：`runner/template_contract.py` 验证 `host_runtime.environment_source` 与 `episode_launch`；`worker/host_identity.py` 以批准业务账号读取非交互登录 shell 的导出变量；`worker/host_backend.py` 合并业务环境并最后写设备可见变量，旧模板保留原入口环境。`runner/host_episode.py` 在同一受控执行单元内顺序监视前台子进程，`runner/cs_entry.py` 与 `command_sdk.py` 处理 direct/普通命令/SDK 命令；API `clients.py`、`execution.py`、`batches.py` 维护回合与结果契约。Docker 与服务端不启用新逐回合适配器。界面和操作见 `frontend/src/templates.tsx`、`guide-content.ts`、`docs/host-execution.md`、`docs/runtime-templates.md`；定向回归 `backend/tests/test_host_shell_episode.py`。普通命令回合完成不等于评测成功率，真实节点验证与模拟测试分别记录。
+
 路径相对仓库根目录。用户操作入口是界面“用户指南”；维护者使用以下源码和文档定位。
 
 | 边界 | 源码 / 文档 | 关联检查 |

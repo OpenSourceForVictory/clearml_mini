@@ -93,6 +93,8 @@ def runtime_mismatch(slot, job):
     label=(f'{side}宿主机环境「{(template.get("host_runtime") or {}).get("environment_name","未指定") }」'
            if mode=='host' else f'{side}容器镜像「{template.get("image","未指定") }」')
     settings=template.get('host_runtime') or template.get('runtime') or {}
+    if mode=='host' and slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
+        return f'{label}的登录环境或逐回合启动需要 Worker 协议 15（当前 {slot.protocol_version}）'
     if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):
         return f'{label}需要 Worker 协议 14（当前 {slot.protocol_version}）'
     if template.get('execution_mode')=='host' and (template.get('host_runtime') or {}).get('working_directory') is not None and slot.protocol_version<13:

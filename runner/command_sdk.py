@@ -34,6 +34,8 @@ class CommandClient(EvaluationClient):
             return TOKEN.sub(replace,text)
         argv=[expand(x) for x in validate_command(task['template']['command'])]
         env=dict(os.environ)
+        if task['template'].get('execution_mode')=='host':
+            env.update(task.get('_resolved_environment',{}))
         settings=task['template'].get('host_runtime') or runtime or {}
         for k,v in {**settings.get('environment',{}),**task.get('environment',{})}.items():env[k]=expand(v)
         schema = task['template'].get('parameter_schema')

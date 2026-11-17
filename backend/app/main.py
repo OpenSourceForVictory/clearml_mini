@@ -228,7 +228,8 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
         if body.client and body.client.service_mode=='managed':raise HTTPException(400,'managed services require orchestration submission')
         values['client_spec'] = snapshot(s, body.client, user.id)
         template = values['client_spec']['template']
-        if template.get('task_type')=='command' and body.episodes!=1:
+        from .clients import host_episode_launch
+        if template.get('task_type')=='command' and body.episodes!=1 and not host_episode_launch(template):
             raise HTTPException(400,'ordinary commands require episodes=1; they do not report episodes')
         values['model_ref'] = template['name'] + ':' + template['version']
     elif body.client is not None:
