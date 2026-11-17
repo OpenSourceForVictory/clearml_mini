@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page){
-  const requests:{body:any;key:string}[]=[];let checks=0,fail:boolean|string=false,delay=0,loseResponse=false,reporting=true;
+  const requests:{body:any;key:string}[]=[];let checks=0,fail:boolean|string=false,delay=0,loseResponse=false,reporting=true;let serverChecks:any[]|undefined,clientReasons:any[]|undefined;
   const suite={id:'suite',name:'Three tasks',version:'v1',template_id:'t',cases:[1,2,3].map(i=>({case_id:'case-'+i,task_name:'task-'+i,episodes:4,seed:10+i,parameters:{variant:i}}))};
   const batch=(body:any,id='batch')=>({id,title:body.title,status:'PENDING',total:body.cases.length||3,succeeded:0,finished:0,total_episodes:body.cases.reduce((n:number,c:any)=>n+c.episodes,0)||12,cases:[]});
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
@@ -17,7 +17,7 @@ async function setup(page:Page){
       if(wait)await new Promise(r=>setTimeout(r,wait));
       if(bad){await route.fulfill({status:400,json:{detail:typeof bad==='string'?bad:[{reason:'client.endpoint: invalid endpoint'}]}});return;}
       data={checked_at:new Date().toISOString(),can_submit:true,status:'needs_environment',task_count:3,total_episodes:12,cases:body.suite_id?suite.cases:body.cases,
-        reasons:[],nodes:[{slot_id:'s',node_name:'R8000',gpu_index:0,gpu_model:'RTX 8000',ready:false,reasons:[{code:'client_image',category:'environment',message:'所需镜像未批准或未就绪',action:'请管理员准备镜像'}]}],note:'检查不预留资源'};
+        reasons:[],nodes:[{slot_id:'s',node_name:'R8000',gpu_index:0,gpu_model:'RTX 8000',ready:false,reasons:clientReasons||[{code:'client_image',category:'environment',message:'所需镜像未批准或未就绪',action:'请管理员准备镜像'}]}],server_checks:serverChecks,note:'检查不预留资源'};
     }
     if(path==='orchestrations'&&route.request().method()==='POST'){
       const body=route.request().postDataJSON(),key=route.request().headers()['idempotency-key'];requests.push({body,key});if(loseResponse){loseResponse=false;await route.abort();return;}data=batch(body);
@@ -36,8 +36,21 @@ async function setup(page:Page){
   await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');await wizard.getByLabel('最大并发任务数').fill('2');
-  return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean|string)=>{fail=x;},setDelay:(x:number)=>{delay=x;}};
+  return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean|string)=>{fail=x;},setDelay:(x:number)=>{delay=x;},setServerChecks:(x:any[])=>{serverChecks=x;},setClientReasons:(x:any[])=>{clientReasons=x;}};
 }
+
+test('preflight names client environment and per-card server blockers',async({page})=>{
+ const {wizard,setServerChecks,setClientReasons}=await setup(page);
+ setClientReasons([{code:'client_runtime',category:'environment',message:'客户端宿主机环境「robotwin」未就绪：该设备未启用宿主机执行',action:'请管理员检查 Worker'}]);
+ setServerChecks([{key:'model',pool_name:'Server GPUs',status:'waiting_resources',reasons:[],nodes:[{slot_id:'server-0',node_name:'server-1',gpu_index:1,gpu_model:'H100',ready:false,reasons:[{code:'gpu_busy',category:'resource',message:'GPU 已占用或达到共享任务上限',action:'等待现有任务释放资源'}]}]}]);
+ await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(wizard.getByText('客户端宿主机环境「robotwin」未就绪：该设备未启用宿主机执行',{exact:false})).toBeVisible();
+ const server=wizard.getByRole('region',{name:'服务端 model 候选设备'});
+ await expect(server).toContainText('资源池 Server GPUs');
+ await expect(server).toContainText('server-1 / 设备 1');
+ await expect(server).toContainText('GPU 已占用或达到共享任务上限');
+ await expect(server).toContainText('等待现有任务释放资源');
+});
 
 test('draft survives navigation and polling; queued submit and independent trial preserve full suite',async({page})=>{
   const {wizard,requests}=await setup(page);

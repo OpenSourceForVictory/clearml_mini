@@ -50,6 +50,7 @@ def test_atomic_idempotent_submission_and_read_only_preflight(env,monkeypatch):
     main,c,a=env;*_,body=setup(env,monkeypatch)
     r=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=body);assert r.status_code==200,r.text
     assert r.json()['pair_checks'][0]['pair_ready']
+    assert r.json()['server_checks'][0]['status']=='ready'
     with main.SessionLocal() as s:
         assert not list(s.scalars(select(Job))) and not list(s.scalars(select(ServiceInstance)))
     suite={'name':'new','version':'1','template_id':body['client']['template_id'],'cases':body['cases']}
@@ -64,6 +65,37 @@ def test_atomic_idempotent_submission_and_read_only_preflight(env,monkeypatch):
         assert s.scalar(select(func.count()).select_from(EvaluationSuite))==1
         assert s.scalar(select(func.count()).select_from(Job))==3
         assert s.scalar(select(func.count()).select_from(EvaluationBatch))==1
+
+
+def test_preflight_reports_server_node_card_and_blocker(env,monkeypatch):
+    main,c,a=env;_,server_slot,_,_,body=setup(env,monkeypatch)
+    with main.SessionLocal() as s:
+        s.get(Slot,server_slot).storage_reported_at=None
+        s.commit()
+    result=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=body)
+    assert result.status_code==200,result.text
+    data=result.json();assert data['status']=='needs_environment'
+    service=data['server_checks'][0]
+    assert service['key']=='default' and service['pool_name']=='mock'
+    assert len(service['nodes'])==1 and service['nodes'][0]['slot_id']==server_slot
+    assert service['nodes'][0]['gpu_index']==0
+    assert any(r['code']=='storage_pending' for r in service['nodes'][0]['reasons'])
+    with main.SessionLocal() as s:
+        assert not list(s.scalars(select(Job))) and not list(s.scalars(select(ServiceInstance)))
+
+
+def test_preflight_requires_service_network_even_when_devices_pair(env,monkeypatch):
+    main,c,a=env;_,server_slot,_,_,body=setup(env,monkeypatch)
+    with main.SessionLocal() as s:
+        s.get(Worker,s.get(Slot,server_slot).worker_id).service_network=None
+        s.commit()
+    result=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=body)
+    assert result.status_code==200,result.text
+    data=result.json()
+    assert not data['pair_checks'][0]['pair_ready']
+    assert data['status']=='needs_environment'
+    assert data['server_checks'][0]['status']=='needs_environment'
+    assert any(r['code']=='service_network_pending' for r in data['server_checks'][0]['nodes'][0]['reasons'])
 
 
 def test_service_scheduling_diagnosis_before_instance_and_after_allocation(env,monkeypatch):

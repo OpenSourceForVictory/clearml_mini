@@ -77,6 +77,27 @@ def test_environment_reasons_match_admission(env, change, code):
     assert tick(main.SessionLocal)==0
 
 
+def test_client_runtime_reason_names_image_and_missing_execution_mode(env):
+    main,_,_=env
+    body,sid=setup(env)
+    with main.SessionLocal() as s:
+        s.get(Slot,sid).execution_modes=['host']
+        s.commit()
+    result=check(env,body)
+    messages=[r['message'] for r in result['nodes'][0]['reasons'] if r['code']=='client_runtime']
+    assert len(messages)==1
+    assert '客户端容器镜像「approved:cs」' in messages[0]
+    assert '未启用容器执行' in messages[0]
+
+
+def test_client_runtime_version_reason_names_host_environment():
+    from types import SimpleNamespace as N
+    from backend.app.scheduling import runtime_mismatch
+    slot=N(protocol_version=12)
+    job=N(client_spec={'template':{'execution_mode':'host','host_runtime':{'environment_name':'robotwin','working_directory':'business'}}})
+    assert runtime_mismatch(slot,job)=='客户端宿主机环境「robotwin」的业务执行目录需要 Worker 协议 13（当前 12）'
+
+
 @pytest.mark.parametrize('field,value,code', [('max_concurrent',0,'node_concurrency'), ('cpu_capacity',0,'node_cpu'), ('ram_gb_capacity',0,'node_ram')])
 def test_node_limits(env,field,value,code):
     main,c,auth=env;body,sid=setup(env)

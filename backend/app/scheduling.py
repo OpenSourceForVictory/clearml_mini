@@ -85,25 +85,36 @@ def telemetry_fresh(slot, at):
 
 
 
+def runtime_mismatch(slot, job):
+    """Explain the exact client/server execution requirement that this slot lacks."""
+    template=(job.client_spec or {}).get('template',{})
+    side='服务端' if getattr(job,'benchmark',None)=='inference-service' else '客户端'
+    mode=template.get('execution_mode','docker')
+    label=(f'{side}宿主机环境「{(template.get("host_runtime") or {}).get("environment_name","未指定") }」'
+           if mode=='host' else f'{side}容器镜像「{template.get("image","未指定") }」')
+    settings=template.get('host_runtime') or template.get('runtime') or {}
+    if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):
+        return f'{label}需要 Worker 协议 14（当前 {slot.protocol_version}）'
+    if template.get('execution_mode')=='host' and (template.get('host_runtime') or {}).get('working_directory') is not None and slot.protocol_version<13:
+        return f'{label}的业务执行目录需要 Worker 协议 13（当前 {slot.protocol_version}）'
+    if template.get('resource_requirements') is not None and template.get('execution_mode')=='host' and slot.protocol_version<11:
+        return f'{label}的资源申请需要 Worker 协议 11（当前 {slot.protocol_version}）'
+    if (job.client_spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:
+        return f'{label}的业务参数需要 Worker 协议 8（当前 {slot.protocol_version}）'
+    if mode not in (slot.execution_modes or ['docker']):
+        return f'{label}未就绪：该设备未启用{"宿主机" if mode=="host" else "容器"}执行'
+    if job.client_spec and (job.client_spec['template'].get('execution_mode') == 'host' or job.client_spec['template'].get('integration_mode') == 'sdk-command') and slot.protocol_version < 7:
+        return f'{label}需要 Worker 协议 7（当前 {slot.protocol_version}）'
+    return None
+
+
 def eligibility_codes(slot, pool, job, held, at):
     """Ordered admission failures shared by scheduler and read-only preflight."""
     if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
             or slot.disk_at is None or (at-utc(slot.disk_at)).total_seconds() >= 15):
         return ['disk_capacity']
+    if runtime_mismatch(slot, job):return ['client_runtime']
     template=(job.client_spec or {}).get('template',{})
-    settings=template.get('host_runtime') or template.get('runtime') or {}
-    if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):
-        return ['client_runtime']
-    if template.get('execution_mode')=='host' and (template.get('host_runtime') or {}).get('working_directory') is not None and slot.protocol_version<13:
-        return ['client_runtime']
-    if template.get('resource_requirements') is not None and template.get('execution_mode')=='host' and slot.protocol_version<11:
-        return ['client_runtime']
-    if (job.client_spec or {}).get('template', {}).get('parameter_schema') is not None and slot.protocol_version < 8:
-        return ['client_runtime']
-    mode = (job.client_spec or {}).get('template', {}).get('execution_mode', 'docker')
-    if mode not in (slot.execution_modes or ['docker']): return ['client_runtime']
-    if job.client_spec and (job.client_spec['template'].get('execution_mode') == 'host' or job.client_spec['template'].get('integration_mode') == 'sdk-command') and slot.protocol_version < 7:
-        return ['client_runtime']
     if job.client_spec and job.client_spec['template'].get('execution_mode', 'docker') == 'docker' and (slot.protocol_version < 3 or
                             job.client_spec['template']['image'] not in (slot.client_images or [])):
         return ['client_image']

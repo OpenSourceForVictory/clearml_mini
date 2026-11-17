@@ -51,6 +51,21 @@ def reason(code, message=None):
     return dict(code=code, category=category, message=message or text, action=action)
 
 
+def runtime_label(job):
+    template=(job.client_spec or {}).get('template',{})
+    side='服务端' if getattr(job,'benchmark',None)=='inference-service' else '客户端'
+    if template.get('execution_mode','docker')=='host':
+        return f'{side}宿主机环境「{(template.get("host_runtime") or {}).get("environment_name","未指定")}」'
+    return f'{side}容器镜像「{template.get("image","未指定")}」'
+
+
+def slot_reason(code, slot, job):
+    if code=='client_runtime':return reason(code, admission.runtime_mismatch(slot,job))
+    if code=='runtime_pending':return reason(code, f'{runtime_label(job)}：节点运行配置未生效或报告已过期')
+    if code=='client_image':return reason(code, f'{runtime_label(job)}未批准或未就绪')
+    return reason(code)
+
+
 class DiagnosticContext:
     """One bounded query set per inspection, shared across all cases."""
     def __init__(self, s):
@@ -91,7 +106,7 @@ class DiagnosticContext:
             local += admission.eligibility_codes(slot, pool, job, held, self.at)
             from .job_resources import budget
             local += admission.node_codes(worker, budget(pool,job), len(node_held), sum(r.reserved_cpu for r in node_held), sum(r.reserved_ram_gb for r in node_held), sum(r.reserved_ram_gb for r in node_held if r.started_at is None))
-            reasons = [reason(code) for code in dict.fromkeys(local)]
+            reasons = [slot_reason(code,slot,job) for code in dict.fromkeys(local)]
             for message in image_runtime.blockers(worker, slot, job.client_spec, self.at):
                 if message not in [r['message'] for r in reasons]: reasons.append(reason('client_runtime', message))
             nodes.append(dict(slot_id=slot.id, node_name=slot.node_name, gpu_index=slot.gpu_index,

@@ -118,41 +118,50 @@ def owned(s,identity,user):
     return batch,orch
 
 
+def diagnose_service(s, definition, owner, context, planner, batch=None):
+    """Read-only per-device admission and network diagnosis for a managed service."""
+    from .orchestration_scheduler import server_job
+    from .service_network import choose_port
+    pool=planner.pools.get(definition['pool_id'])
+    diagnosis=context.inspect(server_job(definition,owner.id),owner,pool,batch)
+    diagnosis['nodes']=[node for node in diagnosis['nodes'] if 'server' in (planner.workers[context.slots[node['slot_id']].worker_id].roles or ['client'])]
+    if not diagnosis['nodes'] and not any(r['code']=='no_nodes' for r in diagnosis['reasons']):
+        diagnosis['reasons'].append({'code':'node_role_mismatch','category':'environment',
+                                     'message':'资源池中没有具备服务端角色的设备','action':'请管理员检查机器角色和资源池成员'})
+    for node in diagnosis['nodes']:
+        if not node['ready']:continue
+        slot=context.slots[node['slot_id']]
+        worker=planner.workers.get(slot.worker_id)
+        if not worker or not worker.service_network:
+            node['reasons'].append({'code':'service_network_pending','category':'environment',
+                                    'message':'服务端网络地址或端口范围未配置','action':'请管理员配置服务端网络'})
+        else:
+            port=choose_port(s,worker)
+            separate_health=(definition['template'].get('readiness') or {}).get('port','business')!='business'
+            if port is None or (separate_health and choose_port(s,worker,[port]) is None):
+                node['reasons'].append({'code':'service_port_busy','category':'resource',
+                                        'message':'服务端端口范围暂无可用端口','action':'等待已有服务释放端口或调整端口范围'})
+        node['ready']=not node['reasons'] and not diagnosis['reasons']
+    if not any(node['ready'] for node in diagnosis['nodes']):
+        all_reasons=diagnosis['reasons']+[r for node in diagnosis['nodes'] for r in node['reasons']]
+        diagnosis['status']='waiting_resources' if all_reasons and all(r['category']=='resource' for r in all_reasons) else 'needs_environment'
+    return {'key':definition['key'],'pool_name':pool.name if pool else '资源池不可用',
+            'status':diagnosis['status'],'reasons':diagnosis['reasons'],'nodes':diagnosis['nodes']}
+
+
 def view(s,batch):
     result=batch_view(s,batch);orch=s.get(EvaluationOrchestration,batch.id)
     instances=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id)))
     scheduling=[]
     if orch.definition['service_mode']=='managed':
         from .preflight import DiagnosticContext
-        from .orchestration_scheduler import Planner, server_job
-        from .service_network import choose_port
+        from .orchestration_scheduler import Planner
         context=DiagnosticContext(s)
         planner=Planner(s,context.at)
         owner=s.get(User,batch.owner_id)
         for definition in orch.definition['services']:
             if any(item.service_key==definition['key'] for item in instances):continue
-            pool=planner.pools.get(definition['pool_id'])
-            diagnosis=context.inspect(server_job(definition,batch.owner_id),owner,pool,batch)
-            for node in diagnosis['nodes']:
-                if not node['ready']:continue
-                slot=context.slots[node['slot_id']]
-                worker=planner.workers.get(slot.worker_id)
-                if not worker or not worker.service_network:
-                    node['reasons'].append({'code':'service_network_pending','category':'environment',
-                                            'message':'服务端网络地址或端口范围未配置','action':'请管理员配置服务端网络'})
-                else:
-                    port=choose_port(s,worker)
-                    separate_health=(definition['template'].get('readiness') or {}).get('port','business')!='business'
-                    if port is None or (separate_health and choose_port(s,worker,[port]) is None):
-                        node['reasons'].append({'code':'service_port_busy','category':'resource',
-                                                'message':'服务端端口范围暂无可用端口','action':'等待已有服务释放端口或调整端口范围'})
-                node['ready']=not node['reasons'] and not diagnosis['reasons']
-            if not any(node['ready'] for node in diagnosis['nodes']):
-                all_reasons=diagnosis['reasons']+[r for node in diagnosis['nodes'] for r in node['reasons']]
-                diagnosis['status']='waiting_resources' if all_reasons and all(r['category']=='resource' for r in all_reasons) else 'needs_environment'
-            scheduling.append({'key':definition['key'],'pool_name':pool.name if pool else '资源池不可用',
-                               'status':diagnosis['status'],'reasons':diagnosis['reasons'],
-                               'nodes':diagnosis['nodes']})
+            scheduling.append(diagnose_service(s,definition,owner,context,planner,batch))
     result['orchestration']={'stop_after_batch':orch.stop_after_batch,'services':[
         {**services.view(s,i),'service_key':i.service_key,'auto_stopped':i.auto_stopped}
         for i in instances],
@@ -171,9 +180,12 @@ def install(app,db,current):
         result['effective_parameters']=[{'case_id':c.case_id,'parameters':spec['parameters'],'sources':spec.get('parameter_sources',{})} for c,spec in zip(cases,configs)]
         if definitions:
             from .orchestration_scheduler import Planner
+            from .preflight import DiagnosticContext
             from types import SimpleNamespace
             from .core import now
             planner=Planner(s,now());checks=[]
+            context=DiagnosticContext(s)
+            result['server_checks']=[diagnose_service(s,d,user,context,planner) for d in definitions]
             for case,spec in zip(cases,configs):
                 r=spec['resources'];client=SimpleNamespace(owner_id=user.id,pool_id=pool.id,benchmark='cs-client',client_spec=spec,
                     gpu_mode=r['gpu_mode'],requested_vram_gb=r['requested_vram_gb'],required_gpu_model=r.get('required_gpu_model'),
@@ -181,7 +193,9 @@ def install(app,db,current):
                 fit=next((pair for d in definitions if d['key'] in spec['service_keys'] and (pair:=planner.pair(client,d))),None)
                 checks.append({'case_id':case.case_id,'pair_ready':bool(fit)})
             result['pair_checks']=checks
-            result['status']='ready' if any(x['pair_ready'] for x in checks) else 'waiting_resources'
+            result['status']=('needs_environment' if result['status']=='needs_environment' or any(x['status']=='needs_environment' for x in result['server_checks']) else
+                              'ready' if any(x['pair_ready'] for x in checks) and any(x['status']=='ready' for x in result['server_checks']) else
+                              'waiting_resources')
             result['note']='平台自动选择两端节点和端口，联合预留资源后启动服务；健康后自动向客户端注入地址。预检不预留资源。'
         return result
 
