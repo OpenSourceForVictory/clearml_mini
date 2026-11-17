@@ -2,6 +2,8 @@
 
 在界面「管理设置 → 机器管理 → 注册新机器」使用 root SSH（推荐密钥），选择 NVIDIA GPU 或 Ascend NPU、设备编号，并勾选宿主机、容器中的一项或两项。两项都选时会同时检查 Docker 和宿主机资源限制；旧节点重新纳管仍保留原执行方式。root 账号由机器管理员准备；平台不会设置 root 密码或修改 SSH 登录策略。
 
+“SSH 纳管”表单在 SSH 认证字段之前的“加速卡与共享调度”区域选择设备类型、设备编号和共享批准；新机默认“不允许共享”。若选择“手动接入”，在生成 Worker 凭据前同样选择 GPU/NPU 及是否共享，下载的 `node-credential.json` 会包含 `accelerator_type` 和对应的 `gpu_sharing` 或 `npu_sharing`，由安装器写入本地配置。修改手动接入选择需重新生成凭据；只生成凭据或下载文件不代表节点已安装或回连。两种入口都还需单独配置资源池共享策略。
+
 GPU 和 NPU 均需确认“设备共享批准”：新安装默认“不允许共享”；只有明确选“允许共享”才把所选设备类型的 `gpu_runtime.allow_shared` 或 `npu_runtime.allow_shared` 写入每张设备的本地 Worker 配置。重新纳管默认“保留节点原设置”，检查计划会逐卡显示原值；管理员也可明确选择全部开启或关闭。该选择随重新纳管的排空、备份和回滚流程生效；已运行任务先完成清理。节点批准与资源池的“允许加速设备共享”是两道独立条件，任务还需选择共享并申请大于 0 GiB 设备内存。节点并不把本地原始 JSON 上报给平台，而是在注册时上报对应的 `gpu:*:shared` 或 `npu:*:shared` 能力。已有 GPU 节点未配置 `gpu_runtime` 时保留原资源池共享行为，重新纳管可明确设置。
 
 已纳管且需立即手工调整的其他节点，先在平台停用新任务调度并等待执行清理；在节点上用 `systemctl show <Worker服务名> -p ExecStart --value` 找到 `--config` 后的配置路径，不照搬其他节点目录。备份对应 JSON，核对 `accelerator_type=npu`、`npu_runtime.approved=true`，仅修改需要共享的卡的 `npu_runtime.allow_shared`，保留文件属主和权限；重启对应 Worker 后确认共享能力上报。不要展示整个 JSON，其中可能有节点凭据。GPU 节点对应字段为 `gpu_runtime.allow_shared`；手工修改不替代资源池共享开关。

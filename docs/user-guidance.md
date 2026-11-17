@@ -6,6 +6,8 @@
 
 内容唯一源为 `frontend/src/guide-content.ts`，呈现为 `user-guide.tsx`；顶层页面在 `main.tsx`，管理分类在 `administration.tsx`，嵌套功能页由 `navigation.tsx` 与 `functionGuideTopics` 显式映射。模板表单、服务实例提供专用入口。
 
+注册机器时的共享批准说明与实际表单同步：SSH 纳管在认证字段前显示 GPU/NPU 类型、设备编号和共享选择；手动接入先选择设备类型及共享批准，再生成并下载含对应字段的节点凭据。针对性验证包括 `ssh-onboarding.spec.ts`、`memberships.spec.ts`（mock API 浏览器流程）和系统安装器共享字段用例；这些用例不代表真实 GPU/NPU 节点安装或业务任务验收。完整项目覆盖率本次未运行。
+
 | 界面 | 主题 |
 | --- | --- |
 | 我的任务、全部任务 | jobs |

@@ -44,6 +44,9 @@
 .administration input[type="checkbox"], .administration input[type="radio"] { width: auto; margin-right: 7px; accent-color: #206b50; }
 .administration fieldset { min-width: 0; border: 1px solid #dce5dc; border-radius: 8px; margin: 16px 0; padding: 16px; }
 .administration fieldset > label { display: inline-flex; align-items: center; margin: 6px 18px 6px 0; }
+.administration .onboarding-accelerators { background: #f6f8f5; border-color: #b6d1bd; }
+.administration .onboarding-accelerators legend { font-weight: 650; color: #20533b; }
+.administration .onboarding-accelerators p { margin: 4px 0 0; }
 .administration textarea { width: 100%; max-width: 100%; min-height: 100px; resize: vertical; border: 1px solid #d5dfd7; border-radius: 7px; padding: 12px; font: 13px/1.6 monospace; color: #26342f; }
 .administration :is(textarea, .admin-table-scroll):focus-visible { outline: 2px solid #409578; outline-offset: 2px; }
 .administration pre { max-width: 100%; overflow: auto; }
