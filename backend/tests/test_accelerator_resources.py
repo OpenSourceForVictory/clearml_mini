@@ -94,6 +94,21 @@ def test_npu_host_properties_never_allow_other_cards_or_root(monkeypatch):
  with pytest.raises(RuntimeError,match='root'):npu_host.properties({})
 
 
+def test_npu_root_host_needs_matching_local_approval(monkeypatch):
+ from worker import npu_host
+ root=N(pw_uid=0,pw_gid=0,pw_name='root',pw_dir='/root')
+ monkeypatch.setattr(npu_host,'approved',lambda cfg:({'host':{'approved':True,'user':'root'}},'/dev/davinci3'))
+ monkeypatch.setattr(npu_host.os,'geteuid',lambda:0)
+ monkeypatch.setattr(npu_host.pwd,'getpwnam',lambda name:root)
+ with pytest.raises(RuntimeError,match='explicit node approval'):
+  npu_host.properties({'host_execution':{'approved':True,'user':'root'}})
+ config={'host_execution':{'approved':True,'user':'root','uid':0,'gid':0,'allow_root_business':True}}
+ props=npu_host.properties(config)
+ assert 'User=root' in props and 'DevicePolicy=closed' in props
+ assert 'DeviceAllow=/dev/davinci3 rw' in props
+ assert 'CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH' in props
+
+
 def test_npu_host_requires_separate_approval(monkeypatch):
  from worker import npu_host
  monkeypatch.setattr(npu_host,'approved',lambda cfg:({'approved':True},'/dev/davinci2'))

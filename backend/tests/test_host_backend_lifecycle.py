@@ -105,7 +105,7 @@ def test_start_enforces_identity_limits_and_no_duplicate(backend,monkeypatch,mod
     (host.root/'launch.json').write_text(json.dumps(launch))
     calls=[];stopped=[];verified=[]
     monkeypatch.setattr('worker.host_backend.os.chown',lambda *a:None)
-    monkeypatch.setattr(host_identity,'settings',lambda cfg:SimpleNamespace(pw_name='business',pw_gid=1234))
+    monkeypatch.setattr(host_identity,'settings',lambda cfg:SimpleNamespace(pw_name='business',pw_uid=1234,pw_gid=1234))
     monkeypatch.setattr(npu_host,'properties',lambda cfg:['DevicePolicy=closed','DeviceAllow=/dev/davinci0 rw'])
     def run(argv,**kwargs):
         calls.append(argv);return SimpleNamespace(returncode=int(mode=='launch-fails'),stderr='cannot start')
@@ -130,3 +130,21 @@ def test_start_enforces_identity_limits_and_no_duplicate(backend,monkeypatch,mod
     if mode=='npu':assert '--property=DeviceAllow=/dev/davinci0 rw' in argv
     assert stopped==([execution] if mode=='limits-fail' else [])
     if mode!='launch-fails':assert verified==[('/test-group',2,3*1024**3)]
+
+
+def test_root_host_start_uses_bounded_unit_properties(backend,monkeypatch):
+    from worker import host_identity,resource_limits
+    host,execution=backend;host.system=True
+    host.worker.config['host_execution']={'approved':True,'user':'root','uid':0,'gid':0,'allow_root_business':True}
+    (host.root/'launch.json').write_text(json.dumps({'started':False,'execution_id':execution}))
+    monkeypatch.setattr(host_identity.os,'geteuid',lambda:0)
+    monkeypatch.setattr(host_identity.pwd,'getpwnam',lambda name:SimpleNamespace(pw_name='root',pw_uid=0,pw_gid=0,pw_dir='/root'))
+    monkeypatch.setattr('worker.host_backend.os.chown',lambda *a:None)
+    commands=[]
+    monkeypatch.setattr('worker.host_backend.subprocess.run',lambda argv,**kw:(commands.append(argv) or SimpleNamespace(returncode=0,stderr='')))
+    monkeypatch.setattr(host,'control',lambda *a,**kw:SimpleNamespace(stdout='/test-group'))
+    monkeypatch.setattr(resource_limits,'verify_group',lambda *a:None)
+    host.start({'execution_id':execution,'cpus':1,'ram_gb':1,'timeout_seconds':60})
+    assert '--property=User=root' in commands[0]
+    assert '--property=CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH' in commands[0]
+    assert '--property=NoNewPrivileges=yes' in commands[0]

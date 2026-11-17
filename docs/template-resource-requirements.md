@@ -41,7 +41,7 @@ NVIDIA 既有设备身份和旧协议兼容；NPU 任务要求协议 11、`ascen
 {"accelerator_type":"npu","gpu_index":2,"execution_modes":["host","docker"],"npu_runtime":{"approved":true,"allow_shared":true,"host":{"approved":true,"user":"HwHiAiUser","environment":{"LD_LIBRARY_PATH":"/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common"}}}}
 ```
 
-用户必须存在且不能是 root；CANN、驱动和批准的 Python/业务代码需对该用户可读/可执行，工作目录及 runs 的父路径需要可遍历，执行目录由平台单独赋予该用户。不要为此放宽凭据目录。后台探测检查设备和实际内核限制；任一失败均不发布该环境为就绪。运行环境中的业务参数不能修改 ASCEND_* 设备选择变量。物理卡号只用于设备规则，CANN 在只允许一张卡时使用逻辑编号 0。上例是显式开启共享的本地配置；当前 SSH 纳管界面新安装默认关闭共享，重新纳管默认保留原配置，只有管理员明确选择才修改该字段。
+用户必须存在；默认是普通账号，只有节点本地 `host_execution` 明确设置 `user=root`、`uid=gid=0`、`allow_root_business=true` 且 NPU host 用户也为 root 时才允许 root 业务。CANN、驱动和批准的 Python/业务代码需对业务身份可读/可执行，工作目录及 runs 的父路径需要可遍历，执行目录由平台单独赋予该身份。不要为此放宽凭据目录；root 业务可读取本机敏感文件，详见 [root 宿主机身份](root-managed-host.md)。后台探测检查设备和实际内核限制；任一失败均不发布该环境为就绪。运行环境中的业务参数不能修改 ASCEND_* 设备选择变量。物理卡号只用于设备规则，CANN 在只允许一张卡时使用逻辑编号 0。上例是显式开启共享的本地配置；当前 SSH 纳管界面新安装默认关闭共享，重新纳管默认保留原配置，只有管理员明确选择才修改该字段。
 
 启动时会合并模板业务库目录、节点批准配置和安装脚本提供的 CANN 目录，并在环境探测阶段验证脚本能以业务账号执行。没有可发现脚本时保持旧的显式配置行为；发现脚本却失败时报告失败，不会把登录 shell 或 root Worker 的完整环境传给业务。自动加载仅适用于 NPU 宿主机，容器仍使用镜像自身的 CANN 环境。
 

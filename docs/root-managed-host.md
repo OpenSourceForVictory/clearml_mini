@@ -8,13 +8,23 @@ GPU 和 NPU 均需确认“设备共享批准”：新安装默认“不允许�
 
 已纳管且需立即手工调整的其他节点，先在平台停用新任务调度并等待执行清理；在节点上用 `systemctl show <Worker服务名> -p ExecStart --value` 找到 `--config` 后的配置路径，不照搬其他节点目录。备份对应 JSON，核对 `accelerator_type=npu`、`npu_runtime.approved=true`，仅修改需要共享的卡的 `npu_runtime.allow_shared`，保留文件属主和权限；重启对应 Worker 后确认共享能力上报。不要展示整个 JSON，其中可能有节点凭据。GPU 节点对应字段为 `gpu_runtime.allow_shared`；手工修改不替代资源池共享开关。
 
-新安装的 Agent、Worker 和升级执行器是 root 系统服务；宿主机客户端与服务端业务通过 systemd 的 User/Group 以 `mini-eval` 普通账号启动，CPU/内存/进程限制仍生效。业务不能通过模板指定 root。该账号默认 UID/GID 29000、禁止交互登录、不加入 sudo/docker 组。已有同名或同 ID 的不兼容账号会阻止安装。容器仍使用镜像/容器运行配置中的用户，这个功能不会改写镜像身份。
+新安装的 Agent、Worker 和升级执行器是 root 系统服务；宿主机客户端与服务端业务默认通过 systemd 的 User/Group 以 `mini-eval` 普通账号启动，CPU/内存/进程限制仍生效。业务不能通过模板指定 root。该账号默认 UID/GID 29000、禁止交互登录、不加入 sudo/docker 组。已有同名或同 ID 的不兼容账号会阻止安装。容器仍使用镜像/容器运行配置中的用户，这个功能不会改写镜像身份。
+
+可信专用节点可由节点管理员显式改为 root 宿主机业务身份。先在平台停用新任务并等待所有执行和清理结束；在节点用 `systemctl show <Worker服务名> -p ExecStart --value` 找到 `--config` 对应的本地 JSON，逐张卡备份并修改，不打印或上传整个文件（含节点凭据）：
+
+```json
+"host_execution": {"approved": true, "user": "root", "uid": 0, "gid": 0, "allow_root_business": true}
+```
+
+NPU 卡还需将同一 JSON 的 `npu_runtime.host.user` 改为 `root`，保留该对象原有的 `approved` 和 `environment`，以及设备、共享和执行方式配置。所有相关 Worker 配置完成后重启对应 Worker，刷新宿主机批准环境探测；先用小任务确认 `id -u` 为 0、CPU/内存额度与指定设备仍生效，再恢复准入。关闭时把业务身份改回已存在的普通账号、更新 UID/GID、去掉 `allow_root_business`，NPU 同步改回同一账号。新纳管默认和重新纳管保留逻辑不会自动选择 root；当前界面不能直接编辑此节点本地身份字段。
+
+root 业务可越过本机普通文件权限并读取平台凭据或其他节点文件，因此只允许管理员信任的代码使用，不能把它视为租户隔离。systemd 限制其 capabilities 为文件 DAC 访问所需的两项，并保留 NoNewPrivileges、任务 cgroup 与 NPU 设备白名单；这些限制不消除 root 读取敏感文件的风险。NFS 若启用 root_squash，root 可能映射为匿名用户，仍需在存储端按导出策略授权。
 
 ## 目录与共享存储
 
 - 控制目录 `/var/lib/mini-eval/control`：代码可供业务读取，配置和恢复状态仅 root 可读写。
 - 业务 HOME `/var/lib/mini-eval/business`；默认工作目录 `/var/lib/mini-eval/workspaces`，每张设备有独立子目录和 Worker 恢复记录。
-- SSH 向导高级设置可指定业务 UID/GID。共享 NFS 的节点应保持相同数值，并由存储管理员授权。不要依赖 root 绕过 NFS root_squash。
+- SSH 向导高级设置可指定普通业务 UID/GID。共享 NFS 的节点应保持相同数值，并由存储管理员授权。root 模式也不能绕过 NFS root_squash。
 - 执行前会按真实业务账号检查 Python、代码根目录、业务执行目录、逻辑资产、工作/输出及缓存权限。报错会指出账号和路径；祖先目录需要可遍历，代码/资产需要可读，输出/缓存需要可写。
 - 对持续更新的业务目录，优先在存储端设置与业务 UID/GID 一致的共享组、setgid 目录及默认 ACL，让新文件继承权限；只给必要的父目录遍历权限，代码/资产读权限，工作/输出/缓存写权限。先以 `sudo -u mini-eval test -r <文件>` 或 `test -w <目录>` 验证，不要全树 `chmod 777`。
 - 安装器不会递归修改已有业务代码或资产树权限。私有 HOME 中的 Python 环境如果不可访问，应迁至可共享目录或授予准确的 ACL。NPU 驱动、CANN 及设备访问权限由节点管理员准备；设备隔离探测失败不能跳过。

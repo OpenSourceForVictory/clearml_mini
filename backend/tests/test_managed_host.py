@@ -18,8 +18,27 @@ def test_root_worker_cannot_default_to_root(monkeypatch):
     monkeypatch.setattr(os,'geteuid',lambda:0)
     with pytest.raises(RuntimeError,match='approved'):host_identity.settings({})
     monkeypatch.setattr(pwd,'getpwnam',lambda _:N(pw_uid=0,pw_gid=0,pw_name='root'))
-    with pytest.raises(RuntimeError,match='must not run as root'):
+    with pytest.raises(RuntimeError,match='explicit node approval'):
         host_identity.settings({'host_execution':{'approved':True,'user':'root'}})
+
+
+def test_root_business_requires_complete_local_approval_and_bounded_capabilities(monkeypatch):
+    monkeypatch.setattr(os,'geteuid',lambda:0)
+    root=N(pw_uid=0,pw_gid=0,pw_name='root',pw_dir='/root')
+    business=N(pw_uid=29000,pw_gid=29000,pw_name='mini-eval',pw_dir='/var/lib/mini-eval/business')
+    monkeypatch.setattr(pwd,'getpwnam',lambda name:root if name=='root' else business)
+    policy={'approved':True,'user':'root','uid':0,'gid':0,'allow_root_business':True}
+    assert host_identity.settings({'host_execution':policy}) is root
+    props=host_identity.properties(root)
+    assert 'User=root' in props and 'Group=0' in props
+    assert 'CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH' in props
+    assert 'NoNewPrivileges=yes' in props and 'RestrictSUIDSGID=yes' in props
+    assert 'CapabilityBoundingSet=' in host_identity.properties(business)
+    for missing in ('uid','gid','allow_root_business'):
+        with pytest.raises(RuntimeError,match='explicit node approval'):
+            host_identity.settings({'host_execution':{k:v for k,v in policy.items() if k!=missing}})
+    with pytest.raises(RuntimeError,match='requires the root account'):
+        host_identity.settings({'host_execution':{**policy,'user':'mini-eval','uid':29000,'gid':29000}})
 
 
 def test_identity_drift_and_unprivileged_manager(monkeypatch):
@@ -135,7 +154,7 @@ def test_system_probe_bounded_cleanup(monkeypatch,case):
         if case=='failure' and args[0]=='systemd-run':raise OSError('unavailable')
         return N(returncode=0)
     monkeypatch.setattr(host_identity.subprocess,'run',run)
-    acc=N(pw_name='mini-eval',pw_gid=29000)
+    acc=N(pw_name='mini-eval',pw_uid=29000,pw_gid=29000)
     if case in ('success','cgroup'):host_identity.verify_system(acc,source='pass')
     else:
         with pytest.raises(RuntimeError):host_identity.verify_system(acc,source='pass')

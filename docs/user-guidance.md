@@ -14,6 +14,8 @@
 
 运行模板指南和宿主机批准环境页说明：NPU 宿主机任务会以批准的业务账号加载节点安装的 CANN `set_env.sh`，用户无需在每张卡或模板重复填写标准 CANN 库路径；业务 Python 依赖仍需自行准备，Docker 仍使用镜像内环境。定向 Python 回归及前端 TypeScript/Vite 构建结果见 [CANN 环境加载验证](validation/auto-cann-host-environment/README.md)；未在缺少 `torch_npu` 业务环境的 29 节点宣称真实服务验收。
 
+宿主机身份提示：默认业务账号为 mini-eval；root 业务只能由节点管理员在本地配置明确批准，界面模板和批准环境 JSON 不提供身份切换。界面同时提示 root 可读取本机敏感文件、仍不继承登录 shell，NFS root_squash 可能继续拒绝访问。定向验证范围见 [root 业务身份验证](validation/opt-in-root-host-business/README.md)。
+
 节点报告有效期调整：宿主机环境、容器镜像/资产和存储回执统一为 60 秒；GPU/NPU、主机 CPU/内存和磁盘采样为 45 秒。提交向导指南说明两类时间窗口。Worker 离线和执行租约仍分别判断，未来时间戳、配置版本不匹配或探测失败不会被延长窗口掩盖。`test_freshness.py` 与相关资源/存储测试覆盖边界；本次不以模拟采样声称真实节点长时间稳定运行，也未运行全量覆盖率。
 
 | 界面 | 主题 |

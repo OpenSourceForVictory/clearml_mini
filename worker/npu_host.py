@@ -1,7 +1,7 @@
 """System-managed Ascend host execution with kernel device access controls.
 
-The privileged Worker manages units; business programs always run as a configured
-non-root account. No task-supplied setting can widen the device allow list.
+The privileged Worker manages units; business programs use a node-approved account.
+No task-supplied setting can widen the device allow list.
 """
 import errno
 import json
@@ -57,12 +57,13 @@ def settings(config):
         raise RuntimeError('NPU host execution requires node administrator approval')
     if os.geteuid()!=0:raise RuntimeError('NPU device isolation requires a system-managed privileged Worker')
     user=host.get('user')
-    if not isinstance(user,str) or not user:raise RuntimeError('NPU host requires a non-root service account')
+    if not isinstance(user,str) or not user:raise RuntimeError('NPU host requires a service account')
     account=pwd.getpwnam(user)
     if config.get('host_execution'):
         from .host_identity import settings as identity_settings
         if identity_settings(config).pw_uid!=account.pw_uid:raise RuntimeError('NPU and managed business identities differ')
-    if account.pw_uid==0:raise RuntimeError('NPU business programs must not run as root')
+    if account.pw_uid==0 and (user!='root' or not config.get('host_execution')):
+        raise RuntimeError('NPU root business account requires explicit node approval')
     environment=host.get('environment',{})
     allowed={'PATH','LD_LIBRARY_PATH','PYTHONPATH','ASCEND_HOME_PATH','ASCEND_OPP_PATH','ASCEND_AICPU_PATH'}
     if not isinstance(environment,dict) or set(environment)-allowed or any(not isinstance(v,str) or '\x00' in v for v in environment.values()):
@@ -72,8 +73,8 @@ def settings(config):
 
 def properties(config):
     account,device,_=settings(config)
-    result=['User='+account.pw_name,'Group='+str(account.pw_gid),'DevicePolicy=closed',
-            'NoNewPrivileges=yes','CapabilityBoundingSet=','RestrictSUIDSGID=yes']
+    from .host_identity import properties as identity_properties
+    result=[*identity_properties(account),'DevicePolicy=closed']
     result+=['DeviceAllow='+path+' rw' for path in (device,*COMMON)]
     return result
 

@@ -10,21 +10,27 @@ import uuid
 def settings(config):
     policy=config.get('host_execution')
     if not isinstance(policy,dict) or policy.get('approved') is not True:
-        raise RuntimeError('root host execution requires an approved non-root business account')
+        raise RuntimeError('root host execution requires an approved business account')
     if os.geteuid()!=0:raise RuntimeError('managed host execution requires a root system Worker')
     user=policy.get('user')
     if not isinstance(user,str) or not user:raise RuntimeError('business account is missing')
     try:account=pwd.getpwnam(user)
     except KeyError:raise RuntimeError('business account does not exist: '+user) from None
-    if account.pw_uid==0:raise RuntimeError('host business programs must not run as root')
+    if account.pw_uid==0:
+        if (user!='root' or policy.get('allow_root_business') is not True
+                or policy.get('uid')!=0 or policy.get('gid')!=0):
+            raise RuntimeError('root business account requires explicit node approval')
+    elif policy.get('allow_root_business') is True:
+        raise RuntimeError('root business approval requires the root account')
     if policy.get('uid',account.pw_uid)!=account.pw_uid or policy.get('gid',account.pw_gid)!=account.pw_gid:
         raise RuntimeError('business account UID/GID changed; repeat node environment approval')
     return account
 
 
 def properties(account):
+    capabilities='CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH' if account.pw_uid==0 else ''
     return ['User='+account.pw_name,'Group='+str(account.pw_gid),'NoNewPrivileges=yes',
-            'CapabilityBoundingSet=','RestrictSUIDSGID=yes','UMask=0077']
+            'CapabilityBoundingSet='+capabilities,'RestrictSUIDSGID=yes','UMask=0077']
 
 
 def check_paths(account,paths):

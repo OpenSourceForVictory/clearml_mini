@@ -53,6 +53,8 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动
 
 统一 root 纳管/普通业务身份：docs/root-managed-host.md；scripts/install_system_node.py 创建系统服务与 mini-eval，worker/host_identity.py 负责身份/权限/资源检查。host_execution 是节点批准配置，模板不能覆盖；旧用户服务升级保留身份。覆盖率门槛见 backend/tests/managed-host.coveragerc，真实测试需 MANAGED_HOST_TEST=1 和隔离 systemd 环境。
 
+可选 root 宿主机业务身份：host_identity.settings 仅接受节点本地 host_execution 的 root 用户、uid/gid=0 和 allow_root_business=true；npu_host.settings 还要求 NPU host 同一身份。host_identity.properties 对 root 保留 CAP_DAC_OVERRIDE、CAP_DAC_READ_SEARCH，普通账号仍清空 capabilities；NPU DevicePolicy=closed 与任务额度继续应用。模板不能选择 root，安装器仍默认 mini-eval，重新纳管保留本地身份。操作与敏感文件/NFS root_squash 边界见 docs/root-managed-host.md，验证见 docs/validation/opt-in-root-host-business/README.md；回归 test_managed_host.py、test_accelerator_resources.py、test_host_backend_lifecycle.py。
+
 NPU 宿主机 CANN 环境：worker/npu_host.py 的 installed_environment 按节点批准的 ASCEND_HOME_PATH、业务账号 ~/Ascend/cann 和系统标准目录发现 set_env.sh，以业务账号加载，只转发允许的 CANN/PATH 变量；worker/host_backend.py 保留模板业务库目录并设置逻辑设备 0，worker/host_environments.py 在批准环境探测时复用加载逻辑。没有脚本时沿用节点显式配置，发现脚本却加载失败时关闭准入；Docker 不使用这条路径。操作见 docs/host-execution.md、root-managed-host.md，验证边界见 docs/validation/auto-cann-host-environment/README.md；回归 test_npu_cann_environment.py、test_worker_environment_probe.py、test_execution_launch_boundaries.py。
 
 NPU/共享 GPU 后端准入：backend/app/scheduling.py 的 eligibility_codes 从模板获取 execution_mode，再与 `npu:{mode}:{gpu_mode}` 或 `gpu:{mode}:shared` 能力匹配；不得引用 runtime_mismatch 的局部 mode。回归 test_accelerator_resources.py，失败证据见 docs/validation/auto-cann-host-environment/README.md。

@@ -42,6 +42,22 @@ def test_approved_identity_used_for_python_probe(monkeypatch,profile,kind):
     assert verified==[config if kind=='npu' else account]
 
 
+def test_explicit_root_identity_is_used_for_host_probe(monkeypatch,profile):
+    from worker import host_identity
+    account=SimpleNamespace(pw_uid=0,pw_gid=0,pw_name='root',pw_dir='/root')
+    monkeypatch.setattr(host_identity.os,'geteuid',lambda:0)
+    monkeypatch.setattr(host_identity.pwd,'getpwnam',lambda name:account)
+    monkeypatch.setattr(host_identity,'check_paths',lambda *a:None)
+    verified=[]
+    monkeypatch.setattr(host_identity,'verify_system',lambda selected:verified.append(selected))
+    monkeypatch.setattr(envs.os,'getgrouplist',lambda *a:[0])
+    calls=[]
+    monkeypatch.setattr(envs.subprocess,'run',lambda *a,**kw:calls.append(kw))
+    envs.probe(profile,{'host_execution':{'approved':True,'user':'root','uid':0,'gid':0,'allow_root_business':True}})
+    assert calls[0]['user']==0 and calls[0]['group']==0 and calls[0]['extra_groups']==[0]
+    assert verified==[account]
+
+
 def test_missing_user_manager_is_actionable(monkeypatch,profile):
     monkeypatch.setattr(envs.subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=1))
     with pytest.raises(ValueError,match='enable linger'):envs.probe(profile)
