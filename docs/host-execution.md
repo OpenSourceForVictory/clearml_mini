@@ -22,6 +22,8 @@ Worker 租约看门狗在失联/停机时停止所属执行。恢复依据稳定
 
 宿主机任务很快结束、systemd 已卸载临时单元时，只要同一执行的启动标记及 supervisor 写下的有效 `exit.json` 仍在，Worker 就按记录的退出码继续结果上报与清理；不会重新启动程序。若缺少可信退出记录，显示 `previously created host unit is missing; refusing duplicate execution` 并使该执行失败。Docker 对应报错明确写 `Docker container`，同样不会原地重建。遇到此报错先看该执行更早的 Worker/业务日志，确认首次启动失败或单元被清理的原因；修复后通过平台重试生成新的执行尝试，不要手工删除 Worker journal 来强行重跑同一执行。
 
+恢复路径的定向验证见[宿主机已结束单元恢复验证](validation/host-finished-unit-recovery/README.md)：覆盖有效、非零、缺失与损坏退出记录；模拟测试不能替代现场首次失败日志。
+
 控制记录及最多各256KiB的 stdout/stderr 保留在本地恢复目录相邻 `.host` 路径，不放到 NFS。业务 input/work/output 沿用该节点工作目录，逐回合 JSONL、产物及 API 上报与 Docker 一致。业务产物受原有数量/大小限制，拒绝符号链接和非法路径。
 
 ```bash

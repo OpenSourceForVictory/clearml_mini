@@ -121,6 +121,35 @@ def test_missing_running_container_is_never_recreated(execution,monkeypatch,mode
     assert completion['status']=='FAILED' and expected in completion['error'] and 'refusing duplicate' in completion['error']
 
 
+@pytest.mark.parametrize('exit_record,expected_status,expected_error',[
+    ('{"code":0}', 'SUCCEEDED', None),
+    ('{"code":7}', 'FAILED', 'runner exited with code 7'),
+    (None, 'FAILED', 'previously created host unit is missing'),
+    ('{"code":"invalid"}', 'FAILED', 'invalid host execution exit record'),
+])
+def test_host_recovery_uses_durable_exit_record_without_relaunch(
+    execution,monkeypatch,exit_record,expected_status,expected_error
+):
+    from worker.host_backend import HostBackend
+    worker,task,events=execution
+    task.update(status='RUNNING',client_spec={'template':{'execution_mode':'host','task_type':'command'}})
+    worker.state={'task':task,'created':True,'offset':0,'sequence':0,'pending':None}
+    worker.save()
+    host=HostBackend(worker)
+    host.root.mkdir(parents=True,exist_ok=True)
+    (host.root/'launch.json').write_text(json.dumps({'execution_id':task['execution_id'],'started':True}))
+    if exit_record is not None:(host.root/'exit.json').write_text(exit_record)
+    monkeypatch.setattr(HostBackend,'control',lambda *a,**kw:SimpleNamespace(stdout='LoadState=not-found\n',returncode=0))
+    monkeypatch.setattr(worker,'inspect',lambda execution_id:HostBackend(worker).inspect(execution_id))
+    monkeypatch.setattr(HostBackend,'start',lambda *a:pytest.fail('recovery must not relaunch the business program'))
+    worker.execute(task)
+    completion=next(body for path,body in events if path.endswith('/complete'))
+    assert completion['status']==expected_status
+    assert (expected_error in completion['error']) if expected_error else completion['error'] is None
+    assert not any(path=='create' for path,_ in events)
+    assert worker.state is None and json.loads(worker.path.read_text()) is None
+
+
 def test_rejected_failure_completion_uses_cleanup(execution,monkeypatch):
     worker,task,events=execution
     original=worker.api.post

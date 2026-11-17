@@ -59,7 +59,7 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动
 
 NPU 宿主机 CANN 环境：worker/npu_host.py 的 installed_environment 按节点批准的 ASCEND_HOME_PATH、业务账号 ~/Ascend/cann 和系统标准目录发现 set_env.sh，以业务账号加载，只转发允许的 CANN/PATH 变量；worker/host_backend.py 保留模板业务库目录并设置逻辑设备 0，worker/host_environments.py 在批准环境探测时复用加载逻辑。没有脚本时沿用节点显式配置，发现脚本却加载失败时关闭准入；Docker 不使用这条路径。操作见 docs/host-execution.md、root-managed-host.md，验证边界见 docs/validation/auto-cann-host-environment/README.md；回归 test_npu_cann_environment.py、test_worker_environment_probe.py、test_execution_launch_boundaries.py。
 
-宿主机已结束单元恢复：worker/host_supervisor.py 写 exit.json；worker/host_backend.py 的 inspect 在 systemd 单元消失时，仅对匹配的已启动 launch.json 与有效退出码恢复 exited，stop 不再停止已卸载单元。其他单元缺失由 worker/client.py 拒绝重复启动，并与 Docker 缺容器错误分开显示。操作见 docs/host-execution.md；回归 test_host_backend_lifecycle.py、test_worker_execution_recovery.py。不可凭失败提示删除 journal 重跑同一执行。
+宿主机已结束单元恢复：worker/host_supervisor.py 写 exit.json；worker/host_backend.py 的 inspect 在 systemd 单元消失时，仅对匹配的已启动 launch.json 与有效退出码恢复 exited，stop 不再停止已卸载单元。其他单元缺失由 worker/client.py 拒绝重复启动，并与 Docker 缺容器错误分开显示。操作见 docs/host-execution.md；test_worker_execution_recovery.py 联合真实本地标记和模拟 systemd 卸载，覆盖退出码 0、非零、缺失、损坏以及禁止重复启动，配合 test_host_backend_lifecycle.py 验证身份边界。不可凭失败提示删除 journal 重跑同一执行。
 
 宿主机设备环境边界：runner/image_runtime.py 的 environment 禁止模板/任务写入设备可见变量与 MINI_EVAL_*；worker/host_backend.py 再次校验任务环境是否在 host_runtime.overridable_env 内，并在业务变量合并后最后写 GPU CUDA_VISIBLE_DEVICES。NPU 仍以设备 cgroup 和逻辑设备 0 约束。操作见 docs/host-execution.md，验证见 docs/validation/host-device-environment-boundary/README.md；回归 test_execution_launch_boundaries.py。GPU 环境变量不是硬隔离。
 
