@@ -61,6 +61,8 @@ NPU 宿主机 CANN 环境：worker/npu_host.py 的 installed_environment 按节�
 
 宿主机设备环境边界：runner/image_runtime.py 的 environment 禁止模板/任务写入设备可见变量与 MINI_EVAL_*；worker/host_backend.py 再次校验任务环境是否在 host_runtime.overridable_env 内，并在业务变量合并后最后写 GPU CUDA_VISIBLE_DEVICES。NPU 仍以设备 cgroup 和逻辑设备 0 约束。操作见 docs/host-execution.md，验证见 docs/validation/host-device-environment-boundary/README.md；回归 test_execution_launch_boundaries.py。GPU 环境变量不是硬隔离。
 
+GPU 宿主机本机身份复核：平台 backend/app/execution.py 的 slot claim 下发 accelerator_type、device_index、gpu_uuid；worker/host_backend.py 在物理 GPU 启动前比较任务编号与本 Worker gpu_index，再用 worker/client.device() 查询当前 nvidia-smi UUID，比对失败则不写 launch.json。NPU 使用 worker/accelerators.assignment 的卡号和 identity 校验；Docker 由设备运行时按 UUID 分配。操作见 docs/host-execution.md、gpu-scheduling.md，验证见 docs/validation/host-gpu-assignment-verification/README.md；回归 test_execution_launch_boundaries.py。此举不构成 GPU 硬隔离。
+
 NPU/共享 GPU 后端准入：backend/app/scheduling.py 的 eligibility_codes 从模板获取 execution_mode，再与 `npu:{mode}:{gpu_mode}` 或 `gpu:{mode}:shared` 能力匹配；不得引用 runtime_mismatch 的局部 mode。回归 test_accelerator_resources.py，失败证据见 docs/validation/auto-cann-host-environment/README.md。
 
 通用命令（Worker 0.17.0 / 协议 14）：docs/generic-commands.md、host-execution.md。host_runtime/runtime.command_mode=exec，缺省 legacy；runner/process_command.py 在最终参数/环境绑定后按业务身份解析程序，cs_entry/service_entry/command_sdk 共用。宿主机 exec 缺省 cwd 为 code_root，平台入口使用 Worker Python；Docker working_directory 独立于 work/output，平台 interpreter 可为绝对 Python 路径。调度检查 image_runtime、host_environments 与 scheduling，旧节点拒绝新字段。测试 backend/tests/test_generic_commands.py，Docker 显式启用，验证边界不是模型评测。界面指南与模板示例必须同步。

@@ -1,0 +1,1 @@
+复用 Worker 注册时的 `device(config)` 采集逻辑，通过本机 `gpu_index` 查询当前 NVIDIA UUID。只对带物理 `gpu_uuid` 的 GPU 宿主机任务执行检查；平台 claim 正常包含 `device_index`。先比较编号，编号不一致无需访问 GPU；再比较当前 UUID。缺少编号也应拒绝，避免异常任务快照绕过检查。虚拟池没有物理 UUID，继续按原逻辑执行。此检查只保证启动时本机槽位身份匹配，不提供对其他 GPU 设备文件的硬隔离。

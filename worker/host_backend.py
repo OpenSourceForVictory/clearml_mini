@@ -67,7 +67,16 @@ class HostBackend:
             from .npu_host import settings
             assignment(w.config,task);npu=settings(w.config);account=npu[0]
         elif w.config.get('accelerator_type')=='npu':raise RuntimeError('GPU task cannot run on NPU Worker')
-        elif self.system:
+        elif task.get('gpu_uuid'):
+            if task.get('device_index')!=int(w.config.get('gpu_index',0)):
+                raise RuntimeError('assigned GPU index differs from worker device')
+            from .client import device
+            try:observed=device(w.config)
+            except (OSError,subprocess.SubprocessError,ValueError,KeyError) as exc:
+                raise RuntimeError('assigned GPU identity could not be verified') from exc
+            if observed.get('gpu_uuid')!=task['gpu_uuid']:
+                raise RuntimeError('assigned GPU UUID differs from worker device')
+        if account is None and self.system:
             from .host_identity import settings
             account=settings(w.config)
         approved=w.state.get('host_approval',{})

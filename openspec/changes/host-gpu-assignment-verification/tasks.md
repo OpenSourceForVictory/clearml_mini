@@ -1,0 +1,3 @@
+- [x] Verify physical GPU host task index and current UUID before creating a launch marker.
+- [x] Add matching, mismatch and inspection-failure tests.
+- [x] Sync host guidance and Skill reference, validate targeted behavior, then commit.

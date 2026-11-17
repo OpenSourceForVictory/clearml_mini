@@ -57,6 +57,8 @@ NPU 宿主机任务会在批准的业务账号下加载该节点已安装的 CAN
 
 宿主机启动环境按平台基础值、模板业务变量、允许的任务覆盖、NPU 节点 CANN 环境、平台分配设备变量依次构造。Worker 会再次检查任务覆盖变量是否在模板允许列表中，并拒绝 `CUDA_VISIBLE_DEVICES`、`ASCEND_RT_VISIBLE_DEVICES`、`MINI_EVAL_*` 等保留变量；GPU 的 `CUDA_VISIBLE_DEVICES` 最后由平台写入分配卡 UUID。模板可设置业务所需的 `LD_LIBRARY_PATH`、`PATH` 等变量，无法借此选择其他卡。GPU 宿主机可见卡变量是程序选择提示，不是内核级设备隔离；多租户安全隔离仍需单独部署策略。
 
+平台先在资源池选中设备槽位，再通过该槽位的 `claim` 响应把 `device_index`、`gpu_uuid` 和加速卡类型交给 Worker。物理 GPU 宿主机任务在创建启动记录前，Worker 用本机 `gpu_index` 查询当前 `nvidia-smi` UUID，并与下发编号和 UUID 核对；不一致或无法读取时拒绝启动。NPU 则复核卡号和稳定 identity，并通过 systemd 设备访问规则只开放分配的物理卡。出现 `assigned GPU index/UUID differs from worker device` 时，先核对节点上该卡的 `nvidia-smi --id=<设备编号> --query-gpu=uuid --format=csv,noheader` 结果、Worker 每卡配置与平台显示的设备；修复设备身份或重新纳管后再新建执行，不要通过改模板环境变量绕过。
+
 宿主机业务默认用节点批准的普通账号运行。可信专用节点可按 [root 宿主机身份配置](root-managed-host.md) 在本地明确启用 root；模板和任务不能决定身份。root 只改变本机业务进程的文件访问身份，不加载交互 shell，也不能绕过 NFS root_squash。
 
 留空不发送该字段，保留旧行为：cwd 为本次任务独立 work，脚本路径从 code_root 解析。配置该字段的任务不能调度到协议低于 13 的节点；预检提示升级 Worker。模板查看和复制新版本保留此字段。

@@ -56,6 +56,9 @@ def test_managed_identity_and_device_environment(tmp_path,monkeypatch,accelerato
         monkeypatch.setattr('worker.npu_host.settings',lambda *a:(account,'/dev/davinci3',env))
         monkeypatch.setattr('worker.npu_host.installed_environment',
                             lambda account,base:{'LD_LIBRARY_PATH':'/installed/lib:'+base['LD_LIBRARY_PATH']})
+    else:
+        task['device_index']=0;task['gpu_uuid']='GPU-assigned'
+        monkeypatch.setattr('worker.client.device',lambda config:{'gpu_index':0,'gpu_uuid':'GPU-assigned'})
     host.create(task)
     launch=json.loads((host.root/'launch.json').read_text())
     config=json.loads(Path(launch['environment']['MINI_EVAL_INPUT']).read_text())
@@ -72,21 +75,44 @@ def test_managed_identity_and_device_environment(tmp_path,monkeypatch,accelerato
         assert launch['environment']['ASCEND_RT_VISIBLE_DEVICES']=='0'
         assert launch['environment']['LD_LIBRARY_PATH']=='/installed/lib:/cann/lib:/business/lib'
         assert launch['environment']['PYTHONPATH'].endswith(':/cann/python')==(accelerator=='npu')
-    else:assert 'ASCEND_RT_VISIBLE_DEVICES' not in launch['environment']
+    else:
+        assert 'ASCEND_RT_VISIBLE_DEVICES' not in launch['environment']
+        assert launch['environment']['CUDA_VISIBLE_DEVICES']=='GPU-assigned'
 
 
 def test_host_business_override_keeps_platform_gpu_assignment(tmp_path,monkeypatch):
     (tmp_path/'app.py').write_text('pass')
     w=host_worker(tmp_path,['python3','app.py']);task=w.state['task']
     task['gpu_uuid']='GPU-assigned'
+    task['device_index']=0
     task['client_spec']['template']['host_runtime'].update(environment={'LOG_LEVEL':'info'},overridable_env=['LOG_LEVEL'])
     task['client_spec']['environment']={'LOG_LEVEL':'debug'}
     monkeypatch.setattr('worker.host_backend.probe',lambda *a:None)
+    monkeypatch.setattr('worker.client.device',lambda config:{'gpu_index':0,'gpu_uuid':'GPU-assigned'})
     host=HostBackend(w);host.create(task)
     launch=json.loads((host.root/'launch.json').read_text())
     assert launch['environment']['LOG_LEVEL']=='debug'
     assert launch['environment']['CUDA_VISIBLE_DEVICES']=='GPU-assigned'
     assert launch['environment']['MINI_EVAL_INPUT'].endswith('input.json')
+
+
+@pytest.mark.parametrize('mode,expected',[
+    ('missing-index','assigned GPU index'),('wrong-index','assigned GPU index'),
+    ('wrong-uuid','assigned GPU UUID'),('inspect-failed','could not be verified')])
+def test_host_rejects_gpu_assignment_mismatch_before_launch(tmp_path,monkeypatch,mode,expected):
+    w=host_worker(tmp_path,['python3','app.py']);task=w.state['task']
+    w.config['gpu_index']=2;task['gpu_uuid']='GPU-assigned'
+    if mode!='missing-index':task['device_index']=1 if mode=='wrong-index' else 2
+    checked=[]
+    def observed(config):
+        checked.append(config)
+        if mode=='inspect-failed':raise OSError('nvidia-smi unavailable')
+        return {'gpu_index':2,'gpu_uuid':'GPU-other' if mode=='wrong-uuid' else 'GPU-assigned'}
+    monkeypatch.setattr('worker.client.device',observed)
+    host=HostBackend(w)
+    with pytest.raises(RuntimeError,match=expected):host.create(task)
+    assert not (host.root/'launch.json').exists()
+    assert bool(checked)==(mode not in ('missing-index','wrong-index'))
 
 
 @pytest.mark.parametrize('key', ['CUDA_VISIBLE_DEVICES','ASCEND_RT_VISIBLE_DEVICES','MINI_EVAL_INPUT','UNAPPROVED'])
