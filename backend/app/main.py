@@ -136,8 +136,25 @@ def login(body: Login, s: Session = Depends(db)):
         valid = False
     if not valid or not user.active:
         raise HTTPException(401, 'invalid credentials')
-    token = jwt.encode({'sub': user.id, 'exp': datetime.now(timezone.utc) + timedelta(minutes=30)}, SECRET, algorithm='HS256')
+    return login_token(user.id, int(datetime.now(timezone.utc).timestamp()))
+
+
+def login_token(user_id, started):
+    timestamp = int(datetime.now(timezone.utc).timestamp())
+    if type(started) is not int or not 0 <= timestamp-started < 12*60*60:
+        raise HTTPException(401, 'invalid token')
+    expires = min(timestamp+30*60, started+12*60*60)
+    token = jwt.encode({'sub': user_id, 'session_started_at': started, 'exp': expires}, SECRET, algorithm='HS256')
     return {'access_token': token, 'token_type': 'bearer'}
+
+
+@app.post('/api/v1/auth/renew')
+def renew(user: User = Depends(current), token: HTTPAuthorizationCredentials = Depends(bearer)):
+    try:
+        claims = jwt.decode(token.credentials, SECRET, algorithms=['HS256'], options={'require': ['exp', 'session_started_at']})
+    except jwt.PyJWTError:
+        raise HTTPException(401, 'invalid token')
+    return login_token(user.id, claims['session_started_at'])
 
 
 @app.get('/api/v1/auth/me')

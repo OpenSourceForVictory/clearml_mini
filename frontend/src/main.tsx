@@ -1,3 +1,4 @@
+import {clearLogin, rememberLogin, watchSession} from "./login-session";
 import {GuideProvider,GuideButton,PageHelp} from './user-guide';
 import {EvaluationSetup} from './evaluation-setup';
 import type {Suite} from './run-wizard';
@@ -123,6 +124,7 @@ function Field({
   );
 }
 function App() {
+  const [locked,setLocked]=useState(false), [sessionWarning,setSessionWarning]=useState(false);
   const [launch,setLaunch]=useState<{suite:Suite}|null>(null);
   const [setupJob,setSetupJob]=useState('');
   function runSuite(suite:Suite){setLaunch({suite});setTab('cs');location.hash='/cs';}
@@ -134,10 +136,16 @@ function App() {
   useEffect(()=>{const change=()=>{setComparisonView(location.hash.startsWith('#/cs/compare/'));if(location.hash.startsWith('#/cs'))setTab(location.hash==='#/cs/results'||location.hash.startsWith('#/cs/batches/')||location.hash.startsWith('#/cs/compare/')?'results':'cs');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   useEffect(() => {
     const logout = () => {
-      sessionStorage.removeItem("eval-token");
+      clearLogin();
+      setLocked(false);setSessionWarning(false);setError("");
       setUser(null);
       setLaunch(null);setSetupJob('');setTab('jobs');
     };
+    const expired=()=>{document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach(dialog=>dialog.close());setLocked(true);setError('登录已过期，请使用原账号重新登录。当前表单暂保留，请勿刷新页面。');};
+    const warning=(e:Event)=>setSessionWarning(Boolean((e as CustomEvent).detail));
+    window.addEventListener('eval-session-expired', expired);
+    window.addEventListener('eval-session-warning', warning);
+    const stopWatching=watchSession();
     window.addEventListener("eval-logout", logout);
     if (sessionStorage.getItem("eval-token"))
       api<User>("auth/me")
@@ -145,8 +153,9 @@ function App() {
         .catch((e) => setError(e.message))
         .finally(() => setLoading(false));
     else setLoading(false);
-    return () => window.removeEventListener("eval-logout", logout);
+    return () => {stopWatching();window.removeEventListener("eval-logout", logout);window.removeEventListener('eval-session-expired',expired);window.removeEventListener('eval-session-warning',warning);};
   }, []);
+  useEffect(()=>{if(locked) document.querySelector<HTMLInputElement>('.login input[name="password"]')?.focus();},[locked]);
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -156,8 +165,10 @@ function App() {
         username: form.get("username"),
         password: form.get("password"),
       });
-      sessionStorage.setItem("eval-token", r.access_token);
-      setUser(await api<User>("auth/me"));
+      const next=await api<User>('auth/me','GET',undefined,{Authorization:'Bearer '+r.access_token});
+      if(user && (next.id!==user.id || next.username!==user.username || next.role!==user.role)) throw new Error('请使用原账号登录；如需切换账号或角色已改变，请先退出并清除当前草稿。');
+      rememberLogin(r.access_token);
+      setUser(next);setLocked(false);setSessionWarning(false);
     } catch (e) {
       setError(String(e));
     }
@@ -168,17 +179,16 @@ function App() {
         <p>正在加载工作台…</p>
       </main>
     );
-  if (!user)
-    return (
+  const loginView = (
       <main className="login">
         <div className="login-card">
           <div className="brand-mark">M</div>
           <p className="eyebrow">MINI EVAL</p>
-          <h1>评测工作台</h1>
+          <h1>{user?'登录已过期':'评测工作台'}</h1>
           <p className="muted">提交评测，查看进度与结果。</p><p className="hint">使用管理员分配的账号登录；忘记密码请联系管理员。登录后可在“用户指南”查看操作与业务接入说明。</p>
           <form onSubmit={login}>
             <Field label="用户名">
-              <input name="username" autoComplete="username" required />
+              <input name="username" autoComplete="username" defaultValue={user?.username||''} required />
             </Field>
             <Field label="密码">
               <input
@@ -195,11 +205,15 @@ function App() {
             )}
             <button className="primary full">登录</button>
           </form>
+          {user&&<button onClick={()=>window.dispatchEvent(new Event('eval-logout'))}>退出并清除当前草稿</button>}
         </div>
       </main>
     );
+  if(!user) return loginView;
   return (
-    <GuideProvider admin={user.role==='admin'}><div className="shell">
+    <GuideProvider admin={user.role==='admin'}>
+    {locked&&loginView}
+    <div className="shell" hidden={locked} style={locked?{display:'none'}:undefined}>
       <aside>
         <div className="brand">
           <span className="brand-mark">M</span>
@@ -252,6 +266,7 @@ function App() {
           </span>
           <span className="live-dot">{tab==='admin'?'管理工作台':tab==='results'&&comparisonView?'比较快照 · 手动刷新':'每 2 秒更新'}</span>
         </header>
+        {sessionWarning&&!locked&&<p role="status">登录即将过期。继续操作可尝试续期；登录满 12 小时需重新登录。过期后当前表单暂保留，请勿刷新。</p>}
         <PageHelp topic={({jobs:"jobs",all:"jobs",workers:"resources",cs:"wizard",results:"results",setup:"start",admin:"start"} as Record<string,string>)[tab]||"start"}/>
         {tab === "jobs" || tab === "all" ? (
           <Jobs key={tab} all={tab === "all"} />

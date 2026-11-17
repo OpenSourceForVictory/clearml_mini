@@ -1,0 +1,3 @@
+- [x] 1. Implement bounded login renewal and backend failure/boundary tests.
+- [x] 2. Implement interaction-based renewal and retained-workspace reauthentication; verify browser paths.
+- [x] 3. Update guides/Skill, run coverage and build, record boundaries and commit.

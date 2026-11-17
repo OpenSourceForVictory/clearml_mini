@@ -1,3 +1,4 @@
+import {expireSession} from "./login-session";
 const errors: Record<string, string> = {
   "machine disabled; wait for execution cleanup before unmanaging": "机器已停止接新任务，请等待现有执行与服务清理完成后再次解除纳管",
   "unmanage the node before re-enrolling": "请先解除原机器纳管，再重新接入",
@@ -36,6 +37,7 @@ export async function api<T>(
   extra: Record<string, string> = {},
 ): Promise<T> {
   const token = sessionStorage.getItem("eval-token");
+  if (!token && !path.startsWith('auth/')) throw new Error('请重新登录后继续操作');
   const res = await fetch("/api/v1/" + path, {
     method,
     headers: {
@@ -48,7 +50,7 @@ export async function api<T>(
   const value = await res.json();
   if (!res.ok) {
     if (res.status === 401 && path !== "auth/login")
-      window.dispatchEvent(new Event("eval-logout"));
+      expireSession(token);
     throw new Error(
       (Array.isArray(value.detail) ? value.detail.map((x:{slot_id?:string;reason?:string}) => (x.slot_id||'')+': '+(x.reason||JSON.stringify(x))).join('; ') : errors[value.detail] || value.detail) || `请求失败 (${res.status})`,
     );

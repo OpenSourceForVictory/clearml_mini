@@ -4,6 +4,7 @@
 
 | 边界 | 源码 / 文档 | 关联检查 |
 | --- | --- | --- |
+| 登录与会话 | backend/app/main.py、frontend/src/login-session.ts、api.ts、main.tsx；docs/login-sessions.md | 真实交互续期、闲置/12 小时上限、并发响应、同账号草稿恢复；轮询不续期 |
 | 工作台、页面帮助 | frontend/src/main.tsx、navigation.tsx、user-guide.tsx、guide-content.ts；docs/user-guidance.md | 角色、表单草稿、键盘焦点、主题映射 |
 | 业务评测向导与集合 | frontend/src/run-wizard.tsx、suites.tsx；backend/app/batches.py；docs/suite-management.md | 模板版本、参数快照、服务绑定、预检 |
 | 模板和参数 | frontend/src/templates.tsx；runner/template_contract.py、parameter_contract.py、task_input.py；docs/runtime-templates.md、task-input.md | 类型、覆盖权限、argv/env 冲突、目录解析 |
