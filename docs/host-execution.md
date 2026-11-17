@@ -6,7 +6,7 @@
 {"simulation":{"python":"/opt/venv/bin/python","code_root":"/srv/simulation"}}
 ```
 
-模板设置 `execution_mode=host`、`host_runtime.environment_name=simulation`；命令中的 python/python3 使用已批准解释器，脚本或原生可执行文件须位于 code_root，模块模式通过该目录的 PYTHONPATH 加载。业务依赖需事先安装，不自动 pip/conda 安装。环境名在模板中保持一致，绝对路径可以按机器不同。
+模板设置 `execution_mode=host`、`host_runtime.environment_name=simulation`；命令中的 python/python3 使用已批准解释器，脚本或原生可执行文件须位于 code_root，模块模式通过该目录的 PYTHONPATH 加载。业务依赖需事先安装，不自动 pip/conda 安装。环境名在模板中保持一致，绝对路径可以按机器不同。宿主机任务直接读取节点上的 code_root，不需要为该目录另配 Docker 挂载；若路径来自 NFS 等共享存储，须先由操作系统在每台候选节点挂载，并确保业务账号可遍历和读取。
 
 节点需要 Worker v7、可用的 systemd 用户管理器、linger 与 cgroup v2。平台通过带版本的 `/admin/nodes/{id}/host-environments` 配置和 Worker 探测回执决定准入；缺失环境、旧 Worker 或过期报告不会启动 host 任务。修改环境不会改变已有执行快照。
 
@@ -16,7 +16,7 @@ Worker 的 `execution_modes` 可设置 `["host"]`，只运行宿主机任务并�
 
 ## 生命周期
 
-每次执行使用 `mini-eval-exec-<execution ID>.service` 用户单元，systemd 限制 CPUQuota、MemoryMax、TasksMax 和 RuntimeMaxSec，并用 control-group 停止子进程树。CUDA_VISIBLE_DEVICES 指向分配的 GPU；显存仍为调度准入估算，不能硬限制 CUDA 进程显存。
+每次执行使用 `mini-eval-exec-<execution ID>.service` 用户单元，systemd 始终设置 TasksMax 和 RuntimeMaxSec；CPU/内存申请为正数时设置 CPUQuota、MemoryMax，未申请且资源池默认值为 0 时省略对应额度。control-group 用于停止子进程树。CUDA_VISIBLE_DEVICES 指向分配的 GPU；显存仍为调度准入估算，不能硬限制 CUDA 进程显存。
 
 Worker 租约看门狗在失联/停机时停止所属执行。恢复依据稳定执行 ID、单元描述和本地 journal，拒绝重复启动，不使用裸 PID 杀进程。启动标记先持久化再请求启动，遇到崩溃窗口宁可失败清理，也不重复运行不确定任务。
 
@@ -55,6 +55,8 @@ systemctl --user status mini-eval-exec-执行ID.service
 
 MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用于执行临时数据与产物。多个任务可在同一个业务目录并发，业务程序不要把可变结果写入共享代码目录。Python SDK、SDK 命令包装、直接协议、普通命令及服务端共用目录解析。
 
+宿主机模板引用的逻辑资产需先在节点的容器环境/逻辑资产配置中映射实际路径，并列入 `host_runtime.assets`；Worker 直接把该节点路径交给业务程序，不创建容器挂载。模板的通用目录 `runtime.mounts` 仅用于 Docker。任务 work/output 由平台在节点工作目录下自动创建；批准 Python 与 code_root 不会替其他数据目录创建路径、挂载文件系统或授予权限。
+
 验证用例在 `backend/tests/test_host_working_directory.py`：独立 venv Python 与业务目录、相对配置、四种入口、非法路径、缺失目录、越界链接、旧模板默认和旧 Worker 准入。验收范围是通用业务启动，不代表真实仿真资产或模型评测。
 
 本次发布与逐项验证见 [独立执行目录验收](validation/host-working-directory/README.md)。六个在线节点已升级 Worker 0.15.0 / 协议 13。
@@ -85,5 +87,7 @@ MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用�
 普通命令按退出码判定执行成功；逐回合 SDK 命令仍需写 MINI_EVAL_RESULT；直接评测协议与服务健康检查的约定不变。参数映射仍在执行前追加，环境映射参与最终 PATH 查找。不要把用户参数拼入 Shell 字符串；通过独立 argv 参数传入。
 
 旧问题复现：兼容模式 `python3 -u app.py` 未配置业务目录时，Python 在任务 work 查找脚本并报文件不存在；`/bin/bash run.sh` 被旧 code_root 校验拒绝。迁移到通用模式后使用批准代码目录启动，二者可执行。旧模式不自动改写，避免改变存量任务行为。
+
+如果启动前报 `business program must exist inside approved code root`，检查当前模板的命令解析方式、`host_runtime.working_directory` 和该节点批准环境的 `code_root`。兼容模式下，`["python","app.py"]` 要求文件存在于 code_root（或已指定的业务执行子目录）内；首项为 `/bin/bash` 等系统程序时也会被当作代码目录内的程序检查，应复制模板切换为“通用命令”，并用 `working_directory="."` 或正确子目录。Worker 会解析实际路径；越界符号链接和目录本身均不能当作业务文件。若代码来自共享存储，先在节点完成系统挂载，确保业务账号有遍历/读取权限，再重新检查环境并试跑。
 
 Docker 的对应配置与验证见 [通用命令指南](generic-commands.md)。
