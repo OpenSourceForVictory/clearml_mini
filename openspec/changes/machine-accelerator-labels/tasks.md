@@ -1,0 +1,1 @@
+- [x] 1. Update labels and guide, cover NPU server and existing empty/error paths, validate and commit.
