@@ -75,6 +75,30 @@ def test_managed_identity_and_device_environment(tmp_path,monkeypatch,accelerato
     else:assert 'ASCEND_RT_VISIBLE_DEVICES' not in launch['environment']
 
 
+def test_host_business_override_keeps_platform_gpu_assignment(tmp_path,monkeypatch):
+    (tmp_path/'app.py').write_text('pass')
+    w=host_worker(tmp_path,['python3','app.py']);task=w.state['task']
+    task['gpu_uuid']='GPU-assigned'
+    task['client_spec']['template']['host_runtime'].update(environment={'LOG_LEVEL':'info'},overridable_env=['LOG_LEVEL'])
+    task['client_spec']['environment']={'LOG_LEVEL':'debug'}
+    monkeypatch.setattr('worker.host_backend.probe',lambda *a:None)
+    host=HostBackend(w);host.create(task)
+    launch=json.loads((host.root/'launch.json').read_text())
+    assert launch['environment']['LOG_LEVEL']=='debug'
+    assert launch['environment']['CUDA_VISIBLE_DEVICES']=='GPU-assigned'
+    assert launch['environment']['MINI_EVAL_INPUT'].endswith('input.json')
+
+
+@pytest.mark.parametrize('key', ['CUDA_VISIBLE_DEVICES','ASCEND_RT_VISIBLE_DEVICES','MINI_EVAL_INPUT','UNAPPROVED'])
+def test_host_rejects_reserved_or_unapproved_task_environment_before_launch(tmp_path,key):
+    w=host_worker(tmp_path,['python3','app.py']);task=w.state['task']
+    task['client_spec']['environment']={key:'other'}
+    host=HostBackend(w)
+    with pytest.raises(ValueError,match='reserved environment variable|override is not allowed'):
+        host.create(task)
+    assert not (host.root/'launch.json').exists()
+
+
 @pytest.mark.parametrize('health_port', ['business',8081])
 def test_container_service_ports_match_input(container,monkeypatch,health_port):
     w,task,calls,inputs=container

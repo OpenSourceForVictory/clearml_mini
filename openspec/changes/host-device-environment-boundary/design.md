@@ -1,0 +1,1 @@
+宿主机环境按固定基础值、模板/合法任务覆盖、节点 CANN（仅 NPU）、平台设备变量的顺序构造。API 层原有 `runner.image_runtime.environment` 保留变量规则继续使用；Worker 对任务环境重新使用同一规则并核对 `host_runtime.overridable_env`，以免异常或旧快照绕过校验。GPU 最后写 `CUDA_VISIBLE_DEVICES`，NPU 最后清除 CUDA 变量并设置 `ASCEND_RT_VISIBLE_DEVICES=0`。不加载登录 shell，也不改变业务账号或 CPU/内存限制。

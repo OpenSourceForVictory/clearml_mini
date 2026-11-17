@@ -55,6 +55,8 @@ systemctl --user status mini-eval-exec-执行ID.service
 
 NPU 宿主机任务会在批准的业务账号下加载该节点已安装的 CANN `set_env.sh`，把 CANN 库路径加入业务环境；模板中配置的业务 `LD_LIBRARY_PATH` 目录也保留。标准安装无需逐卡填写 CANN 路径，非标准安装可由节点管理员显式批准 `ASCEND_HOME_PATH`。这不等于继承 SSH 登录 shell 或 root Worker 的环境；Docker 任务仍依赖镜像内环境。脚本存在但加载失败会使宿主机环境探测显示不可用；缺少标准脚本时沿用旧的显式批准配置。
 
+宿主机启动环境按平台基础值、模板业务变量、允许的任务覆盖、NPU 节点 CANN 环境、平台分配设备变量依次构造。Worker 会再次检查任务覆盖变量是否在模板允许列表中，并拒绝 `CUDA_VISIBLE_DEVICES`、`ASCEND_RT_VISIBLE_DEVICES`、`MINI_EVAL_*` 等保留变量；GPU 的 `CUDA_VISIBLE_DEVICES` 最后由平台写入分配卡 UUID。模板可设置业务所需的 `LD_LIBRARY_PATH`、`PATH` 等变量，无法借此选择其他卡。GPU 宿主机可见卡变量是程序选择提示，不是内核级设备隔离；多租户安全隔离仍需单独部署策略。
+
 宿主机业务默认用节点批准的普通账号运行。可信专用节点可按 [root 宿主机身份配置](root-managed-host.md) 在本地明确启用 root；模板和任务不能决定身份。root 只改变本机业务进程的文件访问身份，不加载交互 shell，也不能绕过 NFS root_squash。
 
 留空不发送该字段，保留旧行为：cwd 为本次任务独立 work，脚本路径从 code_root 解析。配置该字段的任务不能调度到协议低于 13 的节点；预检提示升级 Worker。模板查看和复制新版本保留此字段。

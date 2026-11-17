@@ -59,6 +59,8 @@ NPU 宿主机 CANN 环境：worker/npu_host.py 的 installed_environment 按节�
 
 宿主机已结束单元恢复：worker/host_supervisor.py 写 exit.json；worker/host_backend.py 的 inspect 在 systemd 单元消失时，仅对匹配的已启动 launch.json 与有效退出码恢复 exited，stop 不再停止已卸载单元。其他单元缺失由 worker/client.py 拒绝重复启动，并与 Docker 缺容器错误分开显示。操作见 docs/host-execution.md；回归 test_host_backend_lifecycle.py、test_worker_execution_recovery.py。不可凭失败提示删除 journal 重跑同一执行。
 
+宿主机设备环境边界：runner/image_runtime.py 的 environment 禁止模板/任务写入设备可见变量与 MINI_EVAL_*；worker/host_backend.py 再次校验任务环境是否在 host_runtime.overridable_env 内，并在业务变量合并后最后写 GPU CUDA_VISIBLE_DEVICES。NPU 仍以设备 cgroup 和逻辑设备 0 约束。操作见 docs/host-execution.md，验证见 docs/validation/host-device-environment-boundary/README.md；回归 test_execution_launch_boundaries.py。GPU 环境变量不是硬隔离。
+
 NPU/共享 GPU 后端准入：backend/app/scheduling.py 的 eligibility_codes 从模板获取 execution_mode，再与 `npu:{mode}:{gpu_mode}` 或 `gpu:{mode}:shared` 能力匹配；不得引用 runtime_mismatch 的局部 mode。回归 test_accelerator_resources.py，失败证据见 docs/validation/auto-cann-host-environment/README.md。
 
 通用命令（Worker 0.17.0 / 协议 14）：docs/generic-commands.md、host-execution.md。host_runtime/runtime.command_mode=exec，缺省 legacy；runner/process_command.py 在最终参数/环境绑定后按业务身份解析程序，cs_entry/service_entry/command_sdk 共用。宿主机 exec 缺省 cwd 为 code_root，平台入口使用 Worker Python；Docker working_directory 独立于 work/output，平台 interpreter 可为绝对 Python 路径。调度检查 image_runtime、host_environments 与 scheduling，旧节点拒绝新字段。测试 backend/tests/test_generic_commands.py，Docker 显式启用，验证边界不是模型评测。界面指南与模板示例必须同步。

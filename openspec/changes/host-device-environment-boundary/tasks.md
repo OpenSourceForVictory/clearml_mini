@@ -1,0 +1,3 @@
+- [x] Validate task overrides again at the Worker boundary and write assigned GPU visibility last.
+- [x] Add normal, reserved-variable and unapproved-variable launch tests.
+- [x] Sync host guidance and Skill reference, run targeted validation, then commit.

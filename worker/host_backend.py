@@ -10,7 +10,7 @@ from .host_environments import probe,user_environment
 from .storage import atomic_json
 from .workspace import execution_dirs,validate_storage,disk_status
 from runner.template_contract import host_config
-from runner.image_runtime import TOKEN
+from runner.image_runtime import TOKEN,environment
 from runner.cs_contract import MAX_ARTIFACT_BYTES,MAX_ARTIFACT_COUNT,MAX_ARTIFACT_TOTAL,artifact_name
 
 
@@ -72,6 +72,8 @@ class HostBackend:
             account=settings(w.config)
         approved=w.state.get('host_approval',{})
         host=host_config(task['client_spec']['template']['host_runtime'])
+        task_env=environment(task['client_spec'].get('environment',{}))
+        if set(task_env)-set(host['overridable_env']):raise ValueError('host environment override is not allowed')
         profile=approved.get('environments',{}).get(host['environment_name'])
         if approved.get('revision')!=task.get('host_revision') or profile!=task.get('host_profile'):raise RuntimeError('host environment approval changed or is missing')
         probe(profile,w.config)
@@ -121,9 +123,9 @@ class HostBackend:
             if not os.access(argv[0],os.X_OK):raise RuntimeError('business program is not executable')
         platform_root=str(Path(__file__).resolve().parent.parent)
         env={'PATH':str(Path(profile['python']).parent)+':/usr/local/bin:/usr/bin:/bin','HOME':str(Path.home()),'LANG':'C.UTF-8','PYTHONUNBUFFERED':'1','PYTHONPATH':platform_root+':'+str(code_root),
-             'CUDA_VISIBLE_DEVICES':task.get('gpu_uuid') or '', 'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_WORK_DIR':values['work_dir'],'MINI_EVAL_OUTPUT_DIR':values['output_dir'],
+             'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_WORK_DIR':values['work_dir'],'MINI_EVAL_OUTPUT_DIR':values['output_dir'],
              'MINI_EVAL_ASSETS_DIR':w.config['assets_root'],'MINI_EVAL_CACHE_DIR':w.config['cache_root']}
-        env.update({k:expand(v) for k,v in {**host['environment'],**config.get('environment',{})}.items()})
+        env.update({k:expand(v) for k,v in {**host['environment'],**task_env}.items()})
         if account:env['HOME']=account.pw_dir
         if npu:
             account,device,cann_env=npu
@@ -138,6 +140,8 @@ class HostBackend:
             env.pop('CUDA_VISIBLE_DEVICES',None)
             # The device policy leaves one accessible card; CANN enumerates it as logical zero.
             env['ASCEND_RT_VISIBLE_DEVICES']='0'
+        else:
+            env['CUDA_VISIBLE_DEVICES']=task.get('gpu_uuid') or ''
         config['_resolved_cwd']=str(business_cwd)
         config['_resolved_command']=argv;config['_resolved_environment']=env;config['_resolved_assets']={k:v for k,v in values.items() if k.startswith('assets:')}
         config['template']={**config['template'],'command':argv}
