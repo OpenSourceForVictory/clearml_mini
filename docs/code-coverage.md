@@ -54,3 +54,11 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 新增测试使用真实临时文件、业务子进程和 Unix socket；Docker、SSH、部署命令及外部 API 的故障注入测试只验证边界行为，不宣称生产节点升级、真实 GPU/NPU 或模型评测已验收。构建、控制节点部署、观察脚本均不访问生产系统。覆盖率未达门槛的目录继续由门禁报失败，不降低要求。
 
 完整补测范围、失败证据和统计边界见 [本轮验证记录](validation/project-coverage/README.md)。真接口界面测试可在独立测试 API 上显式设置 `SUITE_LIVE_TEST_API`，运行 `frontend/tests/suites-live.spec.ts` 与 `frontend/tests/templates-live.spec.ts`。它们使用专用测试账号，创建模板和集合数据，禁止指向生产。
+
+## 运维脚本与真实迁移补测
+
+`test_smoke_runtime_scripts.py`、`test_smoke_farm_script.py`、`test_smoke_shared_gpu_script.py`、`test_two_host_acceptance_scripts.py`、`test_robotwin_queue_driver.py` 验证验收驱动器不会将错误回合、缺失产物、设备分配错误、重启重复执行、取消误伤、挂载错误等误报为通过。SSH、Docker、GPU、进程边界被隔离；这些用例不执行真实双机或 GPU 验收。三个双机脚本现在先检查隔离 API 地址，再启动测试监听服务，拒绝非隔离地址不会留下监听线程。
+
+`test_fleet_acceptance_recovery.py` 使用真实检查点文件验证配置恢复不覆盖管理员后续变更；虚拟时间测试仅验证稳定性观察器的逻辑，不可作为两小时稳定性证据。
+
+真实迁移脚本测试通过独立开关 `MIGRATION_DRIVER_TEST_URL` 启用，值为一次性 PostgreSQL **服务器**上的管理连接（需要 CREATE DATABASE 权限）。每个用例创建 `migration_driver_<随机值>` 数据库，只在该库执行历史升级、回填断言、受保护降级和再次升级，最终强制删除该临时库。禁止指向生产服务器；不要与普通应用数据库连接混用。CI 使用其已有的一次性 PostgreSQL service 并显式设置此变量。本地未提供时保留跳过，覆盖率门禁可能因此不达标；门槛不作豁免。

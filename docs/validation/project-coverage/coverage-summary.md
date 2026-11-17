@@ -4,13 +4,13 @@ Python only; frontend and uninstrumented subprocesses excluded from claims
 
 | 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
 | --- | ---: | ---: | ---: |
-| 全部 Python | 142 | 80.59% | 71.68% |
+| 全部 Python | 142 | 89.35% | 78.16% |
 | backend/app | 39 | 95.11% | 80.10% |
 | worker | 22 | 87.34% | 73.23% |
 | node_agent | 8 | 91.67% | 84.29% |
 | runner | 23 | 92.31% | 80.74% |
 | onboarding | 6 | 94.01% | 79.17% |
-| scripts | 44 | 46.03% | 48.63% |
+| scripts | 44 | 80.13% | 77.46% |
 
 ## 功能视图（可重叠，不相加）
 
@@ -26,5 +26,4 @@ Python only; frontend and uninstrumented subprocesses excluded from claims
 
 ## 门槛检查
 
-scripts: line 46.03% < 80.00%
-scripts: branch 48.63% < 70.00%
+通过。测试是否成功需单独查看 tests.xml / test-exit.json。

@@ -1,7 +1,8 @@
 """Isolated API plus two real systemd user Worker units; never production nodes."""
-import json,os,shutil,subprocess,sys,time,urllib.request
+import json,os,re,shutil,subprocess,sys,time,urllib.request
 from pathlib import Path
 from worker.updater import Updater
+from worker.version import SOFTWARE_VERSION
 
 
 def main():
@@ -18,10 +19,14 @@ def main():
             time.sleep(.5)
         raise RuntimeError('temporary workers did not connect')
     token=api('auth/login',{'username':'admin','password':os.environ['UPGRADE_TEST_PASSWORD']})['access_token']
-    root=Path('.runtime/worker-upgrades')/str(time.time_ns());root=root.resolve();root.mkdir()
+    root=Path('.runtime/worker-upgrades')/str(time.time_ns());root=root.resolve();root.mkdir(parents=True)
     app=root/'app';app.mkdir()
     for package in ('worker','runner'):shutil.copytree(package,app/package,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-    version=app/'worker/version.py';version.write_text(version.read_text().replace("SOFTWARE_VERSION='0.10.0'","SOFTWARE_VERSION='0.9.0'"))
+    version=app/'worker/version.py'
+    previous_version='0.0.0' if SOFTWARE_VERSION!='0.0.0' else '0.0.1'
+    source,count=re.subn(r'^SOFTWARE_VERSION\s*=.*$', 'SOFTWARE_VERSION='+repr(previous_version), version.read_text(), flags=re.MULTILINE)
+    if count!=1:raise RuntimeError('cannot prepare isolated Worker version fixture')
+    version.write_text(source)
     n=api('admin/worker-credentials',{'node_name':'upgrade-test-'+root.name,'roles':['client'],'max_concurrent':2})
     pool=api('admin/pools',{'name':'upgrade-test-'+root.name,'gpu_model':'virtual'})
     units=[];configs=[];unitbytes={};configbytes={};unitdir=Path.home()/'.config/systemd/user';unitdir.mkdir(parents=True,exist_ok=True)
@@ -36,7 +41,7 @@ def main():
         for unit in units:subprocess.run(['systemctl','--user','start',unit.name],check=True)
         route='admin/nodes/'+n['id']+'/upgrades'
         before=wait(lambda:(v if len((v:=api(route))['slots'])==2 and all(s['online'] for s in v['slots']) else None))
-        assert {s['software']['version'] for s in before['slots']}=={'0.9.0'}
+        assert {s['software']['version'] for s in before['slots']}=={previous_version}
         cfg={'app_dir':str(app),'state_dir':str(root/'upgrade-state'),'config_paths':configs,'services':[{'scope':'user','name':u.name} for u in units],'verify_timeout':30}
         updater=Updater(cfg);updater.step()
         release=api('admin/worker-releases',{})
@@ -44,7 +49,7 @@ def main():
         updater.step()
         after=api(route);assert after['state']=='SUCCEEDED',after
         assert {s['id'] for s in before['slots']}=={s['id'] for s in after['slots']}
-        assert all(s['software']['version']=='0.10.0' and s['software']['build_digest']==release['id'] for s in after['slots'])
+        assert all(s['software']['version']==SOFTWARE_VERSION and s['software']['build_digest']==release['id'] for s in after['slots'])
         for path,data in configbytes.items():assert Path(path).read_bytes()==data
         for path,data in unitbytes.items():assert Path(path).read_bytes()==data
         (root/'evidence.json').write_text(json.dumps({'upgrade':operation['id'],'release':release['id'],'slots':after['slots'],'units_preserved':True,'credentials_preserved':True},indent=2))

@@ -26,10 +26,10 @@ def main():
     args=p.parse_args()
     base=os.environ['EVAL_API_URL'].rstrip('/')
     test_host=os.environ['STORAGE_TEST_HOST']
-    service=ThreadingHTTPServer((test_host,19091),BaseHTTPRequestHandler)
-    threading.Thread(target=service.serve_forever,daemon=True).start()
     if base not in ('http://127.0.0.1:18090','http://localhost:18090'):
         raise ValueError('acceptance requires the isolated local API on port 18090')
+    service=ThreadingHTTPServer((test_host,19091),BaseHTTPRequestHandler)
+    threading.Thread(target=service.serve_forever,daemon=True).start()
     token=None
     def api(path,body=None,method=None):
         req=urllib.request.Request(base+'/api/v1/'+path,

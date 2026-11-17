@@ -45,4 +45,6 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；API 需要 ONBOARDING
 
 覆盖率补测的范围、失败证据和真接口界面验收见 `docs/validation/project-coverage/README.md`；新增 `templates-live.spec.ts` 通过显式隔离 API 开关验证四类模板注册，`suites-live.spec.ts` 按当前“评测运行与结果 → 评测任务集合管理”导航。
 
-执行与恢复补测：test_worker_service_execution.py（健康探测、租约 watchdog、完成上报）、test_onboarding_recovery_edges.py（恢复身份、取消、凭据过期）、test_worker_bootstrap_transport.py（启动清理、传输）、test_execution_launch_boundaries.py（身份、端口、产物续租）、test_fleet_rollout_cli.py（发布检查点重入与排空前拒绝）。这些边界模拟测试不替代 systemd / GPU / NPU 真机验收；当前剩余门禁缺口见验证记录中的 scripts 目录。
+执行与恢复补测：test_worker_service_execution.py（健康探测、租约 watchdog、完成上报）、test_onboarding_recovery_edges.py（恢复身份、取消、凭据过期）、test_worker_bootstrap_transport.py（启动清理、传输）、test_execution_launch_boundaries.py（身份、端口、产物续租）、test_fleet_rollout_cli.py（发布检查点重入与排空前拒绝）。这些边界模拟测试不替代 systemd / GPU / NPU 真机验收；各目录当前门禁状态见最新验证记录。
+
+运维验收驱动器补测见 docs/code-coverage.md 与 docs/validation/project-coverage/README.md：双机脚本必须在启动监听前拒绝非隔离 API；smoke_worker_upgrades 使用当前版本元信息构造临时旧版本，不能继续写死 0.10.0。test_migration_driver_scripts.py 需 MIGRATION_DRIVER_TEST_URL 指向一次性 PostgreSQL 服务器，并为每个用例创建/删除专用数据库。虚拟时间 soak 和模拟 SSH/Docker 结果不能写成真实稳定性或硬件验收。

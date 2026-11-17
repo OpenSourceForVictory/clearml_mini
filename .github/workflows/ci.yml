@@ -17,6 +17,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://eval:test-password@127.0.0.1:5432/eval
       TEST_DATABASE_URL: postgresql+psycopg://eval:test-password@127.0.0.1:5432/eval
+      MIGRATION_DRIVER_TEST_URL: postgresql+psycopg://eval:test-password@127.0.0.1:5432/postgres
       JWT_SECRET: ci-only-signing-secret
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: ci-only-admin-password

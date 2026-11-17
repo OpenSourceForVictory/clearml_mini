@@ -26,3 +26,12 @@ Tests SHALL cover normal completion, cancellation, resource admission failure, r
 #### Scenario: Operator scripts under test
 - **WHEN** build and deployment scripts are tested with fault injection
 - **THEN** command boundaries are isolated and successful unit tests are not described as real fleet deployment acceptance
+#### Scenario: Current-version upgrade acceptance
+- **WHEN** the isolated upgrade driver is run from a fresh checkout
+- **THEN** it creates its temporary parent directory, derives the target from current Worker metadata and verifies a distinct temporary source version before launching workers
+#### Scenario: Non-isolated two-host acceptance URL
+- **WHEN** a two-host storage, image runtime or membership driver receives a non-isolated API URL
+- **THEN** it rejects the run before starting its test listener or contacting nodes
+#### Scenario: Real migration driver regression
+- **WHEN** a dedicated disposable PostgreSQL server is explicitly configured for driver tests
+- **THEN** each driver uses a separate temporary database and verifies historical backfill, downgrade guards and re-upgrade before deleting that database

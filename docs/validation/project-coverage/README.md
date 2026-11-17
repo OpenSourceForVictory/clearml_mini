@@ -46,3 +46,26 @@ Python 行覆盖率从初始 72.26% 提高到 **78.75%**，分支从 62.02% 提�
 最新 [目录与功能报告](coverage-summary.md)：Python **行 80.59%、分支 71.68%**。Worker **87.34% / 73.23%**，节点纳管与升级 **94.17% / 80.92%**，业务执行与结果 **93.54% / 82.42%**；这些分组已达到各自门槛。
 
 当前唯一未达标目录是 **scripts：46.03% / 48.63%**，主要缺口仍是运维及真机验收脚本。门禁退出码仍为 1，OpenSpec 2.1 保持未完成。上述 SSH、Docker、systemd 和 NPU 硬件边界使用模拟接口；临时文件、线程和检查点真实执行，不能据此称生产发布、真机资源隔离或模型评测已经验收。没有修改产品实现、部署服务或操作生产节点。
+
+## 第三轮补测：运维验收驱动器与数据库迁移
+
+本轮新增 **104 个测试用例**，覆盖宿主机/容器、共享 GPU、双机目录与镜像映射、资源池迁移、队列恢复、升级脚本、配置恢复及稳定性观察器。测试检查错误证据不能被误报为通过；实际 SSH、Docker、GPU、systemd 操作用模拟边界隔离，真实执行临时文件、归档、检查点读写。虚拟时间用例只验证观察逻辑，不构成两小时稳定性验收。
+
+真实 PostgreSQL 使用独立临时容器和 tmpfs。三组新增迁移驱动器测试分别创建随机专用数据库，实际执行历史升级、数据回填、受保护降级、恢复合法数据后降级与再次升级，**3 passed**；每组结束删除专用数据库。CI 的一次性 PostgreSQL service 增加 `MIGRATION_DRIVER_TEST_URL`，避免这三组测试在 CI 静默跳过。
+
+本轮失败证据及修正：
+
+1. `test_smoke_upgrade_script.py::test_upgrade_verdict_and_cleanup[None]` 首次报 `FileNotFoundError`：全新测试目录下没有 `.runtime/worker-upgrades` 父目录。改为创建父目录后再次运行，发现旧版字符串替换没有改变当前 `0.17.0`，触发 `upgrade fixture did not change current source version`。现在从当前 Worker 元信息取目标版本，仅在临时副本构造不同测试版本，并验证目标版本和发布摘要；源文件找不到唯一版本声明时在创建节点/启动服务前拒绝。8 项驱动器测试通过，不代表本轮运行了真实 systemd 升级。
+2. `test_two_host_driver_rejects_nonisolated_api_before_listening[scripts.smoke_storage]` 首次失败：脚本拒绝非隔离 API 前已创建监听服务。storage、image_runtime、memberships 三个同构脚本均改为先验证 API，再监听。相关 23 项驱动器测试通过，未更改平台业务接口。
+
+本轮全量测量使用包含上述变更与所有新增测试的隔离源码副本，不包含工作区另一个尚未完成的集合 N:N 变更。全量结果以本节后续记录为准；不把增量合并数据当作全量测试结果。
+
+### 第三轮全量结果（当前基线，门禁通过）
+
+在隔离副本用 `python -m scripts.test_coverage --output ../round3-full` 重新采集全量覆盖率，显式开启一次性 PostgreSQL 上的 `TEST_DATABASE_URL` 与 `MIGRATION_DRIVER_TEST_URL`。**1112 passed、99 skipped、0 failed，耗时 727.83 秒；命令退出码 0**。本次报告从空覆盖数据开始，不合并前两轮数据。环境为本机 Python 3.13 / PostgreSQL 16.8；GitHub CI 配置已同步，本轮没有运行远端 GitHub Actions。
+
+Python 总体 **行 89.35%、分支 78.16%**，scripts **80.13% / 77.46%**；六个目录全部达到 80% / 70% 门槛，三个关键功能全部达到 90% / 80% 门槛，具体见 [最新覆盖率表](coverage-summary.md)。scripts 行覆盖率、backend/app 分支覆盖率仍接近门槛，后续变更需继续补测，不降低标准。
+
+99 项跳过保留原有真实硬件、容器、特权及其他专门验收开关，不描述成通过。前端未改动，本轮没有重跑浏览器或测量前端覆盖率；前两轮浏览器记录仍保留各自验证边界。临时 PostgreSQL 容器已删除，生产 API、数据库和节点未修改。本轮代码改动仅为四个验收脚本修正、测试、CI 开关和文档；未包含原有未完成的集合 N:N 关联变更。
+
+完整本机证据在 `.runtime/project-coverage/round3-full/`（JUnit、pytest 退出码、JSON/XML/HTML 覆盖率及聚合摘要），不提交运行目录。OpenSpec `project-coverage-baseline` 的任务 2.1 已依据本次全量结果完成，整体 6/6。
