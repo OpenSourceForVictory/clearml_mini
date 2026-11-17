@@ -23,8 +23,8 @@ def server_job(definition,owner_id):
 class Planner:
     def __init__(self,s,at):
         self.s=s;self.at=at
-        self.workers={x.id:x for x in s.scalars(select(Worker))}
-        self.slots=list(s.scalars(select(Slot).order_by(Slot.node_name,Slot.gpu_index)))
+        self.workers={x.id:x for x in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)))}
+        self.slots=list(s.scalars(select(Slot).where(Slot.deleted_at.is_(None)).order_by(Slot.node_name,Slot.gpu_index)))
         self.pools={x.id:x for x in s.scalars(select(Pool).where(Pool.enabled))}
         self.active=list(s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE),Run.cleanup_confirmed.is_(False)))))
         self.jobs={r.job_id:s.get(Job,r.job_id) for r in self.active}

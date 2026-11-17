@@ -1,0 +1,3 @@
+- [x] 1. Add soft deletion migration and guarded lifecycle APIs; test identity reuse and historical preservation.
+- [x] 2. Add reviewed SSH residual cleanup with backups and failure/permission tests.
+- [x] 3. Add UI actions, update guides and Skill, run coverage/frontend/migration checks and commit.

@@ -70,7 +70,7 @@ def build_release():
 def install(app,db,admin,worker_auth):
     def machine(s,identity):
         w=s.get(Worker,identity)
-        if not w:raise HTTPException(404,'node not found')
+        if not w or w.deleted_at:raise HTTPException(404,'node not found')
         return w
 
     @app.get('/api/v1/admin/worker-releases')

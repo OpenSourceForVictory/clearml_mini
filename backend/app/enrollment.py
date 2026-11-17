@@ -62,6 +62,8 @@ def progress(s, w):
 
 def begin(s,w,user,release,agent,revision,expected_devices=None,new=False):
     from .execution import token_hash
+    if w.deleted_at:raise HTTPException(404,'node not found')
+    if (w.connection or {}).get('node_cleanup',{}).get('state') in ('RUNNING','FAILED'):raise HTTPException(409,'resolve remote node cleanup first')
     if revision != w.management_revision: raise HTTPException(409,'machine configuration changed; refresh')
     if not new and not w.revoked_at and not pending(w): raise HTTPException(409,'unmanage the node before re-enrolling')
     if w.upgrade_state in BLOCKING: raise HTTPException(409,'resolve node upgrade before re-enrolling')
@@ -94,7 +96,7 @@ def accepts_new_gpu(w,index,uuid):
 def install(app, db, admin):
     def machine(s, identity):
         w = s.get(Worker, identity)
-        if not w: raise HTTPException(404, 'node not found')
+        if not w or w.deleted_at: raise HTTPException(404, 'node not found')
         return w
 
     @app.get('/api/v1/admin/node-installation-bundle')

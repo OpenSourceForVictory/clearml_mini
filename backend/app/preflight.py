@@ -58,8 +58,8 @@ class DiagnosticContext:
         self.at = now()
         self.active = s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
         self.jobs = {j.id: j for j in s.scalars(select(Job).where(Job.id.in_({r.job_id for r in self.active})))}
-        self.slots = {x.id: x for x in s.scalars(select(Slot))}
-        self.workers = {w.id: w for w in s.scalars(select(Worker))}
+        self.slots = {x.id: x for x in s.scalars(select(Slot).where(Slot.deleted_at.is_(None)))}
+        self.workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)))}
         self.by_slot, self.by_node = defaultdict(list), defaultdict(list)
         self.owners, self.batches = Counter(), Counter()
         for run in self.active:

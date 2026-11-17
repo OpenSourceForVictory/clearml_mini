@@ -59,6 +59,7 @@ type Job = {
   error: string | null;
 };
 type Slot = {
+  roles?: string[];
   id: string;
   node_name: string;
   gpu_index: number;
@@ -595,6 +596,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
   );
 }
 function Resources({ admin }: { admin: boolean }) {
+  const [resourceRole,setResourceRole] = useState('all');
   const [pools, setPools] = useState<Pool[]>([]),
     [slots, setSlots] = useState<Slot[]>([]),
     [summary, setSummary] = useState({ total: 0, online: 0 }),
@@ -605,7 +607,7 @@ function Resources({ admin }: { admin: boolean }) {
       try {
         const p = await api<Pool[]>("pools");
         const w = await api<Slot[] | { total: number; online: number }>(
-          "workers",
+          resourceRole==='all'?"workers":`workers?role=${resourceRole}`,
         );
         if (active) {
           setPools(p);
@@ -628,7 +630,7 @@ function Resources({ admin }: { admin: boolean }) {
       active = false;
       clearInterval(t);
     };
-  }, []);
+  }, [resourceRole]);
   return (
     <>
       <div className="page-title">
@@ -638,6 +640,8 @@ function Resources({ admin }: { admin: boolean }) {
           <p className="muted">按资源池选择适合的执行环境。</p>
         </div>
       </div>
+      <div className="tabs" role="tablist" aria-label="计算资源角色">{[['all','全部资源'],['client','客户端资源'],['server','服务端资源']].map(([value,label])=><button role="tab" key={value} aria-selected={resourceRole===value} onClick={()=>{setResourceRole(value);setSlots([]);setSummary({total:0,online:0})}}>{label}</button>)}</div>
+      <p className="muted">双角色设备会出现在两个分类中；全部资源按设备去重。角色表示用途，是否能接任务还需查看在线与准入状态。资源池列表展示全平台可用池。</p>
       {error && <p className="error">{error}</p>}
       <div className="stats">
         <div>
@@ -659,7 +663,7 @@ function Resources({ admin }: { admin: boolean }) {
           <section key={p.id} className="panel">
             <span className="eyebrow">RESOURCE POOL</span>
             <h2>{p.name}</h2>
-            <p>{p.gpu_model === "virtual" ? "模拟池" : "异构 GPU 池"}</p>
+            <p>{p.gpu_model === "virtual" ? "模拟池" : "物理加速设备池（GPU / NPU）"}</p>
             <p>{p.allow_shared ? `允许共享，每卡最多 ${p.max_tasks_per_gpu} 个任务` : "GPU 独占：每卡一个任务"}</p>
             <p className="muted">显存安全余量 {p.vram_reserve_gb} GiB · 共享准入利用率低于 {p.max_gpu_utilization}%</p>
             <p className="muted">最低显存 {p.min_vram_gb} GiB</p>
@@ -669,11 +673,11 @@ function Resources({ admin }: { admin: boolean }) {
       </div>
       {admin && (
         <section className="panel">
-          <h2>Worker 槽位</h2>
+          <h2>{resourceRole==='client'?'客户端设备':resourceRole==='server'?'服务端设备':'全部计算设备'}</h2>
           <table>
             <thead>
               <tr>
-                <th>机器 / GPU</th>
+                <th>机器 / 设备</th><th>角色</th>
                 <th>型号 / 总显存</th>
                 <th>空闲显存 / 利用率</th>
                 <th>工作磁盘空闲 / 安全阈值</th><th>活动任务 / 显存预留</th>
@@ -688,6 +692,7 @@ function Resources({ admin }: { admin: boolean }) {
                   <td>
                     {s.node_name} / {s.gpu_index}
                   </td>
+                  <td>{(s.roles||['client']).map(r=>r==='server'?'服务端':'客户端').join('、')}</td>
                   <td>{s.gpu_model || "待登记"}<small>{(s.vram_mb / 1024).toFixed(1)} GiB</small></td>
                   <td>{s.telemetry_fresh ? `${((s.free_vram_mb || 0) / 1024).toFixed(1)} GiB / ${s.gpu_utilization}%` : "遥测过期或不可用"}</td>
                   <td>{s.disk_fresh ? `${((s.disk_free_mb||0)/1024).toFixed(1)} / ${((s.disk_min_free_mb||0)/1024).toFixed(1)} GiB${(s.disk_free_mb||0)<(s.disk_min_free_mb||0)?' · 空间不足，暂停准入':''}` : '未上报或已过期'}</td>

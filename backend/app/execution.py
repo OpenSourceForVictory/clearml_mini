@@ -134,7 +134,7 @@ def install(app, db, current):
     def worker_auth(token: Optional[HTTPAuthorizationCredentials] = Depends(bearer), s: Session = Depends(db)):
         if not token or not token.credentials.startswith('wk_'):
             raise HTTPException(401, 'worker credential required')
-        w = s.scalar(select(Worker).where(Worker.token_hash == token_hash(token.credentials), Worker.revoked_at.is_(None)))
+        w = s.scalar(select(Worker).where(Worker.token_hash == token_hash(token.credentials), Worker.revoked_at.is_(None), Worker.deleted_at.is_(None)))
         if not w:
             raise HTTPException(401, 'invalid worker credential')
         return w
@@ -202,7 +202,7 @@ def install(app, db, current):
     @app.post('/api/v1/admin/worker-credentials', status_code=201)
     def provision(body: WorkerCreate, user=Depends(admin), s: Session = Depends(db)):
         lock(s)
-        if s.scalar(select(Worker).where(Worker.node_name == body.node_name)):
+        if s.scalar(select(Worker).where(Worker.node_name == body.node_name, Worker.deleted_at.is_(None))):
             raise HTTPException(409, 'node already provisioned')
         token = 'wk_' + secrets.token_urlsafe(32)
         worker = Worker(token_hash=token_hash(token), **body.model_dump())
@@ -212,7 +212,7 @@ def install(app, db, current):
 
     @app.get('/api/v1/admin/nodes')
     def nodes(user=Depends(admin), s: Session = Depends(db)):
-        return [administration.node_view(s, w) for w in s.scalars(select(Worker).order_by(Worker.node_name))]
+        return [administration.node_view(s, w) for w in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)).order_by(Worker.node_name))]
 
     @app.post('/api/v1/admin/nodes/{worker_id}/rotate-token')
     def rotate(worker_id: str, user=Depends(admin), s: Session = Depends(db)):
@@ -256,8 +256,8 @@ def install(app, db, current):
             raise HTTPException(400, 'virtual and physical device identities must be distinct')
         if body.accelerator_type=='npu' and (body.protocol_version<11 or not body.gpu_uuid.startswith('ascend:')):
             raise HTTPException(400,'NPU registration requires protocol 11 and stable Ascend identity')
-        existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid))
-        indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index))
+        existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid, Slot.deleted_at.is_(None)))
+        indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index, Slot.deleted_at.is_(None)))
         if existing and (existing.worker_id != worker.id or existing.gpu_index != body.gpu_index):
             raise HTTPException(409, 'GPU UUID already registered to another slot')
         if indexed and indexed.gpu_uuid != body.gpu_uuid:

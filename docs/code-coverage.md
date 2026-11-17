@@ -64,3 +64,5 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 真实迁移脚本测试通过独立开关 `MIGRATION_DRIVER_TEST_URL` 启用，值为一次性 PostgreSQL **服务器**上的管理连接（需要 CREATE DATABASE 权限）。每个用例创建 `migration_driver_<随机值>` 数据库，只在该库执行历史升级、回填断言、受保护降级和再次升级，最终强制删除该临时库。禁止指向生产服务器；不要与普通应用数据库连接混用。CI 使用其已有的一次性 PostgreSQL service 并显式设置此变量。本地未提供时保留跳过，覆盖率门禁可能因此不达标；门槛不作豁免。
 
 旧布局纳管的 `scripts/node_layout.py` 同时纳入 scripts 目录与“节点纳管与升级”关键功能统计，沿用原 90%/80% 门槛。若同名测试模块导致收集冲突，可设置 `PYTEST_ADDOPTS=--import-mode=importlib` 再运行原覆盖命令；不排除测试，保留首次失败报告。
+
+机器删除与远程清理补测见 [验证记录](validation/node-removal/README.md)：`test_node_removal.py`、`test_node_cleanup.py` 检查身份重用、历史保留、清理回执和权限/失败路径；`test_resource_roles.py` 检查双角色计数与普通用户汇总权限。`onboarding/cleanup.py` 自动纳入现有“节点纳管与升级”统计。Agent 并发落盘测试在插桩与磁盘负载下原 5 秒等待不足，使用共享 30 秒截止时间，保留所有状态和持久化断言；没有调整覆盖率门槛。

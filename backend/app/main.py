@@ -172,12 +172,15 @@ def pools(user: User = Depends(current), s: Session = Depends(db)):
 
 
 @app.get('/api/v1/workers')
-def workers(user: User = Depends(current), s: Session = Depends(db)):
+def workers(user: User = Depends(current), s: Session = Depends(db), role: Literal['client','server'] | None = None):
     from .memberships import view
-    slots = s.scalars(select(Slot)).all()
+    slots = s.scalars(select(Slot).where(Slot.deleted_at.is_(None))).all()
+    from .core import Worker
+    roles = {w.id: w.roles for w in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)))}
+    if role:slots = [x for x in slots if role in roles.get(x.worker_id,['client'])]
     if user.role == 'admin':
         held = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
-        return [{'id': x.id, 'worker_id': x.worker_id, **view(s, x), 'node_name': x.node_name, 'gpu_index': x.gpu_index,
+        return [{'id': x.id, 'worker_id': x.worker_id, 'roles':roles.get(x.worker_id,['client']), **view(s, x), 'node_name': x.node_name, 'gpu_index': x.gpu_index,
                  'gpu_uuid': x.gpu_uuid, 'pool_id': x.pool_id, 'online': online(x),
                  'quarantined': x.quarantined, 'last_seen_at': x.last_seen_at,
                  'accelerator_type':x.accelerator_type,'accelerator_backends':x.accelerator_backends,'gpu_model': x.gpu_model, 'vram_mb': x.vram_mb, 'free_vram_mb': x.free_vram_mb,

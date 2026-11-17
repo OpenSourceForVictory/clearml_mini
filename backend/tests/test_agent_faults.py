@@ -125,7 +125,10 @@ def test_event_replay_and_ack_are_serialized(tmp_path):
         for _ in range(100):state.acknowledge(0)
     threads=[threading.Thread(target=f) for f in (write,write,ack)]
     for t in threads:t.start()
-    for t in threads:t.join(5);assert not t.is_alive()
+    # Real fsync under coverage can exceed 5s on a busy disk; retain a shared bound.
+    deadline=time.monotonic()+30
+    for t in threads:
+        t.join(max(0,deadline-time.monotonic()));assert not t.is_alive()
     assert state.value['next_event']==201
     assert len({x['sequence'] for x in state.value['events']})==64
     assert json.loads(state.path.read_text())==state.value

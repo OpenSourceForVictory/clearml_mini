@@ -108,3 +108,20 @@ def test_checked_layout_transferred_and_drift_prevents_identity_rotation(operati
         assert ops.jobs[identity]['state']=='SUCCEEDED'
         assert json.loads(uploads['/tmp/mini-eval-node.ABCDEFGH/layout.json'])==plan['installation']
         assert any('--layout-snapshot' in cmd and '--existing' in cmd for cmd in commands)
+
+
+@pytest.mark.parametrize('step',['trust','confirm'])
+def test_current_authorization_replaces_check_token_without_persisting(operations,monkeypatch,step):
+    ops,calls=operations
+    job=ops.start('admin',form(**({'fingerprint':'SHA256:'+'A'*43} if step=='confirm' else {})),'Bearer OLD')
+    identity=job['id'];wait(lambda:ops.jobs[identity]['state']==('READY' if step=='confirm' else 'NEEDS_HOST_KEY'))
+    observed=[]
+    monkeypatch.setattr(ops.pool,'submit',lambda *args:observed.append(ops.secrets[identity]['authorization']))
+    with pytest.raises(Rejected):
+        if step=='confirm':ops.confirm(identity,'other','Bearer STOLEN')
+        else:ops.trust(identity,'other','SHA256:'+'A'*43,'Bearer STOLEN')
+    assert ops.secrets[identity]['authorization']=='Bearer OLD'
+    if step=='confirm':ops.confirm(identity,'admin','Bearer FRESH')
+    else:ops.trust(identity,'admin','SHA256:'+'A'*43,'Bearer FRESH')
+    assert observed==['Bearer FRESH']
+    assert 'Bearer' not in ''.join(p.read_text() for p in ops.root.glob('*.json'))

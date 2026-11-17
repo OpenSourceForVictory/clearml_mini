@@ -186,7 +186,7 @@ def tick(factory, at=None):
         active = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
         pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.enabled))}
         workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.enabled))}
-        slots = {x.id: x for x in s.scalars(select(Slot))}
+        slots = {x.id: x for x in s.scalars(select(Slot).where(Slot.deleted_at.is_(None)))}
         by_slot = {x.id: [] for x in slots.values()}
         for r in active:
             if r.slot_id in by_slot:

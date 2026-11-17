@@ -1,0 +1,2 @@
+- [x] 1. Implement role filtering and resource tabs without expanding permissions.
+- [x] 2. Verify dual-role counting, legacy fallback and UI switching; sync guides and commit.

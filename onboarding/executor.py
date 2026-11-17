@@ -61,7 +61,7 @@ class Operations:
         with self.lock:
             for identity,job in list(self.jobs.items()):
                 if job['state'] in ('READY','NEEDS_HOST_KEY') and self.clock()>job['expires_at']:self.update(identity,'EXPIRED',error='credentials_expired')
-                if job['state'] not in ACTIVE and self.clock()-job['updated_at']>86400:
+                if job['state'] not in ACTIVE and self.clock()-job['updated_at']>86400 and (job.get('kind')!='cleanup' or job.get('cleanup_ack')):
                     self.jobs.pop(identity);(self.root/(identity+'.json')).unlink(missing_ok=True)
     def list(self,actor):
         self.expire()
@@ -70,7 +70,8 @@ class Operations:
         self.expire()
         if identity not in self.jobs or self.jobs[identity]['actor']!=actor:raise Rejected('operation_not_found')
         return self.jobs[identity]
-    def start(self,actor,form,authorization):
+    def start(self,actor,form,authorization,kind='enrollment'):
+        if kind not in ('enrollment','cleanup'):raise Rejected('invalid_operation_kind')
         form=validate(form)
         with self.lock:
             self.expire()
@@ -81,14 +82,15 @@ class Operations:
             key=(form['host'],form['port'],form['username'])
             if any(x['state'] in ACTIVE and ((x['form']['host'],x['form']['port'],x['form']['username'])==key or x['form']['node_name']==form['node_name']) for x in self.jobs.values()):raise Rejected('target_has_active_operation')
             identity=uuid.uuid4().hex;t=self.clock()
-            job={'id':identity,'actor':actor,'state':'CHECKING','stage':'SSH','created_at':t,'updated_at':t,'expires_at':t+900,'form':public_form(form),'error':None}
+            job={'id':identity,'kind':kind,'actor':actor,'state':'CHECKING','stage':'SSH','created_at':t,'updated_at':t,'expires_at':t+900,'form':public_form(form),'error':None}
             self.jobs[identity]=job;self.secrets[identity]={'form':form,'authorization':authorization};self.persist(job)
             self.pool.submit(self.check,identity)
             return copy.deepcopy(job)
-    def trust(self,identity,actor,fingerprint):
+    def trust(self,identity,actor,fingerprint,authorization=None):
         with self.lock:
             job=self.own(identity,actor)
             if job['state']!='NEEDS_HOST_KEY' or fingerprint!=job['host_key']['fingerprint']:raise Rejected('host_key_confirmation_mismatch')
+            if authorization:self.secrets[identity]['authorization']=authorization
             self.secrets[identity]['form']['fingerprint']=fingerprint
             job['form']['fingerprint']=fingerprint
             self.update(identity,'CHECKING','SSH');self.pool.submit(self.check,identity)
@@ -133,6 +135,11 @@ class Operations:
                 finally:remote.close()
                 self.update(identity,'NEEDS_HOST_KEY','HOST_KEY',host_key=key);return
             control=Control(self.api_url,secret['authorization'])
+            if self.jobs[identity].get('kind')=='cleanup':
+                control.call('admin/nodes/'+form['node_id']+'/cleanup/eligibility',{'expected_revision':form['expected_revision']})
+                with self.remote_factory(form) as remote:plan=self.cleanup_remote(remote,form)
+                self.update(identity,'CHECK_FAILED' if plan.get('issues') else 'READY','ENVIRONMENT',cleanup_plan=plan)
+                return
             # Recover identity after a previous failed/ack-lost attempt, never an active managed node.
             nodes=control.call('admin/nodes')
             original=next((n for n in nodes if n['node_name']==form['node_name']),None)
@@ -147,13 +154,19 @@ class Operations:
             with self.remote_factory(form) as remote:plan=self.probe(remote,form,runner)
             self.update(identity,'CHECK_FAILED' if plan['issues'] else 'READY','ENVIRONMENT',plan=plan,release_id=package['release_id'])
         except Exception as error:self.fail(identity,error)
-    def confirm(self,identity,actor):
+    def confirm(self,identity,actor,authorization=None):
         with self.lock:
             job=self.own(identity,actor)
             if job['state'] in ('INSTALLING','VERIFYING','SUCCEEDED'):return copy.deepcopy(job)
             if job['state']!='READY':raise Rejected('environment_check_required')
+            if authorization:self.secrets[identity]['authorization']=authorization
             self.update(identity,'INSTALLING','RECHECK');self.pool.submit(self.install,identity)
             return copy.deepcopy(job)
+    def acknowledge_cleanup(self,identity,actor):
+        with self.lock:
+            job=self.own(identity,actor)
+            if job.get('kind')!='cleanup' or (job['state'] in ACTIVE and not job.get('cleanup_result')):raise Rejected('cleanup_receipt_not_ready')
+            return self.update(identity,cleanup_ack=True)
     def cancel(self,identity,actor):
         with self.lock:
             job=self.own(identity,actor)
@@ -163,7 +176,36 @@ class Operations:
         # No raw exception, remote stdout/stderr, password, key or token is persisted.
         code=str(error) if isinstance(error,Rejected) else 'onboarding_step_failed'
         self.update(identity,'FAILED',error=code)
+    def cleanup_remote(self,remote,form,plan=None,identity=None):
+        source=Path(__file__).with_name('cleanup.py').read_text()
+        body={'node_name':form['node_name']}
+        if identity:body.update(plan=plan,operation=identity)
+        _,raw,_=remote.run([form['python'],'-c',source],json.dumps(body).encode(),timeout=180)
+        result=json.loads(raw)
+        if not isinstance(result,dict):raise Rejected('cleanup_invalid_response')
+        return result
+
+    def cleanup_install(self,identity):
+        secret=self.secrets[identity];form=secret['form'];job=self.jobs[identity]
+        control=Control(self.api_url,secret['authorization'])
+        body={'expected_revision':form['expected_revision'],'operation_id':identity}
+        try:
+            with self.remote_factory(form) as remote:
+                current=self.cleanup_remote(remote,form)
+                if current.get('issues') or current!=job['cleanup_plan']:raise Rejected('environment_changed_repeat_check')
+                control.call('admin/nodes/'+form['node_id']+'/cleanup/begin',body)
+                self.update(identity,stage='CLEANUP',node_id=form['node_id'])
+                result=self.cleanup_remote(remote,form,current,identity)
+                if result.get('state') not in ('SUCCEEDED','FAILED'):
+                    result={'state':'FAILED','error':(result.get('issues') or ['cleanup_invalid_response'])[0]}
+                self.update(identity,cleanup_result=result)
+                control.call('admin/nodes/'+form['node_id']+'/cleanup/complete',{'operation_id':identity,**result})
+                self.update(identity,result['state'],'COMPLETE',error=result.get('error'),cleanup_ack=True)
+        except Exception as error:self.fail(identity,error)
+
     def install(self,identity):
+        if self.jobs[identity].get('kind')=='cleanup':
+            self.cleanup_install(identity);return
         remote_dir=None
         try:
             secret=self.secrets[identity];form=secret['form'];package=secret['package'];control=Control(self.api_url,secret['authorization'])

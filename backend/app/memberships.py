@@ -20,6 +20,7 @@ class MembershipUpdate(BaseModel):
 
 
 def target_error(s, slot, target):
+    if slot.deleted_at:return 'device was deleted'
     if target is None:
         return None
     pool = s.get(Pool, target)

@@ -58,6 +58,24 @@ class Revision(BaseModel):
     expected_revision: int = Field(ge=0)
 
 
+def removable(s, identity, revision, cleanup_retry=False):
+    w=s.get(Worker,identity)
+    if not w or w.deleted_at:raise HTTPException(404,'node not found')
+    if revision!=w.management_revision:raise HTTPException(409,'machine configuration changed; refresh')
+    if not w.revoked_at:raise HTTPException(409,'unmanage the node first')
+    if w.upgrade_state in ('DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'):raise HTTPException(409,'resolve node upgrade first')
+    slots=list(s.scalars(select(Slot).where(Slot.worker_id==w.id)))
+    ids=[x.id for x in slots]
+    if s.scalar(select(Run.id).where(Run.slot_id.in_(ids),or_(Run.status.in_(ACTIVE),Run.cleanup_confirmed.is_(False))).limit(1)) or s.scalar(select(Job.id).where(Job.target_slot_id.in_(ids),Job.status=='PENDING').limit(1)):
+        raise HTTPException(409,'wait for execution cleanup and pending jobs')
+    from .core import DataCleanup,DataCleanupItem
+    if s.scalar(select(DataCleanupItem.id).join(DataCleanup,DataCleanup.id==DataCleanupItem.operation_id).where(DataCleanup.worker_id==w.id,DataCleanupItem.status.in_(('queued','running'))).limit(1)):
+        raise HTTPException(409,'wait for data cleanup')
+    state=(w.connection or {}).get('node_cleanup',{}).get('state')
+    if state in ('RUNNING','FAILED') and not cleanup_retry:raise HTTPException(409,'resolve remote node cleanup first')
+    return w,slots
+
+
 class PoolUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str | None = Field(default=None, min_length=1, max_length=100)
@@ -92,11 +110,23 @@ class AccountUpdate(BaseModel):
 
 
 def install(app, db, admin):
+    @app.delete('/api/v1/admin/nodes/{worker_id}')
+    def remove_node(worker_id:str,body:Revision,user=Depends(admin),s=Depends(db)):
+        lock(s)
+        w,slots=removable(s,worker_id,body.expected_revision)
+        w.deleted_at=now();w.enabled=False;w.management_revision+=1
+        for slot in slots:
+            slot.deleted_at=w.deleted_at;slot.enabled=False
+            slot.pool_id=slot.desired_pool_id=None
+        audit(s,user,'machine.delete',w.id,{'node_name':w.node_name})
+        s.commit()
+        return {'id':w.id,'deleted':True}
+
     @app.post('/api/v1/admin/nodes/{worker_id}/unmanage')
     def unmanage(worker_id: str, body: Revision, user=Depends(admin), s=Depends(db)):
         lock(s)
         w = s.get(Worker, worker_id)
-        if not w: raise HTTPException(404, 'node not found')
+        if not w or w.deleted_at: raise HTTPException(404, 'node not found')
         if w.revoked_at: return node_view(s, w)
         if w.upgrade_state in ('DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'):raise HTTPException(409,'resolve node upgrade before unmanaging')
         if body.expected_revision != w.management_revision: raise HTTPException(409, 'machine configuration changed; refresh')
