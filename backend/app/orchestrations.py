@@ -101,9 +101,14 @@ def compile_submission(s,body,user):
             client=SimpleNamespace(owner_id=user.id,pool_id=pool.id,benchmark='cs-client',client_spec=spec,
                 gpu_mode=r['gpu_mode'],requested_vram_gb=r['requested_vram_gb'],required_gpu_model=r.get('required_gpu_model'),
                 requested_cpu=r.get('cpus'),requested_ram_gb=r.get('ram_gb'))
-            possible=[planner.structural_pair(client,d) for d in definitions if d['key'] in spec['service_keys']]
-            if possible and all(x is False for x in possible):
-                raise HTTPException(400,case.case_id+': client/server requests cannot fit simultaneously in configured pool capacity; adjust resource requests, sharing or pool members')
+            possible=[(d,planner.structural_pair_diagnosis(client,d)) for d in definitions if d['key'] in spec['service_keys']]
+            if possible and all(result is False for _,(result,_) in possible):
+                # Include only the selected pool names and configured constraints.
+                details=[]
+                for definition,(_,reasons) in possible:
+                    server_pool=planner.pools[definition['pool_id']]
+                    details.append('服务 '+definition['key']+'（客户端池 '+pool.name+'；服务端池 '+server_pool.name+'）：'+'、'.join(reasons))
+                raise HTTPException(400,case.case_id+'：客户端与服务端无法同时分配；'+'；'.join(details))
     return request,pool,cases,configs,definitions
 
 

@@ -1,0 +1,3 @@
+- [x] 1. Preserve structural admission result and add specific safe diagnostics.
+- [x] 2. Add normal, boundary, and failure tests; sync UI guide, operations, Skill and validation evidence.
+- [x] 3. Run project coverage and relevant frontend checks; commit.

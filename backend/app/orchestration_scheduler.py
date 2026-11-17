@@ -42,10 +42,11 @@ class Planner:
                                          sum(r.reserved_ram_gb for r in node if not r.started_at)))
 
     def structural_pair(self,client,definition):
-        """Ignore occupancy/liveness; reject only a known capacity contradiction.
+        """Keep the tri-state admission contract used by preflight."""
+        return self.structural_pair_diagnosis(client,definition)[0]
 
-        A missing role/pool is environment preparation, not proof of impossibility.
-        """
+    def structural_pair_diagnosis(self,client,definition):
+        """Explain only configured capacity contradictions, not transient occupancy."""
         server=server_job(definition,client.owner_id)
         def targets(job):
             role='server' if job.benchmark=='inference-service' else 'client'
@@ -53,22 +54,45 @@ class Planner:
                     and role in (self.workers[x.worker_id].roles or ['client'])
                     and (not getattr(job,'target_slot_id',None) or job.target_slot_id==x.id)]
         servers,clients=targets(server),targets(client)
-        if not servers or not clients:return None
-        def fits(job,slot):
+        if not servers or not clients:return None,[]
+        def errors(job,slot,side):
             p=self.pools[job.pool_id];w=self.workers[slot.worker_id];r=budget(p,job)
-            return (not job.required_gpu_model or slot.gpu_model==job.required_gpu_model) and r.cpu_per_job<=w.cpu_capacity and r.ram_gb_per_job<=w.ram_gb_capacity and (not job.requested_vram_gb or job.requested_vram_gb*1024<=slot.vram_mb-p.vram_reserve_gb*1024)
-        for ss in servers:
-            for cs in clients:
-                if not fits(server,ss) or not fits(client,cs):continue
+            result=[]
+            if job.required_gpu_model and slot.gpu_model!=job.required_gpu_model:result.append(side+'设备型号不匹配')
+            if r.cpu_per_job>w.cpu_capacity:result.append(side+'单项 CPU 超过节点容量')
+            if r.ram_gb_per_job>w.ram_gb_capacity:result.append(side+'单项内存超过节点容量')
+            if job.requested_vram_gb and job.requested_vram_gb*1024>slot.vram_mb-p.vram_reserve_gb*1024:
+                result.append(side+'单项设备内存超过卡容量')
+            return result
+        usable_servers=[x for x in servers if not errors(server,x,'服务端')]
+        usable_clients=[x for x in clients if not errors(client,x,'客户端')]
+        if not usable_servers or not usable_clients:
+            reasons=set()
+            if not usable_servers:
+                for slot in servers:reasons.update(errors(server,slot,'服务端'))
+            if not usable_clients:
+                for slot in clients:reasons.update(errors(client,slot,'客户端'))
+            return False,sorted(reasons)
+        reasons=set()
+        for ss in usable_servers:
+            for cs in usable_clients:
+                pair_reasons=[]
                 if ss.id==cs.id:
                     p=self.pools[server.pool_id]
-                    if server.gpu_mode!='shared' or client.gpu_mode!='shared' or p.max_tasks_per_gpu<2:continue
-                    if (server.requested_vram_gb+client.requested_vram_gb+p.vram_reserve_gb)*1024>ss.vram_mb:continue
+                    if server.gpu_mode!='shared' or client.gpu_mode!='shared':
+                        pair_reasons.append('同卡不能同时容纳独占请求')
+                    elif p.max_tasks_per_gpu<2:
+                        pair_reasons.append('同卡共享任务上限小于 2')
+                    elif (server.requested_vram_gb+client.requested_vram_gb+p.vram_reserve_gb)*1024>ss.vram_mb:
+                        pair_reasons.append('同卡双方设备内存申请之和超过容量')
                 if ss.worker_id==cs.worker_id:
                     w=self.workers[ss.worker_id];sr=budget(self.pools[server.pool_id],server);cr=budget(self.pools[client.pool_id],client)
-                    if w.max_concurrent<2 or sr.cpu_per_job+cr.cpu_per_job>w.cpu_capacity or sr.ram_gb_per_job+cr.ram_gb_per_job>w.ram_gb_capacity:continue
-                return True
-        return False
+                    if w.max_concurrent<2:pair_reasons.append('同机并发上限小于 2')
+                    if sr.cpu_per_job+cr.cpu_per_job>w.cpu_capacity:pair_reasons.append('同机双方 CPU 申请之和超过节点容量')
+                    if sr.ram_gb_per_job+cr.ram_gb_per_job>w.ram_gb_capacity:pair_reasons.append('同机双方内存申请之和超过节点容量')
+                if not pair_reasons:return True,[]
+                reasons.update(pair_reasons)
+        return False,sorted(reasons)
 
     def pair(self,client,definition,avoid=()):
         if len(self.active)+2>admission.seconds('MAX_ACTIVE_GLOBAL',2):return None

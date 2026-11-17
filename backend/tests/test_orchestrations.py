@@ -271,7 +271,9 @@ def test_static_pair_capacity_conflict_is_rejected_but_occupancy_is_queueable(en
     assert c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=body).status_code==200
     body['services'][0]['slot_id']=ss
     r=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=body)
-    assert r.status_code==400 and 'cannot fit simultaneously' in r.text
+    assert r.status_code==400 and '客户端与服务端无法同时分配' in r.text
+    assert '客户端池' in r.text and '服务端池' in r.text
+    assert '同卡不能同时容纳独占请求' in r.text
 
 
 def test_unclaimed_server_reservation_expiry_replans_both_sides(env,monkeypatch):

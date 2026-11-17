@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page){
-  const requests:{body:any;key:string}[]=[];let checks=0,fail=false,delay=0,loseResponse=false,reporting=true;
+  const requests:{body:any;key:string}[]=[];let checks=0,fail:boolean|string=false,delay=0,loseResponse=false,reporting=true;
   const suite={id:'suite',name:'Three tasks',version:'v1',template_id:'t',cases:[1,2,3].map(i=>({case_id:'case-'+i,task_name:'task-'+i,episodes:4,seed:10+i,parameters:{variant:i}}))};
   const batch=(body:any,id='batch')=>({id,title:body.title,status:'PENDING',total:body.cases.length||3,succeeded:0,finished:0,total_episodes:body.cases.reduce((n:number,c:any)=>n+c.episodes,0)||12,cases:[]});
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
@@ -15,7 +15,7 @@ async function setup(page:Page){
     if(path==='orchestrations/preflight'){
       checks++;const wait=delay;const bad=fail;const body=route.request().postDataJSON();
       if(wait)await new Promise(r=>setTimeout(r,wait));
-      if(bad){await route.fulfill({status:400,json:{detail:[{reason:'client.endpoint: invalid endpoint'}]}});return;}
+      if(bad){await route.fulfill({status:400,json:{detail:typeof bad==='string'?bad:[{reason:'client.endpoint: invalid endpoint'}]}});return;}
       data={checked_at:new Date().toISOString(),can_submit:true,status:'needs_environment',task_count:3,total_episodes:12,cases:body.suite_id?suite.cases:body.cases,
         reasons:[],nodes:[{slot_id:'s',node_name:'R8000',gpu_index:0,gpu_model:'RTX 8000',ready:false,reasons:[{code:'client_image',category:'environment',message:'所需镜像未批准或未就绪',action:'请管理员准备镜像'}]}],note:'检查不预留资源'};
     }
@@ -36,7 +36,7 @@ async function setup(page:Page){
   await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');await wizard.getByLabel('最大并发任务数').fill('2');
-  return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean)=>{fail=x;},setDelay:(x:number)=>{delay=x;}};
+  return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean|string)=>{fail=x;},setDelay:(x:number)=>{delay=x;}};
 }
 
 test('draft survives navigation and polling; queued submit and independent trial preserve full suite',async({page})=>{
@@ -76,6 +76,14 @@ test('preflight failure is actionable and rechecking allows submission',async({p
   await wizard.getByLabel('最大并发任务数').fill('3');
   await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
   await expect(wizard.getByText(/最大并发 3/)).toBeVisible();
+});
+
+test('capacity diagnosis from preflight is visible without node access',async({page})=>{
+  const {wizard,setFail}=await setup(page);
+  setFail('case-1：客户端与服务端无法同时分配；服务 default（客户端池 Mixed GPUs；服务端池 Server GPUs）：同卡不能同时容纳独占请求');
+  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+  await expect(wizard.getByRole('alert')).toContainText('客户端池 Mixed GPUs；服务端池 Server GPUs');
+  await expect(wizard.getByRole('alert')).toContainText('同卡不能同时容纳独占请求');
 });
 
 
