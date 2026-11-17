@@ -56,4 +56,6 @@ HTTP IP 访问兼容：frontend/src/request-id.ts 统一请求 UUID，randomUUID
 资源池设备类型显示：administration.tsx 的物理池选项包含 GPU / NPU，接口仍为 gpu_model=*；memberships.target_error 区分物理/模拟，scheduling.eligibility_codes 按任务 accelerator_type 匹配设备。不要把通用物理池说明成 GPU 专用或已具备 NPU-only 成员约束。操作见 docs/resource-pool-membership.md。
 
  
-cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制，resource_limits.verify_current 区分 v1/v2/混合，v1 读取 mountinfo 定位合并控制器；非 root inspect_host 保留 v2 委派要求。Docker-only 安装跳过 host 探针，onboarding/docker_prepare.py 在身份 begin 前准备镜像和验证限制。默认 runner 构建材料通过 enrollment.bundle 分发；发布必须同步 API 安装包、独立执行器与 UI，不能仅重启 API。旧自定义目录保护仍保留，验收见 docs/validation/cgroup-runtime/README.md。
+cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制，resource_limits.verify_current 区分 v1/v2/混合，v1 读取 mountinfo 定位合并控制器；非 root inspect_host 保留 v2 委派要求。Docker-only 安装跳过 host 探针，onboarding/docker_prepare.py 仅生成手动镜像准备命令；纳管不拉取、构建或试运行容器，缺镜像不阻断，业务镜像准入仍由 image_runtime 控制。默认 runner 构建材料通过 enrollment.bundle 分发；发布必须同步 API 安装包、独立执行器与 UI，不能仅重启 API。旧自定义目录保护仍保留，验收见 docs/validation/cgroup-runtime/README.md。
+
+旧 root 自定义布局重新纳管：scripts/node_layout.py 从独立 updater 配置验证 root 路径权限、全部配置、有效 systemd 服务及 Python，脱敏布局摘要经 probe → executor → install_node 二次校验。保留旧 Worker 单元和业务账号；辅助组件失败回滚保留文件权限，节点仍停用。新增模块必须进入 enrollment.bundle。操作见 docs/node-reenrollment.md；测试 test_node_layout.py、test_node_installation.py、test_onboarding_recovery_edges.py。

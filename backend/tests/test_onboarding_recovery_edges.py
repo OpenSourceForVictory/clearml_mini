@@ -84,3 +84,27 @@ def test_install_recovery_edges(operations,monkeypatch,mode):
     if mode=='cleanup-warning':assert final['cleanup_warning'] is True
     assert identity not in ops.secrets
     assert 'SECRET' not in json.dumps(final)
+
+
+@pytest.mark.parametrize('changed',[False,True])
+def test_checked_layout_transferred_and_drift_prevents_identity_rotation(operations,changed):
+    ops,calls=operations;plan=ops.probe(None,None,None)
+    plan.update(existing=True,installation={'layout':{'app_dir':'/opt/original'},'fingerprint':'first'})
+    ops.probe=lambda *a:copy.deepcopy(plan)
+    Original=ops.remote_factory;uploads={};commands=[]
+    class Remote(Original):
+        def upload(self,path,payload):uploads[path]=payload
+        def run(self,argv,*a,**kw):commands.append(argv);return super().run(argv,*a,**kw)
+    ops.remote_factory=Remote
+    job=ops.start('admin',form(fingerprint='SHA256:'+'A'*43),'Bearer fixture');identity=job['id']
+    wait(lambda:ops.jobs[identity]['state']=='READY')
+    if changed:plan['installation']['fingerprint']='changed'
+    ops.update(identity,'INSTALLING');ops.install(identity)
+    if changed:
+        assert ops.jobs[identity]['error']=='environment_changed_repeat_check'
+        assert not any(path.endswith('/begin') for path,_ in calls)
+        assert not uploads
+    else:
+        assert ops.jobs[identity]['state']=='SUCCEEDED'
+        assert json.loads(uploads['/tmp/mini-eval-node.ABCDEFGH/layout.json'])==plan['installation']
+        assert any('--layout-snapshot' in cmd and '--existing' in cmd for cmd in commands)

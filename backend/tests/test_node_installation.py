@@ -99,3 +99,52 @@ def test_ssh_timeout_still_cleans_remote_private_directory(tmp_path,monkeypatch,
     with pytest.raises(subprocess.TimeoutExpired):deploy_node.deploy(archive,secret,hashlib.sha256(data).hexdigest(),'user@host')
     assert calls[-1][-1].startswith('rm -rf -- /tmp/mini-eval-node.')
     assert 'sensitive' not in capsys.readouterr().out
+
+
+def test_auxiliary_restore_preserves_bytes_permissions_and_disabled_services(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    config=tmp_path/'agent.json';config.write_bytes(b'{"token":"old"}\n');config.chmod(0o600)
+    unit=tmp_path/'agent.service';unit.write_bytes(b'original unit');unit.chmod(0o644)
+    originals=[(p,p.read_bytes(),p.stat()) for p in (config,unit)]
+    monkeypatch.setattr('scripts.node_layout.discover',lambda *a:{'checked':True})
+    monkeypatch.setattr(install_node,'auxiliary_snapshot',lambda layout:originals)
+    actions=[]
+    monkeypatch.setattr(install_node.Updater,'control',lambda self,action:actions.append(action))
+    def fail(*a):
+        for p in (config,unit):p.write_bytes(b'changed');p.chmod(0o777)
+        raise RuntimeError('auxiliary failure')
+    monkeypatch.setattr(install_node,'install_updater',fail)
+    with pytest.raises(RuntimeError,match='auxiliary failure'):
+        install_node.replace_existing(u.config,new,checked_snapshot={'checked':True})
+    for p,data,info in originals:
+        assert p.read_bytes()==data and p.stat().st_mode==info.st_mode
+    assert actions and set(actions)=={'stop'}
+
+
+def test_stale_layout_rejected_before_services_stop(tmp_path,monkeypatch):
+    u,_,new,_=setup(tmp_path,monkeypatch);calls=[]
+    monkeypatch.setattr('scripts.node_layout.discover',lambda *a:{'changed':True})
+    monkeypatch.setattr(install_node,'control_updater',lambda *a,**kw:calls.append(a))
+    with pytest.raises(ValueError,match='environment_changed'):
+        install_node.replace_existing(u.config,new,checked_snapshot={'checked':True})
+    assert not calls
+
+
+def test_auxiliary_snapshot_keeps_private_backup(tmp_path,monkeypatch):
+    from scripts import node_layout
+    updater=tmp_path/'updater';updater.mkdir();state=tmp_path/'state';state.mkdir()
+    config=updater/'config.json';config.write_bytes(b'{"layout":true}')
+    (updater/'updater.py').write_bytes(b'old updater')
+    agent=tmp_path/'agent.json';agent.write_bytes(b'{"token":"private"}')
+    units=tmp_path/'units';units.mkdir()
+    for name in ('mini-eval-agent.service','mini-eval-updater.service'):(units/name).write_bytes(b'original')
+    monkeypatch.setattr(node_layout,'LAYOUT',config)
+    monkeypatch.setattr(node_layout,'trusted',lambda path:path)
+    real=Path
+    monkeypatch.setattr(install_node,'Path',lambda path:units/real(path).name if str(path).startswith('/etc/systemd/system/') else real(path))
+    records=install_node.auxiliary_snapshot({'state_dir':str(state),'agent':{'config_path':str(agent)}})
+    assert len(records)==5
+    backups=list(state.glob('before-enrollment-*'));assert len(backups)==1
+    assert backups[0].stat().st_mode & 0o777==0o700
+    assert len(list(backups[0].iterdir()))==5
+    assert all(p.stat().st_mode & 0o777==0o600 for p in backups[0].iterdir())

@@ -37,6 +37,8 @@
 
 root 系统宿主机支持 cgroup v1、v2 和混合层级，以实际 CPU、内存、进程数限制验证为准；挂载点显示 tmpfs 不等于不支持。非 root 旧用户服务仍要求 v2 委派，不自动迁移身份或修改引导参数。单纯重启旧镜像不会获得修复，控制面安装包与 SSH 执行器需要同步更新，已部署节点按升级/重新纳管流程更新。
 
-Docker-only 纳管不运行宿主机 systemd 限制探针。环境检查只读检查 runner；缺失时在确认计划后拉取，仅默认 mini-eval-runner:dev 拉取失败允许从校验过的安装包原生构建。自定义镜像不能静默替换。受限容器验证 CPU、内存、PID 与所选 NPU 设备访问后才生成/轮换身份；这些验证不代表业务 CANN 环境已就绪。
+Docker-only 纳管不运行宿主机 systemd 限制探针，只要求 Docker daemon 可用。runner 镜像存在性作为提示，不拉取、构建或试运行；纳管成功不代表容器限制与 NPU/CANN 业务已验证。
 
 已有非标准目录安装仍会被保护性拒绝，需要受控迁移。真实验证范围及失败记录见 [cgroup 与重新纳管验证](validation/cgroup-runtime/README.md)。
+
+镜像准备由用户管理：Docker 纳管仅要求 daemon 可用，缺少平台 runner 或业务镜像不阻止安装。界面提供实际镜像引用与手动命令，纳管不运行镜像验收容器；运行任务仍需批准且就绪的业务镜像。默认 runner 构建方法见 [SSH 纳管说明](ssh-onboarding-executor.md)。

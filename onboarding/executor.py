@@ -106,7 +106,7 @@ class Operations:
 
     def probe(self,remote,form,runner_image):
         source=Path(__file__).with_name('probe.py').read_text()
-        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts.update({k:form.get(k,default) for k,default in (('accelerator_type','gpu'),('business_uid',29000),('business_gid',29000))});opts['ascend_source']=(Path(__file__).resolve().parents[1]/'node_agent/ascend.py').read_text();opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
+        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts.update({k:form.get(k,default) for k,default in (('accelerator_type','gpu'),('business_uid',29000),('business_gid',29000))});opts['ascend_source']=(Path(__file__).resolve().parents[1]/'node_agent/ascend.py').read_text();opts['layout_source']=(Path(__file__).resolve().parents[1]/'scripts/node_layout.py').read_text();opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
         _,data,_=remote.run([form['python'],'-c',source],json.dumps(opts).encode()+b'\n',timeout=120)
         plan=json.loads(data)
         if not isinstance(plan,dict) or not isinstance(plan.get('issues'),list):raise Rejected('invalid_probe_response')
@@ -120,6 +120,9 @@ class Operations:
                     if remote.run(['true'],sudo=True,check=False)[0]:plan['issues'].append('resource_delegation_requires_sudo')
                     else:plan['resource_repair_required']=True
                 else:plan['issues'].append(limits.get('reason','runtime_limits_not_enforced'))
+        if form['mode']=='docker':
+            from .docker_prepare import guidance
+            plan['runner_image_help']=guidance(runner_image,plan.get('runner_image_ready',False))
         if plan['free_disk_gb']<.1:plan['issues'].append('insufficient_installation_disk')
         return plan
     def check(self,identity):
@@ -168,7 +171,7 @@ class Operations:
             with self.remote_factory(form) as remote:
                 plan=self.probe(remote,form,secret['runner_image'])
                 prior=self.jobs[identity]['plan']
-                if plan['issues'] or any(plan[k]!=prior[k] for k in ('home','python','gpus','selected_gpus','configs','services','existing')):raise Rejected('environment_changed_repeat_check')
+                if plan.get('installation')!=prior.get('installation') or plan['issues'] or any(plan[k]!=prior[k] for k in ('home','python','gpus','selected_gpus','configs','services','existing')):raise Rejected('environment_changed_repeat_check')
                 devices=[{'index':x['index'],'uuid':x['uuid']} for x in plan['gpus'] if x['index'] in plan['selected_gpus']]
                 self.update(identity,stage='TRANSFER')
                 _,raw,_=remote.run(['mktemp','-d','/tmp/mini-eval-node.XXXXXXXX']);remote_dir=raw.decode().strip()
@@ -177,9 +180,6 @@ class Operations:
                     remote.upload(remote_dir+'/bundle.zip',payload)
                     extract="import hashlib,sys,zipfile; p=sys.argv[1]; d=open(p+'/bundle.zip','rb').read(); assert hashlib.sha256(d).hexdigest()==sys.argv[2]; zipfile.ZipFile(p+'/bundle.zip').extractall(p)"
                     remote.run([plan['python'],'-c',extract,remote_dir,package['sha256']])
-                    if form['mode']=='docker':
-                        from .docker_prepare import prepare
-                        prepare(remote,plan['python'],remote_dir,secret['runner_image'],form.get('accelerator_type','gpu'),plan['selected_gpus'],lambda stage:self.update(identity,stage=stage))
                     self.update(identity,stage='IDENTITY')
                     credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
                     node_id=credential['id'];self.update(identity,node_id=node_id)
@@ -187,7 +187,10 @@ class Operations:
                     credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
                     remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
                     args=[plan['python'],'-B',remote_dir+'/scripts/install_node.py','--credential',remote_dir+'/credential.json']
-                    if plan['existing']:
+                    if plan.get('installation'):
+                        remote.upload(remote_dir+'/layout.json',json.dumps(plan['installation']).encode())
+                        args+=['--existing','--layout-snapshot',remote_dir+'/layout.json']
+                    elif plan['existing']:
                         args+=['--existing','--home',plan['home']]
                         for s in plan['services']:args+=['--service',s['scope']+':'+s['name']]
                     else:args+=['--gpus',','.join(map(str,plan['selected_gpus']))]

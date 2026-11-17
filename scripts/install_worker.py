@@ -90,8 +90,6 @@ def main():
         identity(config)
         if config.get('execution_modes') != ['host']:
             subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=30)
-            for image in {config['runner_image'], *config.get('client_images', [])}:
-                subprocess.run(['docker', 'image', 'inspect', image], check=True, stdout=subprocess.DEVNULL, timeout=30)
         if 'host' in config.get('execution_modes', []):
             sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
             from worker.resource_limits import verify_host

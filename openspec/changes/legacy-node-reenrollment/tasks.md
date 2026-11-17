@@ -1,0 +1,5 @@
+- [x] 1. Implement trusted custom-layout discovery, snapshot rechecks and installer integration.
+- [x] 2. Preserve auxiliary component files on replacement failure and cover success, boundary and failure paths.
+- [x] 3. Update UI, guides and Skill; run project coverage and related frontend checks.
+- [x] 4. Validate the real NPU re-enrollment flow, record exact boundaries and commit.
+- [x] 5. Make runner preparation manual and non-blocking; verify missing-image enrollment and runtime image admission.

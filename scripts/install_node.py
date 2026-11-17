@@ -47,7 +47,34 @@ def install_updater(layout, system):
         subprocess.run(command, check=True, timeout=90, capture_output=True)
 
 
-def replace_existing(layout, credential):
+def auxiliary_snapshot(layout):
+    """Preserve control files, never copy or clear Agent/Worker recovery journals."""
+    from scripts.node_layout import LAYOUT, trusted
+    paths=[LAYOUT, LAYOUT.parent/'updater.py', Path(layout['agent']['config_path']),
+           Path('/etc/systemd/system/mini-eval-agent.service'),
+           Path('/etc/systemd/system/mini-eval-updater.service')]
+    records=[]
+    backup=Path(layout['state_dir'])/('before-enrollment-'+uuid.uuid4().hex)
+    backup.mkdir(mode=0o700)
+    for index,path in enumerate(paths):
+        trusted(path);info=path.stat();data=path.read_bytes()
+        saved=backup/str(index);saved.write_bytes(data);saved.chmod(0o600)
+        records.append((path,data,info))
+    return records
+
+
+def restore_auxiliary(records):
+    for path,data,info in records:
+        temporary=path.with_name(path.name+'.enrollment-restore')
+        with temporary.open('wb') as stream:
+            os.fchmod(stream.fileno(),info.st_mode & 0o777)
+            os.fchown(stream.fileno(),info.st_uid,info.st_gid)
+            stream.write(data);stream.flush();os.fsync(stream.fileno())
+        os.replace(temporary,path)
+    subprocess.run(['systemctl','daemon-reload'],check=True,capture_output=True,timeout=30)
+
+
+def replace_existing(layout, credential, checked_snapshot=None):
     updater = Updater(layout)
     if updater.journal.exists(): raise ValueError('unfinished upgrade journal; recover it before re-enrollment')
     if any(v['node_name'] != credential['node_name'] for v in updater.values):
@@ -61,6 +88,11 @@ def replace_existing(layout, credential):
         raise ValueError('all original GPU instances must be included')
     digest = (ROOT/'release.sha256').read_text().strip()
     if remote.get('release_id') != digest: raise ValueError('download the bundle for the current re-enrollment operation')
+    auxiliary=[]
+    if checked_snapshot is not None:
+        from scripts.node_layout import discover
+        if discover(credential['node_name'],sys.executable)!=checked_snapshot:raise ValueError('environment_changed_repeat_check')
+        auxiliary=auxiliary_snapshot(layout)
     system = layout['services'][0]['scope'] == 'system'
     if system and os.geteuid() != 0: raise ValueError('system service installation requires root')
     if not system and os.geteuid() == 0: raise ValueError('run user-service installation as its owning user')
@@ -94,6 +126,7 @@ def replace_existing(layout, credential):
         if swapped:
             # Services must be stopped and journals checked before restoring code.
             control_updater(system, 'stop', check=False)
+            subprocess.run(['systemctl']+([] if system else ['--user'])+['stop','mini-eval-agent.service'],check=True,capture_output=True,timeout=30)
             updater.control('stop')
             with ExitStack() as stack:
                 updater.idle_locks(stack, indices)
@@ -102,6 +135,7 @@ def replace_existing(layout, credential):
                 os.replace(backup, updater.app)
                 for path, value in originals.items():
                     owner=path.stat(); atomic(path,json.loads(value));os.chown(path,owner.st_uid,owner.st_gid)
+                if auxiliary:restore_auxiliary(auxiliary)
         raise
     finally:
         if stage.exists(): shutil.rmtree(stage)
@@ -113,6 +147,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--credential',type=Path,required=True)
     p.add_argument('--existing',action='store_true')
+    p.add_argument('--layout-snapshot',type=Path,help='checked root updater layout and fingerprint')
     p.add_argument('--home',type=Path,default=Path.home())
     p.add_argument('--service',action='append',default=[],help='scope:original-unit.service; repeat for all units')
     p.add_argument('--instance',default='gpu')
@@ -122,7 +157,13 @@ def main():
     os.environ.setdefault('DBUS_SESSION_BUS_ADDRESS','unix:path='+os.environ['XDG_RUNTIME_DIR']+'/bus')
     try:
         credential=json.loads(a.credential.read_text())
-        if a.existing:
+        if a.layout_snapshot:
+            from scripts.node_layout import discover
+            if not a.existing or a.service:raise ValueError('layout snapshot requires existing mode without service overrides')
+            snapshot=json.loads(a.layout_snapshot.read_text())
+            if discover(credential['node_name'],sys.executable)!=snapshot:raise ValueError('environment_changed_repeat_check')
+            layout=replace_existing(snapshot['layout'],credential,checked_snapshot=snapshot)
+        elif a.existing:
             layout=replace_existing(existing_layout(a.home.resolve(),a.service),credential)
         elif os.geteuid()==0:
             from scripts.install_system_node import install

@@ -64,3 +64,23 @@ def test_existing_layout_requires_complete_consistent_services(tmp_path,mode):
         assert layout['services']==[{'scope':'user','name':'worker.service'}]
     else:
         with pytest.raises(ValueError):install_node.existing_layout(tmp_path,services)
+
+
+@pytest.mark.parametrize('case',['valid','stale','without-existing','service-override'])
+def test_checked_snapshot_cli(tmp_path,monkeypatch,case):
+    credential=tmp_path/'credential.json';credential.write_text('{"node_name":"n"}')
+    snapshot={'layout':{'app_dir':'/original'},'fingerprint':'checked'}
+    target=tmp_path/'layout.json';target.write_text(json.dumps(snapshot))
+    args=['install','--credential',str(credential),'--layout-snapshot',str(target)]
+    if case!='without-existing':args.append('--existing')
+    if case=='service-override':args+=['--service','system:mini-eval-worker-other.service']
+    monkeypatch.setattr(sys,'argv',args)
+    monkeypatch.setattr('scripts.node_layout.discover',lambda *a:None if case=='stale' else snapshot)
+    seen=[]
+    monkeypatch.setattr(install_node,'replace_existing',lambda *a,**kw:seen.append((a,kw)))
+    if case=='valid':
+        install_node.main()
+        assert seen[0][0][0]==snapshot['layout'] and seen[0][1]['checked_snapshot']==snapshot
+    else:
+        with pytest.raises(SystemExit):install_node.main()
+        assert not seen

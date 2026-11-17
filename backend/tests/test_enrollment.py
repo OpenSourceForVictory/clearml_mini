@@ -85,6 +85,6 @@ def test_bundle_contains_complete_platform_components(env):
     from scripts.deploy_node import validate_bundle
     validate_bundle(payload,data['sha256'])
     with zipfile.ZipFile(io.BytesIO(payload)) as z:
-        assert {'worker/client.py','worker/updater.py','runner/sdk.py','scripts/install_node.py','scripts/deploy_node.py','scripts/install_worker_updater.py'}<=set(z.namelist())
+        assert {'worker/client.py','worker/updater.py','runner/sdk.py','scripts/install_node.py','scripts/deploy_node.py','scripts/install_worker_updater.py','scripts/node_layout.py'}<=set(z.namelist())
         assert hashlib.sha256(z.read('worker-release.zip')).hexdigest()==data['release_id']
         assert hashlib.sha256(z.read('worker/updater.py')).hexdigest()==data['agent_digest']

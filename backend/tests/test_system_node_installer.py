@@ -108,7 +108,8 @@ def test_invalid_installation_never_starts_services(setup,monkeypatch,case):
 def test_docker_prerequisite_checks(setup):
     credential,calls,*_=setup;credential['execution_modes']=['docker']
     m.install(credential,'all')
-    assert ['docker','info'] in calls and ['docker','image','inspect','test'] in calls
+    assert ['docker','info'] in calls
+    assert not any(c[:2]==['docker','image'] or c[:2]==['docker','pull'] or c[:2]==['docker','build'] for c in calls)
 
 @pytest.mark.parametrize('issue',['uid','gid','home','privileged','range','nonroot'])
 def test_account_rejection_before_mutation(monkeypatch,issue):

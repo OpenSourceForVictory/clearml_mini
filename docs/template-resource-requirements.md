@@ -20,7 +20,7 @@ SSH 纳管/重新纳管的环境检查会启动短验证任务并清理测试 un
 
 手动安装可由管理员执行 `sudo python3 scripts/configure_node_resources.py --uid UID`，然后由目标用户执行 `systemctl --user daemon-reexec`、`python3 -m worker.resource_limits`。`daemon-reexec` 重新执行用户服务管理器，不重启已运行服务，但修复应在节点排空后执行。复验失败时保持 host 不可用。已有机器可排空后走原机器重新纳管流程；后台 HostEnvironments 在独立线程持续复查，升级后也重新验证，不阻塞 Agent 心跳。
 
-Docker 不依赖用户级委派，CPU/内存使用容器运行时限制。纳管时检查 Docker 可达及 runner 镜像；实际容器限制由执行集成测试验证。目前不提供在纳管阶段对任意 Docker 环境自动修复的承诺。
+Docker 不依赖用户级委派，CPU/内存使用容器运行时限制。纳管时要求 Docker 可达，runner 镜像缺失仅提示手动准备，不阻止安装；实际容器限制由执行集成测试验证。目前不提供在纳管阶段对任意 Docker 环境自动修复的承诺。
 
 ## 异构能力边界
 

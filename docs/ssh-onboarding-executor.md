@@ -82,6 +82,8 @@ ONBOARDING_SOCKET_DIR=/home/platform/.local/share/mini-eval-onboarding/socket
 
 root 系统宿主机支持 cgroup v1、v2 和混合层级，以实际 CPU、内存、进程数限制验证为准；挂载点显示 tmpfs 不等于不支持。非 root 旧用户服务仍要求 v2 委派，不自动迁移身份或修改引导参数。单纯重启旧镜像不会获得修复，控制面安装包与 SSH 执行器需要同步更新，已部署节点按升级/重新纳管流程更新。
 
-Docker-only 纳管不运行宿主机 systemd 限制探针。环境检查只读检查 runner；缺失时在确认计划后拉取，仅默认 mini-eval-runner:dev 拉取失败允许从校验过的安装包原生构建。自定义镜像不能静默替换。受限容器验证 CPU、内存、PID 与所选 NPU 设备访问后才生成/轮换身份；这些验证不代表业务 CANN 环境已就绪。
+Docker-only 纳管不运行宿主机 systemd 限制探针；只要求 Docker daemon 可用。runner 镜像是否存在仅作为提示，不阻止安装，不自动拉取、构建或试运行容器。页面按实际镜像提供命令：默认 runner 在项目根目录或完整节点安装包解压目录执行 `docker build -f runner/Dockerfile -t mini-eval-runner:dev .`；自定义镜像执行 `docker pull <实际镜像名>`。离线或仓库失败由管理员准备镜像后再运行业务。模板镜像继续由机器“容器环境”批准、Worker 探测及调度检查；纳管成功不表示容器资源限制、NPU/CANN 或模型业务已验收。
 
-已有非标准目录安装仍会被保护性拒绝，需要受控迁移。真实验证范围及失败记录见 [cgroup 与重新纳管验证](validation/cgroup-runtime/README.md)。
+已有 root 自定义目录安装可从独立 updater 的可信布局原位恢复，保留 Worker 单元、业务账号和数据路径。布局、配置或服务变化需重新检查；缺失布局、权限不可信、遗漏设备和恢复记录未清理仍拒绝。安装包必须包含 scripts/node_layout.py，API 与执行器同步发布。详见 [重新纳管](node-reenrollment.md)。真实验证范围及失败记录见 [cgroup 与重新纳管验证](validation/cgroup-runtime/README.md)。
+
+若缺 runner 导致存储校验失败，准备镜像后在“存储”页点击“保存存储配置 / 重试校验”；业务镜像在“容器环境”批准后等待 Worker 上报就绪。

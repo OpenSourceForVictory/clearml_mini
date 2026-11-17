@@ -62,3 +62,5 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 `test_fleet_acceptance_recovery.py` 使用真实检查点文件验证配置恢复不覆盖管理员后续变更；虚拟时间测试仅验证稳定性观察器的逻辑，不可作为两小时稳定性证据。
 
 真实迁移脚本测试通过独立开关 `MIGRATION_DRIVER_TEST_URL` 启用，值为一次性 PostgreSQL **服务器**上的管理连接（需要 CREATE DATABASE 权限）。每个用例创建 `migration_driver_<随机值>` 数据库，只在该库执行历史升级、回填断言、受保护降级和再次升级，最终强制删除该临时库。禁止指向生产服务器；不要与普通应用数据库连接混用。CI 使用其已有的一次性 PostgreSQL service 并显式设置此变量。本地未提供时保留跳过，覆盖率门禁可能因此不达标；门槛不作豁免。
+
+旧布局纳管的 `scripts/node_layout.py` 同时纳入 scripts 目录与“节点纳管与升级”关键功能统计，沿用原 90%/80% 门槛。若同名测试模块导致收集冲突，可设置 `PYTEST_ADDOPTS=--import-mode=importlib` 再运行原覆盖命令；不排除测试，保留首次失败报告。

@@ -21,7 +21,22 @@ def collect(options):
             p=subprocess.run(argv,capture_output=True,text=True,timeout=15)
             return p.returncode,p.stdout
         except (OSError,subprocess.SubprocessError):return 1,''
-    for p in sorted(configdir.glob('*.json')):
+    installation=None
+    paths=sorted(configdir.glob('*.json'))
+    if os.geteuid()==0 and options.get('layout_source'):
+        scope={};exec(options['layout_source'],scope)
+        try:
+            installation=scope['discover'](options['node_name'],sys.executable)
+            if installation:
+                discovered=[Path(x) for x in installation['layout']['config_paths']]
+                if paths and set(paths)!=set(discovered):raise ValueError('existing_layout_incomplete')
+                paths=discovered
+        except (ValueError,KeyError,TypeError,OSError,subprocess.SubprocessError) as error:
+            code=str(error)
+            allowed={'existing_layout_untrusted','existing_layout_incomplete','existing_layout_services_mismatch','installed_node_identity_conflict','execution_journal_pending','upgrade_journal_pending'}
+            issues.append(code if code in allowed else 'existing_layout_invalid')
+            installation=None
+    for p in paths:
         v=json.loads(p.read_text())
         if not isinstance(v,dict) or 'state_path' not in v:continue
         configs.append({'path':str(p),'node_name':v.get('node_name'),'gpu_index':v.get('gpu_index',0),'mock':v.get('mock',False),'gpu_uuid':('mock:'+v.get('node_name','')+':'+str(v.get('gpu_index',0))) if v.get('mock') else None})
@@ -40,6 +55,7 @@ def collect(options):
         code,text=run(['systemctl','--user','show',name,'-p','ExecStart','--value'])
         if code==0 and c['path'] in text and not any(s['scope']=='system' for s in services):services.append({'scope':'user','name':name})
     services=list({(x['scope'],x['name']):x for x in services}.values())
+    if installation:services=installation['layout']['services']
     if not configs and (home/'.local/share/mini-eval-worker').exists():issues.append('incomplete_installation_requires_recovery')
     if configs and (not services or len({s['scope'] for s in services})!=1):issues.append('original_services_ambiguous')
     if configs and any(c['node_name']!=options['node_name'] for c in configs):issues.append('installed_node_identity_conflict')
@@ -97,7 +113,7 @@ def collect(options):
         with urllib.request.build_opener(NoRedirect()).open(options['api_url'].rstrip('/')+'/healthz',timeout=10) as response:
             if response.status!=200:issues.append('node_cannot_reach_API')
     except Exception:issues.append('node_cannot_reach_API')
-    return {'runner_image_ready':runner_ready,'cgroup_mode':'v2' if Path('/sys/fs/cgroup/cgroup.controllers').exists() else 'v1-or-hybrid','uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else ('mini-eval' if os.geteuid()==0 else None),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',29000),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
+    return {'installation':installation,'runner_image_ready':runner_ready,'cgroup_mode':'v2' if Path('/sys/fs/cgroup/cgroup.controllers').exists() else 'v1-or-hybrid','uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else ('mini-eval' if os.geteuid()==0 else None),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',29000),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
             'gpus':gpus,'selected_gpus':chosen,'existing':bool(configs),'services':services,
             'configs':configs,'issues':sorted(set(issues)),'free_disk_gb':round(shutil.disk_usage(home).free/1024**3,1)}
 

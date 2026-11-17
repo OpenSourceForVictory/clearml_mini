@@ -7,7 +7,7 @@
 - Linux、Python 3.11+（当前标准库客户端也已在本机 Python 3.9 上用于 smoke）。
 - 当前账户可运行 `docker info`。
 - NVIDIA GPU：`nvidia-smi` 正常，Docker 已配置 NVIDIA Container Toolkit。
-- 预先构建或拉取固定 Runner 镜像。不要在任务领取期间临时拉取大镜像。
+- 节点可先纳管；缺少 Runner 镜像不阻止安装。运行容器任务及容器存储校验前，由用户构建或拉取固定 Runner 镜像。不要在任务领取期间临时拉取大镜像。
 
 ```bash
 docker build -f runner/Dockerfile -t mini-eval-runner:dev .

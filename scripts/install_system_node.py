@@ -65,8 +65,6 @@ def _install(credential,selection,instance='gpu'):
     if kind not in ('gpu','npu'):raise ValueError('unsupported accelerator type')
     if credential.get('execution_modes') != ['host']:
         subprocess.run(['docker','info'],check=True,capture_output=True,timeout=30)
-        for image in {credential['runner_image'],*credential.get('client_images',[])}:
-            subprocess.run(['docker','image','inspect',image],check=True,capture_output=True,timeout=30)
     acc=account(int(credential.get('business_uid',29000)),int(credential.get('business_gid',29000)))
     if 'host' in credential.get('execution_modes',['docker','host']):verify_system(acc)
     kind=credential.get('accelerator_type','gpu')

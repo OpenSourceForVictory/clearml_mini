@@ -84,3 +84,23 @@ def test_docker_v1_missing_runner_is_preparation_not_rejection(environment,monke
     assert result['issues']==[] and result['runner_image_ready'] is False
     assert result['cgroup_mode']=='v1-or-hybrid'
     assert not any('pull' in c or 'build' in c for c in calls)
+
+
+def test_custom_layout_probe_preserves_business_user_and_services(environment):
+    import json
+    options,_,home,_=environment
+    p=home/'legacy.json';p.write_text(json.dumps(dict(node_name='fresh',state_path=str(home/'state.json'),gpu_index=0,npu_runtime={'host':{'user':'original-business'}})))
+    installation={'layout':{'config_paths':[str(p)],'services':[{'scope':'system','name':'mini-eval-worker-legacy.service'}]},'fingerprint':'hash'}
+    options.update(gpus='0',node_id='original',layout_source='def discover(*a): return '+repr(installation))
+    result=probe.collect(options)
+    assert result['issues']==[] and result['existing']
+    assert result['business_user']=='original-business' and result['installation']==installation
+    assert result['services']==installation['layout']['services']
+
+
+@pytest.mark.parametrize('error',['existing_layout_untrusted','upgrade_journal_pending','private secret'])
+def test_custom_layout_failure_is_safe_and_blocks(environment,error):
+    options,*_=environment;options['layout_source']='def discover(*a): raise ValueError('+repr(error)+')'
+    result=probe.collect(options)
+    assert result['installation'] is None
+    assert result['issues']==[error if error!='private secret' else 'existing_layout_invalid']

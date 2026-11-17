@@ -166,17 +166,20 @@ def test_resource_repair_precedes_install_and_failed_verification_blocks(operati
     assert not any(path.endswith('/complete') for path,_ in calls)
     assert op['id'] not in ops.secrets
 
-def test_docker_preparation_failure_never_rotates_identity(operations,monkeypatch):
+def test_missing_runner_does_not_block_enrollment_or_run_docker_builds(operations):
     ops,calls=operations
-    def failed(*a):raise Rejected('docker_runtime_verification_failed')
-    monkeypatch.setattr('onboarding.docker_prepare.prepare',failed)
+    original=ops.probe;ops.probe=lambda *a:{**original(*a),'runner_image_ready':False}
+    Original=ops.remote_factory;commands=[]
+    class Remote(Original):
+        def run(self,argv,*a,**kw):commands.append(argv);return super().run(argv,*a,**kw)
+    ops.remote_factory=Remote
     values={**form(fingerprint='SHA256:'+'A'*43),'mode':'docker'}
     op=ops.start('admin',values,'Bearer SECRET')
     wait(lambda:ops.jobs[op['id']]['state']=='READY')
     ops.confirm(op['id'],'admin')
-    wait(lambda:ops.jobs[op['id']]['state']=='FAILED')
-    assert ops.jobs[op['id']]['error']=='docker_runtime_verification_failed'
-    assert not any(path.endswith('/begin') for path,_ in calls)
+    wait(lambda:ops.jobs[op['id']]['state']=='SUCCEEDED')
+    assert any(path.endswith('/begin') for path,_ in calls)
+    assert not any(cmd[0]=='docker' for cmd in commands)
 
 def test_bundle_includes_trusted_runner_build_inputs():
     import io,zipfile
