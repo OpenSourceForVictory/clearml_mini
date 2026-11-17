@@ -27,6 +27,25 @@ def test_gpu_sharing_and_dual_execution_mode():
         with pytest.raises(Rejected):validate(form(accelerator_type='npu',gpu_sharing=choice))
 
 
+def test_execution_mode_preserve_requires_reenrollment():
+    assert validate({**form(), 'node_id':'existing', 'mode':'preserve'})['mode']=='preserve'
+    with pytest.raises(Rejected,match='execution mode'):
+        validate({**form(), 'mode':'preserve'})
+
+
+def test_reenrollment_probe_checks_preserved_host_and_docker_modes(operations):
+    ops,_=operations
+    checked=[]
+    ops.host_resources=lambda *a:(checked.append('host') or {'ready':True})
+    plan={'issues':[],'services':[],'configs':[{'execution_modes':['host','docker']}],
+          'free_disk_gb':10,'runner_image_ready':False}
+    class Remote:
+        def run(self,*a,**kw):return 0,json.dumps(plan).encode(),b''
+    result=Operations.probe(ops,Remote(),validate({**form(),'mode':'preserve','node_id':'n'}),'runner')
+    assert checked==['host']
+    assert result['runner_image_help']['image']=='runner'
+
+
 def wait(fn):
     for _ in range(200):
         if value:=fn():return value

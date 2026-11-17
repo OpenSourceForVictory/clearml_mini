@@ -74,6 +74,31 @@ def test_reenrollment_gpu_sharing_preserves_or_changes_local_policy(tmp_path,mon
     assert actual.get('execution_modes')==original.get('execution_modes')
 
 
+@pytest.mark.parametrize('modes',[['host'],['docker'],['host','docker']])
+def test_reenrollment_explicit_execution_modes_reach_worker_config(tmp_path,monkeypatch,modes):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    install_node.replace_existing(u.config,{**new,'execution_modes':modes})
+    assert json.loads(path.read_text())['execution_modes']==modes
+
+
+def test_reenrollment_rejects_invalid_execution_modes_before_stop(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    original=path.read_bytes();actions=[]
+    monkeypatch.setattr(install_node,'control_updater',lambda *a,**kw:actions.append(a))
+    with pytest.raises(ValueError,match='execution mode'):
+        install_node.replace_existing(u.config,{**new,'execution_modes':['docker','unknown']})
+    assert not actions and path.read_bytes()==original
+
+
+def test_reenrollment_mode_change_rolls_back_on_failure(tmp_path,monkeypatch):
+    u,path,new,_=setup(tmp_path,monkeypatch)
+    original=json.loads(path.read_text())
+    monkeypatch.setattr(install_node,'install_updater',lambda *a:(_ for _ in ()).throw(RuntimeError('injected failure')))
+    with pytest.raises(RuntimeError,match='injected failure'):
+        install_node.replace_existing(u.config,{**new,'execution_modes':['host']})
+    assert json.loads(path.read_text())==original
+
+
 def test_install_failure_restores_code_and_credentials(tmp_path,monkeypatch):
     u,path,new,_=setup(tmp_path,monkeypatch);original=path.read_bytes();code=(u.app/'worker/client.py').read_bytes()
     monkeypatch.setattr(install_node,'install_updater',lambda *a:(_ for _ in ()).throw(ValueError('failed')))

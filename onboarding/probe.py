@@ -107,7 +107,8 @@ def collect(options):
                 if getattr(fn(name),attr)!=number:issues.append('business_identity_conflict')
             except KeyError:pass
     runner_ready=True
-    if options['mode'] in ('docker','both'):
+    docker_selected=options['mode'] in ('docker','both') or (options['mode']=='preserve' and any('docker' in c['execution_modes'] for c in configs))
+    if docker_selected:
         if run(['docker','info'])[0]:issues.append('docker_unavailable')
         elif run(['docker','image','inspect',options['runner_image']])[0]:runner_ready=False
     try:

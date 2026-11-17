@@ -35,7 +35,7 @@
 
 多设备存储设置：backend/app/storage.py 从 Worker.connection 的 slot_storage_overrides 解析每卡覆盖，整机默认保留 Worker.storage_config 原形；execution.heartbeat 按槽位下发，旧 Worker 协议 v4 仍使用 `/slots/<slot_id>`。frontend/src/storage.tsx 不能用第 0 卡实际目录预填整机表单，每卡编辑与版本冲突独立处理。操作见 docs/worker-setup.md；回归 test_storage.py、storage.spec.ts。回退旧 API 时覆盖不再参与调度，应先恢复新 API。
 
-GPU/NPU 共享与双执行环境纳管：frontend/src/ssh-onboarding.tsx 选择 preserve/enabled/disabled，经 onboarding/contracts.py、executor.py 写入安装凭据；scripts/install_system_node.py 新安装默认关闭，scripts/install_node.py 重新纳管默认保留、显式选择时仅更新本地 gpu_runtime.allow_shared 或 npu_runtime.allow_shared 并沿原回滚恢复。onboarding/probe.py 只展示逐卡布尔值，不暴露完整配置。Worker 在注册时由 accelerators.capabilities 转为 gpu:*:shared 或 npu:*:shared 能力，普通心跳不传原字段。操作与手工定位见 docs/root-managed-host.md，回归 test_system_node_installer.py、test_node_installation.py、test_ssh_onboarding.py、ssh-onboarding.spec.ts。
+GPU/NPU 共享与双执行环境纳管：frontend/src/ssh-onboarding.tsx 新纳管选择 host/docker/both、共享 enabled/disabled；重新纳管执行环境和共享均默认 preserve，显式选择才改写。onboarding/contracts.py、executor.py 传递选择，probe.py 根据保留或新选择检查运行依赖；scripts/install_system_node.py 新装写入模式与共享，scripts/install_node.py 重新纳管更新每卡 execution_modes 或 gpu_runtime.allow_shared/npu_runtime.allow_shared 并在失败时回滚。Worker 注册时上报 execution_modes，并由 accelerators.capabilities 转为 gpu:*:shared 或 npu:*:shared；普通心跳不传这些配置。操作与手工定位见 docs/node-reenrollment.md、docs/root-managed-host.md，回归 test_system_node_installer.py、test_node_installation.py、test_ssh_onboarding.py、ssh-onboarding.spec.ts。
 
 新机共享选择入口：SSH 表单的加速卡区域排在认证字段之前；手动接入由 administration.tsx 收集设备类型和共享选择，node-enrollment.tsx 将其写入下载凭据，scripts/install_system_node.py 读取对应字段。重新生成凭据前后的选择不可混用。回归 ssh-onboarding.spec.ts、memberships.spec.ts；界面步骤见 docs/root-managed-host.md。
 

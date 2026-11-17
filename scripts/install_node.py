@@ -90,6 +90,9 @@ def replace_existing(layout, credential, checked_snapshot=None):
     if sharing not in ('preserve','enabled','disabled'):raise ValueError('invalid NPU sharing choice')
     gpu_sharing=credential.get('gpu_sharing','preserve')
     if gpu_sharing not in ('preserve','enabled','disabled'):raise ValueError('invalid GPU sharing choice')
+    modes=credential.get('execution_modes','preserve')
+    if modes!='preserve' and (not isinstance(modes,list) or not modes or len(modes)>2 or set(modes)-{'docker','host'}):
+        raise ValueError('invalid execution mode choice')
     if sharing!='preserve' and (credential.get('accelerator_type')!='npu' or any(
             v.get('accelerator_type')!='npu' or v.get('npu_runtime',{}).get('approved') is not True
             for v in updater.values)):
@@ -127,8 +130,10 @@ def replace_existing(layout, credential, checked_snapshot=None):
             os.replace(stage, updater.app)
             for path, previous in zip(updater.configs, updater.values):
                 owner = path.stat()
-                # Preserve node-local settings unless the administrator explicitly changes sharing.
+                # Preserve node-local settings unless the administrator explicitly changes modes or sharing.
                 updated={**previous, 'api_url':credential['api_url'], 'token':credential['token']}
+                if modes!='preserve':
+                    updated['execution_modes']=modes
                 if sharing!='preserve':
                     updated['npu_runtime']={**previous['npu_runtime'],'allow_shared':sharing=='enabled'}
                 if gpu_sharing!='preserve':
