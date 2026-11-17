@@ -103,3 +103,5 @@ MINI_EVAL_WORK_DIR 和 MINI_EVAL_OUTPUT_DIR 不随业务 cwd 改变，分别用�
 Docker 的对应配置与验证见 [通用命令指南](generic-commands.md)。
 
 宿主机服务运行期间若控制端因短时繁忙对执行心跳返回 HTTP 503，Worker 保留已启动的 systemd 单元并在现有租约期限内重试；租约仍由 watchdog 监督，持续不可用不会无限延长。其他 HTTP 拒绝仍按原有失败和清理流程处理。排查服务失败时同时查看平台服务日志、节点 `mini-eval-worker-*.service` 与对应 `mini-eval-exec-<执行ID>.service` 日志；业务输出出现不代表平台服务已达到就绪或已完成清理。2026-11-18 的真机验证中曾出现 ACL 程序已启动、随后心跳 503 导致服务失败，本修正针对该触发条件；自动化验证覆盖 503 重试与其他 HTTP 拒绝，不等同于业务模型评测。
+
+本次真机宿主机 GPU/NPU 启动、失败路径和发布范围记录在 [2026-11-18 验证报告](validation/host-runtime-release-20261118/README.md)。
