@@ -34,6 +34,8 @@
 
 批次详情布局由 frontend/src/batch-detail.tsx 与 batch-detail.css 管理；参数与服务页按首次访问加载并保留组件状态。修改页签需回归 batch-monitoring、batch-controls、batch-reports、config-pages 浏览器用例，确保筛选、补跑尝试快照和控制版本不变。
 
+服务端调度概览：backend/app/orchestrations.py 的编排详情对尚无实例的服务定义复用 DiagnosticContext 输出服务端池、候选设备与阻塞原因，不写入调度状态；frontend/src/orchestration-status.tsx 在默认任务页显示调度、启动和健康阶段，完整日志与绑定保留在服务页。操作见 docs/batch-monitoring.md；回归 test_orchestrations.py 和 orchestration-status.spec.ts。
+
 SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动启动 onboarding 服务（onboarding/Dockerfile），专用 socket 卷连接 API，状态卷仅执行器持有；onboarding.healthcheck 检查本地协议，无 API 依赖环。旧显式 ONBOARDING_SOCKET 及父目录 bind mount 保留兼容宿主机 mini-eval-onboarding.service。发布检查 scripts/fleet_rollout.py 保护环境和挂载，不能把执行器缺失误判成目标 SSH 密码错误。
 
 统一 root 纳管/普通业务身份：docs/root-managed-host.md；scripts/install_system_node.py 创建系统服务与 mini-eval，worker/host_identity.py 负责身份/权限/资源检查。host_execution 是节点批准配置，模板不能覆盖；旧用户服务升级保留身份。覆盖率门槛见 backend/tests/managed-host.coveragerc，真实测试需 MANAGED_HOST_TEST=1 和隔离 systemd 环境。

@@ -120,10 +120,44 @@ def owned(s,identity,user):
 
 def view(s,batch):
     result=batch_view(s,batch);orch=s.get(EvaluationOrchestration,batch.id)
+    instances=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id)))
+    scheduling=[]
+    if orch.definition['service_mode']=='managed':
+        from .preflight import DiagnosticContext
+        from .orchestration_scheduler import Planner, server_job
+        from .service_network import choose_port
+        context=DiagnosticContext(s)
+        planner=Planner(s,context.at)
+        owner=s.get(User,batch.owner_id)
+        for definition in orch.definition['services']:
+            if any(item.service_key==definition['key'] for item in instances):continue
+            pool=planner.pools.get(definition['pool_id'])
+            diagnosis=context.inspect(server_job(definition,batch.owner_id),owner,pool,batch)
+            for node in diagnosis['nodes']:
+                if not node['ready']:continue
+                slot=context.slots[node['slot_id']]
+                worker=planner.workers.get(slot.worker_id)
+                if not worker or not worker.service_network:
+                    node['reasons'].append({'code':'service_network_pending','category':'environment',
+                                            'message':'服务端网络地址或端口范围未配置','action':'请管理员配置服务端网络'})
+                else:
+                    port=choose_port(s,worker)
+                    separate_health=(definition['template'].get('readiness') or {}).get('port','business')!='business'
+                    if port is None or (separate_health and choose_port(s,worker,[port]) is None):
+                        node['reasons'].append({'code':'service_port_busy','category':'resource',
+                                                'message':'服务端端口范围暂无可用端口','action':'等待已有服务释放端口或调整端口范围'})
+                node['ready']=not node['reasons'] and not diagnosis['reasons']
+            if not any(node['ready'] for node in diagnosis['nodes']):
+                all_reasons=diagnosis['reasons']+[r for node in diagnosis['nodes'] for r in node['reasons']]
+                diagnosis['status']='waiting_resources' if all_reasons and all(r['category']=='resource' for r in all_reasons) else 'needs_environment'
+            scheduling.append({'key':definition['key'],'pool_name':pool.name if pool else '资源池不可用',
+                               'status':diagnosis['status'],'reasons':diagnosis['reasons'],
+                               'nodes':diagnosis['nodes']})
     result['orchestration']={'stop_after_batch':orch.stop_after_batch,'services':[
         {**services.view(s,i),'service_key':i.service_key,'auto_stopped':i.auto_stopped}
-        for i in s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id))],
-        'definitions':orch.definition['services'],'service_mode':orch.definition['service_mode']}
+        for i in instances],
+        'definitions':orch.definition['services'],'service_mode':orch.definition['service_mode'],
+        'scheduling':scheduling}
     return result
 
 

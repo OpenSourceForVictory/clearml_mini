@@ -1,6 +1,6 @@
 import './batch-detail.css';
 import {BatchParameters} from './batch-parameters';
-import {OrchestrationStatus} from './orchestration-status';
+import {OrchestrationStatus,ServiceStartupSummary} from './orchestration-status';
 import {ReportDownloads} from './batch-reports';
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
@@ -66,6 +66,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <section hidden={tab!=='parameters'} aria-label="批次参数页">{showParameters&&<BatchParameters cases={b.cases} maxConcurrent={b.max_concurrent}/>}</section>
       <section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行参数或任务执行配置中查看。</p>}</section>
       <section hidden={tab!=='tasks'} aria-label="批次任务页">
+      {b.orchestrated&&tab==='tasks'&&<ServiceStartupSummary id={id} onDetails={()=>{setTab('services');setShowServices(true);}}/>}
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>
       <p>已完成回合 {b.summary.completed_episodes}/{b.total_episodes} · 目标成功 {b.summary.successes} · 目标失败 {b.summary.goal_failures} · 回合异常 {b.summary.episode_errors} · 执行失败/超时 {b.summary.execution_failures}</p>
       <p>目标成功率 {b.summary.success_rate===null?'暂无数据':(b.summary.success_rate*100).toFixed(1)+'%'} · 未上报任务 {b.summary.unreported_tasks}</p>

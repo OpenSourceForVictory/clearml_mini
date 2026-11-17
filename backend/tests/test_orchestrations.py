@@ -66,6 +66,40 @@ def test_atomic_idempotent_submission_and_read_only_preflight(env,monkeypatch):
         assert s.scalar(select(func.count()).select_from(EvaluationBatch))==1
 
 
+def test_service_scheduling_diagnosis_before_instance_and_after_allocation(env,monkeypatch):
+    main,c,a=env;_,server_slot,_,_,body=setup(env,monkeypatch)
+    batch=submit(env,body)
+    path='/api/v1/orchestrations/'+batch['id']
+    detail=c.get(path,headers=a['alice']).json()
+    scheduling=detail['orchestration']['scheduling']
+    assert len(scheduling)==1 and scheduling[0]['status']=='ready'
+    assert any(node['ready'] for node in scheduling[0]['nodes'])
+    assert not detail['orchestration']['services']
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,server_slot)
+        slot.storage_reported_at=None
+        s.commit()
+    blocked=c.get(path,headers=a['alice']).json()['orchestration']['scheduling'][0]
+    assert blocked['status']=='needs_environment'
+    assert any(reason['code']=='storage_pending' for node in blocked['nodes'] for reason in node['reasons'])
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,server_slot)
+        slot.storage_reported_at=now()
+        worker=s.get(Worker,slot.worker_id)
+        worker.service_network=None
+        s.commit()
+    no_network=c.get(path,headers=a['alice']).json()['orchestration']['scheduling'][0]
+    assert no_network['status']=='needs_environment'
+    assert any(reason['code']=='service_network_pending' for node in no_network['nodes'] for reason in node['reasons'])
+    with main.SessionLocal() as s:
+        slot=s.get(Slot,server_slot)
+        s.get(Worker,slot.worker_id).service_network={'address':'192.168.8.151','port_start':19000,'port_end':19002}
+        s.commit()
+    assert tick(main.SessionLocal)==2
+    started=c.get(path,headers=a['alice']).json()['orchestration']
+    assert started['services'] and started['scheduling']==[]
+
+
 def test_managed_shared_health_gate_binding_and_cleanup(env,monkeypatch):
     main,c,a=env;st,ss,ct,cs,body=setup(env,monkeypatch);batch=submit(env,body)
     assert tick(main.SessionLocal)==2
