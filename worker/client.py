@@ -387,8 +387,18 @@ class Worker:
         thread.start()
         probe_runner=None
         try:
-            requested_at = time.monotonic()
-            initial = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution, 'started': False})
+            while True:
+                if self.stop_event.is_set() or lease_lost.is_set() or time.monotonic() >= deadline[0]:
+                    raise RuntimeError('worker stopped or lease expired before start')
+                requested_at = time.monotonic()
+                try:
+                    initial = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution, 'started': False})
+                    break
+                except APIError as exc:
+                    if exc.status != 503:
+                        raise
+                    # A busy control plane does not renew the original lease.
+                    self.stop_event.wait(min(.5, max(0, deadline[0] - time.monotonic())))
             deadline[0] = requested_at + initial['lease_seconds'] - 2
             if initial['cancel']:
                 self.stop_container(execution)

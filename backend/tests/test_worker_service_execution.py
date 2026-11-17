@@ -103,7 +103,7 @@ def test_invalid_event_failure_acknowledgement_recovery(execution,status):
 @pytest.mark.parametrize('stop_fails',[False,True])
 def test_lease_watchdog_stops_process_while_api_call_is_blocked(execution,monkeypatch,stop_fails):
     import threading
-    worker,task,events=execution;task['lease_seconds']=2
+    worker,task,events=execution;task['lease_seconds']=3
     stopped=threading.Event();stops=[];original=worker.api.post
     def stop(identity):
         stops.append(identity);stopped.set()

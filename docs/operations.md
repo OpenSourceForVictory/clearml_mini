@@ -141,3 +141,5 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 保存新版本与 claim 共用 PostgreSQL 调度锁。未领取的 RESERVED 返回 PENDING 并释放 GPU/CPU/内存预留；STARTING/RUNNING/CANCEL_REQUESTED 及待清理执行保持原位。每张卡空闲后独立切换。页面的最后报告过期、校验失败或旧 Worker「需升级」都意味着不能领取新任务。
 
 回退先在界面恢复本机配置，等待所有槽位确认、排空任务并确认容器清理后，再降级 Worker/API 和数据库。数据库降级前备份；目录、执行 journal 与 `.storage.json` 不得随数据库回滚删除。存储设置不会改变 Docker 自身镜像/层的 data-root，也不会自动迁移旧执行文件。
+
+调度时间检查：自动 tick 在读取候选节点和设备后刷新准入时刻，避免将 tick 开始后合法提交的新报告误判成未来数据；真正未来的时间戳和超出有效期的样本仍不准入，不通过延长 TTL 解决。首次执行握手 503 重试需要 Worker 0.18.1，单独更新 API 不会更新已纳管 Worker。

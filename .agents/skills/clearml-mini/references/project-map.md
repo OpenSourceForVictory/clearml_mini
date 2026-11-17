@@ -105,3 +105,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 节点新鲜度：freshness.py 将宿主机、容器和存储配置回执统一为 60 秒，将磁盘、GPU/NPU 与 Agent 主机资源采样统一为 45 秒；main.workers 与调度共用 telemetry_fresh/recent，未来时间戳及缺失字段关闭准入。Worker 在线默认 30 秒、执行租约 30 秒独立不变。操作见 docs/operations.md、docs/gpu-scheduling.md、docs/node-resource-reporting.md；回归 test_freshness.py、test_resource_roles.py、test_resource_reporting.py。
 
 回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software，enrollment/worker_upgrades 仅豁免可选 service_readiness_v1 版本验收，业务准入保持能力门槛。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。
+
+宿主机首次握手恢复（Worker 0.18.1）：client.execute 在 started=false 的首次心跳 503 时有界重试，原租约与停止信号持续有效；调度 tick 对已读取候选报告采用读取完成时刻检查，显式 at 保持固定，未来和过期数据仍拒绝。回归 test_worker_execution_recovery.py、test_worker_service_execution.py、test_scheduling.py、test_freshness.py；现场证据见 host-shell-episode-launch 验证记录。

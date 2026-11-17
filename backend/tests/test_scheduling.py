@@ -129,3 +129,22 @@ def test_unconfirmed_timeout_keeps_node_resource_credit(farm):
     assert tick(farm) == 0  # The other GPU is free, but the node RAM is not confirmed free.
     with farm() as s:
         assert s.get(Job, second).status == 'PENDING'
+
+@pytest.mark.parametrize('sample_offset,explicit,expected',[(1,False,1),(5,False,0),(-90,False,0),(1,True,0)])
+def test_reports_committed_during_tick_use_read_completion_time(farm,monkeypatch,sample_offset,explicit,expected):
+    from backend.app import scheduling,orchestration_scheduler
+    start=now()
+    job(farm,'a')
+    def reconcile(s,at):
+        # Model a heartbeat committed while the tick is reconciling, before its
+        # candidate reads. Use the real storage/runtime freshness checks.
+        for slot in s.scalars(select(Slot)):
+            slot.protocol_version=5
+            slot.storage_report={'revision':0,'status':'applied'}
+            slot.runtime_report={'revision':0,'applied_revision':0}
+            slot.storage_reported_at=slot.runtime_reported_at=start+timedelta(seconds=sample_offset)
+        s.flush()
+    monkeypatch.setattr(orchestration_scheduler,'reconcile',reconcile)
+    times=iter([start,start+timedelta(seconds=2)])
+    monkeypatch.setattr(scheduling,'now',lambda:next(times))
+    assert tick(farm,start if explicit else None)==expected

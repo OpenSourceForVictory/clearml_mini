@@ -224,3 +224,55 @@ def test_once_loop_registers_claims_and_releases_completed_child(execution,monke
     assert any(p.endswith('/claim') for p,b in calls)
     assert retention_events==[str(worker.workspace),task['execution_id']]
     assert worker.children=={} and controller.source=='agent'
+
+@pytest.mark.parametrize('outcome',['success','cancel','expired','stop','denied'])
+def test_initial_busy_handshake_is_bounded_and_never_launches_early(execution,monkeypatch,outcome):
+    worker,task,events=execution
+    original=worker.api.post
+    attempts=0
+    clock=[10.]
+    monkeypatch.setattr(client.time,'monotonic',lambda:clock[0])
+    def wait(seconds):
+        assert not any(p in ('create','inspect') for p,_ in events)
+        if outcome=='expired':clock[0]+=60
+        elif outcome=='stop':worker.stop_event.set()
+        return worker.stop_event.is_set()
+    monkeypatch.setattr(worker.stop_event,'wait',wait)
+    def post(path,body=None):
+        nonlocal attempts
+        if path=='worker/heartbeat' and body.get('started') is False:
+            attempts+=1
+            if attempts==1:raise client.APIError(503,'busy')
+            if outcome=='denied':raise client.APIError(401,'denied')
+            return {**original(path,body),'cancel':outcome=='cancel'}
+        return original(path,body)
+    worker.api.post=post
+    if outcome=='denied':
+        with pytest.raises(client.APIError):worker.execute(task)
+    else:worker.execute(task)
+    assert attempts==(1 if outcome in ('expired','stop') else 2)
+    assert not any(p=='create' for p,_ in events)
+    if outcome in ('cancel','expired','stop'):
+        completion=next(b for p,b in events if p.endswith('/complete'))
+        assert completion['status']==('CANCELLED' if outcome=='cancel' else 'FAILED')
+    if outcome=='success':assert worker.state is None
+
+def test_initial_busy_then_launches_new_execution_once(execution,monkeypatch):
+    worker,task,events=execution
+    task['client_spec']={'template':{'task_type':'command'}}
+    original=worker.api.post;attempts=0
+    def post(path,body=None):
+        nonlocal attempts
+        if path=='worker/heartbeat' and body.get('started') is False:
+            attempts+=1
+            if attempts<3:raise client.APIError(503,'busy')
+        return original(path,body)
+    worker.api.post=post
+    monkeypatch.setattr(worker.stop_event,'wait',lambda _:False)
+    states=iter([None,{'State':{'Status':'created','Running':False}},
+                 {'State':{'Status':'exited','Running':False,'ExitCode':0}}])
+    monkeypatch.setattr(worker,'inspect',lambda _:next(states))
+    worker.execute(task)
+    assert attempts==3
+    assert len([p for p,_ in events if p=='create'])==1
+    assert next(b for p,b in events if p.endswith('/complete'))['status']=='SUCCEEDED'

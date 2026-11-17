@@ -196,6 +196,7 @@ def node_codes(worker, pool, count, cpu, ram, pending_ram=0):
 def tick(factory, at=None):
     from .storage import ready
     from . import memberships, image_runtime
+    live_clock = at is None
     at = at or now()
     with factory() as s:
         if not lock(s, wait=False):
@@ -232,6 +233,10 @@ def tick(factory, at=None):
                 node_ram[n] = node_ram.get(n, 0) + r.reserved_ram_gb
                 if r.started_at is None:
                     pending_ram[n] = pending_ram.get(n, 0) + r.reserved_ram_gb
+        # Reports may commit after tick entry while reconciliation/queries run.
+        # Compare the loaded snapshot to read completion, not tick entry time.
+        if live_clock:
+            at = now()
         free = [x for x in slots.values() if x.worker_id in workers and x.pool_id in pools
                 and not slot_codes(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(

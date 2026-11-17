@@ -35,3 +35,19 @@ OpenSpec：`host-shell-episode-launch`。本次在仓库代码上运行定向测
 所有本轮平台测试模板已归档，NPU 临时业务脚本已删除；结束时查询活动或未清理 evaluation_runs 为 0。
 
 覆盖率补充：以 `backend/tests/project.coveragerc` 对 shell/episode、host lifecycle、parameter contract、CANN、task input 定向插桩，102 passed。局部原始报告 `/tmp/host-verify-coverage.json`；host_identity 行 48/75、分支 18/34，host_backend 行 169/223、分支 59/106，parameter_contract 行 148/151、分支 68/78。未合并业务子进程，host_episode 显示行 0/56、分支 0/14。该局部报告不能替代 `python -m scripts.test_coverage` 的全仓库目录/关键功能门禁，也未证明达到 80/70 或 90/80 要求。
+
+## 首次握手与自动准入修复（2026-11-18）
+
+首次握手 503 缺口已修复：Worker 0.18.1 在原租约内重试 started=false 心跳，取消、Worker 停止和租约到期禁止启动；认证等其他错误保持原处理，创建标记与防重复执行约束不变。新增回归覆盖两次 503 后只创建一次、取消、持续忙碌到期、停止和 401。测试初稿曾把运行期心跳计入首次握手次数，并误认为 401 不抛出，修正测试断言后通过；既有 watchdog 测试的 2 秒租约减去安全余量后已立即到期，调整测试输入为 3 秒，以继续验证“有效租约发起请求后 API 阻塞，watchdog 独立停止”的原目标。
+
+调度诊断捕获候选报告比 tick 开始时刻晚约 30–35ms，合法新报告被 freshness 的未来检查拒绝。修正为读取候选快照后刷新自动准入时刻，显式 at 保持确定性，真正未来和过期数据仍拒绝。该竞态已确定存在，但没有证据证明旧任务长期等待只有这一种原因。临时诊断仅记录 ID、阻塞码和报告相对年龄，已经随正式镜像替换移除；加入诊断后的旧版本任务 `26e89274-d04e-45a7-8c53-aa31ccf2734e` 也曾自动成功，因此不能仅以重启后成功宣称根因完全排除。
+
+部署镜像 `mini-eval-api:host-handshake-20261118`；Worker 发布 `28733f10ca7df1b212c92a5140765adee4a6f6fb2ece8a5399426eb5f7e80360`，0.18.1 / 协议 15。仅本机 GPU 与 29 NPU 节点升级，均 SUCCEEDED；无需数据库迁移。API healthz 正常。
+
+正式部署后连续 3 个平台 GPU 客户端任务完全依赖自动调度：`ffadddc6-b471-443c-87ba-7aee16df2e30`、`d56e2fda-1994-4cf5-94a0-e9f5df645701`、`4d016cce-ce3d-495e-8c13-43970bd83d75`。均 SUCCEEDED、cleanup_confirmed=true，每个 3 条回合记录；程序断言批准账号、带空格及中文的业务 argv、JSON 参数、模板变量、指定 GPU UUID，并完成真实 CUDA 运算。该组为普通命令模式，不将其扩展为三种协议全平台验收。
+
+正式部署后 NPU 服务 `7f2be571-3a4f-43d7-9ffb-200445914830`，任务 `ec73b647-16e5-4e59-9104-193e7dd37685` 自动启动，日志包含 `HOST_NPU_VERIFIED uid=1001 visible=0 tensor=ok env=ok`，健康后停止且清理确认。模板已归档、临时 NPU 脚本删除，平台活动或未清理执行数为 0。真实运算是冒烟测试，不是业务模型质量验收；现场没有故意制造生产控制面 503，503 恢复由故障注入用例验证。
+
+核心恢复、Worker service、scheduling、freshness 定向插桩 65 passed。使用项目 coveragerc，原始局部报告 `/tmp/host-handshake-coverage.json`：worker/client.py 行 375/637、分支 112/266；scheduling.py 行 221/268、分支 73/128。未运行全仓库门禁，未合并子进程；不宣称项目覆盖率门槛达标。
+
+共享调度、编排、Worker 升级与宿主机 shell/episode 扩展回归：55 passed（134 秒）；与核心组相互独立，本轮两组共 120 项通过。
