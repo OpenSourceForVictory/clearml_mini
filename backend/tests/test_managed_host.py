@@ -136,10 +136,10 @@ def test_system_probe_bounded_cleanup(monkeypatch,case):
         return N(returncode=0)
     monkeypatch.setattr(host_identity.subprocess,'run',run)
     acc=N(pw_name='mini-eval',pw_gid=29000)
-    if case=='success':host_identity.verify_system(acc,source='pass')
+    if case in ('success','cgroup'):host_identity.verify_system(acc,source='pass')
     else:
         with pytest.raises(RuntimeError):host_identity.verify_system(acc,source='pass')
-    if case in ('success','failure'):
+    if case in ('success','failure','cgroup'):
         assert '--property=User=mini-eval' in calls[0]
         assert [a[1] for a in calls[1:]]==['stop','reset-failed']
     else:assert not calls

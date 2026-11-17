@@ -54,3 +54,6 @@ SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动
 HTTP IP 访问兼容：frontend/src/request-id.ts 统一请求 UUID，randomUUID 缺失时用 getRandomValues；SSH 注册和运行向导共用，不能直接调用 crypto.randomUUID。浏览器回归见 ssh-onboarding.spec.ts 与 run-wizard.spec.ts。
 
 资源池设备类型显示：administration.tsx 的物理池选项包含 GPU / NPU，接口仍为 gpu_model=*；memberships.target_error 区分物理/模拟，scheduling.eligibility_codes 按任务 accelerator_type 匹配设备。不要把通用物理池说明成 GPU 专用或已具备 NPU-only 成员约束。操作见 docs/resource-pool-membership.md。
+
+ 
+cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制，resource_limits.verify_current 区分 v1/v2/混合，v1 读取 mountinfo 定位合并控制器；非 root inspect_host 保留 v2 委派要求。Docker-only 安装跳过 host 探针，onboarding/docker_prepare.py 在身份 begin 前准备镜像和验证限制。默认 runner 构建材料通过 enrollment.bundle 分发；发布必须同步 API 安装包、独立执行器与 UI，不能仅重启 API。旧自定义目录保护仍保留，验收见 docs/validation/cgroup-runtime/README.md。

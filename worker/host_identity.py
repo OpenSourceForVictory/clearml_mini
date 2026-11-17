@@ -47,7 +47,6 @@ for label,path,mode in json.loads(sys.argv[1]):
 def verify_system(account=None,source=None):
     """Check real system-unit limits, optionally under the business account."""
     if os.geteuid()!=0:raise RuntimeError('system-managed host execution requires root Worker')
-    if not Path('/sys/fs/cgroup/cgroup.controllers').exists():raise RuntimeError('cgroup v2 is required for managed host execution')
     source=source or Path(__file__).with_name('resource_limits.py').read_text()
     unit='mini-eval-identity-probe-'+uuid.uuid4().hex+'.service'
     args=['systemd-run','--quiet','--wait','--pipe','--unit='+unit,

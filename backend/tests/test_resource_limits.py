@@ -68,3 +68,89 @@ def test_system_scope_cgroup_v1_limits(tmp_path,monkeypatch,quota,memory,pids,va
     if valid:limits.verify_group('/unit',1,134217728,32)
     else:
         with pytest.raises(ValueError):limits.verify_group('/unit',1,134217728,32)
+
+
+def test_hybrid_combined_controller_mounts(tmp_path,monkeypatch):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    original=Path.read_text
+    cgroups='0::/unified-other\n2:cpu,cpuacct:/cpu-job\n3:memory:/mem-job\n4:pids:/pid-job\n'
+    mountinfo=[]
+    for number,controller,group,files in [
+        (2,'cpu,cpuacct','cpu-job',{'cpu.cfs_quota_us':'100000','cpu.cfs_period_us':'100000'}),
+        (3,'memory','mem-job',{'memory.limit_in_bytes':'134217728'}),
+        (4,'pids','pid-job',{'pids.max':'32'})]:
+        mount=tmp_path/controller;root=mount/group;root.mkdir(parents=True)
+        for key,value in files.items():(root/key).write_text(value)
+        mountinfo.append(f'{number} 1 0:1 / {mount} rw - cgroup cgroup rw,{controller}')
+    def read(path,*args,**kw):
+        if str(path)=='/proc/self/cgroup':return cgroups
+        if str(path)=='/proc/self/mountinfo':return '\n'.join(mountinfo)
+        return original(path,*args,**kw)
+    monkeypatch.setattr(Path,'read_text',read)
+    limits.verify_current(1,134217728,32)
+    (tmp_path/'memory/mem-job/memory.limit_in_bytes').write_text('999999999')
+    with pytest.raises(ValueError,match='memory_limit_not_enforced'):limits.verify_current(1,134217728,32)
+
+
+def test_system_verification_not_rejected_just_for_v1(monkeypatch):
+    from worker import host_identity
+    monkeypatch.setattr(host_identity.os,'geteuid',lambda:0)
+    monkeypatch.setattr(Path,'exists',lambda _:False)
+    calls=[]
+    monkeypatch.setattr(host_identity.subprocess,'run',lambda args,**kw:calls.append(args))
+    host_identity.verify_system(source='probe')
+    assert calls[0][0]=='systemd-run'
+    assert '--property=MemoryMax=128M' in calls[0]
+
+@pytest.mark.parametrize('group,mount_root,relative',[('/','/docker/id',''),('/docker/id','/docker/id',''),('/docker/id/task','/docker/id','task')])
+def test_v1_namespace_mount_roots(tmp_path,monkeypatch,group,mount_root,relative):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    original=Path.read_text
+    mounts=[]
+    for controller,files in {'cpu':{'cpu.cfs_quota_us':'100000','cpu.cfs_period_us':'100000'},'memory':{'memory.limit_in_bytes':'134217728'},'pids':{'pids.max':'32'}}.items():
+        mount=tmp_path/controller;directory=mount/relative;directory.mkdir(parents=True)
+        for name,value in files.items():(directory/name).write_text(value)
+        mounts.append(f'1 0 0:1 {mount_root} {mount} rw - cgroup cgroup rw,{controller}')
+    monkeypatch.setattr(Path,'read_text',lambda p,*a,**k:chr(10).join(mounts) if str(p)=='/proc/self/mountinfo' else original(p,*a,**k))
+    limits.verify_group(group,1,134217728,32)
+
+@pytest.mark.parametrize('group', ['relative','/../escape'])
+def test_invalid_group_paths_rejected(tmp_path,monkeypatch,group):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    with pytest.raises(ValueError):limits.verify_group(group,1,134217728,32)
+
+def test_missing_v1_controller_rejected(tmp_path,monkeypatch):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    with pytest.raises(ValueError,match='missing cpu'):limits.verify_group('/unit',1,134217728,32,groups={'memory':'/unit'})
+
+@pytest.mark.parametrize('bad', [None,'cpu','memory','pids'])
+def test_v2_current_limits(tmp_path,monkeypatch,bad):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path)
+    (tmp_path/'cgroup.controllers').write_text('cpu memory pids')
+    root=tmp_path/'unit';root.mkdir()
+    for key,value in {'cpu.max':'max 100000' if bad=='cpu' else '100000 100000','memory.max':'max' if bad=='memory' else '134217728','pids.max':'max' if bad=='pids' else '32'}.items():(root/key).write_text(value)
+    original=Path.read_text
+    monkeypatch.setattr(Path,'read_text',lambda p,*a,**k:'0::/unit' if str(p)=='/proc/self/cgroup' else original(p,*a,**k))
+    if bad:
+        with pytest.raises(ValueError):limits.verify_current(1,134217728,32)
+    else:limits.verify_current(1,134217728,32)
+
+@pytest.mark.parametrize('group',['/','/user'])
+def test_user_manager_invalid_or_inaccessible_group(tmp_path,monkeypatch,group):
+    monkeypatch.setattr(limits,'CGROUP_ROOT',tmp_path);(tmp_path/'cgroup.controllers').touch()
+    monkeypatch.setattr(limits,'run',lambda *a,**k:SimpleNamespace(stdout=group))
+    assert limits.inspect_host()['reason']=='systemd_user_manager_unavailable'
+
+def test_probe_cleanup_failure_is_bounded(monkeypatch):
+    monkeypatch.setattr(limits,'inspect_host',lambda:{'ready':True})
+    def fail(*a,**k):raise OSError('unavailable')
+    monkeypatch.setattr(limits,'run',fail)
+    assert limits.verify_host()['reason']=='runtime_limits_not_enforced'
+
+def test_resource_command_passes_user_bus_and_timeout(monkeypatch):
+    monkeypatch.setattr(limits.os,'getuid',lambda:1001)
+    calls=[]
+    monkeypatch.setattr(limits.subprocess,'run',lambda *a,**kw:calls.append(kw))
+    limits.run(['true'])
+    assert calls[0]['timeout']==15
+    assert calls[0]['env']['DBUS_SESSION_BUS_ADDRESS']=='unix:path=/run/user/1001/bus'

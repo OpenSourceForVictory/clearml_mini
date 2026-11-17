@@ -1,0 +1,4 @@
+- [x] 1. Unify root host cgroup compatibility and Docker-only installer checks.
+- [x] 2. Prepare runner automatically with resource/device probes before registering identity.
+- [x] 3. Cover failures, modes and cgroup layouts; run safe hardware checks where available.
+- [x] 4. Sync UI, guides, Skill and version; commit and report deployment boundaries.

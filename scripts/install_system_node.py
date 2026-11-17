@@ -68,7 +68,7 @@ def _install(credential,selection,instance='gpu'):
         for image in {credential['runner_image'],*credential.get('client_images',[])}:
             subprocess.run(['docker','image','inspect',image],check=True,capture_output=True,timeout=30)
     acc=account(int(credential.get('business_uid',29000)),int(credential.get('business_gid',29000)))
-    verify_system(acc)
+    if 'host' in credential.get('execution_modes',['docker','host']):verify_system(acc)
     kind=credential.get('accelerator_type','gpu')
     if kind=='npu':
         available=discover_npu();indices=available if selection=='all' else [int(x) for x in selection.split(',')]
@@ -81,7 +81,7 @@ def _install(credential,selection,instance='gpu'):
     planned=plan(config,instance,selection,indices,CONTROL)
     for name,_,value in planned:
         if (UNIT_DIR/('mini-eval-worker-managed-'+name+'.service')).exists():raise ValueError('managed Worker unit already exists')
-        if kind=='npu':
+        if kind=='npu' and 'host' in credential.get('execution_modes',['docker','host']):
             from worker.npu_host import probe
             probe(value)
     for path in (CONTROL,CONTROL/'.local',CONTROL/'.local/share',WORKSPACES):

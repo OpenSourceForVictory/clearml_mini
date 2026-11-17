@@ -70,3 +70,17 @@ def test_npu_uses_ascend_parser_and_health(environment,monkeypatch,valid):
     assert not any(c[0]=='nvidia-smi' for c in calls)
     if valid:assert result['gpus']==[{'index':0,'name':'Ascend 910B','uuid':'ascend:0000:01:00.0:0'}] and not result['issues']
     else:assert 'npu_driver_unavailable' in result['issues']
+
+
+def test_docker_v1_missing_runner_is_preparation_not_rejection(environment,monkeypatch):
+    options,calls,*_=environment;options.update(mode='docker',runner_image='mini-eval-runner:dev')
+    original=Path.exists
+    monkeypatch.setattr(Path,'exists',lambda p:False if str(p)=='/sys/fs/cgroup/cgroup.controllers' else original(p))
+    def run(args,**kwargs):
+        calls.append(args)
+        return N(returncode=1 if args[:3]==['docker','image','inspect'] else 0,stdout='0, RTX, GPU-A\n' if args[0]=='nvidia-smi' else '')
+    monkeypatch.setattr(probe.subprocess,'run',run)
+    result=probe.collect(options)
+    assert result['issues']==[] and result['runner_image_ready'] is False
+    assert result['cgroup_mode']=='v1-or-hybrid'
+    assert not any('pull' in c or 'build' in c for c in calls)

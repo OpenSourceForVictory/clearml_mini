@@ -165,3 +165,23 @@ def test_resource_repair_precedes_install_and_failed_verification_blocks(operati
     assert not any('install_node.py' in ' '.join(argv) for argv,_ in commands)
     assert not any(path.endswith('/complete') for path,_ in calls)
     assert op['id'] not in ops.secrets
+
+def test_docker_preparation_failure_never_rotates_identity(operations,monkeypatch):
+    ops,calls=operations
+    def failed(*a):raise Rejected('docker_runtime_verification_failed')
+    monkeypatch.setattr('onboarding.docker_prepare.prepare',failed)
+    values={**form(fingerprint='SHA256:'+'A'*43),'mode':'docker'}
+    op=ops.start('admin',values,'Bearer SECRET')
+    wait(lambda:ops.jobs[op['id']]['state']=='READY')
+    ops.confirm(op['id'],'admin')
+    wait(lambda:ops.jobs[op['id']]['state']=='FAILED')
+    assert ops.jobs[op['id']]['error']=='docker_runtime_verification_failed'
+    assert not any(path.endswith('/begin') for path,_ in calls)
+
+def test_bundle_includes_trusted_runner_build_inputs():
+    import io,zipfile
+    from backend.app.enrollment import bundle
+    data,*_=bundle()
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        assert 'runner/Dockerfile' in archive.namelist()
+        assert 'runner/requirements.txt' in archive.namelist()

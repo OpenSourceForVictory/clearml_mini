@@ -144,3 +144,12 @@ def test_discover_npu_parses_physical_indices(monkeypatch):
     info='HBM-Usage(MB) AICore(%)\n| 0 910B | OK | 0 |\n| 0 | 0000:01:00.0 | 0 0/100 0/65536 |\n'
     monkeypatch.setattr(m.subprocess,'run',lambda args,**kw:N(stdout=mapping if '-m' in args else info))
     assert m.discover_npu()==[0]
+
+@pytest.mark.parametrize('kind',['gpu','npu'])
+def test_docker_only_never_calls_host_resource_or_device_probe(setup,monkeypatch,kind):
+    credential,*_=setup
+    def forbidden(*a):raise AssertionError('Docker-only must not require host systemd execution')
+    monkeypatch.setattr('worker.host_identity.verify_system',forbidden)
+    monkeypatch.setattr('worker.npu_host.probe',forbidden)
+    result=m.install({**credential,'accelerator_type':kind,'execution_modes':['docker']},'all')
+    assert len(result['config_paths'])==2

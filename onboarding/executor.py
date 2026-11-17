@@ -170,18 +170,22 @@ class Operations:
                 prior=self.jobs[identity]['plan']
                 if plan['issues'] or any(plan[k]!=prior[k] for k in ('home','python','gpus','selected_gpus','configs','services','existing')):raise Rejected('environment_changed_repeat_check')
                 devices=[{'index':x['index'],'uuid':x['uuid']} for x in plan['gpus'] if x['index'] in plan['selected_gpus']]
-                self.update(identity,stage='IDENTITY')
-                credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
-                node_id=credential['id'];self.update(identity,node_id=node_id)
-                credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=[form['mode']],pool_id=None,mock=False)
-                credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
                 self.update(identity,stage='TRANSFER')
                 _,raw,_=remote.run(['mktemp','-d','/tmp/mini-eval-node.XXXXXXXX']);remote_dir=raw.decode().strip()
                 if not re.fullmatch(r'/tmp/mini-eval-node\.[A-Za-z0-9]+',remote_dir):raise Rejected('invalid_remote_temporary_directory')
                 try:
-                    remote.upload(remote_dir+'/bundle.zip',payload);remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
+                    remote.upload(remote_dir+'/bundle.zip',payload)
                     extract="import hashlib,sys,zipfile; p=sys.argv[1]; d=open(p+'/bundle.zip','rb').read(); assert hashlib.sha256(d).hexdigest()==sys.argv[2]; zipfile.ZipFile(p+'/bundle.zip').extractall(p)"
                     remote.run([plan['python'],'-c',extract,remote_dir,package['sha256']])
+                    if form['mode']=='docker':
+                        from .docker_prepare import prepare
+                        prepare(remote,plan['python'],remote_dir,secret['runner_image'],form.get('accelerator_type','gpu'),plan['selected_gpus'],lambda stage:self.update(identity,stage=stage))
+                    self.update(identity,stage='IDENTITY')
+                    credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
+                    node_id=credential['id'];self.update(identity,node_id=node_id)
+                    credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes=[form['mode']],pool_id=None,mock=False)
+                    credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000))
+                    remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
                     args=[plan['python'],'-B',remote_dir+'/scripts/install_node.py','--credential',remote_dir+'/credential.json']
                     if plan['existing']:
                         args+=['--existing','--home',plan['home']]

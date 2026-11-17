@@ -76,8 +76,6 @@ def collect(options):
         if run(['systemctl','--user','show-environment'])[0]:issues.append('systemd_user_session_unavailable')
     if not configs and os.geteuid()!=0:issues.append('new_node_requires_root')
     if os.geteuid()==0 and not configs and (options.get('node_id') or Path('/etc/systemd/system/mini-eval-agent.service').exists()):issues.append('existing_installation_requires_identity_migration')
-    if os.geteuid()==0:
-        if not Path('/sys/fs/cgroup/cgroup.controllers').exists():issues.append('cgroup_v2_required')
     if os.geteuid()==0 and not configs:
         import pwd,grp
         uid=options.get('business_uid',29000);gid=options.get('business_gid',29000)
@@ -89,16 +87,17 @@ def collect(options):
             try:
                 if getattr(fn(name),attr)!=number:issues.append('business_identity_conflict')
             except KeyError:pass
+    runner_ready=True
     if options['mode']=='docker':
         if run(['docker','info'])[0]:issues.append('docker_unavailable')
-        elif run(['docker','image','inspect',options['runner_image']])[0]:issues.append('runner_image_missing')
+        elif run(['docker','image','inspect',options['runner_image']])[0]:runner_ready=False
     try:
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self,*a,**kw):return None
         with urllib.request.build_opener(NoRedirect()).open(options['api_url'].rstrip('/')+'/healthz',timeout=10) as response:
             if response.status!=200:issues.append('node_cannot_reach_API')
     except Exception:issues.append('node_cannot_reach_API')
-    return {'uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else ('mini-eval' if os.geteuid()==0 else None),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',29000),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
+    return {'runner_image_ready':runner_ready,'cgroup_mode':'v2' if Path('/sys/fs/cgroup/cgroup.controllers').exists() else 'v1-or-hybrid','uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else ('mini-eval' if os.geteuid()==0 else None),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',29000),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
             'gpus':gpus,'selected_gpus':chosen,'existing':bool(configs),'services':services,
             'configs':configs,'issues':sorted(set(issues)),'free_disk_gb':round(shutil.disk_usage(home).free/1024**3,1)}
 

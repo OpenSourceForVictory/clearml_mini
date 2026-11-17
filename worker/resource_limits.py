@@ -43,7 +43,7 @@ def verify_current(cpus, memory_bytes, pids=256):
     for line in Path('/proc/self/cgroup').read_text().splitlines():
         _,controllers,group=line.split(':',2)
         for controller in controllers.split(','):groups[controller]=group
-    if '' in groups:
+    if '' in groups and (CGROUP_ROOT/'cgroup.controllers').is_file():
         verify_group(groups[''],cpus,memory_bytes,pids)
     else:
         verify_group(groups.get('cpu',''),cpus,memory_bytes,pids,groups=groups)
@@ -61,6 +61,21 @@ def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
         def read(controller,name):
             path=groups.get(controller,'')
             if not path.startswith('/'):raise ValueError('missing '+controller+' cgroup')
+            # v1 controllers may use combined mounts and different hierarchy paths.
+            for line in Path('/proc/self/mountinfo').read_text().splitlines():
+                left, sep, right = line.partition(' - ')
+                fields=left.split(); tail=right.split()
+                if not sep or len(fields)<5 or len(tail)<3 or tail[0]!='cgroup' or controller not in tail[2].split(','):continue
+                mount=Path(fields[4]); root=fields[3]
+                if not mount.is_relative_to(CGROUP_ROOT):continue
+                if '..' in Path(path).parts:raise ValueError('invalid cgroup path')
+                if path=='/':relative=''
+                elif root=='/':relative=path.lstrip('/')
+                elif path==root:relative=''
+                elif path.startswith(root.rstrip('/')+'/'):relative=path[len(root):].lstrip('/')
+                else:continue
+                return (mount/relative/name).read_text().strip()
+            if '..' in Path(path).parts:raise ValueError('invalid cgroup path')
             return (CGROUP_ROOT/controller/path.lstrip('/')/name).read_text().strip()
         quota=read('cpu','cpu.cfs_quota_us');period=read('cpu','cpu.cfs_period_us')
         memory=read('memory','memory.limit_in_bytes');tasks=read('pids','pids.max')

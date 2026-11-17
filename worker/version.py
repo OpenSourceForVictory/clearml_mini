@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-SOFTWARE_VERSION='0.17.0'
+SOFTWARE_VERSION='0.17.1'
 PROTOCOL_VERSION=14
 CAPABILITIES=['docker','host','episode_reporting','typed_parameters','directory_mounts','inference_services','task_input','command_tasks','accelerator_contract','ascend_docker','ascend_host','service_readiness_v1']
 

@@ -76,3 +76,12 @@ ONBOARDING_SOCKET_DIR=/home/platform/.local/share/mini-eval-onboarding/socket
 通过 HTTP IP 地址访问时，浏览器可能不提供 crypto.randomUUID，旧注册页面会在发送 SSH 检查请求前报错。前端现统一生成请求 UUID，缺少原生方法时使用 getRandomValues；不需要用户调整浏览器开关。运行向导也使用相同方法，并保持失败重试复用幂等键。验证包含禁用 randomUUID 后完整注册界面流程及向导回归，不代表目标节点实际安装验证。其他机器需重新构建 API 镜像中的前端后才生效，仅重启旧镜像无效。
 
 此修复验证：17 项独立浏览器场景通过，TypeScript/Vite 构建通过；模拟禁用原生 UUID，不宣称在无法访问的远端浏览器完成验收。本次提交未自动更新远端部署。
+
+ 
+## cgroup 兼容与 runner 准备（0.17.1）
+
+root 系统宿主机支持 cgroup v1、v2 和混合层级，以实际 CPU、内存、进程数限制验证为准；挂载点显示 tmpfs 不等于不支持。非 root 旧用户服务仍要求 v2 委派，不自动迁移身份或修改引导参数。单纯重启旧镜像不会获得修复，控制面安装包与 SSH 执行器需要同步更新，已部署节点按升级/重新纳管流程更新。
+
+Docker-only 纳管不运行宿主机 systemd 限制探针。环境检查只读检查 runner；缺失时在确认计划后拉取，仅默认 mini-eval-runner:dev 拉取失败允许从校验过的安装包原生构建。自定义镜像不能静默替换。受限容器验证 CPU、内存、PID 与所选 NPU 设备访问后才生成/轮换身份；这些验证不代表业务 CANN 环境已就绪。
+
+已有非标准目录安装仍会被保护性拒绝，需要受控迁移。真实验证范围及失败记录见 [cgroup 与重新纳管验证](validation/cgroup-runtime/README.md)。
