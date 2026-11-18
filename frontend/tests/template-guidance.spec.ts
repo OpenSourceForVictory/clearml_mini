@@ -113,3 +113,16 @@ test('generic command controls and Docker directory are submitted',async({page})
  await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
  expect(writes[0].body.runtime).toMatchObject({command_mode:'exec',working_directory:'/app',interpreter:'/opt/platform/bin/python'});
 });
+
+for(const width of [1440,390])test(`template detail has independent view and restores trigger ${width}`,async({page})=>{
+ await setup(page);await page.setViewportSize({width,height:844});
+ const trigger=page.getByRole('button',{name:'查看配置',exact:true});await trigger.click();
+ await expect(page.getByRole('tab',{name:'已注册模板',exact:true})).toBeHidden();
+ await expect(page.getByRole('button',{name:'返回模板列表'})).toBeInViewport();
+ await expect(page.getByRole('region',{name:'模板配置详情'})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByRole('button',{name:'返回模板列表'}).click();await expect(trigger).toBeFocused();
+ await page.getByRole('tab',{name:'服务端模板',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();
+ await expect(page.getByRole('button',{name:'返回模板列表'})).toBeInViewport();
+ await expect(page.getByRole('region',{name:'模板配置详情'})).toContainText('server / 1');
+});

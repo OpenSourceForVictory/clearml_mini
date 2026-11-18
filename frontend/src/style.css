@@ -594,3 +594,12 @@ dd {
 
 [hidden] { display: none !important; }
 .batch-parameters pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#f4f6f3;padding:16px;border-radius:8px;}
+
+/* Management details occupy the content area, with a persistent return action. */
+.detail-heading { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: var(--panel, #fff); padding: 12px 0; border-bottom: 1px solid #dbe2ea; }
+.detail-heading h2 { margin: 0; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+
+.administration .panel.machine-configuration, .administration .panel.suite-config, .administration .panel.management-detail { overflow: visible; }
+.detail-heading h2 { min-width: 0; max-width: 100%; font-size: 20px; }
+.detail-heading button { flex-shrink: 0; }

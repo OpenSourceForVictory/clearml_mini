@@ -1,3 +1,4 @@
+import {useDetailNavigation} from './detail-navigation';
 import React,{useEffect,useState,useRef,useId} from 'react';
 import {api} from './api';
 import './suite-manager.css';
@@ -21,6 +22,7 @@ function Parameters({value,change,label}:{value:Record<string,unknown>;change:(v
   }catch{setError('参数必须为 JSON 对象');e.target.setCustomValidity('参数必须为 JSON 对象');}}}/>{error&&<small role="alert">{error}</small>}</>;
 }
 export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template[];onRun:(s:ManagedSuite)=>void;onSaved:()=>void;onJob:(id:string)=>void}){
+  const details=useDetailNavigation();
   const [configOpen,setConfigOpen]=useState(false),[configStarted,setConfigStarted]=useState(false);
   const configRef=useRef<HTMLElement>(null),configId=useId();
   const [list,setList]=useState<Summary[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1);
@@ -45,11 +47,12 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     void load();const t=setInterval(()=>void load(),5000);return()=>{live=false;clearInterval(t);};},[page,q,tag,client,state]);
   useEffect(()=>{let live=true;setRuns([]);if(editing)void api<typeof runs>('suites/'+editing.id+'/runs?page='+runPage).then(r=>{if(live)setRuns(r);}).catch(e=>{if(live)setError(String(e));});return()=>{live=false;};},[editing?.id,runPage]);
   function reset(value:Doc=empty(),t='',defaults:Record<string,unknown>={}){
-    setConfigStarted(true);setConfigOpen(true);setClientDefaults(defaults);
+    details.enter();details.dirty.current=false;setConfigStarted(true);setConfigOpen(true);setClientDefaults(defaults);
     setDoc(value);setTemplate(t);setRelated(t?[t]:[]);setEditing(null);setSelected(new Set());setPreview(null);setMessage('');setError('');setTaskQuery('');setRunPage(1);
   }
-  function setCases(cases:Case[]){setDoc(old=>({...old,cases}));setPreview(null);}
+  function setCases(cases:Case[]){details.dirty.current=true;setDoc(old=>({...old,cases}));setPreview(null);}
   async function load(id:string){
+    if(id!==editing?.id&&!details.replace())return;
     try{const s=await api<ManagedSuite>('suites/'+id);reset({schema_version:1,name:s.name,version:s.version,description:s.description,tags:s.tags,source:s.source,cases:s.cases},s.template_id,s.client_defaults||{});setEditing(s);setRelated(s.template_ids||[s.template_id]);}
     catch(e){setError(String(e));}
   }
@@ -57,6 +60,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     const result=await api<Preview>('suites/preview','POST',{content:JSON.stringify({...value,...(ordinary?{cases:value.cases.map(c=>({...c,episodes:1}))}:{}),tags:value.tags.map(t=>t.trim()).filter(Boolean)})});setPreview(result);return result;
   }
   async function importFile(file:File){
+    if(!details.replace())return;
     setBusy(true);setError('');
     try{if(file.size>1048576)throw Error('文件不能超过 1 MiB');
       const result=await api<Preview>('suites/preview','POST',{content:await file.text()});setPreview(result);setConfigStarted(true);setConfigOpen(true);
@@ -64,6 +68,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
   async function preset(){
+    if(!details.replace())return;
     setBusy(true);setError('');
     try{const catalogs=await api<(Doc&{id:string})[]>('suites/catalogs');const {id,...value}=catalogs[0];reset(value);setMessage('已载入 RoboTwin 50 项目录。勾选任务后点击“仅保留选中任务”，再保存子集。');}
     catch(e){setError(String(e));}finally{setBusy(false);}
@@ -76,7 +81,7 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
       const {schema_version,client:hint,clients:hints,...values}=result.document;
       const body={...values,client_defaults:clientDefaults,template_id:template,template_ids:related.length?related:[template],status:published?'published':'draft',...(editing?{expected_revision:editing.revision}:{})};
       const saved=await api<ManagedSuite>('suites'+(editing?'/'+editing.id:''),editing?'PUT':'POST',body);
-      setEditing(saved);setDoc({...result.document,cases:saved.cases});setMessage(published?'集合版本已发布。':'草稿已保存。');
+      details.dirty.current=false;setEditing(saved);setDoc({...result.document,cases:saved.cases});setMessage(published?'集合版本已发布。':'草稿已保存。');
       await refresh();onSaved();if(run)onRun(saved);
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
@@ -109,11 +114,11 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
   }
   return <div className="suite-manager">
     {error&&<p role="alert" className="error">{error}</p>}
-    <section className="panel">
+    <section className="panel" hidden={details.open}>
       <h2>评测集合管理</h2>
       <p className="hint">从预置目录、JSON/YAML 文件或已有集合创建。集合定义评测内容；服务地址、资源池和并发在运行时配置。</p>
       <div className="suite-overview" aria-label="集合概览"><div><span>筛选结果 · 集合版本</span><strong>{total}</strong></div><div><span>当前页已发布</span><strong>{list.filter(s=>s.status==='published'&&!s.archived).length}</strong></div><div><span>当前页草稿</span><strong>{list.filter(s=>s.status==='draft'&&!s.archived).length}</strong></div></div>
-      <div className="row suite-create"><button disabled={busy} onClick={()=>reset()}>新建集合</button><button disabled={busy} onClick={()=>void preset()}>从 RoboTwin 预置创建</button>
+      <div className="row suite-create">{configStarted&&<button onClick={details.enter}>继续查看当前配置</button>}<button disabled={busy} onClick={()=>{if(details.replace())reset()}}>新建集合</button><button disabled={busy} onClick={()=>void preset()}>从 RoboTwin 预置创建</button>
         <label className="field">导入集合 JSON / YAML<input aria-label="导入集合 JSON / YAML" type="file" accept=".json,.yaml,.yml" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f);e.target.value='';}}/></label></div>
       <div className="suite-filters">
         <Field label="搜索集合"><input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}}/></Field>
@@ -125,12 +130,12 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
         <tbody>{list.map(s=><tr key={s.id} aria-label={'集合 '+s.name+' / '+s.version}><th scope="row"><span className="suite-ellipsis suite-name" title={s.name}>{s.name}</span><small className="suite-ellipsis" title={s.version+' · '+s.tags.join('、')}>{s.version}{s.tags.length?' · '+s.tags.join('、'):''}</small></th><td><span className={'suite-status '+(s.archived?'archived':s.status)}>{s.archived?'已归档':s.status==='draft'?'草稿':'已发布'}</span></td>
           <td><span className="suite-ellipsis" title={templates.find(t=>t.id===s.template_id)?.name||s.template_id}>{(s.template_ids||[s.template_id]).map(id=>{const t=templates.find(t=>t.id===id);return t?t.name+' / '+t.version:'模板不可用'}).join('、')}</span><small>{(s.template_ids||[s.template_id]).length} 个可用模板</small></td>
           <td>{s.task_count} 项 / {s.total_episodes} 回合</td><td><span className="suite-ellipsis" title={s.latest_run?.title}>{s.latest_run?.title||'尚未运行'}</span>{s.latest_run&&<small>{({PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',CANCELLED:'已取消'} as Record<string,string>)[s.latest_run.status]||s.latest_run.status}</small>}</td>
-          <td><button aria-label={'查看 '+s.name+' / '+s.version} disabled={busy} onClick={()=>{if(editing?.id===s.id){setConfigOpen(true);setConfigStarted(true);}else void load(s.id);}}>查看配置</button></td></tr>)}</tbody></table></div>
+          <td><button aria-label={'查看 '+s.name+' / '+s.version} disabled={busy} onClick={()=>{if(editing?.id===s.id){details.enter();setConfigOpen(true);setConfigStarted(true);}else void load(s.id);}}>查看配置</button></td></tr>)}</tbody></table></div>
       {!list.length&&<p>没有符合条件的集合。</p>}
       <div className="pagination"><button disabled={page<=1} onClick={()=>setPage(p=>p-1)}>集合上一页</button><span>第 {page} 页，共 {total} 个版本</span><button disabled={page*20>=total} onClick={()=>setPage(p=>p+1)}>集合下一页</button></div>
     </section>
-    <section ref={configRef} className="panel suite-config" hidden={!configStarted}>
-      <div className="suite-config-heading"><h2>{editing?editing.name+' / '+editing.version:'新建集合草稿'}</h2><button type="button" aria-expanded={configOpen} aria-controls={configId} onClick={()=>setConfigOpen(v=>!v)}>{configOpen?'收起配置':'展开配置'}</button></div>
+    <section ref={configRef} className="panel suite-config" hidden={!configStarted||!details.open} onChangeCapture={()=>{details.dirty.current=true}}>
+      <div className="suite-config-heading detail-heading" ref={details.heading} tabIndex={-1}><h2>{editing?editing.name+' / '+editing.version:'新建集合草稿'}</h2><button type="button" onClick={details.back}>返回集合列表</button><button type="button" aria-expanded={configOpen} aria-controls={configId} onClick={()=>setConfigOpen(v=>!v)}>{configOpen?'收起配置':'展开配置'}</button></div>
       <div id={configId} hidden={!configOpen}>
       {message&&<p role="status" className="success">{message}</p>}
       {editing&&<><p>版本状态：{editing.archived?'已归档':editing.status==='draft'?'草稿':'已发布'} · 编辑版本 {editing.revision}</p>

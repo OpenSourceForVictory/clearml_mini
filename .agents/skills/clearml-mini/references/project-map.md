@@ -121,3 +121,7 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 ### 客户端总执行时限
 
 `backend/app/clients.py` 的认证接口 `/api/v1/execution-limits` 返回 `EXECUTION_TIMEOUT_SECONDS` 上限与默认值；客户端提交按该上限校验。`scheduling.py` 对已提交客户端使用快照时限，不因后续降低平台上限截短，并区分总时限、启动超时和租约过期。`frontend/src/run-wizard.tsx` 动态显示上限并阻止未加载配置时提交。操作见 `docs/operations.md`，验证见 `backend/tests/test_client_execution_limits.py` 和 `frontend/tests/run-wizard.spec.ts`；变更不涉及 Worker 升级或数据库迁移。
+
+### 管理详情导航
+
+`frontend/src/detail-navigation.ts` 管理独立详情的列表滚动/触发焦点恢复与草稿替换确认；机器、模板、集合分别接入 administration.tsx、templates.tsx、suites.tsx。列表保持挂载而隐藏，详情返回不会保存表单。验证见 detail-navigation.spec.ts、suite-layout.spec.ts 和 template-guidance.spec.ts；仅前端，无迁移或 Worker 更新。不要将当前组件内保留草稿描述成刷新后持久化。

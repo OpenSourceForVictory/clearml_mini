@@ -19,9 +19,10 @@ test('management navigation and machine roles use a selected detail',async({page
   await expect(page.getByRole('heading',{name:'host · 配置详情'})).toHaveCount(0);
   await page.getByRole('button',{name:'查看配置'}).click();
   await expect(page.getByRole('heading',{name:'host · 配置详情'})).toBeInViewport();
-  await expect(page.getByRole('region',{name:'host · 配置详情'})).toBeFocused();
+  await expect(page.locator('.detail-heading')).toBeFocused();
   await page.getByRole('button',{name:'停用（停止接新任务）'}).click();
   await expect.poll(()=>update).toEqual({enabled:false,expected_revision:0});
+  await page.getByRole('button',{name:'返回机器列表'}).click();
   await page.getByRole('tab',{name:'服务端机器'}).click();
   await expect(page.getByText('host',{exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'host · 配置详情'})).toHaveCount(0);

@@ -1,3 +1,4 @@
+import {useDetailNavigation} from './detail-navigation';
 import {GuideButton} from './user-guide';
 import {ReadinessEditor,readinessDraft,Readiness} from './readiness-editor';
 import {ClientRegistration} from './evaluation-setup';
@@ -22,6 +23,7 @@ export function Templates(){
  <div hidden={kind!=='registration'}>{kind==='registration'&&<ClientRegistration/>}</div>{['client','server'].map(id=><div key={id} hidden={kind!==id}><TemplateWorkspace kind={id}/></div>)}</>;
 }
 function TemplateWorkspace({kind}:{kind:string}){
+ const details=useDetailNavigation(),formTop=React.useRef<HTMLDivElement>(null);
  const [rows,setRows]=useState<Template[]>([]),[edit,setEdit]=useState<Template|null|undefined>(undefined),[error,setError]=useState('');
  const [tab,setTab]=useState('list'),[view,setView]=useState<Template|null>(null),[dirty,setDirty]=useState(false),[generation,setGeneration]=useState(0);
  const refresh=()=>api<Template[]>(kind==='client'?'client-templates':'admin/server-templates').then(setRows);
@@ -29,16 +31,18 @@ function TemplateWorkspace({kind}:{kind:string}){
  function register(source?:Template){
   if(source&&dirty&&!confirm('复制将替换当前未提交的模板草稿，是否继续？'))return;
   if(source||edit===undefined){setEdit(source||null);setDirty(false);setGeneration(n=>n+1)}
-  setView(null);setTab('register');
+  details.dismiss();setView(null);setTab('register');
+  requestAnimationFrame(()=>{formTop.current?.focus({preventScroll:true});formTop.current?.scrollIntoView({block:'start'});});
  }
  async function act(t:Template,action:'state'|'archive'){try{setError('');await api('admin/'+kind+'-templates/'+t.id,action==='state'?'PATCH':'DELETE',action==='state'?{enabled:!t.enabled}:undefined);await refresh()}catch(e){setError(String(e))}}
  return <>
- <div className="tabs" role="tablist" aria-label={(kind==='client'?'客户端':'服务端')+'模板操作'}><button role="tab" aria-selected={tab==='list'} onClick={()=>setTab('list')}>已注册模板</button><button role="tab" aria-selected={tab==='register'} onClick={()=>register()}>注册新模板</button></div>
+ <div hidden={details.open}><div className="tabs" role="tablist" aria-label={(kind==='client'?'客户端':'服务端')+'模板操作'}><button role="tab" aria-selected={tab==='list'} onClick={()=>setTab('list')}>已注册模板</button><button role="tab" aria-selected={tab==='register'} onClick={()=>register()}>注册新模板</button></div>
  <section className="panel" hidden={tab!=='list'}><h2>{kind==='client'?'客户端':'服务端'}运行模板</h2><p>模板版本固定执行配置；修改时复制为新版本，已提交任务保留原快照。</p>{error&&<p role="alert" className="error">{error}</p>}<button onClick={()=>register()}>注册模板</button>
  {!rows.length&&<p className="muted">暂无模板。进入“注册新模板”，根据操作说明准备运行环境并填写配置。</p>}
- <div className="template-table"><table><thead><tr><th>名称 / 版本</th><th>执行方式</th><th>接入方式</th><th>状态</th><th>操作</th></tr></thead><tbody>{rows.map(t=><tr key={t.id}><td>{t.name} / {t.version}</td><td>{t.execution_mode==='host'?'宿主机':'Docker'}</td><td>{kind==='server'?'长期服务':t.integration_mode==='sdk-command'?'SDK + 业务命令':'直接评测协议'}</td><td>{t.enabled?'启用':'停用'}</td><td><button onClick={()=>setView(t)}>查看配置</button><button onClick={()=>register(t)}>复制新版本</button>{kind==='server'&&!t.owner_id&&<button onClick={async()=>{try{await api('admin/server-templates/'+t.id+'/access','PATCH',{expected_revision:t.revision||0,available_to_members:!t.available_to_members});await refresh()}catch(e){setError(String(e))}}}>{t.available_to_members?'撤回成员使用':'允许成员使用'}</button>}<button onClick={()=>void act(t,'state')}>{t.enabled?'停用':'启用'}</button><button onClick={()=>{if(confirm('归档此模板？已有任务快照保留。'))void act(t,'archive')}}>归档</button></td></tr>)}</tbody></table></div>
- {view&&<TemplateConfig key={view.id} template={view} kind={kind} onClose={()=>setView(null)} onCopy={()=>register(view)}/>}</section>
- <div hidden={tab!=='register'}><TemplateExamples kind={kind} onUse={register}/>{edit!==undefined&&<div onChange={()=>setDirty(true)} onClick={e=>{if((e.target as HTMLElement).closest('form button'))setDirty(true)}}><TemplateForm key={generation} kind={kind} source={edit} onClose={()=>setTab('list')} onSave={async()=>{await refresh();setEdit(undefined);setDirty(false);setTab('list')}}/></div>}</div></>;
+ <div className="template-table"><table><thead><tr><th>名称 / 版本</th><th>执行方式</th><th>接入方式</th><th>状态</th><th>操作</th></tr></thead><tbody>{rows.map(t=><tr key={t.id}><td>{t.name} / {t.version}</td><td>{t.execution_mode==='host'?'宿主机':'Docker'}</td><td>{kind==='server'?'长期服务':t.integration_mode==='sdk-command'?'SDK + 业务命令':'直接评测协议'}</td><td>{t.enabled?'启用':'停用'}</td><td><button onClick={()=>{setView(t);details.enter()}}>查看配置</button><button onClick={()=>register(t)}>复制新版本</button>{kind==='server'&&!t.owner_id&&<button onClick={async()=>{try{await api('admin/server-templates/'+t.id+'/access','PATCH',{expected_revision:t.revision||0,available_to_members:!t.available_to_members});await refresh()}catch(e){setError(String(e))}}}>{t.available_to_members?'撤回成员使用':'允许成员使用'}</button>}<button onClick={()=>void act(t,'state')}>{t.enabled?'停用':'启用'}</button><button onClick={()=>{if(confirm('归档此模板？已有任务快照保留。'))void act(t,'archive')}}>归档</button></td></tr>)}</tbody></table></div>
+ </section>
+ <div hidden={tab!=='register'} ref={formTop} tabIndex={-1}><TemplateExamples kind={kind} onUse={register}/>{edit!==undefined&&<div onChange={()=>setDirty(true)} onClick={e=>{if((e.target as HTMLElement).closest('form button'))setDirty(true)}}><TemplateForm key={generation} kind={kind} source={edit} onClose={()=>setTab('list')} onSave={async()=>{await refresh();setEdit(undefined);setDirty(false);setTab('list')}}/></div>}</div></div>
+ {view&&details.open&&<section className="panel management-detail"><div className="detail-heading" ref={details.heading} tabIndex={-1}><h2>{view.name} / {view.version}</h2><button onClick={details.back}>返回模板列表</button></div><TemplateConfig key={view.id} template={view} kind={kind} onClose={details.back} onCopy={()=>register(view)}/></section>}</>;
 }
 export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:string;source:Template|null;onSave?:()=>Promise<void>;onClose?:()=>void;readOnly?:boolean}){
  const [mode,setMode]=useState(source?.execution_mode||'docker'),[integration,setIntegration]=useState(source?.integration_mode||'direct'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
