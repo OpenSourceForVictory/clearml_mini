@@ -85,6 +85,10 @@ def suite_view(suite):
 def batch_view(s, batch, jobs=None, progresses=None):
     jobs = jobs if jobs is not None else s.scalars(select(Job).options(selectinload(Job.runs)).where(Job.batch_id == batch.id)
                      .order_by(Job.created_at, Job.id)).all()
+    from .core import Slot
+    from .placement import view as placement_view
+    slot_ids = {j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
+    placements = {slot.id: placement_view(slot) for slot in s.scalars(select(Slot).where(Slot.id.in_(slot_ids)))} if slot_ids else {}
     succeeded = sum(j.status == 'SUCCEEDED' for j in jobs)
     finished = sum(j.status in TERMINAL for j in jobs)
     if jobs and succeeded == len(jobs):
@@ -100,7 +104,7 @@ def batch_view(s, batch, jobs=None, progresses=None):
     return {'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command' or j.client_spec['template'].get('episode_reporting')),
-            'cases': [{'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
+            'cases': [{'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
                        'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' and not j.client_spec['template'].get('episode_reporting') else j.episodes, 'status': j.status,
                        'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,

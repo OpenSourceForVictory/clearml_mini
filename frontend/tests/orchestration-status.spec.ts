@@ -7,14 +7,17 @@ test('owned batch shows task service generation, logs and revisioned stop',async
   if(path==='suites/manage')data={items:[],total:0};
   if(path==='auth/me')data={id:'u',username:'User',role:'user'};
   if(path==='batches/b/monitor')data={id:'b',title:'Managed',orchestrated:true,cases:[],total:1,finished:0,max_concurrent:1,total_episodes:0,control_revision:0,summary:{states:{RESERVED:1},completed_episodes:0,successes:0,goal_failures:0,episode_errors:0,execution_failures:0,unreported_tasks:0,success_rate:null}};
-  if(path==='orchestrations/b')data={cases:[{case_id:'scene',endpoint:'http://node:19000',service_key:'model',service_execution_id:'generation-1',waiting_service:true}],orchestration:{service_mode:'managed',stop_after_batch:true,definitions:[{key:'model',mode:'shared'}],services:[{id:'s',name:'Model service',state:'STARTING',endpoint:'http://node:19000',revision:3,cleanup_pending:true,probe:{kind:'http',error_code:'authentication_failed',phase:'response',success_threshold:1,failure_threshold:3,failures:3}}]}};
+  if(path==='orchestrations/b')data={cases:[{case_id:'scene',endpoint:'http://node:19000',service_key:'model',service_execution_id:'generation-1',waiting_service:true}],orchestration:{service_mode:'managed',stop_after_batch:true,definitions:[{key:'model',mode:'shared'}],services:[{id:'s',name:'Model service',placement:{id:'npu-slot',node_name:'server-npu',accelerator_type:'npu',gpu_index:3,gpu_model:'Ascend'},state:'STARTING',endpoint:'http://node:19000',revision:3,cleanup_pending:true,probe:{kind:'http',error_code:'authentication_failed',phase:'response',success_threshold:1,failure_threshold:3,failures:3}}]}};
   if(path==='orchestrations/b/services/s/logs')data={content:'model loaded',job_id:'job'};
   if(path==='orchestrations/b/services/s/control'){calls.push(route.request().postDataJSON());data={};}
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/batches/b');
+
+ await expect(page.getByRole('region',{name:'服务端启动状态'})).toContainText('server-npu / NPU 3');
  await page.getByRole('button',{name:'服务端与关联',exact:true}).click();
  const panel=page.getByRole('region',{name:'客户端与服务关系'});
+ await expect(panel).toContainText('server-npu / NPU 3');await expect(panel).toContainText('型号：Ascend');
  await expect(panel).toContainText('generation-1');await expect(panel).toContainText('等待服务健康');
  await panel.getByRole('button',{name:'查看 Model service 日志'}).click();await expect(panel).toContainText('model loaded');
  await panel.getByRole('button',{name:'停止 Model service'}).click();await expect.poll(()=>calls.length).toBe(1);
@@ -36,7 +39,7 @@ test('default task page shows server scheduling blockers and then startup status
   if(path==='orchestrations/b'){
    if(fail){await route.abort();return;}
    data={cases:[],orchestration:{service_mode:'managed',stop_after_batch:true,definitions:[{key:'model',mode:'shared'}],
-    services:phase==='starting'?[{id:'s',service_key:'model',name:'Model service',state:'STARTING',endpoint:'http://node:19000',revision:1,cleanup_pending:false}]:[],
+    services:phase==='starting'?[{id:'s',service_key:'model',name:'Model service',placement:{id:'npu-slot',node_name:'server-npu',accelerator_type:'npu',gpu_index:3,gpu_model:'Ascend'},state:'STARTING',endpoint:'http://node:19000',revision:1,cleanup_pending:false}]:[],
     scheduling:phase==='pending'?[{key:'model',pool_name:'server-pool',status:'needs_environment',reasons:[],nodes:[{node_name:'server-1',gpu_index:0,ready:false,reasons:[{code:'storage_pending',message:'工作目录配置未生效或报告已过期'}]}]}]:[]}};
   }
   await route.fulfill({json:data});

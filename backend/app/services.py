@@ -122,7 +122,10 @@ def view(s,item):
         if item.template_snapshot.get('readiness') and alive and fresh and not (item.probe_state or {}).get('ever_ready'):state='STARTING'
     if not item.desired_running and not held(s,item):state='STOPPED'
     from .service_readiness import diagnostics
-    return {'probe':diagnostics(item),'health_port':item.health_port,**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
+    from .placement import view as placement_view
+    run = job.runs[-1] if job and job.runs else None
+    assigned = s.get(Slot, run.slot_id) if run and run.slot_id else None
+    return {'placement':placement_view(assigned),'probe':diagnostics(item),'health_port':item.health_port,**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
 
 
 def resolve_parameters(definition,parameters,environment,overrides):

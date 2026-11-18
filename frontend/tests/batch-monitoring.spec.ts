@@ -1,7 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page){
   let offline=false,run='r1',lose=false,delay=false;const requests:any[]=[];
-  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
+  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -66,4 +66,11 @@ test('detail tabs preserve filtering and retry selection and contain narrow tabl
   await page.setViewportSize({width:390,height:844});
   expect(await page.locator('.batch-detail-table').evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
+test('client placement is a separate column with GPU zero and unassigned states',async({page})=>{
+ await setup(page);
+ await expect(page.getByRole('columnheader',{name:'客户端分配位置'})).toBeVisible();
+ await expect(page.getByRole('cell',{name:'client-gpu / GPU 0 型号：Test GPU'})).toBeVisible();
+ await expect(page.getByText('未分配或位置记录不可用').first()).toBeVisible();
 });
