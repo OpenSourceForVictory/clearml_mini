@@ -158,3 +158,5 @@ Worker0.21.1 启动失败恢复：client.execute 将 terminal_failure 在停止/
 全量验证入口与夹具：python -m scripts.test_coverage 使用项目统一覆盖分母；浏览器测试需要 Vite（部分用例动态加载 /src/api.ts），不能统一替换成静态 dist 服务。集合跳转运行向导的模拟 API 必须返回 execution-limits，缺失时页面按设计拒绝继续。2026-11-19 首轮失败、复测与跳过证据见 docs/validation/host-recovery-full-20261119/README.md，不用复测通过覆盖首轮失败记录。
 
 Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，并原子 replace；只读 inspect 不得重写 JSON，否则断言与后台轮询并发时可能读到空文件。该夹具修正不改变实际 Agent 生命周期，失败证据见上述全量验证记录。
+
+覆盖补充：test_migration_driver_scripts.py 需要 MIGRATION_DRIVER_TEST_URL 指向专用一次性 PostgreSQL；用例自行建立/删除数据库，scripts/check_*_migration.py 包含破坏性降级，不得使用平台数据库。2026-11-19 全量加三项迁移补测同实现合并已过覆盖门槛，不能抹去首轮失败/跳过或宣称第二轮全量通过；证据见 docs/validation/host-recovery-full-20261119/README.md。

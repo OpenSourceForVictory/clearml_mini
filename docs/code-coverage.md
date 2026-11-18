@@ -74,3 +74,8 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 2026-11-18 复测将 `MIGRATION_DRIVER_TEST_URL` 指向一次性 PostgreSQL，与全量覆盖命令在同一进程树中启用已有真实迁移用例；不再仅单独运行后口头计入覆盖率。`TEST_DATABASE_URL` 同样仅使用此一次性环境，验证 Agent 并发修复。原 78.51% scripts 行覆盖率失败证据保留，不降低门槛。
 
 日志 v2 的 worker/log_stream.py、backend/app/execution_logs.py 与 runner/log_capture.py 纳入“业务执行与结果”关键功能（90% 行 / 80% 分支）和各自目录分母；不排除新增日志路径。实际 systemd/Docker 子进程和浏览器未插桩部分不计入 Python 覆盖率。
+
+
+## 2026-11-19 补充迁移验证
+
+宿主机恢复全量后启用 3 项真实 PostgreSQL 迁移脚本测试，使用临时独立容器和数据库，验证结束已清理。相同产品实现的全量加补充覆盖数据达到全部目录与关键功能门槛；scripts 行 80.81%、分支 78.20%。保留初始全量失败及跳过，不能称第二轮全量通过。命令口径、边界与报告见 [验证记录](validation/host-recovery-full-20261119/README.md)。

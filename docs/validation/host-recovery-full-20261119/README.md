@@ -2,7 +2,7 @@
 
 ## 运行边界
 
-Python 使用 `PYTEST_ADDOPTS=--import-mode=importlib .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/host-recovery-full-20261119`，项目统一分母与门槛，不排除未测代码。运行时 Python 实现对应 9df8200；本轮仅额外修正前端测试夹具。未连接生产数据库执行测试。
+Python 使用 `PYTEST_ADDOPTS=--import-mode=importlib .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/host-recovery-full-20261119`，项目统一分母与门槛，不排除未测代码。运行时 Python 实现对应 9df8200；本轮额外修正前端和 Agent 测试夹具，未改变产品实现。未连接生产数据库执行测试。
 
 前端类型检查及生产构建通过（存在 bundle 大于 500 kB 提示）。Playwright 使用独立本地 Vite、模拟 API，清空继承的测试账号及 live API 配置；真实部署用例按原规则跳过。浏览器未插桩，不计入 Python 覆盖率。
 
@@ -23,3 +23,14 @@ Agent HTTP 集成用例失败于最终读取模拟 systemctl 状态 JSON（test_
 ## 节点观察
 
 见 node-observation.md。29 心跳持续更新，8 张卡上报 0.20.5；SSH 超时，未升级节点。历史 missing unit 记录不等于已确认用户最新现场根因。
+
+
+## 补充真实数据库验证与覆盖门槛
+
+后续使用专为本次创建、仅监听本机随机端口的一次性 PostgreSQL 16.8 容器，启用 test_migration_driver_scripts.py 的 3 项既有用例，结果 **3 passed，10.32 秒**（real-migrations.log）。每项创建独立数据库，真实执行集合、资源池归属、镜像运行环境的历史数据回填、受保护降级、降级后重新升级；无模拟迁移命令。完成后已移除本次临时数据库容器，未触碰生产数据库。
+
+收集命令使用与全量相同的 backend/tests/project.coveragerc，MIGRATION_DRIVER_TEST_URL 指向临时数据库；coverage.py 在同一进程通过 runpy 记录迁移检查脚本。Alembic 子进程未插桩，不宣称其独立进程覆盖率。
+
+产品代码未改变，合并原始全量 .coverage 与本次独立迁移 .coverage；保留原始报告，扩展报告在 coverage-artifacts/host-recovery-full-20261119-extended/，摘要见 coverage-extended.md。同样的 scripts.coverage_report 和门槛检查返回 0：总行 **90.04%**、总分支 **79.93%**；scripts **80.81% / 78.20%**，所有目录及关键功能组门槛通过。未降低阈值、未排除文件、未合并其他产品版本。
+
+这是全量加补充用例的累计覆盖证据，不是第二轮完整测试。原始全量的 1 失败/133 跳过保持不变；其中 3 个迁移跳过项已在补充运行中验证通过。夹具修正后的相关复测结果见上文，不用覆盖率通过替代测试结果。
