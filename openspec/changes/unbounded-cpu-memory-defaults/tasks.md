@@ -4,3 +4,4 @@
 - [x] Add targeted normal, boundary, and failure-path tests for scheduling, telemetry, and runtime launch.
 - [x] Update the interface guide, operator docs, and project Skill reference.
 - [x] Run targeted backend/frontend checks and validate this OpenSpec change.
+- [x] 全量回归清理旧资源池上限断言：批次保留超过池默认值的 CPU/内存申请，边界有效值接受，非法数值或设备内存整批拒绝且不创建部分任务（test_case_resources.py，7 passed）。
