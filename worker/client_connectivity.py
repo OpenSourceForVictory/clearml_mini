@@ -10,12 +10,38 @@ from urllib.parse import urlsplit
 LOG = logging.getLogger('mini-eval-worker.connectivity')
 
 
+async def _transport(parts,port):
+    from runner.cs_contract import check_ip
+    addresses=await asyncio.get_running_loop().getaddrinfo(parts.hostname,port,type=socket.SOCK_STREAM)
+    if not addresses:raise socket.gaierror('no addresses')
+    # Pin validated numeric addresses; never resolve the host again when connecting.
+    for family,_,_,_,address in addresses:check_ip(address[0])
+    context=ssl.create_default_context() if parts.scheme=='wss' else None
+    last_error=None
+    for family,_,_,_,address in addresses:
+        try:
+            _,writer=await asyncio.open_connection(address[0],port,family=family,
+                ssl=context,server_hostname=parts.hostname if context else None)
+        except OSError as exc:
+            last_error=exc
+            continue
+        try:
+            writer.close()
+            await writer.wait_closed()
+        finally:
+            writer.close()
+        return ('TLS' if context else 'TCP'),'-'
+    raise last_error
+
+
 async def _probe(endpoint,timeout):
     import aiohttp
     from async_timeout import timeout as deadline
     from runner.cs_contract import endpoint_parts
     parts,port=endpoint_parts(endpoint)
     async with deadline(timeout):
+        if parts.scheme in ('ws','wss'):
+            return await _transport(parts,port)
         class Resolver(aiohttp.AsyncResolver):
             async def resolve(self,*args,**kwargs):
                 result=await super().resolve(*args,**kwargs)
@@ -28,22 +54,9 @@ async def _probe(endpoint,timeout):
         trace=aiohttp.TraceConfig();trace.on_request_redirect.append(redirect)
         try:
             async with aiohttp.ClientSession(connector=connector,trust_env=False,trace_configs=[trace],timeout=aiohttp.ClientTimeout(total=timeout)) as session:
-                if parts.scheme in ('ws','wss') and parts.path not in ('','/'):
-                    try:
-                        async with session.ws_connect(endpoint,max_msg_size=65536,timeout=aiohttp.ClientWSTimeout(ws_close=.1)):
-                            status=101
-                    except aiohttp.WSServerHandshakeError as exc:
-                        # An authentication challenge proves reachability. The business
-                        # program owns its own credentials, not the Worker.
-                        if exc.status not in (401,403):raise
-                        status=exc.status
-                    return "WEBSOCKET",status
-                else:
-                    # Any HTTP response proves transport reachability, without making
-                    # assumptions about a business root path or credentials.
-                    transport_url=parts._replace(scheme={'ws':'http','wss':'https'}.get(parts.scheme,parts.scheme)).geturl()
-                    async with session.head(transport_url,allow_redirects=False) as response:
-                        return "HEAD",response.status
+                # HTTP responses, including 405, prove transport reachability.
+                async with session.head(endpoint,allow_redirects=False) as response:
+                    return "HEAD",response.status
         finally:
             await connector.close();await resolver.close()
 
@@ -66,7 +79,7 @@ def target(endpoint):
 def method_for(endpoint):
     try:
         parts=urlsplit(endpoint)
-        return 'WEBSOCKET' if parts.scheme in ('ws','wss') and parts.path not in ('','/') else 'HEAD'
+        return {'ws':'TCP','wss':'TLS'}.get(parts.scheme,'HEAD')
     except (ValueError,TypeError):
         return 'UNKNOWN'
 
@@ -79,6 +92,7 @@ def diagnosis(exc):
     elif isinstance(cause,socket.gaierror) or name=='ClientConnectorDNSError':reason='dns'
     elif isinstance(cause,ConnectionRefusedError):reason='connection_refused'
     elif name=='WSServerHandshakeError':reason='websocket_handshake'
+    elif name=='ClientResponseError':reason='http_response'
     elif isinstance(exc,ValueError):reason='invalid_endpoint'
     elif isinstance(exc,ImportError):reason='dependency'
     elif isinstance(exc,OSError) or name.startswith(('ClientConnection','ServerDisconnected')):reason='connection_error'

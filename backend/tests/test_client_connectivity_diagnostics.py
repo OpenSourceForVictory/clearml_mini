@@ -4,7 +4,7 @@ import socket
 import ssl
 
 import pytest
-from aiohttp import web, WSServerHandshakeError
+from aiohttp import web, WSServerHandshakeError, ClientResponseError
 from worker import client_connectivity as guard
 
 
@@ -22,7 +22,7 @@ def test_head_405_logged_and_proxy_ignored(monkeypatch, caplog):
         site = web.TCPSite(runner, '127.0.0.1', 0); await site.start()
         port = site._server.sockets[0].getsockname()[1]
         try:
-            await guard.check(f'ws://127.0.0.1:{port}/')
+            await guard.check(f'http://127.0.0.1:{port}/')
         finally:
             await runner.cleanup()
     asyncio.run(run())
@@ -38,6 +38,7 @@ def test_head_405_logged_and_proxy_ignored(monkeypatch, caplog):
     (socket.gaierror(-2, 'secret'), 'dns'),
     (ssl.SSLError('secret'), 'tls'),
     (WSServerHandshakeError(None, (), status=405, message='secret'), 'websocket_handshake'),
+    (ClientResponseError(None, (), status=400, message='secret'), 'http_response'),
     (ValueError('secret'), 'invalid_endpoint'),
     (ImportError('secret'), 'dependency'),
     (OSError('secret'), 'connection_error'),

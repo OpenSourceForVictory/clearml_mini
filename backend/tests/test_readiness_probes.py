@@ -103,14 +103,15 @@ def test_tls_ca_and_invalid_certificate(tmp_path):
     asyncio.run(run())
 
 
-def test_client_guard_auth_challenge_and_wrong_protocol(monkeypatch):
+def test_client_guard_transport_independent_of_business_protocol(monkeypatch):
     monkeypatch.setattr("runner.cs_contract.check_ip",lambda host:None)
     from worker.client_connectivity import check
     async def run(port):
         await check(f'http://127.0.0.1:{port}/http')
         await check(f'ws://127.0.0.1:{port}/echo')
         await check(f'ws://127.0.0.1:{port}/auth')
-        with pytest.raises(Exception):await check(f'ws://127.0.0.1:{port}/http')
+        # Transport reachability is independent of business handshake/path.
+        await check(f'ws://127.0.0.1:{port}/http')
     asyncio.run(with_server(run))
 
 
