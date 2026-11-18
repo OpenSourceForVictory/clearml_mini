@@ -147,14 +147,16 @@ def test_docker_entry_does_not_use_host_episode_adapter(tmp_path):
     assert events==[]
 
 
-def test_host_command_template_accepts_multiple_episodes_but_docker_does_not(env):
+@pytest.mark.parametrize('policy',['stop','continue'])
+def test_host_command_template_accepts_multiple_episodes_but_docker_does_not(env,policy):
     _,client,headers=env
     host={'name':'host-repeat','version':'1','image':'','execution_mode':'host',
           'task_type':'command','command':['/bin/true'],
-          'host_runtime':{'environment_name':'approved','episode_launch':'per_episode'}}
+          'host_runtime':{'environment_name':'approved','episode_launch':'per_episode','episode_error_policy':policy}}
     response=client.post('/api/v1/admin/client-templates',headers=headers['admin'],json=host)
     assert response.status_code==201,response.text
     assert response.json()['episode_reporting'] is True
+    assert response.json()['host_runtime'].get('episode_error_policy','stop')==policy
     body={'title':'repeat','benchmark':'cs-client','model_ref':'command','episodes':3,'pool_id':'mock',
           'client':{'template_id':response.json()['id'],'service_mode':'none','task_name':'repeat'}}
     accepted=client.post('/api/v1/jobs',headers=headers['alice'],json=body)
@@ -205,3 +207,79 @@ def test_api_requires_all_host_command_episode_records_before_completion(env):
     assert client.post(base+'/complete',headers=token,json={'status':'SUCCEEDED'}).status_code==200
     detail=client.get('/api/v1/jobs/'+job_id,headers=headers['alice']).json()
     assert detail['status']=='SUCCEEDED' and detail['attempts'][0]['metrics'] is None
+
+
+@pytest.mark.parametrize('behavior',['exit','missing','invalid'])
+@pytest.mark.parametrize('failed_episode',[1,3])
+def test_continue_direct_records_errors_and_attempts_all(tmp_path,behavior,failed_episode):
+    script=tmp_path/'business.py'
+    failure={'exit':'sys.exit(1)','missing':'sys.exit(0)','invalid':'print(json.dumps({"final":{}}));sys.exit(0)'}[behavior]
+    script.write_text('import os,sys,json\ni=int(os.environ["MINI_EVAL_EPISODE_ID"])\n'
+                      +f'if i=={failed_episode}: {failure}\n'
+                      +'print(json.dumps({"final":{"episode_count":1,"success_rate":1,"runtime":0.01}}))\n')
+    result,events,_,_=client(tmp_path,script,template_extra={'host_runtime':{'episode_launch':'per_episode','episode_error_policy':'continue'}})
+    assert result.returncode!=0
+    ends=[e for e in events if e['status']!='STARTED']
+    assert [e['episode_id'] for e in ends]==[1,2,3]
+    assert ends[failed_episode-1]['status']=='ERROR'
+    assert ends[failed_episode-1]['exit_code']==(1 if behavior=='exit' else 0)
+    assert sum(e['status']=='COMPLETED' for e in ends)==2
+    assert '1 of 3 business episodes' in result.stderr
+
+
+@pytest.mark.parametrize('integration',['ordinary','sdk-command'])
+def test_continue_ordinary_and_sdk_commands(tmp_path,integration):
+    script=tmp_path/'business.py'
+    script.write_text('import os,sys,json\nfrom pathlib import Path\n'
+                      'i=int(os.environ["MINI_EVAL_EPISODE_ID"])\n'
+                      'if i==1: sys.exit(1)\n'
+                      'Path(os.environ["MINI_EVAL_RESULT"]).write_text(json.dumps({"success":True}))\n')
+    result,events,_,_=client(tmp_path,script,ordinary=integration=='ordinary',template_extra={
+        'integration_mode':'direct' if integration=='ordinary' else 'sdk-command',
+        'host_runtime':{'episode_launch':'per_episode','episode_error_policy':'continue'}})
+    assert result.returncode!=0
+    assert [e['status'] for e in events]==['STARTED','ERROR','STARTED','COMPLETED','STARTED','COMPLETED']
+    assert [e['exit_code'] for e in events if e['status']!='STARTED']==[1,0,0]
+
+
+def test_episode_policy_validation_and_old_worker_gate():
+    from runner.template_contract import host_config
+    from backend.app.scheduling import runtime_mismatch
+    base={'environment_name':'python','episode_launch':'per_episode'}
+    assert host_config(base).get('episode_error_policy','stop')=='stop'
+    assert 'episode_error_policy' not in host_config({**base,'episode_error_policy':'stop'})
+    assert host_config({**base,'episode_error_policy':'continue'})['episode_error_policy']=='continue'
+    for bad in ({**base,'episode_error_policy':'ignore'}, {'environment_name':'python','episode_error_policy':'continue'}):
+        with pytest.raises(ValueError):host_config(bad)
+    job=SimpleNamespace(benchmark='cs-client',client_spec={'template':{'execution_mode':'host','host_runtime':{**base,'episode_error_policy':'continue'}}})
+    assert '协议 17' in runtime_mismatch(SimpleNamespace(protocol_version=16),job)
+    from backend.app.host_environments import blockers as host_blockers
+    from backend.app.image_runtime import blockers as image_blockers
+    for check in (host_blockers,image_blockers):
+        assert '协议 17' in check(None,SimpleNamespace(protocol_version=16),job.client_spec,None)[0]
+    assert runtime_mismatch(SimpleNamespace(protocol_version=17,execution_modes=['host']),job) is None
+
+
+def test_continue_does_not_swallow_setup_or_cancellation(tmp_path):
+    from runner.sdk import EvaluationClient,run
+    class Failing(EvaluationClient):
+        calls=0
+        def setup(self,context):raise RuntimeError('setup failed')
+        def run_episode(self,*args):self.calls+=1;raise KeyboardInterrupt()
+    config={'episodes':3,'seed':1,'template':{'execution_mode':'host','host_runtime':{'episode_launch':'per_episode','episode_error_policy':'continue'}}}
+    instance=Failing()
+    with pytest.raises(RuntimeError,match='setup failed'):run(instance,config,tmp_path)
+    assert instance.calls==0
+    instance.setup=lambda context:None
+    with pytest.raises(KeyboardInterrupt):run(instance,config,tmp_path)
+    assert instance.calls==1
+
+
+def test_continue_all_episodes_error_without_success_final(tmp_path):
+    script=tmp_path/'fail.py';script.write_text('raise SystemExit(1)')
+    result,events,_,_=client(tmp_path,script,ordinary=True,template_extra={
+        'host_runtime':{'episode_launch':'per_episode','episode_error_policy':'continue'}})
+    assert result.returncode!=0
+    assert [e['episode_id'] for e in events if e['status']=='ERROR']==[1,2,3]
+    assert '3 of 3 business episodes' in result.stderr
+    assert '"final"' not in result.stdout

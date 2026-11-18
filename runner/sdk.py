@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import traceback
 
 EVENT_PREFIX = 'MINI_EVAL_EVENT '
 
@@ -88,6 +89,12 @@ def run(client, config, output_dir=None):
     context.output_dir.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     successes = 0
+    errors = 0
+    template = config.get('template', {})
+    host = template.get('host_runtime') or {}
+    continue_errors = (template.get('execution_mode') == 'host'
+                       and host.get('episode_launch') == 'per_episode'
+                       and host.get('episode_error_policy') == 'continue')
     try:
         client.setup(context)
         for i in range(1, config['episodes'] + 1):
@@ -109,9 +116,13 @@ def run(client, config, output_dir=None):
                 # User exception details go to stderr; progress does not expose remote payloads.
                 emit({**base, 'status': 'ERROR', 'error': 'simulation episode raised an exception',
                       **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
-                raise
+                if not continue_errors:raise
+                errors += 1
+                traceback.print_exc(file=sys.stderr)
     finally:
         client.teardown()
+    if errors:
+        raise RuntimeError(f'{errors} of {config["episodes"]} business episodes had execution errors; remaining episodes were attempted')
     metrics = {'success_rate': successes/config['episodes'], 'episode_count': config['episodes'],
                'runtime': time.monotonic()-started}
     print(json.dumps({'final': metrics}), flush=True)

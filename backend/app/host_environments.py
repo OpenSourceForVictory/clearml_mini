@@ -50,6 +50,8 @@ def blockers(worker,slot,spec,at):
     template=(spec or {}).get('template',{})
     if template.get('execution_mode','docker')!='host':return []
     settings=template.get('host_runtime') or {}
+    if slot.protocol_version<17 and settings.get('episode_error_policy')=='continue':
+        return ['回合出错后继续需要 Worker 协议 17，请升级节点 Worker']
     if slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
         return ['宿主机登录环境与逐回合启动需要 Worker 协议 15，请升级节点 Worker']
     if 'command_mode' in template.get('host_runtime',{}) and slot.protocol_version<14:return ['通用命令需要 Worker 协议 14，请升级节点 Worker']

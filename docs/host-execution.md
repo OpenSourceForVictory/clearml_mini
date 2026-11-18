@@ -117,3 +117,23 @@ Docker 的对应配置与验证见 [通用命令指南](generic-commands.md)。
 启动前首次执行心跳收到 HTTP 503 时，Worker 0.18.1 同样在原租约内等待重试；收到有效响应并处理取消后才创建或恢复业务单元。重试不会自行延长租约，停止或租约到期禁止启动，401 等其他拒绝仍按原流程处理。
 
 客户端启动前连通性诊断：更新客户端 Worker 后，journal 中 `client connectivity passed/failed` 记录目标 origin（协议、主机、端口）、检查耗时、超时上限，成功记录方式（HEAD/TCP/TLS）与 HTTP 状态（TCP/TLS 为 -），失败记录异常类型和原因分类；任务错误保留 `client_service_unreachable` 并附带分类（timeout、dns、connection_refused、tls、http_response 等）。不记录路径、查询、凭据、响应正文或原始异常文本。HTTP(S) HEAD 收到 405 仍判定可达。WS 所有路径仅检查 TCP，WSS 检查 TCP/TLS 并使用系统默认信任校验证书；不再发送 HEAD 或 WebSocket 握手，不验证路径、业务认证、子协议或模型就绪。DNS 结果逐项校验并固定数值地址后连接；业务是否就绪仍以服务端就绪检查为准。此修复针对 WS 服务拒绝 HEAD 导致 unsupported http method: HEAD / ClientResponseError 400 的误判。默认 3 秒、不读取环境代理不变。查看客户端 `journalctl -u 'mini-eval-worker-*' --since '10 minutes ago'` 并对照失败时间。无需数据库迁移；仅更新平台 API 不会更新已纳管节点的 Worker。
+
+
+## 回合出错后的处理
+
+在管理设置 → 运行模板管理 → 客户端模板，复制新版本，选择宿主机执行和“每回合启动一次业务程序”，设置“回合出错后的处理”：
+
+- **立即停止（默认）**：进程非零退出、缺少协议结果或结果非法时，记录 ERROR 并停止后续回合。旧模板保持此行为。
+- **记录错误，继续后续回合**：例如3回合中第一回合退出1，记录该回合ERROR/退出码1，仍启动第二、第三回合。有任一执行错误时，任务最终仍为FAILED，不输出成功final；每回合退出码与任务整体退出码是不同信息。
+
+正常进程输出有效协议结果 `success=false` 属于业务未成功，会记录 COMPLETED/业务失败并继续，不属于上述执行错误。普通命令按退出码判定；直接协议缺少结果即使退出0也记录ERROR；SDK命令仍要求合法的MINI_EVAL_RESULT。
+
+API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在保存时规范化为省略字段，避免旧Worker拒绝未知字段。continue仅用于宿主机per_episode客户端，覆盖普通命令、直接协议和SDK每回合命令。切回整个任务方式时保存stop；Docker和服务端生命周期不变。模板发布后需要用新版本重新提交，已有任务快照不会被修改。
+
+初始化失败、取消、租约失效、总执行超时仍终止任务；continue不会重试错误回合，也不会自动修复共享服务状态。需要API、前端和Worker0.20.0（协议17），旧Worker被预检/调度/领取拦截。无需数据库迁移。
+
+验证采用本机Python子进程（退出码1、缺少/非法结果、后续正常回合）、SDK/API回合记录及浏览器模板编辑；不代表真实GPU/NPU模型验收。按要求运行专项测试，未运行全量覆盖率门槛检查，前端未插桩。
+
+本次验证：宿主机/SDK/回合记录专项67项通过；新增补充场景13项通过；策略规范化与旧Worker诊断复查3项通过（以上存在用例重叠，不合计）。保留Starlette弃用提示；前端构建保留大分块提示。
+
+模板界面18项通过（包含策略复制和切换），TypeScript类型检查、前端构建和OpenSpec strict校验通过。

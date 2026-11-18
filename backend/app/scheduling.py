@@ -102,6 +102,8 @@ def runtime_mismatch(slot, job):
     if slot.protocol_version<16 and ((job.client_spec or {}).get('timeout_seconds')==0 or resources.get('cpu_unlimited') or resources.get('memory_unlimited')):
         return f'{label}的不限执行时长或CPU/内存上限需要 Worker 协议 16（当前 {slot.protocol_version}）'
     settings=template.get('host_runtime') or template.get('runtime') or {}
+    if mode=='host' and settings.get('episode_error_policy')=='continue' and slot.protocol_version<17:
+        return f'{label}的回合出错后继续需要 Worker 协议 17（当前 {slot.protocol_version}）'
     if mode=='host' and slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
         return f'{label}的登录环境或逐回合启动需要 Worker 协议 15（当前 {slot.protocol_version}）'
     if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):

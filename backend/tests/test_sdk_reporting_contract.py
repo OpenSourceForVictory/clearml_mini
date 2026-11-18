@@ -118,3 +118,18 @@ def test_torn_event_journal_waits_for_full_line_and_ack(tmp_path):
     worker.send_episode_journal(execution)
     assert calls == [start(),start()]
     assert worker.state['episode_file_offset'] == len(data)+1
+
+
+def test_error_then_later_completed_episodes_remain_visible_on_failed_task(env):
+    c,token,base,view,_=reporting(env,3)
+    for i in (1,2,3):
+        assert c.post(base+'/episodes',headers=token,json=start(i)).status_code==200
+        result=({**start(i),'status':'ERROR','error':'business episode failed','exit_code':1}
+                if i==1 else {**end(i,True),'exit_code':0})
+        assert c.post(base+'/episodes',headers=token,json=result).status_code==200
+    response=c.post(base+'/complete',headers=token,json={'status':'FAILED','error':'1 of 3 episodes had execution errors','exit_code':2})
+    assert response.status_code==200,response.text
+    detail=c.get(view,headers=env[2]['alice']).json()
+    assert detail['run_status']=='FAILED'
+    assert detail['progress']['errors']==1 and detail['progress']['completed']==2
+    assert [item['result']['exit_code'] for item in detail['items']]==[1,0,0]

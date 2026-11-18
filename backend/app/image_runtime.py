@@ -86,6 +86,8 @@ def blockers(worker, slot, spec, at):
     if slot.protocol_version<12 and any(b.get('source')=='platform.listen.health_port' for b in template.get('platform_bindings',[])):
         return ['健康端口映射需要 Worker v12，请升级目标节点']
     settings=template.get('host_runtime') or template.get('runtime') or {}
+    if template.get('execution_mode')=='host' and settings.get('episode_error_policy')=='continue' and slot.protocol_version<17:
+        return ['回合出错后继续需要 Worker 协议 17，请升级节点 Worker']
     if template.get('execution_mode')=='host' and slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
         return ['宿主机登录环境与逐回合启动需要 Worker 协议 15，请升级节点 Worker']
     if slot.protocol_version<14 and ('command_mode' in settings or (template.get('execution_mode')!='host' and ('working_directory' in settings or settings.get('interpreter','python3') not in ('python','python3')))):

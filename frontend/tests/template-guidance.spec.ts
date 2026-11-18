@@ -1,10 +1,10 @@
 import {test,expect,Page} from '@playwright/test';
 const template={id:'existing',name:'demo',version:'1',enabled:true,image:'demo:1',execution_mode:'docker',integration_mode:'sdk-command',command:['python3','/app/episode.py'],protocols:['http'],episode_reporting:true,endpoint_exclusive:true,platform_bindings:[{source:'task.task_name',target:'argv',name:'--task'}],parameter_schema:{version:1,fields:{scene:{type:'string',default:'room',overridable:true,binding:{target:'env',name:'SCENE'}}}},runtime:{environment:{LOG_LEVEL:'info'},overridable_env:[],assets:{dataset:'/datasets'},mounts:{shared:{source:'directories:shared',target:'/shared',read_only:true,required:true}}}};
-async function setup(page:Page,fail=false){
+async function setup(page:Page,fail=false,clientTemplate:any=template){
  const writes:any[]=[];await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
  if(path==='auth/me')data={username:'admin',role:'admin'};
- if(path==='client-templates')data=[template];
+ if(path==='client-templates')data=[clientTemplate];
  if(path==='admin/server-templates')data=[{...template,id:'server',name:'server',execution_mode:'host',image:'',integration_mode:'direct',runtime:null,host_runtime:{environment_name:'demo',assets:['dataset'],environment:{},overridable_env:[]},port:8000,protocol:'http',health_type:'http',health_path:'/healthz',startup_timeout:120}];
  if(route.request().method()!=='GET'){writes.push({path,body:route.request().postDataJSON()});if(fail){await route.fulfill({status:400,json:{detail:'invalid example'}});return}data={id:'new',...route.request().postDataJSON()}}
  await route.fulfill({json:data})});
@@ -142,4 +142,17 @@ for(const target of ['argv','env'])test(`hyphenated business names and ${target}
  await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
  expect(writes[0].body.parameter_schema.fields['task-config'].binding).toMatchObject({target,name:target==='argv'?'--task-config':'task-config'});
  expect(writes[0].body.runtime.environment).toEqual({'control-mode':'eef'});
+});
+
+
+for(const launch of ['per_episode','whole_task'])test(`host episode error policy copy and launch switch ${launch}`,async({page})=>{
+ const source={...template,execution_mode:'host',image:'',runtime:null,host_runtime:{environment_name:'demo',episode_launch:'per_episode',episode_error_policy:'continue',environment:{},assets:[],overridable_env:[]}};
+ const writes=await setup(page,false,source);
+ await page.getByRole('button',{name:'复制新版本',exact:true}).click();await page.getByLabel('版本',{exact:true}).fill('2');
+ await expect(page.getByLabel('回合出错后的处理',{exact:true})).toHaveValue('continue');
+ await page.getByLabel('客户端回合启动',{exact:true}).selectOption(launch);
+ if(launch==='whole_task')await expect(page.getByLabel('回合出错后的处理',{exact:true})).toHaveCount(0);
+ else{await page.getByLabel('回合出错后的处理',{exact:true}).selectOption('stop');await page.getByLabel('回合出错后的处理',{exact:true}).selectOption('continue');}
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.host_runtime).toMatchObject({episode_launch:launch,episode_error_policy:launch==='per_episode'?'continue':'stop'});
 });

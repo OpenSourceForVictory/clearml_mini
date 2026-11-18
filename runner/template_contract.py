@@ -4,7 +4,7 @@ from .image_runtime import environment, NAME, placeholders
 
 
 def host_config(value):
-    if not isinstance(value, dict) or set(value) - {'environment_name','environment','overridable_env','assets','working_directory','command_mode','environment_source','episode_launch'}:
+    if not isinstance(value, dict) or set(value) - {'environment_name','environment','overridable_env','assets','working_directory','command_mode','environment_source','episode_launch','episode_error_policy'}:
         raise ValueError('invalid host runtime fields')
     mode=value.get('command_mode','legacy')
     if mode not in ('legacy','exec'):raise ValueError('invalid command_mode')
@@ -12,6 +12,9 @@ def host_config(value):
     if source not in ('explicit','login'):raise ValueError('invalid environment_source')
     episode_launch=value.get('episode_launch','whole_task')
     if episode_launch not in ('whole_task','per_episode'):raise ValueError('invalid episode_launch')
+    policy=value.get('episode_error_policy','stop')
+    if policy not in ('stop','continue'):raise ValueError('invalid episode_error_policy')
+    if policy=='continue' and episode_launch!='per_episode':raise ValueError('continue requires host per_episode launch')
     name=value.get('environment_name')
     if not isinstance(name,str) or not NAME.fullmatch(name): raise ValueError('host environment_name is required')
     env=environment(value.get('environment',{}));overrides=value.get('overridable_env',[]);assets=value.get('assets',[])
@@ -24,7 +27,7 @@ def host_config(value):
         from pathlib import PurePosixPath
         if not isinstance(directory,str) or not directory.strip() or len(directory)>2000 or any(c in directory for c in ('\x00','\n','\r')) or '..' in PurePosixPath(directory).parts or '${' in directory:
             raise ValueError('invalid host working_directory')
-    return {**({'command_mode':mode} if 'command_mode' in value else {}),**({'environment_source':source} if 'environment_source' in value else {}),**({'episode_launch':episode_launch} if 'episode_launch' in value else {}),**({'working_directory':directory} if directory is not None else {}),'environment_name':name,'environment':env,'overridable_env':list(dict.fromkeys(overrides)),'assets':list(dict.fromkeys(assets))}
+    return {**({'episode_error_policy':policy} if policy=='continue' else {}),**({'command_mode':mode} if 'command_mode' in value else {}),**({'environment_source':source} if 'environment_source' in value else {}),**({'episode_launch':episode_launch} if 'episode_launch' in value else {}),**({'working_directory':directory} if directory is not None else {}),'environment_name':name,'environment':env,'overridable_env':list(dict.fromkeys(overrides)),'assets':list(dict.fromkeys(assets))}
 
 
 def command(value):
