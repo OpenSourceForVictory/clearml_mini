@@ -126,3 +126,20 @@ for(const width of [1440,390])test(`template detail has independent view and res
  await expect(page.getByRole('button',{name:'返回模板列表'})).toBeInViewport();
  await expect(page.getByRole('region',{name:'模板配置详情'})).toContainText('server / 1');
 });
+
+for(const target of ['argv','env'])test(`hyphenated business names and ${target} mappings preserve names`,async({page})=>{
+ const writes=await setup(page);await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await page.getByLabel('模板名称',{exact:true}).fill('hyphen');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('demo:1');
+ await page.getByLabel('启用类型化业务参数').check();await page.getByRole('button',{name:'添加业务字段'}).click();
+ await page.getByLabel('字段名称',{exact:true}).fill('task-config');
+ await page.getByLabel('选择要传递的参数').selectOption({label:'task-config'});await page.getByRole('button',{name:'添加参数映射'}).click();
+ const field=page.getByRole('group',{name:/^业务字段 1/});await field.getByLabel('传递方式').selectOption(target);
+ await field.getByLabel('绑定名称').fill(target==='argv'?'--task-config':'task-config');
+ await page.getByRole('button',{name:'添加环境变量',exact:true}).click();
+ await page.getByLabel('变量名称 1',{exact:true}).fill('control-mode');await page.getByLabel('变量值 1',{exact:true}).fill('eef');
+ await expect(page.getByText('变量名支持中划线',{exact:false})).toBeVisible();
+ if(target==='env'){await field.getByLabel('绑定名称').fill('ASCEND_private-key');await page.getByRole('button',{name:'注册此版本'}).click();await expect(page.getByRole('alert')).toContainText('平台保留');expect(writes).toHaveLength(0);await field.getByLabel('绑定名称').fill('task-config');}
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.parameter_schema.fields['task-config'].binding).toMatchObject({target,name:target==='argv'?'--task-config':'task-config'});
+ expect(writes[0].body.runtime.environment).toEqual({'control-mode':'eef'});
+});

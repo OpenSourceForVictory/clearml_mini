@@ -12,6 +12,7 @@ from .image_runtime import environment
 
 VERSION = 1
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
+BUSINESS_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_-]{0,63}$')
 TYPES = {'string', 'integer', 'number', 'boolean', 'enum', 'object', 'array'}
 RESERVED = {'task_name', 'episodes', 'seed', 'endpoint', 'execution_id', 'input_path',
             'work_dir', 'output_dir', 'episode_id', 'episode_seed', 'result_path', 'port', 'health_port', 'bind_host',
@@ -87,7 +88,7 @@ def validate_type(spec, path, depth=0):
         fields = spec.get('properties')
         if not isinstance(fields, dict) or len(fields)>64: fail(path, 'object requires bounded properties')
         for name, child in fields.items():
-            if not isinstance(name,str) or not NAME.fullmatch(name): fail(path, 'invalid property name')
+            if not isinstance(name,str) or not BUSINESS_NAME.fullmatch(name): fail(path, 'invalid property name')
             validate_type(child, path+'.'+name, depth+1)
 
 
@@ -100,7 +101,7 @@ def validate_schema(schema):
     targets = set()
     metadata = {'label','description','default','overridable','binding'}
     for name, field in fields.items():
-        if not isinstance(name,str) or not NAME.fullmatch(name) or name in RESERVED or name.startswith('MINI_EVAL_'):
+        if not isinstance(name,str) or not BUSINESS_NAME.fullmatch(name) or name in RESERVED or name.startswith('MINI_EVAL_'):
             raise ValueError('invalid or platform-reserved parameter name')
         if not isinstance(field, dict): fail(name, 'field must be an object')
         spec = {k:v for k,v in field.items() if k not in metadata}

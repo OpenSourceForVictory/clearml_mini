@@ -21,7 +21,7 @@ export function parameterSchema(draft:ParameterDraft):Record<string,any>|null{
  const fields:Record<string,any>={};const bindings=new Set<string>();
  for(const row of draft.rows){
   const name=row.name.trim();
-  if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(name)||reserved.has(name)||name.startsWith('MINI_EVAL_'))throw new Error(`业务参数 ${name||'（未命名）'}：名称非法或为平台保留字段`);
+  if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)||reserved.has(name)||name.startsWith('MINI_EVAL_'))throw new Error(`业务参数 ${name||'（未命名）'}：名称非法或为平台保留字段`);
   if(Object.hasOwn(fields,name))throw new Error(`业务参数 ${name}：名称重复`);
   const d=structuredClone(row.definition);
   if('default' in d){
@@ -42,7 +42,7 @@ export function parameterSchema(draft:ParameterDraft):Record<string,any>|null{
   if(binding&&binding.target!=='input'){
    if(!binding.name)throw new Error(`${name}：请填写绑定名称`);
    if(binding.target==='argv'&&!/^--[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(binding.name))throw new Error(`${name}：命令行绑定须使用 --name 形式`);
-   if(binding.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(binding.name)||/^(MINI_EVAL_|NVIDIA_|ASCEND_)/.test(binding.name)||['CUDA_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(binding.name)))throw new Error(`${name}：环境变量名称非法或为平台保留变量`);
+   if(binding.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(binding.name)||/^(MINI_EVAL_|NVIDIA_|ASCEND_)/.test(binding.name)||['CUDA_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(binding.name)))throw new Error(`${name}：环境变量名称非法或为平台保留变量`);
    const key=binding.target+':'+binding.name;if(bindings.has(key))throw new Error(`${name}：绑定目标重复`);bindings.add(key);
   }
   Object.defineProperty(fields,name,{value:d,enumerable:true,writable:true,configurable:true});
@@ -56,7 +56,7 @@ export function ParameterEditor({value,onChange}:{value:ParameterDraft;onChange:
  return <div className="parameter-editor">
  <label className="check"><input type="checkbox" checked={value.enabled} onChange={e=>onChange({...value,enabled:e.target.checked})}/>启用类型化业务参数</label>
  <p className="muted">模板定义字段，集合任务或服务部署填写具体值。运行时只允许覆盖明确开放的字段。评测任务名、回合数和种子沿用集合中的任务计划。</p>
- {value.enabled&&<><p className="hint">需要 Worker v8。未声明的业务参数会被拒绝；关闭此选项将恢复旧版自由 JSON 参数。更改字段类型会重置该字段的默认值、约束和绑定。</p>
+ {value.enabled&&<><p className="hint">业务参数名允许字母开头，后接字母、数字、下划线或中划线（最多 64 字符）；名称原样传递，task-config 与 task_config 不互换。需要使用支持此名称规则的新版 Worker/Runner。未声明的业务参数会被拒绝；关闭此选项将恢复旧版自由 JSON 参数。更改字段类型会重置该字段的默认值、约束和绑定。</p>
  {value.rows.map((row,index)=>{const d=row.definition,b=d.binding||{target:'input'};return <fieldset className="parameter-card" key={row.id}><legend>业务字段 {index+1}{row.name?` · ${row.name}`:''}</legend>
  <div className="row"><Field label="字段名称"><input value={row.name} onChange={e=>update(row.id,{name:e.target.value})}/></Field><Field label="显示名称"><input value={d.label||''} onChange={e=>optional(row,'label',e.target.value||undefined)}/></Field><Field label="参数类型"><select value={d.type} onChange={e=>{const type=e.target.value;update(row.id,{definition:{type,...(d.label?{label:d.label}:{}),...(d.description?{description:d.description}:{}),...(d.required?{required:true}:{}),...(d.overridable?{overridable:true}:{})},defaultText:'',choicesText:'[]',structureText:type==='array'?' {"type":"string"}':'{}'})}}>{types.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></Field></div>
  <Field label="参数说明"><input value={d.description||''} onChange={e=>optional(row,'description',e.target.value||undefined)}/></Field>

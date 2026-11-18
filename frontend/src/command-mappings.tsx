@@ -12,7 +12,7 @@ export function validateMappings(bindings:PlatformBinding[],parameters:Record<st
   if(b.target==='input')continue;
   const name=b.name||'';
   if(b.target==='argv'&&!/^--[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name))throw new Error('命令参数名须使用 --name 形式');
-  if(b.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)||/^(MINI_EVAL_|NVIDIA_|ASCEND_)/.test(name)||['CUDA_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(name)))throw new Error('环境变量名称非法或为平台保留变量');
+  if(b.target==='env'&&(!/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(name)||/^(MINI_EVAL_|NVIDIA_|ASCEND_)/.test(name)||['CUDA_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','PYTHONPATH','PYTHONHOME'].includes(name)))throw new Error('环境变量名称非法或为平台保留变量');
   const key=b.target+':'+name;
   if(used.has(key))throw new Error('参数映射目标重复：'+name);used.add(key);
   if(b.target==='argv'&&command.some(arg=>arg===name||arg.startsWith(name+'=')))throw new Error('基础命令已包含映射参数：'+name+'，请只保留一处');

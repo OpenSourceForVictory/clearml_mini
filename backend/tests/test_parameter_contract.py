@@ -93,3 +93,41 @@ def test_errors_do_not_echo_business_values():
     secret='private-token-not-for-errors'
     with pytest.raises(ValueError) as err:resolve_values(schema(),{'scene':'room','trials':secret})
     assert secret not in str(err.value) and 'trials' in str(err.value)
+
+@pytest.mark.parametrize('target,dest',[('argv','--task-config'),('env','task-config'),('env','TASK_CONFIG'),('input',None)])
+def test_hyphenated_business_parameters_reach_real_process(tmp_path,target,dest):
+    binding={'target':target,**({'name':dest} if dest else {})}
+    spec={'version':1,'fields':{'task-config':{'type':'string','default':'demo_clean','overridable':True,'binding':binding},
+                              'task_config':{'type':'string','default':'distinct'}}}
+    values=resolve_values(spec,{}, {'task-config':'demo clean;$(not-executed)'})
+    assert values=={'task-config':'demo clean;$(not-executed)','task_config':'distinct'}
+    command=[sys.executable,'-c','import os,sys,json;print(json.dumps([sys.argv[1:],dict(os.environ)]))']
+    argv,env=bind_values(spec,values,command)
+    import os
+    result=subprocess.run(argv,env={**os.environ,**env},capture_output=True,text=True,check=True,timeout=5)
+    args,environment=json.loads(result.stdout)
+    if target=='argv':assert args==['--task-config',values['task-config']]
+    if target=='env':assert environment[dest]==values['task-config']
+    if target=='input':assert args==[] and 'task-config' not in env
+
+def test_hyphenated_object_properties_and_name_boundaries():
+    spec={'version':1,'fields':{'task-config':{'type':'object','properties':{'control-mode':{'type':'string'}}}}}
+    assert resolve_values(spec,{'task-config':{'control-mode':'eef'}})=={'task-config':{'control-mode':'eef'}}
+    for name in ['a'+'-'*63,'task_config']:
+        validate_schema({'version':1,'fields':{name:{'type':'string'}}})
+    for name in ['-task','1task','task.config','task config','a'*65,'a\0b']:
+        with pytest.raises(ValueError):validate_schema({'version':1,'fields':{name:{'type':'string'}}})
+    from runner.parameter_contract import NAME
+    assert not NAME.fullmatch('asset-name')
+
+@pytest.mark.parametrize('name',['MINI_EVAL_foo-bar','ASCEND_foo-bar','CUDA_VISIBLE_DEVICES','bad=name','bad name','a\0b','-bad','a'*129])
+def test_hyphen_environment_still_rejects_reserved_or_invalid_names(name):
+    from runner.image_runtime import environment
+    with pytest.raises(ValueError):environment({name:'value'})
+
+def test_hyphen_environment_template_overrides_keep_exact_names():
+    from runner.template_contract import host_config
+    from runner.image_runtime import environment
+    assert environment({'task-config':'demo_clean','task_config':'other'})=={'task-config':'demo_clean','task_config':'other'}
+    config=host_config({'environment_name':'approved','environment':{'task-config':'demo_clean'},'overridable_env':['task-config']})
+    assert config['overridable_env']==['task-config']

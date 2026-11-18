@@ -6,7 +6,7 @@ WORK = '/tmp/mini-eval-work'
 OUTPUT = '/tmp/mini-eval-output'
 ADAPTER = '/tmp/mini-eval-runtime'
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
-ENV = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,127}$')
+ENV = re.compile(r'^[A-Za-z_][A-Za-z0-9_-]{0,127}$')
 TOKEN = re.compile(r'\$\{([^}]+)\}')
 
 

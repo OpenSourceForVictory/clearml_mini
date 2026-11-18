@@ -24,3 +24,5 @@ description: 查询、开发和维护当前 clearml_mini 平台的机器纳管�
 - 共享显存是预约与准入，不是硬显存隔离；不要承诺无限并发。
 - 平台分配端口、服务地址和路径；用户业务无需自行调度。WS 应用消息由业务定义。
 - 不在 Skill、指南、样例、Git 或日志中写入凭据，不输出 `.env`、私钥和私有登录文件。
+
+业务参数/环境变量中划线规则及 Shell 兼容边界见 [名称与传递说明](../../../docs/hyphenated-parameters.md)。共享契约 runner/parameter_contract.py 的 BUSINESS_NAME 与资产使用的 NAME 分开维护；环境校验在 runner/image_runtime.py，须同步前端三个编辑器，不自动将中划线改为下划线。

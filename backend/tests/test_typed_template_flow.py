@@ -119,3 +119,26 @@ def test_direct_entry_receives_business_arguments_and_environment(tmp_path, monk
     with pytest.raises(SystemExit) as exit:cs_entry.main()
     assert exit.value.code==0
     assert json.loads(result.read_text())=={'args':['--scene','direct room'],'difficulty':'2'}
+
+
+def test_hyphen_names_survive_api_batch_snapshot_and_override(env):
+    main,c,auth=env
+    spec={'version':1,'fields':{'task-config':{'type':'string','default':'demo_clean','overridable':True,
+          'binding':{'target':'env','name':'task-config'}}}}
+    r=c.post('/api/v1/admin/client-templates',headers=auth['admin'],json={
+        'name':'hyphen','version':'1','image':'approved:cs','command':['python3','business.py'],
+        'parameter_schema':spec,'runtime':{'environment':{'control-mode':'eef'},'overridable_env':['control-mode']}})
+    assert r.status_code==201,r.text
+    body=batch_body(r.json()['id'])
+    for case in body['cases']:case['parameters']={'task-config':'demo_clean'}
+    body['client']['parameter_overrides']={'task-config':'custom'}
+    body['client']['environment']={'control-mode':'joint'}
+    result=c.post('/api/v1/batches',headers=auth['alice'],json=body)
+    assert result.status_code==201,result.text
+    with main.SessionLocal() as s:
+        jobs=list(s.scalars(select(Job)))
+        assert len(jobs)==2
+        for job in jobs:
+            assert job.client_spec['parameters']=={'task-config':'custom'}
+            assert job.client_spec['environment']=={'control-mode':'joint'}
+            assert job.client_spec['template']['parameter_schema']==spec
