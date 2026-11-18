@@ -166,3 +166,5 @@ python -m examples.cosmos_robotwin.assets \
 [suite-robotwin2-full-eef-command.json](suite-robotwin2-full-eef-command.json) 使用项目内置固定版本的完整 50 任务清单，每任务 100 回合、种子 100000，共 5000 回合。每项 parameters 为 `{"task-config":"demo_clean","control-mode":"eef","state-source":"command"}`。在评测任务集合管理导入 JSON，选择客户端模板后校验并发布；尚未提交运行。
 
 此文件按用户模板约定使用连字符参数名，与本目录旧 Cosmos 示例模板的下划线参数名不同。客户端模板必须声明相同的业务参数名并映射到业务命令；若模板使用 `task_config` 等下划线名称，应先统一名称再导入使用。文件已通过平台集合规范化器校验，但未验证目标模板、资产、服务或真实评测；总执行时限在提交运行时单独设置。
+
+2026-11-18 官方清单复核：直接读取 [RoboTwin 固定版本 all_tasks.yml](https://raw.githubusercontent.com/RoboTwin-Platform/RoboTwin/ea8b21121ebb3cd201ff5b3fe361944ac94eda3f/env_cfg/eval/all_tasks.yml)，与上述 JSON 的 task_name 逐项比较，官方 50 项、文件 50 项，名称与顺序完全一致，无遗漏或额外任务。这确认的是该固定版本的完整任务清单，不代表跟随官方最新分支。JSON 包装为 Mini Eval 导入格式，eef/command 参数为用户指定，100 回合和种子 100000 沿用项目清单默认值，不宣称整份文件是官方默认评测配置。
