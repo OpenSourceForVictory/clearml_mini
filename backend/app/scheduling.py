@@ -316,6 +316,7 @@ def tick(factory, at=None):
                     break
             if not made_progress:
                 break
+        admitted += orchestration_scheduler.fill_desired_instances(s,at)
         state = s.get(SchedulerState, 'heartbeat')
         if not state:
             state = SchedulerState(key='heartbeat', value={})

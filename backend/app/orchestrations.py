@@ -22,6 +22,13 @@ class ServiceDefinition(BaseModel):
     slot_id:str|None=None
     mode:Literal['exclusive','shared']='shared'
     max_instances:int|None=Field(default=None,ge=1,le=20)
+    instance_count:int|None=Field(default=None,ge=1,le=20)
+
+    @model_validator(mode='after')
+    def count_mode(self):
+        if self.instance_count is not None and self.max_instances is not None:
+            raise ValueError('instance_count and legacy max_instances are mutually exclusive')
+        return self
     parameters:dict=Field(default_factory=dict)
     parameter_overrides:dict=Field(default_factory=dict)
     environment:dict[str,str]=Field(default_factory=dict)
@@ -78,7 +85,7 @@ def compile_submission(s,body,user):
         from .job_resources import resolve as resolve_resources,explicit
         resource,resource_sources=resolve_resources(server_pool,definition,('submission',explicit(item.resources)))
         definitions.append({**item.model_dump(exclude={'parameter_overrides','resources'}),'parameters':values,'template':definition,
-                            'resources':resource,'resource_sources':resource_sources,'max_instances':item.max_instances or (1 if item.mode=='shared' else min(body.max_concurrent,20))})
+                            'resources':resource,'resource_sources':resource_sources,'max_instances':item.instance_count or item.max_instances or (1 if item.mode=='shared' else min(body.max_concurrent,20))})
     keys={d['key'] for d in definitions}
     for spec in configs:
         spec['task_input_version']=1
@@ -160,7 +167,9 @@ def view(s,batch):
         planner=Planner(s,context.at)
         owner=s.get(User,batch.owner_id)
         for definition in orch.definition['services']:
-            if any(item.service_key==definition['key'] for item in instances):continue
+            related=[item for item in instances if item.service_key==definition['key']]
+            occupied=sum(not item.auto_stopped or services.held(s,item) for item in related)
+            if occupied >= (definition.get('instance_count') or 1):continue
             scheduling.append(diagnose_service(s,definition,owner,context,planner,batch))
     result['orchestration']={'stop_after_batch':orch.stop_after_batch,'services':[
         {**services.view(s,i),'service_key':i.service_key,'auto_stopped':i.auto_stopped}
@@ -176,7 +185,7 @@ def install(app,db,current):
         request,pool,cases,configs,definitions=compile_submission(s,body,user)
         from .preflight import inspect_batch
         result=inspect_batch(s,request,user,pool,cases,configs)
-        result['service_plan']=[{'key':d['key'],'template':d['template'],'mode':d['mode'],'pool_id':d['pool_id'],'resources':d['resources'],'resource_sources':d.get('resource_sources',{}),'address':'automatic','max_instances':d['max_instances']} for d in definitions]
+        result['service_plan']=[{'key':d['key'],'template':d['template'],'mode':d['mode'],'pool_id':d['pool_id'],'resources':d['resources'],'resource_sources':d.get('resource_sources',{}),'address':'automatic','max_instances':d['max_instances'],'instance_count':d.get('instance_count')} for d in definitions]
         result['effective_parameters']=[{'case_id':c.case_id,'parameters':spec['parameters'],'sources':spec.get('parameter_sources',{})} for c,spec in zip(cases,configs)]
         if definitions:
             from .orchestration_scheduler import Planner

@@ -80,7 +80,7 @@ CS 评测批次 → 评测集合运行提供五步向导：集合、客户端、
 `POST /api/v1/orchestrations` 使用同一请求体并要求 `Idempotency-Key`；同键同内容返回原批次，
 同键不同内容返回 409。`client.service_mode` 为 `external`、`managed` 或 `none`。
 托管模式的 `services` 数组每项包含 `key`、`template_id`、`pool_id`、`mode`、
-可选 `max_instances`、`parameters`、`parameter_overrides`、`environment`、`resources`。
+新提交使用 `instance_count`（1–20）表示目标服务实例数；兼容旧 `max_instances` 按需上限，二者互斥。其他可选项：`parameters`、`parameter_overrides`、`environment`、`resources`。
 外部模式使用 `client.endpoints`；无服务模式不填写地址。新集合使用 `new_suite`，与 `suite_id` / `cases` 互斥。
 
 调度器在现有 Run 账本中同时预留一个服务和一个客户端的预算；客户端等待当前服务执行的新鲜健康报告，

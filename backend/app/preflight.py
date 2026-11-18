@@ -128,7 +128,7 @@ class DiagnosticContext:
         if not pool or not pool.enabled: codes.append('pool_disabled')
         if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')
         if self.owners[owner.id] >= admission.seconds('MAX_ACTIVE_PER_USER', 2): codes.append('user_concurrency')
-        if batch and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
+        if batch and job.benchmark != 'inference-service' and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
         endpoint_states = endpoints.inspect(job.client_spec, endpoints.holdings(self.active),self.session)
         if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_not_ready')
         if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_dependency')

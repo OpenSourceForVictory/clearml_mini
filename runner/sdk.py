@@ -94,6 +94,7 @@ def run(client, config, output_dir=None):
             episode = Episode(i, episode_seed(config['seed'], i))
             base = {'episode_id': i, 'seed': episode.seed}
             emit({**base, 'status': 'STARTED'})
+            client.process_exit_code = None
             begin = time.monotonic()
             try:
                 result = client.run_episode(config, episode, context)
@@ -101,11 +102,13 @@ def run(client, config, output_dir=None):
                     raise TypeError('run_episode must return EpisodeResult')
                 emit({**base, 'status': 'COMPLETED', 'success': result.success,
                       'metrics': result.metrics, 'artifacts': result.artifacts,
-                      'runtime': time.monotonic()-begin})
+                      'runtime': time.monotonic()-begin,
+                      **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
                 successes += int(result.success)
             except Exception:
                 # User exception details go to stderr; progress does not expose remote payloads.
-                emit({**base, 'status': 'ERROR', 'error': 'simulation episode raised an exception'})
+                emit({**base, 'status': 'ERROR', 'error': 'simulation episode raised an exception',
+                      **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
                 raise
     finally:
         client.teardown()

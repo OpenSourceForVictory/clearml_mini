@@ -51,6 +51,7 @@ class HostEpisodeClient(EvaluationClient):
                 elif not line.startswith('MINI_EVAL_EVENT '):
                     print(line,end='',flush=True)
             code=process.wait()
+        self.process_exit_code = code
         if code:
             raise RuntimeError(f'business episode {episode.id} exited with code {code}')
         if self.ordinary:

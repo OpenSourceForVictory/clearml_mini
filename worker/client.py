@@ -367,6 +367,7 @@ class Worker:
         return self.state['offset'] >= len(output)
 
     def execute(self, task):
+        observed_exit_code = None
         execution = task['execution_id']
         if self.state is None:
             self.state = {'service_started_at': time.time(), 'host_approval': self.config.get('_host_approval', {}), 'runtime': self.runtime_snapshot, 'storage': self.storage_snapshot, 'task': task, 'offset': 0, 'sequence': 0, 'created': False, 'pending': None}
@@ -466,9 +467,11 @@ class Worker:
                     if reply['cancel'] and self.host_mode():
                         # systemd may unload a successfully stopped transient
                         # unit immediately. stop_container already verified exit.
-                        container = {'State': {'Running': False, 'ExitCode': 0}}
+                        container = {'State': {'Running': False, 'ExitCode': None}}
                     else:
                         raise RuntimeError('container disappeared')
+                if not container['State']['Running']:
+                    observed_exit_code = container['State'].get('ExitCode')
                 if self.host_mode(): output, err = HostBackend(self).logs()
                 else:
                     output = docker('logs', self.name(execution), timeout=5).stdout
@@ -512,8 +515,8 @@ class Worker:
                     command_task=(task.get('client_spec') or {}).get('template',{}).get('task_type')=='command'
                     if command_task:result=None
                     status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if not is_service(task) and code == 0 and (result or command_task) else 'FAILED')
-                    body = {'status': status, 'metrics': result if status == 'SUCCEEDED' else None,
-                            'error': None if status == 'SUCCEEDED' else (err[-900:] or f'runner exited with code {code}')}
+                    body = {'status': status, 'exit_code': code, 'metrics': result if status == 'SUCCEEDED' else None,
+                            'error': None if status == 'SUCCEEDED' else (err[-900:] or (f'missing protocol final result; runner exited with code {code}' if not command_task and not is_service(task) and code == 0 and not result else f'runner exited with code {code}'))}
                     if task.get('benchmark') == 'cs-client':
                         self.upload_artifacts(task, deadline)
                     self.api.post(f'worker/executions/{execution}/complete', body)
@@ -531,7 +534,7 @@ class Worker:
                 # through a failed completion, while retaining the journal on outages.
                 try:
                     self.api.post(f'worker/executions/{execution}/complete',
-                        {'status': 'FAILED', 'error': ('execution data rejected: '+str(exc))[:1000]})
+                        {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': ('execution data rejected: '+str(exc))[:1000]})
                 except APIError as failure:
                     if failure.status not in (404, 409):
                         raise
@@ -548,7 +551,7 @@ class Worker:
         except Exception as exc:
             self.stop_container(execution)
             try:
-                self.api.post(f'worker/executions/{execution}/complete', {'status': 'FAILED', 'error': str(exc)[:1000]})
+                self.api.post(f'worker/executions/{execution}/complete', {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': str(exc)[:1000]})
             except APIError as api_exc:
                 if api_exc.status not in (404, 409):
                     raise

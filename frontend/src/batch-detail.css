@@ -30,3 +30,9 @@
 .batch-detail pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
 .batch-detail [hidden]{display:none!important}
 @media(max-width:700px){.batch-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-detail-metrics>div{padding:12px}.batch-detail-toolbar{align-items:flex-start}.batch-detail-tabs button{padding:10px 12px}}
+
+.service-instance-table { overflow-x:auto; max-width:100%; }
+.service-instance-table table { min-width:760px; width:100%; }
+.service-instance-table td { vertical-align:top; overflow-wrap:anywhere; }
+.service-instance-table small { display:block; margin-top:4px; }
+.service-instance-table .logs { max-height:360px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }

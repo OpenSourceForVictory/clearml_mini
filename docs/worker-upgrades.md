@@ -71,3 +71,6 @@ sudo python3 scripts/install_worker_updater.py --config /absolute/path/updater.j
 本功能已部署，已在本机 GPU 和 29 NPU 节点验证托管升级。旧节点仍需先安装独立升级执行器，再由管理员逐台发起升级。
 
 Runner 没有独立版本号，随节点组件包更新宿主机代码；使用平台运行适配器的新容器会复制新版 Runner。旧模式使用镜像内置 Runner，必须另行重建镜像。组件包使用 Worker 软件版本作为标签，Agent 有独立版本号；不能要求三个组件版本字符串相同，应核对发布摘要与回连状态。当前按钮为“目标节点组件发布版本”和“排空并升级此机器”。
+
+
+退出码上报：Worker 0.18.2 保持协议 15，完成请求增加可选 exit_code，Runner 逐回合终态事件也可含实际业务子进程退出码。先部署迁移 x407a89 与 API，再升级节点，避免旧 API 拒绝新增事件字段；旧记录不回填。详情见 [批次监控](batch-monitoring.md)。容器内旧 Runner 需要按本页的注入/镜像更新方式更新。

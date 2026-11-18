@@ -88,6 +88,8 @@ def test_host_direct_stops_after_bad_episode(tmp_path,behavior):
     assert result.returncode!=0
     assert [e['status'] for e in events]==['STARTED','COMPLETED','STARTED','ERROR']
     assert not output.joinpath('episode-3').exists()
+    assert events[-1]['exit_code']==(7 if behavior=='exit' else 0)
+    assert events[1]['exit_code']==0
 
 
 def test_host_ordinary_command_repeats_without_business_result(tmp_path):

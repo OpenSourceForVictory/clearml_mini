@@ -54,7 +54,9 @@ class CommandClient(EvaluationClient):
         from .process_command import for_template
         cwd=task.get('_resolved_cwd') or (runtime or {}).get('working_directory') or context.work_dir
         argv=for_template(task['template'],argv,cwd,env)
-        subprocess.run(argv,env=env,cwd=cwd,check=True)
+        process = subprocess.run(argv,env=env,cwd=cwd,check=False)
+        self.process_exit_code = process.returncode
+        process.check_returncode()
         if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size>16384:
             raise ValueError('business command must write a regular result JSON (max 16 KiB)')
         with result_path.open() as f: result=json.load(f)

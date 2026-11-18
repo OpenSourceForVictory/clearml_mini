@@ -17,6 +17,7 @@ const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
 export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.MutableRefObject<Record<string,Filters>>;id:string;onBack:()=>void;onJob:(id:string)=>void}) {
   const [tab,setTab]=useState('tasks');
+  const [episodeRows,setEpisodeRows]=useState<Record<string,boolean>>({});
   const [showParameters,setShowParameters]=useState(false),[showServices,setShowServices]=useState(false);
   const {data:b,error}=usePoll<Monitor>('batches/'+id+'/monitor');
   const [status,setStatus]=useState(savedFilters.current[id]?.status||''),[reason,setReason]=useState(savedFilters.current[id]?.reason||''),[query,setQuery]=useState(savedFilters.current[id]?.query||''),[job,setJob]=useState('');
@@ -80,13 +81,13 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <button disabled={busy||!Object.keys(selected).length} onClick={()=>setSelected({})}>清空选择</button>
       {retryError&&<p role="alert" className="error">{retryError}</p>}
       {result&&<div role="status"><p>已补跑 {result.retried} 项，跳过 {result.skipped} 项。</p>{result.items.map(r=><p key={r.job_id}>{b.cases.find(c=>c.job_id===r.job_id)?.case_id}: {r.outcome==='retried'?`已创建尝试 ${r.attempt}`:r.message}</p>)}</div>}
-      <div className="batch-detail-table"><table><thead><tr><th>补跑</th><th>任务</th><th>状态</th><th>客户端分配位置</th><th>回合</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><tr key={c.job_id}>
+      <div className="batch-detail-table"><table><thead><tr><th>补跑</th><th>任务</th><th>状态</th><th>客户端分配位置</th><th>回合</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><React.Fragment key={c.job_id}><tr>
         <td><input type="checkbox" aria-label={'选择补跑 '+c.case_id} checked={!!selected[c.job_id]} disabled={busy||(!eligible(c)&&!selected[c.job_id])} onChange={e=>setSelected(old=>{const next={...old};if(e.target.checked)next[c.job_id]=c.run_id;else delete next[c.job_id];return next;})}/></td>
         <td>{c.case_id}<small>{c.task_name} · 种子 {c.seed}</small></td><td>{statusLabels[c.status]}<small>尝试 {c.attempt}</small></td><td><ExecutionPlacement value={c.placement}/></td>
         <td>{c.task_type==='command'?(c.episode_reporting?`普通命令已完成 ${c.progress.completed}/${c.episodes} 回合`:'普通命令，按退出码完成'):c.episode_reporting?`${c.progress.completed}/${c.episodes}，目标成功 ${c.progress.successes}`:'客户端未上报回合'}</td>
         <td>{c.waiting&&<><p>{c.waiting.reasons.map(r=>r.message).join('；')||'等待可用节点'}</p><details><summary>节点诊断</summary>{c.waiting.nodes.map(n=><p key={n.node_name+':'+n.gpu_index}>{n.node_name} / 设备 {n.gpu_index}: {n.reasons.map(r=>r.message).join('；')||'符合要求'}</p>)}</details></>}
           <details><summary>执行配置</summary><p>{c.config.pool_name} · {c.config.client_name}/{c.config.client_version}</p><p>实际推理地址：{c.config.endpoint||'未分配'} · {c.config.endpoint_mode==='exclusive'?'独占':c.config.endpoint_mode==='shared'?'共享':''}</p><ul>{c.config.endpoint_candidates?.map(e=><li key={e.url}>候选：{e.url} · {e.mode==='exclusive'?'独占':'共享'}</li>)}</ul><p>{c.config.gpu_mode} · 显存 {c.config.requested_vram_gb} GiB</p></details>{c.error&&<p>{c.error}</p>}</td>
-        <td><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>)}</tbody></table></div>
+        <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{episodeRows[c.job_id]?'收起回合':'查看回合'}</button><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={7}><section aria-label={c.case_id+' 回合状态'}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
       {!cases.length&&<p>没有符合筛选条件的任务。</p>}
       {job&&<AttemptInspector key={job} jobId={job} onClose={()=>setJob('')}/>}
       </section>

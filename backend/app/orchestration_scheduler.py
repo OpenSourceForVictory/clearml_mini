@@ -129,6 +129,22 @@ def reserve(s,job,slot,at,selection=None,waiting=False,ttl=None):
     return run
 
 
+def create_reserved_service(s,batch,definition,server_slot,address,port,at,stopped):
+    reusable=next((i for i in stopped if i.auto_stopped),None)
+    item=reusable or ServiceInstance(resource_sources=definition.get('resource_sources',{}),resources=definition['resources'],name=(batch.title+' / '+definition['key'])[:100],
+        template_snapshot=definition['template'],parameters=definition['parameters'],environment=definition['environment'],
+        gpu_mode=definition['resources']['gpu_mode'],requested_vram_gb=definition['resources']['requested_vram_gb'],
+        orchestration_batch_id=batch.id,service_key=definition['key'])
+    item.worker_id=server_slot.worker_id;item.slot_id=server_slot.id;item.address=address;item.port=port;item.auto_stopped=False
+    s.add(item);s.flush();services.enqueue(s,item,s.get(User,batch.owner_id))
+    server=s.get(Job,item.current_job_id)
+    server.client_spec={**server.client_spec,'task_input_version':1}
+    server.requested_cpu=definition['resources'].get('cpus');server.requested_ram_gb=definition['resources'].get('ram_gb')
+    server.required_gpu_model=definition['resources'].get('required_gpu_model')
+    sr=reserve(s,server,server_slot,at)
+    return item,server,sr
+
+
 def allocate_pair(s,job,at):
     orch=s.get(EvaluationOrchestration,job.batch_id)
     if not orch:return None
@@ -139,30 +155,20 @@ def allocate_pair(s,job,at):
         related=[i for i in instances if i.service_key==definition['key']]
         active=[i for i in related if services.held(s,i)]
         if len(active)>=definition['max_instances']:continue
+        if definition.get('instance_count') and sum(not i.auto_stopped or services.held(s,i) for i in related)>=definition['instance_count']:continue
         stopped=[i for i in related if not services.held(s,i)]
         # Faults require explicit restart. Only a bind conflict gets bounded,
         # automatic re-placement on a different port (three total attempts).
         faults=[i for i in stopped if not i.auto_stopped]
         avoid=[]
-        if faults:
+        if faults and not definition.get('instance_count'):
             if len(faults)>=3:continue
             if any('service address is not local or port is already in use' not in (s.get(Job,i.current_job_id).error or '') for i in faults):continue
             avoid=[(i.worker_id,i.port) for i in faults]
         pair=planner.pair(job,definition,avoid)
         if not pair:continue
         server_slot,client_slot,address,port=pair
-        reusable=next((i for i in stopped if i.auto_stopped),None)
-        item=reusable or ServiceInstance(resource_sources=definition.get('resource_sources',{}),resources=definition['resources'],name=(s.get(EvaluationBatch,job.batch_id).title+' / '+definition['key'])[:100],
-            template_snapshot=definition['template'],parameters=definition['parameters'],environment=definition['environment'],
-            gpu_mode=definition['resources']['gpu_mode'],requested_vram_gb=definition['resources']['requested_vram_gb'],
-            orchestration_batch_id=job.batch_id,service_key=definition['key'])
-        item.worker_id=server_slot.worker_id;item.slot_id=server_slot.id;item.address=address;item.port=port;item.auto_stopped=False
-        s.add(item);s.flush();services.enqueue(s,item,s.get(User,job.owner_id))
-        server=s.get(Job,item.current_job_id)
-        server.client_spec={**server.client_spec,'task_input_version':1}
-        server.requested_cpu=definition['resources'].get('cpus');server.requested_ram_gb=definition['resources'].get('ram_gb')
-        server.required_gpu_model=definition['resources'].get('required_gpu_model')
-        sr=reserve(s,server,server_slot,at)
+        item,server,sr=create_reserved_service(s,s.get(EvaluationBatch,job.batch_id),definition,server_slot,address,port,at,stopped)
         selection=service_dependencies.candidate(s,item,definition)
         cr=reserve(s,job,client_slot,at,selection,True,(definition['template'].get('readiness') or definition['template'])['startup_timeout']+admission.seconds('STARTUP_TIMEOUT_SECONDS',120))
         return [(server,server_slot,sr,None),(job,client_slot,cr,selection)]
@@ -197,3 +203,47 @@ def reconcile(s,at):
                 item.desired_running=False;item.auto_stopped=True;item.revision+=1
                 job=s.get(Job,item.current_job_id) if item.current_job_id else None
                 if job and job.status not in admission.TERMINAL:cancel_job(s,job)
+
+
+def fill_desired_instances(s,at):
+    """Fill explicit replica targets after client admission, using the same ledger."""
+    admitted=0
+    for orch in s.scalars(select(EvaluationOrchestration).order_by(EvaluationOrchestration.batch_id)):
+        batch=s.get(EvaluationBatch,orch.batch_id)
+        if not batch or batch.deleted_at or batch.scheduling_paused:continue
+        owner=s.get(User,batch.owner_id)
+        if not owner or not owner.active:continue
+        clients=list(s.scalars(select(Job).where(Job.batch_id==batch.id,Job.status.in_(['PENDING','RESERVED','STARTING','RUNNING']))))
+        if not clients:continue
+        for definition in orch.definition['services']:
+            target=definition.get('instance_count')
+            eligible=[j for j in clients if definition['key'] in (j.client_spec or {}).get('service_keys',[])]
+            if not target or not eligible:continue
+            while True:
+                related=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id,ServiceInstance.service_key==definition['key'])))
+                occupied=sum(not i.auto_stopped or services.held(s,i) for i in related)
+                if occupied>=target:break
+                planner=Planner(s,at)
+                if len(planner.active)>=admission.seconds('MAX_ACTIVE_GLOBAL',2):break
+                if sum(planner.jobs[r.job_id].owner_id==owner.id for r in planner.active)>=admission.seconds('MAX_ACTIVE_PER_USER',2):break
+                client_active=any(planner.jobs[r.job_id].id in {j.id for j in eligible} and r.status in admission.ACTIVE for r in planner.active)
+                pair=None
+                if not client_active:
+                    # Never fill all capacity with servers while no client can run.
+                    pair=next((p for j in eligible if (p:=planner.pair(j,definition))),None)
+                    if not pair:break
+                server=server_job(definition,owner.id)
+                allocation=None
+                for slot in planner.slots:
+                    if pair and slot.id!=pair[0].id:continue
+                    worker=planner.workers.get(slot.worker_id)
+                    if not worker or not worker.service_network or not planner.fits(server,slot):continue
+                    port=choose_port(s,worker)
+                    if port is None:continue
+                    if (definition['template'].get('readiness') or {}).get('port','business')!='business' and choose_port(s,worker,[port]) is None:continue
+                    allocation=(slot,worker.service_network['address'],port);break
+                if not allocation:break
+                stopped=[i for i in related if i.auto_stopped and not services.held(s,i)]
+                create_reserved_service(s,batch,definition,*allocation,at,stopped)
+                admitted+=1
+    return admitted

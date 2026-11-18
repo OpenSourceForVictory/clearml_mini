@@ -72,6 +72,7 @@ class Metrics(BaseModel):
 
 
 class Finish(BaseModel):
+    exit_code: int | None = Field(default=None, strict=True, ge=-255, le=255)
     status: Literal['SUCCEEDED', 'FAILED', 'CANCELLED']
     metrics: Optional[Metrics] = None
     error: Optional[str] = Field(default=None, max_length=1000)
@@ -507,6 +508,7 @@ def install(app, db, current):
                 raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
         status = 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else body.status
         run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' and body.metrics else None
+        run.exit_code = body.exit_code
         run.cleanup_confirmed = True
         transition(s, run, status, body.error)
         memberships.reconcile(s)

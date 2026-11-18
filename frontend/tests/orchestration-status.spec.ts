@@ -60,3 +60,35 @@ test('default task page shows server scheduling blockers and then startup status
  await summary.getByRole('button',{name:'查看服务端与关联详情'}).click();
  await expect(page.getByRole('region',{name:'客户端与服务关系'})).toContainText('Model service');
 });
+
+
+test('explicit replica target shows partial scheduling and both distinct instances',async({page})=>{
+ let count=1,logsFail=true;
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={id:'u',username:'User',role:'user'};
+  if(p==='batches/b/monitor')data={id:'b',title:'Replicas',orchestrated:true,cases:[],total:1,finished:0,max_concurrent:1,total_episodes:0,control_revision:0,summary:{states:{RUNNING:1},completed_episodes:0,successes:0,goal_failures:0,episode_errors:0,execution_failures:0,unreported_tasks:0,success_rate:null}};
+  if(p==='orchestrations/b')data={cases:[],orchestration:{service_mode:'managed',stop_after_batch:true,definitions:[{key:'model',mode:'shared',instance_count:2}],services:Array.from({length:count},(_,i)=>({id:'replica-'+i,name:'Same service name',service_key:'model',state:i?'STARTING':'HEALTHY',endpoint:'http://server:'+String(19000+i),revision:0,cleanup_pending:false,placement:{node_name:i?'server-gpu':'server-npu',gpu_index:i?3:0,accelerator_type:i?'gpu':'npu',gpu_model:i?'GPU model':'Ascend'}})),scheduling:count===1?[{key:'model',pool_name:'npu',status:'waiting_resources',reasons:[{code:'global_concurrency',message:'平台活动任务已达上限'}],nodes:[]}]:[]}};
+  if(p.endsWith('/replica-0/logs'))data={content:'first instance log'};
+  if(p.endsWith('/replica-1/logs')){
+   if(logsFail){await route.fulfill({status:500,json:{detail:'read failed'}});return;}
+   data={content:'second instance log'};
+  }
+  await route.fulfill({json:data});
+ });
+ await page.goto('/#/cs/batches/b');const summary=page.getByRole('region',{name:'服务端启动状态'});
+ await expect(summary).toContainText('目标 2 · 已创建 1 · 就绪 1');await expect(summary).toContainText('未创建 1');await expect(summary).toContainText('平台活动任务已达上限');
+ count=2;await expect(summary).toContainText('目标 2 · 已创建 2 · 就绪 1 · 启动中 1');await expect(summary).not.toContainText('平台活动任务已达上限');
+ await summary.getByRole('button',{name:'查看服务端与关联详情'}).click();const detail=page.getByRole('region',{name:'客户端与服务关系'});
+ await expect(detail).toContainText('实例 ID：replica-0');await expect(detail).toContainText('实例 ID：replica-1');const first=detail.getByRole('row',{name:'服务实例 replica-0',exact:true}),second=detail.getByRole('row',{name:'服务实例 replica-1',exact:true});
+ await expect(first).toContainText('server-npu / NPU 0');await expect(first).not.toContainText('GPU 3');
+ await expect(second).toContainText('server-gpu / GPU 3');await expect(second).not.toContainText('NPU 0');
+ await first.getByRole('button',{name:'查看 Same service name 日志'}).click();
+ await second.getByRole('button',{name:'查看 Same service name 日志'}).click();
+ const firstLogs=detail.getByRole('region',{name:'实例 replica-0 日志'}),secondLogs=detail.getByRole('region',{name:'实例 replica-1 日志'});
+ await expect(firstLogs).toContainText('first instance log');await expect(secondLogs.getByRole('alert')).toContainText('read failed');
+ logsFail=false;await secondLogs.getByRole('button',{name:'刷新日志'}).click();
+ await expect(secondLogs).toContainText('second instance log');await expect(firstLogs).not.toContainText('second instance log');
+ await firstLogs.getByRole('button',{name:'关闭服务日志'}).click();await expect(firstLogs).toHaveCount(0);await expect(secondLogs).toBeVisible();
+});

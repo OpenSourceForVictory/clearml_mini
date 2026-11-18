@@ -40,6 +40,7 @@ def test_completion_semantics(execution,monkeypatch,mode,code,output,expected):
     worker.execute(task)
     completion=next(body for path,body in events if path.endswith('/complete'))
     assert completion['status']==expected
+    assert completion['exit_code']==code
     assert (completion['metrics'] is not None)==(mode=='evaluation' and expected=='SUCCEEDED')
     assert worker.state is None and json.loads(worker.path.read_text()) is None
     assert events[-1][0]=='remove'
@@ -145,6 +146,7 @@ def test_host_recovery_uses_durable_exit_record_without_relaunch(
     worker.execute(task)
     completion=next(body for path,body in events if path.endswith('/complete'))
     assert completion['status']==expected_status
+    assert completion['exit_code']==(json.loads(exit_record)['code'] if exit_record and expected_error != 'invalid host execution exit record' else None)
     assert (expected_error in completion['error']) if expected_error else completion['error'] is None
     assert not any(path=='create' for path,_ in events)
     assert worker.state is None and json.loads(worker.path.read_text()) is None
@@ -276,3 +278,17 @@ def test_initial_busy_then_launches_new_execution_once(execution,monkeypatch):
     assert attempts==3
     assert len([p for p,_ in events if p=='create'])==1
     assert next(b for p,b in events if p.endswith('/complete'))['status']=='SUCCEEDED'
+
+def test_protocol_rejected_completion_keeps_observed_exit_code(execution,monkeypatch):
+    worker,task,events=execution
+    original=worker.api.post
+    monkeypatch.setattr(client,'docker',lambda *a,**kw:SimpleNamespace(stdout='{"final":{"success_rate":1,"episode_count":2,"runtime":0.1}}\n',stderr=''))
+    def post(path,body=None):
+        if path.endswith('/complete') and body['status']=='SUCCEEDED':
+            raise client.APIError(400,'successful execution requires all planned episode results')
+        return original(path,body)
+    worker.api.post=post
+    worker.execute(task)
+    completion=next(body for path,body in events if path.endswith('/complete'))
+    assert completion['status']=='FAILED' and completion['exit_code']==0
+    assert 'execution data rejected' in completion['error']

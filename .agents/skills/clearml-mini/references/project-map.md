@@ -125,3 +125,8 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 ### 管理详情导航
 
 `frontend/src/detail-navigation.ts` 管理独立详情的列表滚动/触发焦点恢复与草稿替换确认；机器、模板、集合分别接入 administration.tsx、templates.tsx、suites.tsx。列表保持挂载而隐藏，详情返回不会保存表单。验证见 detail-navigation.spec.ts、suite-layout.spec.ts 和 template-guidance.spec.ts；仅前端，无迁移或 Worker 更新。不要将当前组件内保留草稿描述成刷新后持久化。
+
+
+### 服务数量、实例行与回合退出码
+
+新编排 instance_count 是目标数量，旧 max_instances 仍是按需上限；orchestration_scheduler.fill_desired_instances 在客户端准入后用相同账本补实例，保留客户端容量并尊重暂停/终态/人工停止。orchestration-status.tsx 每实例一行并独立展开日志；位置来自该服务当前执行 Run，不由客户端或候选节点推断。episodes.py 的 include_planned 补充计划占位并返回判定来源。execution.Finish/Run.exit_code 保存整次执行实际退出码，runner host_episode/command_sdk 经 sdk 的可选事件 exit_code 保存子进程码；缺协议但退出 0 仍是异常。旧记录/纯 SDK 无进程码不可猜测。迁移 x407a89 与 Worker/Runner 0.18.2；先更新 API 再更新节点。见 docs/batch-monitoring.md、docs/task-input.md，专项 test_desired_service_instances、test_episode_visibility、test_host_shell_episode、test_worker_execution_recovery 和界面 orchestration-status/batch-monitoring。

@@ -74,3 +74,31 @@ test('client placement is a separate column with GPU zero and unassigned states'
  await expect(page.getByRole('cell',{name:'client-gpu / GPU 0 型号：Test GPU'})).toBeVisible();
  await expect(page.getByText('未分配或位置记录不可用').first()).toBeVisible();
 });
+
+test('episode expansion separates protocol results, process exits and unreported rounds',async({page})=>{
+ await setup(page);
+ let source='protocol',code:number|null=0,reporting=true;
+ await page.route('**/jobs/j0/attempts/*/episodes?*',async route=>{
+  await route.fulfill({json:{planned:3,run_status:'FAILED',exit_code:code,result_source:source,episode_reporting:reporting,
+   progress:{completed:1,successes:0,errors:1},items:[
+    {episode_id:1,seed:7,started:{},result:{status:'COMPLETED',success:false,metrics:{},exit_code:0}},
+    {episode_id:2,seed:8,started:{},result:{status:'ERROR',error:'missing protocol result',exit_code:0}},
+    {episode_id:3,seed:9,started:null,result:null}]}})
+ });
+ await page.getByRole('button',{name:'查看回合',exact:true}).first().click();
+ const episodes=page.getByRole('region',{name:'case0 回合状态'});
+ await expect(episodes).toContainText('平台协议业务结果');
+ await expect(episodes).toContainText('执行进程退出码：0');
+ await expect(episodes).toContainText('业务失败');
+ await expect(episodes).toContainText('执行异常');
+ await expect(episodes).toContainText('缺少协议回合结果');
+ await expect(episodes.getByRole('row').nth(3)).toContainText('未上报');
+ await expect(episodes).not.toContainText('业务成功 1');
+ source='exit_code';code=7;
+ await expect(episodes).toContainText('普通命令退出码');
+ await expect(episodes).toContainText('执行进程退出码：7');
+ code=null;await expect(episodes).toContainText('执行进程退出码：未上报');
+ reporting=false;await expect(episodes).toContainText('整次执行');await expect(episodes.getByRole('table').getByRole('row')).toHaveCount(2);
+ await page.getByRole('button',{name:'收起回合',exact:true}).click();
+ await expect(episodes).toHaveCount(0);
+});

@@ -223,6 +223,7 @@ class Run(Base):
     enqueued_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    exit_code: Mapped[Optional[int]] = mapped_column(Integer)
     result_json: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     error: Mapped[Optional[str]] = mapped_column(String(1000))
     execution_id: Mapped[Optional[str]] = mapped_column(String(36), unique=True)
