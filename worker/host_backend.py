@@ -201,7 +201,7 @@ class HostBackend:
         owner=path.stat()
         launch['started']=True;atomic_json(path,launch)
         if self.system:os.chown(path,owner.st_uid,owner.st_gid)
-        properties={'Description':'Mini Eval execution '+task['execution_id'],'TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']),'StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
+        properties={'Description':'Mini Eval execution '+task['execution_id'],'TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
         if task['cpus']:properties['CPUQuota']=str(task['cpus']*100)+'%'
         if task['ram_gb']:properties['MemoryMax']=str(task['ram_gb'])+'G'
         command=['systemd-run',*([] if self.system else ['--user']),'--quiet','--unit='+self.unit(task['execution_id']),'--working-directory='+str(Path(__file__).resolve().parent.parent)]

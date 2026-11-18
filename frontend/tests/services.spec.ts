@@ -31,8 +31,9 @@ test('service deployment sends typed business values separately from environment
  await page.getByLabel('实例名称',{exact:true}).fill('typed instance');await page.getByLabel('服务端模板版本').selectOption('t');
  await page.getByLabel('目标机器 / GPU').selectOption('slot');await page.getByLabel('服务机器 IPv4 地址').fill('192.168.8.151');
  await page.getByLabel('业务参数 JSON',{exact:true}).fill('{"scene":"room"}');
+ await page.getByLabel('不限制内存上限',{exact:true}).check();await page.getByLabel('服务最低内存 GiB').fill('8');
  await page.getByRole('button',{name:'提交部署',exact:true}).click();
- await expect.poll(()=>submitted).toMatchObject({template_id:'t',slot_id:'slot',parameters:{scene:'room'},parameter_overrides:{},environment:{}});
+ await expect.poll(()=>submitted).toMatchObject({template_id:'t',slot_id:'slot',parameters:{scene:'room'},parameter_overrides:{},environment:{},resources:{ram_gb:8,memory_unlimited:true}});
 });
 
 test('readiness diagnostics are read-only and collapse on a narrow screen',async({page})=>{

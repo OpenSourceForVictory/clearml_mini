@@ -239,6 +239,7 @@ def submit(body: Submit, idempotency_key: Optional[str] = Header(None), user: Us
     resource,sources=resolve_resources(pool,(spec or {}).get('template'),('submission',submission(body)))
     values.update(gpu_mode=resource['gpu_mode'],requested_vram_gb=resource['requested_vram_gb'],required_gpu_model=resource['required_gpu_model'],requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'))
     if spec is not None:spec.update(resources=resource,resource_sources=sources)
+    elif resource.get('cpu_unlimited') or resource.get('memory_unlimited'):raise HTTPException(400,'unlimited resource requests require a runtime template')
     elif resource.get('accelerator_type')=='npu':raise HTTPException(400,'NPU requests require a runtime template')
     job = Job(owner_id=user.id, idempotency_key=idempotency_key, **values)
     s.add(job)

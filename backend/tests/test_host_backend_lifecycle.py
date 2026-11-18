@@ -61,8 +61,9 @@ def test_stop_of_finished_unloaded_unit_does_not_restart_or_stop(backend,monkeyp
     assert calls==[('show',host.unit(execution),'--property=LoadState,Description,ActiveState,SubState,ExecMainStatus')]
 
 
+@pytest.mark.parametrize('timeout',[0,60])
 @pytest.mark.parametrize('cpus,ram_gb',[ (0,0), (0,3), (2,0) ])
-def test_host_unlimited_axes_omit_selected_systemd_quotas(backend,monkeypatch,cpus,ram_gb):
+def test_host_unlimited_axes_omit_selected_systemd_quotas(backend,monkeypatch,cpus,ram_gb,timeout):
     from worker import resource_limits
     host,execution=backend
     (host.root/'launch.json').write_text(json.dumps({'started':False,'execution_id':execution}))
@@ -70,7 +71,8 @@ def test_host_unlimited_axes_omit_selected_systemd_quotas(backend,monkeypatch,cp
     monkeypatch.setattr('worker.host_backend.subprocess.run',lambda argv,**kwargs:(commands.append(argv) or SimpleNamespace(returncode=0,stderr='')))
     monkeypatch.setattr(host,'control',lambda *a,**kw:SimpleNamespace(stdout='/test-group'))
     monkeypatch.setattr(resource_limits,'verify_group',lambda *a:verified.append(a))
-    host.start({'execution_id':execution,'cpus':cpus,'ram_gb':ram_gb,'timeout_seconds':60})
+    host.start({'execution_id':execution,'cpus':cpus,'ram_gb':ram_gb,'timeout_seconds':timeout})
+    assert '--property=RuntimeMaxSec='+('infinity' if timeout==0 else '60') in commands[0]
     assert any('CPUQuota=' in value for value in commands[0])==bool(cpus)
     assert any('MemoryMax=' in value for value in commands[0])==bool(ram_gb)
     assert verified==[('/test-group',cpus,ram_gb*1024**3)]

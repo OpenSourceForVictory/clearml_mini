@@ -110,7 +110,7 @@ class ClientRequest(BaseModel):
     task_name: str = Field(min_length=1, max_length=200)
     seed: int = Field(default=0, ge=0, le=2147483647)
     request_timeout_seconds: int = Field(default=10, ge=1, le=120)
-    timeout_seconds: int = Field(default=300, ge=1)
+    timeout_seconds: int = Field(default=300, ge=0, strict=True)
     parameters: dict = Field(default_factory=dict)
     parameter_overrides: dict = Field(default_factory=dict)
     environment: dict[str, str] = Field(default_factory=dict)

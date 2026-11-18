@@ -18,7 +18,7 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
-const initial={cpus:'',ram_gb:'',title:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
+const initial={unlimited_timeout:false,cpu_unlimited:false,memory_unlimited:false,cpus:'',ram_gb:'',title:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
 export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
   const [resourceDrafts,setResourceDrafts]=useState<Record<string,Record<string,any>>>({});
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
@@ -37,6 +37,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   },[limitReload]);
   function validateTimeout(){
     if(executionLimit===null)throw Error('请先读取平台执行时限上限');
+    if(draft.unlimited_timeout)return;
     if(!Number.isInteger(draft.timeout_seconds)||draft.timeout_seconds<1||draft.timeout_seconds>executionLimit)throw Error(`每项总执行时限须为 1–${executionLimit} 秒的整数`);
   }
   const [values,setValues]=useState<ValuesDraft>({}),[extraTemplates,setExtraTemplates]=useState<Template[]>([]),[copy,setCopy]=useState<{kind:'client'|'server';source:CopyTemplate}|null>(null);
@@ -64,7 +65,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     const poll=async()=>{try{const b=await api<Trial>('batches/'+id);if(active){setTrial(b);setTrialError('');}}catch(e){if(active)setTrialError(String(e));}};
     void poll();const timer=setInterval(poll,2000);return()=>{active=false;clearInterval(timer);};
   },[trial?.id]);
-  const update=(key:keyof typeof initial,value:string|number)=>setDraft(d=>({...d,[key]:value}));
+  const update=(key:keyof typeof initial,value:string|number|boolean)=>setDraft(d=>({...d,[key]:value}));
   function chooseSuite(id:string){setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
   function validateAddresses(){
     const keys=new Set<string>();
@@ -89,9 +90,9 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
     const inputCases=parseCases(ordinaryOnce?cases.map(c=>({...c,episodes:1})):cases);
-    return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
+    return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpu_unlimited?{cpu_unlimited:true}:{}),...(draft.memory_unlimited?{memory_unlimited:true}:{}),...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
       new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
-      client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.timeout_seconds}};
+      client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.unlimited_timeout?0:draft.timeout_seconds}};
   }
   async function inspect(){
     if(pending.current)return;
@@ -147,8 +148,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
-      <Field label="每项总超时秒"><input type="number" required min={1} max={executionLimit??undefined} value={draft.timeout_seconds} onChange={e=>{timeoutEdited.current=true;update('timeout_seconds',Number(e.target.value))}}/></Field></div>
-      <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
+      <label><input type="checkbox" checked={draft.unlimited_timeout} onChange={e=>update('unlimited_timeout',e.target.checked)}/>不限制每项总执行时长</label><Field label="每项总超时秒"><input disabled={draft.unlimited_timeout} type="number" required min={1} max={executionLimit??undefined} value={draft.timeout_seconds} onChange={e=>{timeoutEdited.current=true;update('timeout_seconds',Number(e.target.value))}}/></Field></div>
+      <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。选择不限仍需心跳续租，且支持取消；需要 Worker 协议 16。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
       {limitError&&<p role="alert">平台执行时限读取失败：{limitError}</p>}<button type="button" onClick={()=>{setPreview(null);setLimitReload(n=>n+1)}}>刷新执行时限</button>
       {template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
       {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/></>}
@@ -171,8 +172,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <Field label="最大并发任务数"><input type="number" required min={1} max={100} value={draft.max_concurrent} onChange={e=>update('max_concurrent',Number(e.target.value))}/></Field>
       {template?.resource_requirements?<ResourceRequest contract={template.resource_requirements} value={resourceDrafts[templateId]||{}} onChange={v=>{setResourceDrafts({...resourceDrafts,[templateId]:v});setPreview(null)}} label="客户端资源"/>:<>      <Field label="客户端 GPU 模式"><select value={draft.gpu_mode} onChange={e=>update('gpu_mode',e.target.value)}><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
       <Field label="每项所需显存 GiB"><input type="number" required min={0} max={10000} value={draft.requested_vram_gb} onChange={e=>update('requested_vram_gb',Number(e.target.value))}/></Field>
-      <details><summary>高级资源约束</summary><Field label="每项 CPU 核数（可选）"><input type="number" min={1} step={1} value={draft.cpus} placeholder="使用资源池默认值" onChange={e=>update('cpus',e.target.value)}/></Field>
-      <Field label="每项内存 GiB（可选）"><input type="number" min={1} step={1} value={draft.ram_gb} placeholder="使用资源池默认值" onChange={e=>update('ram_gb',e.target.value)}/></Field>
+      <details><summary>高级资源约束</summary><label><input type="checkbox" checked={draft.cpu_unlimited} onChange={e=>update('cpu_unlimited',e.target.checked)}/>不限制 CPU 上限</label><label><input type="checkbox" checked={draft.memory_unlimited} onChange={e=>update('memory_unlimited',e.target.checked)}/>不限制内存上限</label><p>选择不限时，仍须填写对应正数最低申请量，用于调度预约；实际超出预约的用量不保证可用。</p><Field label="每项 CPU 核数（可选）"><input type="number" min={1} step={1} required={draft.cpu_unlimited} value={draft.cpus} placeholder="使用资源池默认值" onChange={e=>update('cpus',e.target.value)}/></Field>
+      <Field label="每项内存 GiB（可选）"><input type="number" min={1} step={1} required={draft.memory_unlimited} value={draft.ram_gb} placeholder="使用资源池默认值" onChange={e=>update('ram_gb',e.target.value)}/></Field>
       <Field label="指定 GPU 型号（可选）"><input maxLength={100} value={draft.required_gpu_model} onChange={e=>update('required_gpu_model',e.target.value)}/></Field></details></>}
     </div>}
     {step===4&&<>
@@ -181,7 +182,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         <dt>任务与回合</dt><dd>{cases.length} 项任务，{ordinaryOnce?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
         <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{serviceMode==='managed'?serviceRows.map(s=><p key={s.key}>{s.key} · {servers.find(t=>t.id===s.template_id)?.name} · {s.mode==='exclusive'?'独占':'共享'} · 自动地址</p>):serviceMode==='none'?'无需服务':addresses.map((e,i)=><p key={i}>{e.url} · {e.mode==='exclusive'?'独占':'共享'}</p>)}</dd>
         <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {template?.resource_requirements?'按模板及本次覆盖申请':(draft.gpu_mode==='shared'?'共享':'独占')+' · 每项 '+draft.requested_vram_gb+' GiB'} · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
-        <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.timeout_seconds} 秒（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</dd>
+        <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.unlimited_timeout?'不限':draft.timeout_seconds+' 秒'}（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</dd>
         <dt>启动变量</dt><dd><code>{draft.environment}</code></dd>
       </dl>
       <button type="button" onClick={()=>void inspect()}>重新检查</button>

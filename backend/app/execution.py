@@ -32,7 +32,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
@@ -381,7 +381,8 @@ def install(app, db, current):
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
                 return {'task': None, 'cleanup': []}
             s.refresh(worker)
-            from .scheduling import workload_codes
+            from .scheduling import workload_codes, runtime_mismatch
+            if runtime_mismatch(slot, job):return {'task':None,'cleanup':[]}
             if workload_codes(worker, slot, s.get(Job, run.job_id)):
                 return {'task': None, 'cleanup': []}
             if image_runtime.blockers(worker, slot, s.get(Job, run.job_id).client_spec, now()):
@@ -420,6 +421,11 @@ def install(app, db, current):
                 'timeout_seconds': execution_timeout(job),
                 'lease_seconds': seconds('LEASE_SECONDS', 30)}
         if job.client_spec:
+            resources=job.client_spec.get('resources',{})
+            task['reserved_cpus']=run.reserved_cpu
+            task['reserved_ram_gb']=run.reserved_ram_gb
+            if resources.get('cpu_unlimited'):task['cpus']=0
+            if resources.get('memory_unlimited'):task['ram_gb']=0
             task['client_spec'] = endpoints.input_spec(run, job.client_spec)
             task['image'] = job.client_spec['template']['image']
             if job.client_spec['template'].get('execution_mode') == 'host':

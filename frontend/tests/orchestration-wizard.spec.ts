@@ -36,12 +36,14 @@ test('managed service passes separate typed parameters and automatic addressing'
  await wizard.getByLabel('服务 1 模板').selectOption('server');await wizard.getByLabel('batch_size',{exact:true}).fill('8');
  await wizard.getByLabel('服务 1 访问模式').selectOption('exclusive');
  await wizard.getByLabel('服务 1 实例数',{exact:true}).fill('2');
+ await wizard.getByText('服务资源与运行变量',{exact:true}).click();
+ await wizard.getByLabel('服务 1 不限制内存上限',{exact:true}).check();await wizard.getByLabel('服务 1 内存 GiB',{exact:true}).fill('8');
  await wizard.getByRole('button',{name:'下一步',exact:true}).click();await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');
  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(wizard.getByRole('button',{name:'提交评测批次'})).toBeEnabled();
  await wizard.getByText('有效业务参数与来源',{exact:true}).click();await expect(wizard.getByText('"batch_size": 4',{exact:false})).toBeVisible();
  await wizard.getByRole('button',{name:'提交评测批次'}).click();await expect.poll(()=>requests.length).toBe(2);
  expect(requests[1].body.client).toMatchObject({service_mode:'managed',parameters:{batch_size:4,fast:true}});
- expect(requests[1].body.services[0]).toMatchObject({key:'default',mode:'exclusive',instance_count:2,pool_id:'pool',parameters:{batch_size:8}});
+ expect(requests[1].body.services[0]).toMatchObject({key:'default',mode:'exclusive',instance_count:2,pool_id:'pool',parameters:{batch_size:8},resources:{ram_gb:8,memory_unlimited:true}});
  expect(requests[1].body.services[0]).not.toHaveProperty('address');
  expect(requests[1].body.services[0]).not.toHaveProperty('max_instances');
  expect(requests[1].body.client).not.toHaveProperty('endpoints');

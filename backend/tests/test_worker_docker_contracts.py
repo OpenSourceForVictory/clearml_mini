@@ -85,3 +85,15 @@ def test_inspection_does_not_confuse_outage_or_foreign_container_with_absence(co
     if expected:
         with pytest.raises(RuntimeError,match=expected):worker.inspect(task['execution_id'])
     else:assert worker.inspect(task['execution_id']) is None
+
+@pytest.mark.parametrize('runtime',[False,True])
+def test_unlimited_time_bypasses_image_timer(container,runtime):
+    worker,task,calls,inputs=container
+    task['timeout_seconds']=0
+    if runtime:
+        task['client_spec']['template']['runtime']={'command_mode':'exec','assets':{},'working_directory':'/app/business'}
+    worker.create(task)
+    create=calls[0]
+    assert 'runner.supervise' not in create and '--timeout' not in create
+    assert '-m' in create and 'runner.cs_entry' in create
+    assert inputs[0]['timeout_seconds']==0

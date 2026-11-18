@@ -71,7 +71,7 @@ def reconcile(s, at):
                 run.slot_id = run.execution_id = run.reservation_expires_at = None
             continue
         expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
-        overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
+        overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
         startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
             if overrun:
@@ -98,6 +98,9 @@ def runtime_mismatch(slot, job):
     mode=template.get('execution_mode','docker')
     label=(f'{side}宿主机环境「{(template.get("host_runtime") or {}).get("environment_name","未指定") }」'
            if mode=='host' else f'{side}容器镜像「{template.get("image","未指定") }」')
+    resources=(job.client_spec or {}).get('resources',{})
+    if slot.protocol_version<16 and ((job.client_spec or {}).get('timeout_seconds')==0 or resources.get('cpu_unlimited') or resources.get('memory_unlimited')):
+        return f'{label}的不限执行时长或CPU/内存上限需要 Worker 协议 16（当前 {slot.protocol_version}）'
     settings=template.get('host_runtime') or template.get('runtime') or {}
     if mode=='host' and slot.protocol_version<15 and (settings.get('environment_source')=='login' or settings.get('episode_launch')=='per_episode'):
         return f'{label}的登录环境或逐回合启动需要 Worker 协议 15（当前 {slot.protocol_version}）'

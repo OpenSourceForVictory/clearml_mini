@@ -2,7 +2,7 @@
 from copy import deepcopy
 
 ALIASES={'accelerator_mode':'gpu_mode','accelerator_memory_gb':'requested_vram_gb','accelerator_model':'required_gpu_model'}
-FIELDS={'cpus','ram_gb','accelerator_type','gpu_mode','requested_vram_gb','required_gpu_model'}
+FIELDS={'cpus','ram_gb','accelerator_type','gpu_mode','requested_vram_gb','required_gpu_model','cpu_unlimited','memory_unlimited'}
 LIMITS={'cpus':(1,10000),'ram_gb':(1,100000),'requested_vram_gb':(0,10000)}
 
 
@@ -16,6 +16,8 @@ def request(value):
         if name in LIMITS:
             lo,hi=LIMITS[name]
             if type(v) is not int or not lo<=v<=hi:raise ValueError(name+': invalid resource value')
+        elif name in ('cpu_unlimited','memory_unlimited'):
+            if type(v) is not bool:raise ValueError(name+': expected boolean')
         elif name=='accelerator_type':
             if v not in ('gpu','npu'):raise ValueError('accelerator_type must be gpu or npu')
         elif name=='gpu_mode':
@@ -44,7 +46,7 @@ def validate(value):
     if memory['default']<memory['minimum']:raise ValueError('accelerator memory default is below minimum')
     if acc['mode']=='shared' and memory['default']<1:raise ValueError('shared accelerator requires positive memory')
     overrides=result.setdefault('allow_overrides',[])
-    if not isinstance(overrides,list) or any(not isinstance(k,str) or k not in FIELDS for k in overrides) or len(set(overrides))!=len(overrides):raise ValueError('invalid resource allow_overrides')
+    if not isinstance(overrides,list) or any(not isinstance(k,str) or k not in FIELDS-{'cpu_unlimited','memory_unlimited'} for k in overrides) or len(set(overrides))!=len(overrides):raise ValueError('invalid resource allow_overrides')
     return result
 
 
@@ -58,11 +60,18 @@ def resolve(contract,layers,legacy_defaults):
     for source,values in layers:
         values=request(values)
         for key,value in values.items():
-            if contract and key not in contract['allow_overrides'] and value!=effective.get(key):raise ValueError(key+': resource override is locked by template')
+            permission={'cpu_unlimited':'cpus','memory_unlimited':'ram_gb'}.get(key,key)
+            if contract and permission not in contract['allow_overrides'] and value!=effective.get(key,False if key.endswith('_unlimited') else None):raise ValueError(key+': resource override is locked by template')
             # Validate each layer, so invalid submission cannot be hidden by a case.
             if contract:
                 minimum={'cpus':contract['cpu']['minimum'],'ram_gb':contract['memory']['minimum'],'requested_vram_gb':contract['accelerator']['memory']['minimum']}.get(key)
                 if minimum is not None and value<minimum:raise ValueError(key+': resource request below template minimum')
             effective[key]=value;sources[key]=source
+    for flag,axis,part in [('cpu_unlimited','cpus','cpu'),('memory_unlimited','ram_gb','memory')]:
+        if effective.get(flag):
+            if contract and not any(axis in values for _,values in layers):
+                effective[axis]=contract[part]['minimum'];sources[axis]='template_minimum'
+            if (not contract and not any(axis in values for _,values in layers)) or type(effective.get(axis)) is not int or effective[axis]<1:
+                raise ValueError(axis+': unlimited runtime requires a positive scheduling minimum')
     if effective.get('gpu_mode')=='shared' and effective.get('requested_vram_gb',0)<1:raise ValueError('shared accelerator requires positive memory')
     return effective,sources

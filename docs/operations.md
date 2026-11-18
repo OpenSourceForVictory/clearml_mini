@@ -40,7 +40,7 @@ Compose 项目名固定为 `mini-eval`。常驻服务只有 `api`、`db`；`migr
 | WORKER_TTL_SECONDS | 30 | 槽位停止新准入的心跳时限 |
 | LEASE_SECONDS | 30 | 已认领执行的租约 |
 | LOST_WORKER_GRACE_SECONDS | 30 | 租约过期后的服务端宽限期 |
-| EXECUTION_TIMEOUT_SECONDS | 3600 | 新客户端提交的总执行时限上限；无客户端快照任务的执行默认值 |
+| EXECUTION_TIMEOUT_SECONDS | 3600 | 新客户端有限时长的上限；无客户端快照任务的执行默认值 |
 | STARTUP_TIMEOUT_SECONDS | 120 | 认领到首次执行心跳的时限 |
 | RUNNER_IMAGE | mini-eval-runner:dev | 管理员批准的固定镜像 |
 
@@ -161,8 +161,8 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 
 ### 客户端总执行时限
 
-业务评测向导的客户端步骤可设置“每项总超时秒”，全部回合共用，不包含排队等待。界面通过已认证的 `GET /api/v1/execution-limits` 显示平台上限，初始值为 300 秒与上限中的较小值。读取失败需刷新执行时限后继续，已编辑值会保留；超出上限明确拒绝，不自动截短。
+业务评测向导的客户端步骤可设置“每项总超时秒”，全部回合共用，不包含排队等待。界面通过已认证的 `GET /api/v1/execution-limits` 显示平台上限，初始值为 300 秒与上限中的较小值。读取失败需刷新执行时限后继续，已编辑值会保留；超出上限明确拒绝，不自动截短。勾选“不限制每项总执行时长”会提交 `client.timeout_seconds=0`，跳过总执行时限，仍执行启动期限、租约续期、取消与清理。不要把 `EXECUTION_TIMEOUT_SECONDS` 或 `LEASE_SECONDS` 改成 0 来代替此选项。
 
 管理员通过 `EXECUTION_TIMEOUT_SECONDS` 调整上限，例如 `7200`，更新 API 与调度器的部署环境并重建对应服务。新提交按新上限校验；已提交任务及其重试保留客户端快照中的时限，不受后来降低上限影响。启动超时、心跳租约过期和客户端总执行时限已到会分别显示原因，资源仍需清理确认后释放。服务端长期运行时限不随本项调整。
 
-本变更需更新 API、调度器与前端，不需要数据库迁移或 Worker 升级。专项测试验证了上限读取、提交校验、快照保持、三种超时及界面故障恢复；不代表真机业务评测验收。
+有限时长配置不需要 Worker 升级；新增“不限”选项需要 API、调度器、前端及 Worker 0.19.0（协议 16）。不需要数据库迁移。旧 Worker 无法领取新不限配置；更新 API 不会自动更新节点 Worker。验证边界见 [可选执行限制](optional-execution-limits.md)。

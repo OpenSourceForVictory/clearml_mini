@@ -39,14 +39,19 @@ def test_entrypoints_resolve_same_contract(env,endpoint,resources):
    assert all(j.client_spec['resources']['accelerator_type']=='gpu' for j in jobs)
 
 
-def test_service_snapshot_survives_template_change(env):
+@pytest.mark.parametrize('unlimited',[False,True])
+def test_service_snapshot_survives_template_change(env,unlimited):
  from backend.tests.test_services import setup
  from backend.app.services import enqueue
  from backend.app.core import ServiceInstance,User
  main,c,a=env;_,slot,body=setup(env);t=template(env,'server');body['template_id']=t['id']
+ if unlimited:body['resources']={'memory_unlimited':True,'ram_gb':4}
  r=c.post('/api/v1/admin/services',headers=a['admin'],json=body);assert r.status_code==201,r.text
  with main.SessionLocal() as s:
   instance=s.get(ServiceInstance,r.json()['id']);original=instance.resources.copy()
+  if unlimited:
+   assert original['ram_gb']==4 and original['memory_unlimited'] is True
+   assert s.get(Job,instance.current_job_id).client_spec['resources']['memory_unlimited'] is True
   changed=copy.deepcopy(CONTRACT);changed['cpu']['default']=2
   st=s.get(ServerTemplate,t['id']);st.definition={**st.definition,'resource_requirements':changed};s.commit()
   s.get(Job,instance.current_job_id).status='FAILED';s.commit()

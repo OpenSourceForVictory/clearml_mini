@@ -262,7 +262,12 @@ class Worker:
                         '--benchmark='+task['benchmark'], '--episodes='+str(task['episodes'])]
         if runtime:
             command[0] = runtime['interpreter']
-        args.extend([task['image'], *([] if runtime else ['python']), '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']), *command])
+        if task['timeout_seconds'] == 0:
+            # No total deadline; Worker lease watchdog and cancellation still own cleanup.
+            # Bypass even an old image's supervisor, which interprets zero as immediate expiry.
+            args.extend([task['image'], *(command[1:] if runtime else command)])
+        else:
+            args.extend([task['image'], *([] if runtime else ['python']), '-m', 'runner.supervise', '--timeout', str(task['timeout_seconds']), *command])
         docker(*args, timeout=20)
         if runtime:
             with tempfile.TemporaryDirectory(prefix='eval-adapter-') as temporary:

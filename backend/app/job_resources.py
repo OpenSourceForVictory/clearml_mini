@@ -21,6 +21,8 @@ class Request(BaseModel):
     @model_serializer(mode='wrap')
     def serialize(self,handler):
         return {k:v for k,v in handler(self).items() if k in self.model_fields_set}
+    cpu_unlimited:bool|None=None
+    memory_unlimited:bool|None=None
     cpus:int|None=Field(default=None,ge=1,le=10000)
     ram_gb:int|None=Field(default=None,ge=1,le=100000)
     gpu_mode:Literal['exclusive','shared']|None=None

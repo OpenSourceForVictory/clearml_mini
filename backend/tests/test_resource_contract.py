@@ -26,3 +26,20 @@ def test_legacy_explicit_zero_and_null_model():
 @pytest.mark.parametrize('change',[{'version':True},{'allow_overrides':['unknown']},{'cpu':{'minimum':3,'default':2}},{'accelerator':{'type':'npu','mode':'shared','memory':{'minimum':0,'default':0}}}])
 def test_invalid_contract(change):
  with pytest.raises(ValueError):validate({**CONTRACT,**change})
+
+@pytest.mark.parametrize('flag,axis,minimum',[('cpu_unlimited','cpus',1),('memory_unlimited','ram_gb',2)])
+def test_unlimited_reserves_template_minimum(flag,axis,minimum):
+ result,sources=resolve(CONTRACT,[('submission',{flag:True})],DEFAULTS)
+ assert result[axis]==minimum and sources[axis]=='template_minimum'
+ result,_=resolve(CONTRACT,[('submission',{flag:True,axis:8})],DEFAULTS)
+ assert result[axis]==8
+ locked={**CONTRACT,'allow_overrides':[]}
+ with pytest.raises(ValueError,match='locked'):resolve(locked,[('submission',{flag:True})],DEFAULTS)
+ with pytest.raises(ValueError,match='positive scheduling minimum'):resolve(None,[('submission',{flag:True})],DEFAULTS)
+ result,_=resolve(None,[('submission',{flag:True,axis:8})],DEFAULTS)
+ assert result[axis]==8
+ with pytest.raises(ValueError,match='below template minimum'):resolve(CONTRACT,[('submission',{flag:True,'ram_gb':1})],DEFAULTS)
+
+@pytest.mark.parametrize('value',[0,1,'true',None])
+def test_unlimited_flags_are_strict_booleans(value):
+ with pytest.raises(ValueError,match='boolean'):request({'cpu_unlimited':value})

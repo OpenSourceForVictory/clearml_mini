@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-async function setup(page:Page){
+async function setup(page:Page,resourceContract?:any){
   let executionLimit=7200,limitFailure=false;
   const requests:{body:any;key:string}[]=[];let checks=0,fail:boolean|string=false,delay=0,loseResponse=false,reporting=true;let serverChecks:any[]|undefined,clientReasons:any[]|undefined;
   const suite={id:'suite',name:'Three tasks',version:'v1',template_id:'t',cases:[1,2,3].map(i=>({case_id:'case-'+i,task_name:'task-'+i,episodes:4,seed:10+i,parameters:{variant:i}}))};
@@ -13,7 +13,7 @@ async function setup(page:Page){
     if(path==='suites/suite')data={...suite,tags:[],status:'published',description:'',source:'',revision:0,archived:false};
     if(path==='suites')data=[suite];
     if(path==='pools')data=[{id:'pool',name:'Mixed GPUs'}];
-    if(path==='client-templates')data=[{id:'t',name:'Client',version:'v2',enabled:true,protocols:['ws'],episode_reporting:true,runtime:{overridable_env:['MODE']}}];
+    if(path==='client-templates')data=[{id:'t',resource_requirements:resourceContract,name:'Client',version:'v2',enabled:true,protocols:['ws'],episode_reporting:true,runtime:{overridable_env:['MODE']}}];
     if(path==='orchestrations/preflight'){
       checks++;const wait=delay;const bad=fail;const body=route.request().postDataJSON();
       if(wait)await new Promise(r=>setTimeout(r,wait));
@@ -206,4 +206,34 @@ test('execution limit is dynamic, validates inputs and keeps user value on refre
  await expect.poll(()=>ctl.requests.length).toBe(1);
  expect(ctl.requests[0].body.client.timeout_seconds).toBe(7200);
  await expect.poll(()=>ctl.checks()).toBeGreaterThan(0);
+});
+
+test('unlimited execution keeps finite draft and positive resource reservations',async({page})=>{
+ const {wizard:w,requests}=await setup(page);
+ await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'上一步',exact:true}).click();
+ const timeout=w.getByLabel('每项总超时秒',{exact:true});await timeout.fill('600');
+ await w.getByLabel('不限制每项总执行时长',{exact:true}).check();await expect(timeout).toBeDisabled();
+ await w.getByLabel('不限制每项总执行时长',{exact:true}).uncheck();await expect(timeout).toHaveValue('600');
+ await w.getByLabel('不限制每项总执行时长',{exact:true}).check();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByText('高级资源约束',{exact:true}).click();
+ await w.getByLabel('不限制 CPU 上限',{exact:true}).check();await w.getByLabel('不限制内存上限',{exact:true}).check();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByLabel('每项 CPU 核数（可选）')).toBeVisible();
+ await w.getByLabel('每项 CPU 核数（可选）').fill('2');await w.getByLabel('每项内存 GiB（可选）').fill('8');
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w).toContainText('每项总执行时限 不限');
+ await w.getByRole('button',{name:'提交排队',exact:true}).click();await expect.poll(()=>requests.length).toBe(1);
+ expect(requests[0].body).toMatchObject({client:{timeout_seconds:0},resources:{cpus:2,ram_gb:8,cpu_unlimited:true,memory_unlimited:true}});
+});
+
+
+test('template limits reserve the minimum and respect locked CPU',async({page})=>{
+ const contract={version:1,cpu:{minimum:1,default:2},memory:{minimum:8,default:16},accelerator:{type:'gpu',mode:'exclusive',memory:{minimum:0,default:0}},allow_overrides:['ram_gb']};
+ const {wizard:w,requests}=await setup(page,contract);
+ await expect(w.getByLabel(/不限制 CPU上限/)).toBeDisabled();
+ await w.getByLabel(/不限制内存上限/).check();
+ await expect(w.getByLabel('客户端资源 · 内存 GiB',{exact:true})).toHaveValue('8');
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await w.getByRole('button',{name:'提交排队',exact:true}).click();await expect.poll(()=>requests.length).toBe(1);
+ expect(requests[0].body.resources).toEqual({ram_gb:8,memory_unlimited:true});
 });
