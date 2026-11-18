@@ -108,7 +108,7 @@ def install(app, db, admin):
     @app.post('/api/v1/admin/nodes/{identity}/reenroll')
     def start(identity:str, body:Revision, user=Depends(admin), s=Depends(db)):
         _, release, agent = bundle()
-        lock(s); w = machine(s, identity)
+        lock(s); w = machine(s, identity); s.refresh(w, with_for_update=True)
         return begin(s,w,user,release,agent,body.expected_revision)
 
     @app.get('/api/v1/admin/nodes/{identity}/enrollment')
@@ -117,7 +117,7 @@ def install(app, db, admin):
 
     @app.post('/api/v1/admin/nodes/{identity}/enrollment/complete')
     def complete(identity:str, body:Revision, user=Depends(admin), s=Depends(db)):
-        lock(s); w = machine(s, identity)
+        lock(s); w = machine(s, identity); s.refresh(w, with_for_update=True)
         if body.expected_revision != w.management_revision: raise HTTPException(409, 'machine configuration changed; refresh')
         if not progress(s, w)['ready']: raise HTTPException(409, 'all original GPU workers and the updater must reconnect with the installation bundle')
         w.connection = {**w.connection, 'enrollment':{**w.connection['enrollment'], 'state':'COMPLETE'}}

@@ -136,7 +136,7 @@ def install(app, db, admin, worker_auth):
 
     @app.put('/api/v1/admin/nodes/{identity}/agent')
     def configure(identity: str, body: Configure, user=Depends(admin), s=Depends(db)):
-        lock(s); w = node(s, identity); r = record(w)
+        lock(s); w = node(s, identity); s.refresh(w, with_for_update=True); r = record(w)
         if not r: raise HTTPException(409, 'install node Agent first')
         if body.expected_revision != r['revision']: raise HTTPException(409, 'agent configuration changed; refresh')
         if w.upgrade_state in ('DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'):
@@ -153,7 +153,7 @@ def install(app, db, admin, worker_auth):
 
     @app.post('/api/v1/agent/register')
     def register(body: Register, w=Depends(worker_auth), s=Depends(db)):
-        lock(s); s.refresh(w); r = record(w)
+        lock(s); s.refresh(w, with_for_update=True); r = record(w)
         if r.get('boot_id') == body.boot_id:
             return {'session': r['session'], **response(s, w, r)}
         r = {**r, 'boot_id': body.boot_id, 'session': secrets.token_hex(16), 'sequence': 0,
@@ -189,7 +189,7 @@ def install(app, db, admin, worker_auth):
 
     @app.post('/api/v1/agent/stop-permit')
     def permit(body: Permit, w=Depends(worker_auth), s=Depends(db)):
-        lock(s); s.refresh(w); r = record(w)
+        lock(s); s.refresh(w, with_for_update=True); r = record(w)
         if r.get('session') != body.session:
             raise HTTPException(409, 'agent session superseded')
         if r.get('revision') != body.revision:

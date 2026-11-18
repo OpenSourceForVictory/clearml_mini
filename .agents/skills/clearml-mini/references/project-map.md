@@ -45,6 +45,8 @@ GPU/NPU 共享与双执行环境纳管：frontend/src/ssh-onboarding.tsx 新纳�
 
 新机共享选择入口：SSH 表单的加速卡区域排在认证字段之前；手动接入由 administration.tsx 收集设备类型和共享选择，node-enrollment.tsx 将其写入下载凭据，scripts/install_system_node.py 读取对应字段。重新生成凭据前后的选择不可混用。回归 ssh-onboarding.spec.ts、memberships.spec.ts；界面步骤见 docs/root-managed-host.md。
 
+Agent JSON 并发维护：所有修改 Worker.connection 的管理路径（Agent、单卡目录、纳管、SSH 清理、updater 回执）须先获取 Worker 行锁并刷新，再读取/合并；已有全局锁的路径保持全局锁→行锁顺序，心跳不取全局锁。不能用旧 ORM JSON 覆盖新样本；回归 integration/test_node_agent_race.py 在一次性 PostgreSQL 控制事务交错，SQLite 测试不能证明行锁有效。
+
 心跳连接池争用：backend/app/execution.py 空闲心跳、node_agents.py 采样和 services.py 健康探测更新最新数据库状态，不排队等待 scheduling.py 全局锁；同节点/服务通过数据库行锁保护序号与配置。携带执行租约的心跳用 fast_lock 快速失败 503，保留状态转换互斥；探测会话启动仍用全局锁。见 docs/operations.md 和 docs/validation/heartbeat-db-contention/README.md；回归 test_heartbeat_contention.py、test_service_readiness.py、test_node_agents.py。
 
 独立解释器与业务目录的可载入样例：frontend/public/template-examples/catalog.json 中三个 `-cwd` 样例；机器环境 `template_demo_cwd` 指定 Python 与 code_root，模板 working_directory 指向 examples/runtime_templates。准备说明通过注册模板页面下载 README.md（源 examples/runtime_templates/README.md）。

@@ -158,6 +158,7 @@ def install(app, db, admin):
     def put_slot_storage(worker_id: str, slot_id: str, body: StorageUpdate, user=Depends(admin), s=Depends(db)):
         lock(s)
         w = machine(s, worker_id)
+        s.refresh(w, with_for_update=True)
         slot=s.get(Slot,slot_id)
         if not slot or slot.worker_id!=w.id or getattr(slot, 'deleted_at', None):
             raise HTTPException(404, 'device not found on this machine')

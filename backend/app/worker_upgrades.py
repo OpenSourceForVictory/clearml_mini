@@ -121,7 +121,7 @@ def install(app,db,admin,worker_auth):
 
     @app.post('/api/v1/worker/upgrades/poll')
     def poll(body:Poll=Poll(),worker=Depends(worker_auth),s=Depends(db)):
-        lock(s);s.refresh(worker);worker.updater_seen_at=now();i=current(s,worker);devices=slots(s,worker)
+        lock(s);s.refresh(worker, with_for_update=True);worker.updater_seen_at=now();i=current(s,worker);devices=slots(s,worker)
         if i and i.status=='DRAINING' and all(online(x) and not held(s,x) for x in devices):transition(worker,i,'APPLYING')
         record=(worker.connection or {}).get('enrollment',{})
         if record.get('state')=='INSTALLING' and body.agent_digest:

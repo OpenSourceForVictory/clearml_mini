@@ -67,6 +67,7 @@ def reconcile_cleanup(s,job,user):
     from .administration import audit
     identity=job.get('node_id') or job.get('form',{}).get('node_id')
     w=s.get(Worker,identity) if identity else None
+    if w:s.refresh(w, with_for_update=True)
     prior=(w.connection or {}).get('node_cleanup',{}) if w else {}
     if not w or w.deleted_at or prior.get('operation_id')!=job['id'] or prior.get('state')!='RUNNING':return
     result=job.get('cleanup_result')
@@ -113,6 +114,7 @@ def install(app,db,admin):
         from .administration import removable,audit
         lock(s)
         w,_=removable(s,identity,body.expected_revision,cleanup_retry=True)
+        s.refresh(w, with_for_update=True)
         prior=(w.connection or {}).get('node_cleanup',{})
         if prior.get('state')=='RUNNING':raise HTTPException(409,'remote cleanup outcome unknown; refresh operation records first')
         w.connection={**(w.connection or {}),'node_cleanup':{'operation_id':body.operation_id,'state':'RUNNING'}}
@@ -162,6 +164,7 @@ def install(app,db,admin):
         if body.node_id and (not w or w.deleted_at or w.node_name!=body.node_name):raise HTTPException(404,'original machine not found')
         if not body.node_id and w:raise HTTPException(409,'node already provisioned; select original machine for re-enrollment')
         new=w is None
+        if w:s.refresh(w, with_for_update=True)
         if new:
             import secrets
             w=Worker(node_name=body.node_name,token_hash=secrets.token_hex(32),roles=body.roles,enabled=False)
