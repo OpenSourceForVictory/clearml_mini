@@ -1,5 +1,7 @@
 # 部署与运维
 
+现有平台升级、数据库备份、Compose 自动迁移及失败处理见 [数据库迁移与 Compose 升级指南](database-migration.md)。可在其他部署机器按该文档执行，须沿用该机器的环境文件、项目名与覆盖配置。
+
 2026-11-18 宿主机登录环境与逐回合启动发布：控制端镜像 `mini-eval-api:host-shell-episode-20261118`，数据库版本 `w396f78` 无迁移。29 号 NPU 节点与本机 GPU 节点升级 Worker 0.18.0 / 协议 15；其他节点保持旧版本，登录环境或逐回合模板会按协议门槛排除旧节点。发布、备份、真实任务及清理边界见 [验证记录](validation/host-shell-episode-launch/README.md)。
 
 默认平台部署现包含 SSH 纳管执行器：scripts/control.py up 同时构建 API 与 onboarding 镜像，Compose 自动启动、健康检查和连接。复制项目到新机器后按正常平台部署即可，平台用户无需另装执行器或配置 socket。机器注册与恢复均通过界面操作。详细架构与旧宿主机部署兼容见 [SSH 纳管执行器](ssh-onboarding-executor.md)。
@@ -21,7 +23,7 @@ python scripts/control.py status
 python scripts/control.py down
 ```
 
-Compose 项目名固定为 `mini-eval`。常驻服务只有 `api`、`db`；`migrate`、`bootstrap` 是执行后退出的初始化任务。API 同时提供前端和调度循环。脚本仅管理本项目，不重启 Docker daemon，不停止其他容器。停止控制节点保留 PostgreSQL 卷。
+Compose 项目名固定为 `mini-eval`。常驻服务为 `api`、`db` 和 SSH 纳管执行器 `onboarding`；`migrate`、`bootstrap` 是执行后退出的初始化任务。API 同时提供前端和调度循环。脚本仅管理本项目，不重启 Docker daemon，不停止其他容器。停止控制节点保留 PostgreSQL 卷。
 
 初始账号和随机密码保存在项目 `.env`（0600、Git 忽略）。修改 `.env` 的初始密码不会重置已有管理员密码。当前账户若无 Compose 插件，可设置 `MINIEVAL_COMPOSE=/tmp/docker-compose-clearml` 使用已有独立可执行文件。
 

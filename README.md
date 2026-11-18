@@ -82,6 +82,7 @@ cd frontend && npm ci && npm run build
 - [执行数据盘点、清理与保留策略](docs/worker-retention.md)
 - [机器接入与资源池成员管理](docs/resource-pool-membership.md)
 - [部署、备份和监控](docs/operations.md)
+- [数据库迁移与 Compose 升级指南](docs/database-migration.md)
 - [API 示例](docs/api-examples.md)
 - [OpenSpec 任务](openspec/changes/lightweight-workers/tasks.md)
 
