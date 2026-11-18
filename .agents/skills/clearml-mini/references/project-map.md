@@ -142,3 +142,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 登录函数兼容：Worker0.20.3 的 host_identity.login_environment 在普通变量校验前过滤 BASH_FUNC_*%%，修正 ml/module 导出导致 invalid；总环境上限先校验，普通变量名/长度/编码保护保留。test_host_shell_episode.py 使用真实 Bash 输出复现并回归；不传函数定义，不改变 Docker。操作及验证边界见 docs/host-execution.md“登录环境包含 Modules 导出函数”。
 
 Worker0.20.4 登录环境名称改用进程环境语义：非空UTF-8，NUL/首个等号为分隔符，不再应用Shell标识符正则；函数过滤、大小/编码限制和平台覆盖不变。test_host_shell_episode.py 验证特殊名称及含等号/命令样式的字面值传到真实子进程；模板字段规则不变。见 docs/host-execution.md“登录环境名称兼容”。
+
+Worker0.20.5：client.execute初始握手后使用专用线程发送started=false启动心跳，覆盖start_lock、登录环境和create/start；启动结束join再恢复运行心跳。取消/终止拒绝交主线程清理，watchdog仍独立保护，晚响应不复活失效租约。test_worker_startup_lease.py覆盖真实慢Shell、线程和三次连续执行，外部API/Docker/systemd故障注入；非现场根因确认/真机评测。配置与升级边界见docs/host-execution.md启动续租章节。

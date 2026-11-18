@@ -132,3 +132,19 @@ def test_unlimited_memory_minimum_still_blocks_insufficient_node(env):
     values['host']['values']['memory_available_mb']=16384
     beat(c,token,session,2,values)
     assert tick(main.SessionLocal)==1
+
+
+def test_startup_renewal_preserves_startup_budget_and_does_not_start_clock(env):
+    main,c,auth=env;token,slots=node(env)
+    submit(env);task=claim(env,token,slots[0])
+    for _ in range(3):
+        response=c.post('/api/v1/worker/heartbeat',headers=token,json={
+            'slot_id':slots[0],'execution_id':task['execution_id'],'started':False})
+        assert response.status_code==200,response.text
+    with main.SessionLocal() as s:
+        run=s.scalar(select(Run).where(Run.execution_id==task['execution_id']))
+        assert run.status=='STARTING' and run.started_at is None
+        at=now();assert run.lease_expires_at.replace(tzinfo=at.tzinfo)>at
+        run.enqueued_at=at-timedelta(seconds=121)
+        reconcile(s,at)
+        assert run.status=='TIMED_OUT' and '执行启动超时' in run.error

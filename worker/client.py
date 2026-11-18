@@ -31,6 +31,10 @@ LOG = logging.getLogger('mini-eval-worker')
 MAX_LOG_BYTES = 262144
 
 
+class StartupCancelled(Exception):
+    """Control plane cancelled the execution during startup preparation."""
+
+
 class APIError(Exception):
     def __init__(self, status, message):
         self.status = status
@@ -379,10 +383,44 @@ class Worker:
             self.save()
         deadline = [time.monotonic() + task['lease_seconds'] - 2]
         done, lease_lost = threading.Event(), threading.Event()
+        startup_done, startup_abort = threading.Event(), threading.Event()
+        startup_error = []
+
+        def check_startup():
+            if startup_error:
+                raise startup_error[0]
+            if self.stop_event.is_set() or lease_lost.is_set() or time.monotonic() >= deadline[0]:
+                raise RuntimeError('worker stopped or lease expired before start')
+
+        def renew_startup():
+            interval = min(2, max(.2, (deadline[0] - time.monotonic()) / 4))
+            while not startup_done.wait(interval):
+                try:
+                    check_startup()
+                    requested = time.monotonic()
+                    reply = self.api.post('worker/heartbeat', {
+                        'slot_id': self.slot_id, 'execution_id': execution, 'started': False})
+                    # A late response must not resurrect a locally expired lease.
+                    check_startup()
+                    if reply['cancel']:
+                        raise StartupCancelled()
+                    deadline[0] = requested + reply['lease_seconds'] - 2
+                except (urllib.error.URLError, TimeoutError):
+                    continue
+                except APIError as exc:
+                    if exc.status == 503:
+                        continue
+                    startup_error.append(exc)
+                    startup_abort.set()
+                    return
+                except Exception as exc:
+                    startup_error.append(exc)
+                    startup_abort.set()
+                    return
 
         def watchdog():
             while not done.wait(.5):
-                if self.stop_event.is_set() or time.monotonic() >= deadline[0]:
+                if self.stop_event.is_set() or startup_abort.is_set() or time.monotonic() >= deadline[0]:
                     lease_lost.set()
                     try:
                         self.stop_container(execution)
@@ -413,29 +451,41 @@ class Worker:
                 self.state = None
                 self.save()
                 return
-            with self.start_lock:
-                if self.stop_event.is_set() or lease_lost.is_set():
-                    raise RuntimeError('worker stopped or lease expired before start')
-                container = self.inspect(execution)
-                if not container:
-                    if self.state['created'] or task['status'] == 'RUNNING':
-                        kind = 'host unit' if self.host_mode() else 'Docker container'
-                        raise RuntimeError(f'previously created {kind} is missing; refusing duplicate execution')
-                    # Crash before create is safe to fail; never recreate an uncertain execution.
-                    self.state['created'] = True
-                    self.save()
-                    if task.get('benchmark')=='cs-client' and task.get('client_spec',{}).get('service_mode')!='none':
-                        from .probe_dependencies import ready as probes_available
-                        if probes_available():
-                            from .client_connectivity import verify
-                            verify(task['client_spec']['endpoint'])
-                    self.create(task)
+            check_startup()
+            startup_thread = threading.Thread(target=renew_startup, daemon=True,
+                                              name='startup-lease-'+execution)
+            startup_thread.start()
+            try:
+                with self.start_lock:
+                    check_startup()
                     container = self.inspect(execution)
-                if container['State']['Status'] == 'created':
-                    if lease_lost.is_set():
-                        raise RuntimeError('lease expired before start')
-                    if self.host_mode(): HostBackend(self).start(task)
-                    else: docker('start', self.name(execution), timeout=10)
+                    check_startup()
+                    if not container:
+                        if self.state['created'] or task['status'] == 'RUNNING':
+                            kind = 'host unit' if self.host_mode() else 'Docker container'
+                            raise RuntimeError(f'previously created {kind} is missing; refusing duplicate execution')
+                        # Crash before create is safe to fail; never recreate an uncertain execution.
+                        self.state['created'] = True
+                        self.save()
+                        if task.get('benchmark')=='cs-client' and task.get('client_spec',{}).get('service_mode')!='none':
+                            from .probe_dependencies import ready as probes_available
+                            if probes_available():
+                                from .client_connectivity import verify
+                                verify(task['client_spec']['endpoint'])
+                        check_startup()
+                        self.create(task)
+                        check_startup()
+                        container = self.inspect(execution)
+                    if container['State']['Status'] == 'created':
+                        check_startup()
+                        if self.host_mode(): HostBackend(self).start(task)
+                        else: docker('start', self.name(execution), timeout=10)
+            finally:
+                startup_done.set()
+                startup_thread.join(timeout=15)
+            check_startup()
+            if startup_thread.is_alive():
+                raise RuntimeError('startup heartbeat did not finish')
             if is_service(task) and task['client_spec']['service'].get('readiness'):
                 from .readiness import ProbeRunner
                 session=self.api.post(f'worker/executions/{execution}/service-probe-session')
@@ -530,6 +580,17 @@ class Worker:
                     self.save()
                     return
                 time.sleep(min(2, max(.2, task['lease_seconds']/4)))
+        except StartupCancelled:
+            self.stop_container(execution)
+            try:
+                self.api.post(f'worker/executions/{execution}/complete', {'status': 'CANCELLED'})
+            except APIError as exc:
+                if exc.status not in (404, 409):
+                    raise
+                self.api.post(f'worker/executions/{execution}/cleanup')
+            self.remove(execution)
+            self.state = None
+            self.save()
         except APIError as exc:
             self.stop_container(execution)
             if exc.status in (404, 409):
@@ -565,6 +626,7 @@ class Worker:
             self.state = None
             self.save()
         finally:
+            startup_done.set()
             if probe_runner:probe_runner.close()
             done.set()
             thread.join(timeout=15)
