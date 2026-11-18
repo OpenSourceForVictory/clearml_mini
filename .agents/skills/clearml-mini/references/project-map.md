@@ -113,3 +113,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 节点组件升级界面：worker-upgrades.tsx 统一说明 Worker/Runner/Agent；发布标签沿用 Worker 版本，Runner 无独立版本，Agent 托管有条件。运行适配器复制新版 Runner，旧镜像内置 Runner 需重建。见 docs/worker-upgrades.md、指南 upgrades、worker-upgrades.spec.ts；不要把节点升级描述成镜像或驱动更新。
 
 删除批次诊断：HTTP 500 的文本响应由 frontend/src/api.ts 显示为“请求失败 (500)”，不再出现 JSON 解析错误。失败时保留批次及比较选择；记录批次 ID、请求时间并检查 API 异常日志，必要时刷新确认状态后再重试。409 仍展示未清理或关联服务未停止的业务原因。节点工作目录不由该接口清除。测试见 batch-history.spec.ts、test_batch_deletion_records.py；前端错误展示修复不代表现场后台 500 根因已修复。
+
+客户端启动前连通性诊断：更新客户端 Worker 后，journal 中 `client connectivity passed/failed` 记录目标 origin（协议、主机、端口）、检查耗时、超时上限，成功记录方式与 HTTP 状态，失败记录异常类型和原因分类；任务错误保留 `client_service_unreachable` 并附带分类（timeout、dns、connection_refused、tls、websocket_handshake 等）。不记录路径、查询、凭据、响应正文或原始异常文本。HEAD 收到 405 仍判定可达，不代表业务就绪；非根路径 WebSocket 仍需握手成功或认证挑战 401/403。默认 3 秒、不读取环境代理不变。查看客户端 `journalctl -u 'mini-eval-worker-*' --since '10 minutes ago'` 并对照失败时间。无需数据库迁移；仅更新平台 API 不会更新已纳管节点的 Worker。
