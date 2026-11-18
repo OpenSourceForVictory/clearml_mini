@@ -1,0 +1,24 @@
+[
+  {
+    "kind": "direct",
+    "batch_id": "0a1bb3ce-d8e9-4fbf-ae9b-201e99f34370",
+    "client_template": "live-gpu-direct / 20261118",
+    "service_template": "default · live-npu-readiness / 20261118",
+    "configured_instances": 2,
+    "visible_instance_rows": 2,
+    "read_only_business": true,
+    "auth_renewals": 1,
+    "requests": 9
+  },
+  {
+    "kind": "sdk",
+    "batch_id": "36e0335c-67f8-447e-a729-9a6502309450",
+    "client_template": "live-gpu-sdk / 20261118",
+    "service_template": "default · live-npu-readiness / 20261118",
+    "configured_instances": 2,
+    "visible_instance_rows": 2,
+    "read_only_business": true,
+    "auth_renewals": 1,
+    "requests": 9
+  }
+]

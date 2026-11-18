@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-18",
+  "api_image": "mini-eval-api:startup-lease-0205-20261118",
+  "onboarding_image": "mini-eval-onboarding:startup-lease-0205-20261118",
+  "nodes": [
+    {
+      "node": "local4090-151",
+      "online_slots": 1,
+      "worker": "0.20.5",
+      "protocol": 17
+    },
+    {
+      "node": "ascend910b3-29",
+      "online_slots": 8,
+      "worker": "0.20.5",
+      "protocol": 17
+    }
+  ],
+  "hardware": {
+    "batch_id": "4803223f-8bd8-4986-a0a3-0400956896f6",
+    "cases": [
+      {
+        "case_id": "case-1",
+        "job_id": "fad90573-201a-498a-aa71-88be3be02640",
+        "status": "SUCCEEDED",
+        "gpu_tensor_checks": 3,
+        "service_ready_checks": 3,
+        "cleanup_confirmed": true
+      },
+      {
+        "case_id": "case-2",
+        "job_id": "8e68290d-0487-4462-aae8-4fe92f7e954e",
+        "status": "SUCCEEDED",
+        "gpu_tensor_checks": 3,
+        "service_ready_checks": 3,
+        "cleanup_confirmed": true
+      },
+      {
+        "case_id": "case-3",
+        "job_id": "043c34b8-24b5-4e18-a8bb-c2faa4344cd2",
+        "status": "SUCCEEDED",
+        "gpu_tensor_checks": 3,
+        "service_ready_checks": 3,
+        "cleanup_confirmed": true
+      }
+    ],
+    "npu_service_tensor_check": true,
+    "service_cleanup_confirmed": true
+  },
+  "slow_login_isolated": {
+    "version": "0.20.5",
+    "installed_code": true,
+    "real_login_seconds": 35.04,
+    "lease_seconds": 30,
+    "startup_heartbeats": 18,
+    "status": "SUCCEEDED",
+    "bash_functions_filtered": true,
+    "api_systemd_simulated": true
+  },
+  "all_nodes_original_admission_restored": true,
+  "held_executions": 0,
+  "validation_templates_archived": true,
+  "database_migration": false
+}

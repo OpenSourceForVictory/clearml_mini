@@ -187,3 +187,5 @@ API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在�
 验证边界：本地真实Shell sleep超过初始租约、真实线程、故障注入API及模拟Docker/systemd边界验证续租、取消/失效、晚响应、恢复及连续三个任务；不等于真实GPU/NPU业务验收，未部署故障节点，也未运行全量覆盖率门槛统计。
 
 本次验证：启动续租、执行恢复、服务执行、宿主机生命周期/登录环境、Docker契约及执行时限相关测试185 passed / 3 skipped（特权环境未开启），另补API启动预算测试1 passed。一个既有Starlette弃用警告；TypeScript和OpenSpec strict通过。初轮测试对晚响应的断言混淆“有效租约内启动后失租”和“失租后才启动”，失败输出保留 /tmp/startup-lease-tests.log；随后拆为两项测试分别断言停止已启动执行和禁止后续启动。最终输出 /tmp/startup-lease-all.log、/tmp/startup-lease-api.log。未跑全量覆盖率，不宣称达到目录覆盖率门槛。
+
+Worker0.20.5已发布到实验平台，并升级local4090-151及ascend910b3-29，验证3个串行任务共9回合GPU与真实NPU服务；另用安装代码隔离验证35秒慢登录续租。用户其他故障平台未确认更新，验证范围见[发布验收](validation/startup-lease-release/README.md)。
