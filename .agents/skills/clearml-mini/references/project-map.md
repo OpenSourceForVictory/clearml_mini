@@ -134,3 +134,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 可选执行限制：客户端 timeout_seconds=0 不设总时限，但租约、启动、取消继续有效。resources.cpu_unlimited/memory_unlimited 将正数调度预约与运行硬上限分开；最低预约继续参与容量判断和计账，领取运行轴为0并附reserved_*。模板cpus/ram_gb覆盖权限控制不限选项。Worker0.19.0/协议16，旧Worker在调度及领取拦截。见 docs/optional-execution-limits.md；回归 test_client_execution_limits.py、test_resource_contract.py、test_host_backend_lifecycle.py、test_worker_docker_contracts.py 与 run-wizard.spec.ts。无需迁移，非真机模型验收。
 
 宿主机逐回合错误策略：host_runtime.episode_error_policy=stop（默认）或continue，仅per_episode客户端允许continue；runner/sdk.py记录ERROR后继续，全部尝试结束有错误则整体失败，不输出成功final。正常success=false仍是COMPLETED。setup/teardown、取消、租约和时限不受继续策略豁免。Worker0.20.0/协议17；调度、host/image环境诊断和claim阻断旧Worker。界面 templates.tsx复制保留策略，whole_task保存stop。见 docs/host-execution.md；测试test_host_shell_episode.py、test_command_sdk.py、test_sdk_reporting_contract.py和template-guidance.spec.ts。无需迁移。
+
+可选限制真机修正：Worker0.20.1 的 resource_limits.verify_group 只读取有限 CPU/内存轴的 cgroup 文件，兼容 systemd 未启用不限轴控制器；有限轴缺文件和原 pids 限制仍拒绝。专项 test_resource_limits.py 覆盖 v1/v2。部署与真机边界见 docs/validation/episode-limits-live/README.md。

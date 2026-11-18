@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-18",
+  "worker": "0.20.1",
+  "protocol": 17,
+  "cases": [
+    {
+      "name": "live-limits-20261118-gpu-continue",
+      "job_id": "bba77793-f390-4888-bb7d-ac5eef285c21",
+      "status": "FAILED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        1,
+        0,
+        0
+      ],
+      "hardware_probe_count": 3
+    },
+    {
+      "name": "live-limits-20261118-gpu-stop",
+      "job_id": "61b44b43-e402-42a2-89fb-187384fee00e",
+      "status": "FAILED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        1,
+        null,
+        null
+      ],
+      "hardware_probe_count": 1
+    },
+    {
+      "name": "live-limits-20261118-npu-continue",
+      "job_id": "01709f7b-e9f2-4e36-b06b-26db647e075f",
+      "status": "FAILED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        1,
+        0,
+        0
+      ],
+      "hardware_probe_count": 3
+    },
+    {
+      "name": "live-limits-20261118-npu-stop",
+      "job_id": "c04b650f-7f57-46d4-b5fc-df0ee9672d05",
+      "status": "FAILED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        1,
+        null,
+        null
+      ],
+      "hardware_probe_count": 1
+    },
+    {
+      "name": "live-limits-docker-True",
+      "job_id": "7e099e05-925a-4072-9971-3ce645aa71de",
+      "status": "SUCCEEDED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        null
+      ],
+      "hardware_probe_count": 1
+    },
+    {
+      "name": "live-limits-docker-False",
+      "job_id": "63db68d7-74fe-4ab6-a16b-c6a4e75a1144",
+      "status": "SUCCEEDED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        null
+      ],
+      "hardware_probe_count": 1
+    },
+    {
+      "name": "live-cancel-docker-True",
+      "job_id": "d1e673a3-718d-4ee4-9009-92921d95e5e1",
+      "status": "CANCELLED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        null
+      ],
+      "hardware_probe_count": 1,
+      "docker_limits": {
+        "NanoCpus": 0,
+        "Memory": 0,
+        "PidsLimit": 256,
+        "DeviceRequests": null
+      },
+      "command": [
+        "-m",
+        "runner.cs_entry"
+      ]
+    },
+    {
+      "name": "live-cancel-docker-False",
+      "job_id": "bd41d4db-7fa0-40c2-b70d-a750816da56e",
+      "status": "CANCELLED",
+      "cleanup_confirmed": true,
+      "episode_exit_codes": [
+        null
+      ],
+      "hardware_probe_count": 1,
+      "docker_limits": {
+        "NanoCpus": 1000000000,
+        "Memory": 2147483648,
+        "PidsLimit": 256,
+        "DeviceRequests": null
+      },
+      "command": [
+        "-m",
+        "runner.supervise",
+        "--timeout",
+        "180",
+        "python3",
+        "-m",
+        "runner.cs_entry"
+      ]
+    }
+  ],
+  "orchestrations": [
+    {
+      "kind": "direct",
+      "batch_id": "0a1bb3ce-d8e9-4fbf-ae9b-201e99f34370",
+      "status": "SUCCEEDED",
+      "services": 2,
+      "episodes": 3,
+      "client_readiness_assertions": 3,
+      "cleanup_confirmed": true
+    },
+    {
+      "kind": "sdk",
+      "batch_id": "36e0335c-67f8-447e-a729-9a6502309450",
+      "status": "SUCCEEDED",
+      "services": 2,
+      "episodes": 3,
+      "client_readiness_assertions": 3,
+      "cleanup_confirmed": true
+    }
+  ]
+}

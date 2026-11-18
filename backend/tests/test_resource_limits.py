@@ -171,3 +171,29 @@ def test_resource_command_passes_user_bus_and_timeout(monkeypatch):
     limits.run(['true'])
     assert calls[0]['timeout']==15
     assert calls[0]['env']['DBUS_SESSION_BUS_ADDRESS']=='unix:path=/run/user/1001/bus'
+
+
+@pytest.mark.parametrize('v2', [True, False])
+@pytest.mark.parametrize('cpus,memory', [(0, 0), (1, 0), (0, 1024)])
+def test_unlimited_axes_may_have_no_controller_files(tmp_path, monkeypatch, v2, cpus, memory):
+    monkeypatch.setattr(limits, 'CGROUP_ROOT', tmp_path)
+    if v2:
+        (tmp_path/'cgroup.controllers').write_text('pids')
+        root = tmp_path/'job'; root.mkdir()
+        (root/'pids.max').write_text('256')
+        if cpus: (root/'cpu.max').write_text('100000 100000')
+        if memory: (root/'memory.max').write_text('1024')
+    else:
+        for controller in ['pids'] + (['cpu'] if cpus else []) + (['memory'] if memory else []):
+            (tmp_path/controller/'job').mkdir(parents=True)
+        (tmp_path/'pids/job/pids.max').write_text('256')
+        if cpus:
+            (tmp_path/'cpu/job/cpu.cfs_quota_us').write_text('100000')
+            (tmp_path/'cpu/job/cpu.cfs_period_us').write_text('100000')
+        if memory: (tmp_path/'memory/job/memory.limit_in_bytes').write_text('1024')
+    limits.verify_group('/job', cpus, memory)
+    # Missing files remain fatal when an axis actually requests enforcement.
+    if not cpus:
+        with pytest.raises(FileNotFoundError): limits.verify_group('/job', 1, memory)
+    if not memory:
+        with pytest.raises(FileNotFoundError): limits.verify_group('/job', cpus, 1024)

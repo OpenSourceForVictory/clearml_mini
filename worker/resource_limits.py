@@ -53,8 +53,9 @@ def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
     if not group.startswith('/'):raise ValueError('missing task cgroup')
     if (CGROUP_ROOT/'cgroup.controllers').is_file():
         root=CGROUP_ROOT/group.lstrip('/')
-        quota,period=(root/'cpu.max').read_text().split()
-        memory=(root/'memory.max').read_text().strip()
+        # systemd need not enable an unused controller for an unlimited axis.
+        if cpus:quota,period=(root/'cpu.max').read_text().split()
+        if memory_bytes:memory=(root/'memory.max').read_text().strip()
         tasks=(root/'pids.max').read_text().strip()
     else:
         groups=groups or dict.fromkeys(('cpu','memory','pids'),group)
@@ -77,8 +78,9 @@ def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
                 return (mount/relative/name).read_text().strip()
             if '..' in Path(path).parts:raise ValueError('invalid cgroup path')
             return (CGROUP_ROOT/controller/path.lstrip('/')/name).read_text().strip()
-        quota=read('cpu','cpu.cfs_quota_us');period=read('cpu','cpu.cfs_period_us')
-        memory=read('memory','memory.limit_in_bytes');tasks=read('pids','pids.max')
+        if cpus:quota=read('cpu','cpu.cfs_quota_us');period=read('cpu','cpu.cfs_period_us')
+        if memory_bytes:memory=read('memory','memory.limit_in_bytes')
+        tasks=read('pids','pids.max')
     if cpus and (quota=='max' or int(quota)<=0 or int(quota)>cpus*int(period)):raise ValueError('cpu_limit_not_enforced')
     if memory_bytes and (memory=='max' or not 0<int(memory)<=memory_bytes):raise ValueError('memory_limit_not_enforced')
     if tasks=='max' or not 0<int(tasks)<=pids:raise ValueError('pids_limit_not_enforced')
