@@ -34,6 +34,6 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
    </tr>;
   })}</tbody></table></div>}
   <div className="pagination"><button disabled={page===1||loading} onClick={()=>onPage(page-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20||loading} onClick={()=>onPage(page+1)}>下一页</button></div>
-  {deleting&&<dialog ref={dialog} onCancel={e=>{e.preventDefault();if(!busy)setDeleting(null);}} className="history-confirm" aria-labelledby="delete-batch-title"><h3 id="delete-batch-title">删除评测批次</h3><p>确认删除「{deleting.title}」？</p><p>批次下的任务、运行记录、日志和产物会删除，审计记录和删除状态会保留。运行任务或关联服务尚未清理时无法删除。</p>{deleteError&&<p role="alert" className="error">{deleteError}</p>}<button disabled={busy} onClick={()=>void remove()}>{busy?'正在删除…':'确认删除批次'}</button><button disabled={busy} onClick={()=>setDeleting(null)}>暂不删除</button></dialog>}
+  {deleting&&<dialog ref={dialog} onCancel={e=>{e.preventDefault();if(!busy)setDeleting(null);}} className="history-confirm" aria-labelledby="delete-batch-title"><h3 id="delete-batch-title">删除评测批次</h3><p>确认删除「{deleting.title}」？</p><p>批次下的任务、运行记录、日志和产物会删除，审计记录和删除状态会保留。运行任务或关联服务尚未清理时无法删除。此操作不清除节点工作目录，不释放磁盘空间。</p>{deleteError&&<p role="alert" className="error">{deleteError}</p>}<button disabled={busy} onClick={()=>void remove()}>{busy?'正在删除…':'确认删除批次'}</button><button disabled={busy} onClick={()=>setDeleting(null)}>暂不删除</button></dialog>}
  </section>;
 }

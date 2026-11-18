@@ -44,3 +44,38 @@ test('deleting the only record on last page returns to previous page',async({pag
  await page.getByRole('button',{name:'删除批次',exact:true}).click();await page.getByRole('button',{name:'确认删除批次'}).click();
  await expect(page.getByText('第 1 页',{exact:true})).toBeVisible();await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(20);
 });
+
+for(const failure of [{status:500,body:'Internal Server Error',contentType:'text/plain'},{status:502,body:'<html>Bad Gateway</html>',contentType:'text/html'},{status:503,body:'',contentType:'text/plain'}]){
+ test(`delete HTTP ${failure.status} preserves row and selection and supports retry`,async({page})=>{
+  const ctl=await setup(page);
+  await page.route('**/api/v1/batches/done',route=>route.fulfill(failure));
+  const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
+  await page.getByLabel('比较选择 完成批次').check();
+  await row.getByRole('button',{name:'删除批次'}).click();
+  await page.getByRole('button',{name:'确认删除批次'}).click();
+  await expect(page.getByRole('alert')).toContainText(`请求失败 (${failure.status})`);
+  await expect(page.getByRole('alert')).not.toContainText('Unexpected token');
+  await expect(row).toBeVisible();await expect(page.getByLabel('比较选择 完成批次')).toBeChecked();
+  expect(ctl.deleted).toEqual([]);
+  await page.unroute('**/api/v1/batches/done');
+  await page.getByRole('button',{name:'确认删除批次'}).click();
+  await expect(row).toHaveCount(0);expect(ctl.deleted).toEqual(['done']);
+ });
+}
+
+test('API handles empty success, invalid success and non-JSON unauthorized responses',async({page})=>{
+ await setup(page);
+ const call=()=>page.evaluate(async()=>{
+  const modulePath='/src/api.ts';const {api}=await import(modulePath);
+  try{return {value:await api('diagnostic-test')};}catch(e){return {error:String(e)};}
+ });
+ await page.route('**/api/v1/diagnostic-test',route=>route.fulfill({status:204}));
+ expect(await call()).toEqual({value:undefined});
+ await page.unroute('**/api/v1/diagnostic-test');
+ await page.route('**/api/v1/diagnostic-test',route=>route.fulfill({status:200,body:'<html>proxy</html>'}));
+ expect((await call()).error).toContain('响应格式错误 (200)');
+ await page.unroute('**/api/v1/diagnostic-test');
+ await page.route('**/api/v1/diagnostic-test',route=>route.fulfill({status:401,body:'Unauthorized'}));
+ expect((await call()).error).toContain('请求失败 (401)');
+ expect(await page.evaluate(()=>sessionStorage.getItem('eval-token'))).toBeNull();
+});

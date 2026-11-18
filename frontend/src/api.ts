@@ -47,12 +47,18 @@ export async function api<T>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const value = await res.json();
+  if (res.status === 401 && path !== "auth/login") expireSession(token);
+  if (res.status === 204 && res.ok) return undefined as T;
+  let value;
+  try {
+    value = await res.json();
+  } catch {
+    throw new Error(res.ok ? `响应格式错误 (${res.status})` : `请求失败 (${res.status})`);
+  }
   if (!res.ok) {
-    if (res.status === 401 && path !== "auth/login")
-      expireSession(token);
+    const detail = value?.detail;
     throw new Error(
-      (Array.isArray(value.detail) ? value.detail.map((x:{slot_id?:string;reason?:string}) => (x.slot_id||'')+': '+(x.reason||JSON.stringify(x))).join('; ') : errors[value.detail] || value.detail) || `请求失败 (${res.status})`,
+      (Array.isArray(detail) ? detail.map((x:{slot_id?:string;reason?:string}) => (x?.slot_id||'')+': '+(x?.reason||JSON.stringify(x))).join('; ') : typeof detail === 'string' ? errors[detail] || detail : '') || `请求失败 (${res.status})`,
     );
   }
   return value;
