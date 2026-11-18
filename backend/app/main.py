@@ -315,9 +315,8 @@ def job_logs(job_id: str, run_id: Optional[str] = None, after: int = Query(-1, g
     run = next((r for r in job.runs if r.id == run_id), None) if run_id else job.runs[-1]
     if not run:
         raise HTTPException(404, 'attempt not found')
-    rows = s.scalars(select(RunLog).where(RunLog.run_id == run.id, RunLog.sequence > after).order_by(RunLog.sequence).limit(limit)).all()
-    return {'run_id': run.id, 'chunks': [{'sequence': r.sequence, 'content': r.content} for r in rows],
-            'next_after': rows[-1].sequence if rows else after, 'max_bytes': 262144}
+    from .execution_logs import read
+    return read(s, run, after, limit)
 
 
 @app.get('/api/v1/admin/health')

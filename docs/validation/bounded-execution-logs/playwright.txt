@@ -1,0 +1,12 @@
+
+Running 5 tests using 1 worker
+
+(node:3760517) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/execution-logs.spec.ts:3:1 › service logs show gaps, append by cursor, stop at completion and close (7.7s)
+  ✓  2 tests/execution-logs.spec.ts:36:1 › replaced service attempt rejects late logs and retries a failed read (2.6s)
+  ✓  3 tests/orchestration-status.spec.ts:2:1 › owned batch shows task service generation, logs and revisioned stop (399ms)
+  ✓  4 tests/orchestration-status.spec.ts:31:1 › default task page shows server scheduling blockers and then startup status (6.6s)
+  ✓  5 tests/orchestration-status.spec.ts:65:1 › explicit replica target shows partial scheduling and both distinct instances (2.7s)
+
+  5 passed (20.4s)

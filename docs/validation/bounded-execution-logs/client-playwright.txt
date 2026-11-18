@@ -1,0 +1,20 @@
+
+Running 13 tests using 1 worker
+
+(node:3769558) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (272ms)
+  ✓   2 tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (420ms)
+  ✓   3 tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (297ms)
+  ✓   4 tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (350ms)
+  ✓   5 tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (334ms)
+  ✓   6 tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (364ms)
+  ✓   7 tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (193ms)
+  ✓   8 tests/batch-monitoring.spec.ts:29:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.6s)
+  ✓   9 tests/batch-monitoring.spec.ts:39:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓  10 tests/batch-monitoring.spec.ts:45:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓  11 tests/batch-monitoring.spec.ts:53:1 › detail tabs preserve filtering and retry selection and contain narrow tables (364ms)
+  ✓  12 tests/batch-monitoring.spec.ts:71:1 › client placement is a separate column with GPU zero and unassigned states (176ms)
+  ✓  13 tests/batch-monitoring.spec.ts:78:1 › episode expansion separates protocol results, process exits and unreported rounds (6.6s)
+
+  13 passed (22.8s)

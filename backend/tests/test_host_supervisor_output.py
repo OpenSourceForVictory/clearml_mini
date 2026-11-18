@@ -42,3 +42,18 @@ def test_failed_device_verification_does_not_launch_business(tmp_path,monkeypatc
     with pytest.raises(RuntimeError,match='device mismatch'):host_supervisor.main()
     assert not (tmp_path/'should-not-exist').exists()
     assert not (tmp_path/'exit.json').exists()
+
+
+def test_v2_supervisor_keeps_tail_and_independent_result(tmp_path,monkeypatch):
+    from runner.log_capture import read_ring
+    launch(tmp_path,monkeypatch,"import sys,json;print('x'*800000);print(json.dumps({'final':{'success_rate':1}}));print('last-error',file=sys.stderr)",log_protocol=2)
+    assert host_supervisor.main()==0
+    assert not (tmp_path/'stdout.log').exists()
+    assert json.loads((tmp_path/'final.json').read_text())['final']['success_rate']==1
+    records=[];offset=0
+    while True:
+        row,offset=read_ring(tmp_path/'logs',offset)
+        if row is None:break
+        records.append(row)
+    assert records[0]['gap']
+    assert any('last-error' in r['content'] for r in records)

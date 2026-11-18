@@ -150,3 +150,5 @@ Worker0.20.5：client.execute初始握手后使用专用线程发送started=fals
 0.20.5及配置页实验发布：docs/validation/startup-lease-release/README.md。仅local4090-151与ascend910b3-29组件升级；真实API/systemd下3任务9GPU回合和NPU服务通过，35秒慢登录是安装代码+模拟API/systemd隔离验证，勿合并宣称完整端到端长登录验证。原接单状态恢复、 held=0，测试模板归档，其他故障平台未确认升级。
 
 批次删除外键回归：batch_deletion.remove 每层删除显式 flush，确保服务任务先于 ServiceInstance 删除，保持事务回滚；test_batch_deletion_records.py 必须先 tick 生成真实数据库服务记录，不能只提交编排定义后取消。SQLite 外键验证不等于现场 PostgreSQL 验收，见 docs/validation/batch-delete-foreign-keys/README.md。
+
+日志 v2 API：backend/app/execution_logs.py、core.RunLogState/RunLogChunk、迁移 y518b90；256 KiB/256 块滚动窗口、Run 行锁、ACK 摘要与游标缺口；旧 run_logs 不改写。Worker 0.21.0 按 bounded_logs_v2 协商；runner/log_capture.py 与 worker/log_stream.py 提供有界采集、独立协议记录和上传，旧 journal 不切换。只有所选节点升级后新执行才启用，不能声称已自动修复其他部署。见 docs/execution-logs.md，专项及 PostgreSQL 竞态测试 test_execution_logs_v2/test_execution_logs_postgres。

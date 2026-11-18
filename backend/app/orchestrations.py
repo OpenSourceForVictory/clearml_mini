@@ -2,7 +2,7 @@
 import hashlib
 import json
 from typing import Literal
-from fastapi import Depends,Header,HTTPException
+from fastapi import Depends,Header,HTTPException,Query
 from pydantic import BaseModel,ConfigDict,Field,model_validator,field_validator
 from sqlalchemy import select
 from .core import EvaluationOrchestration,EvaluationBatch,EvaluationSuite,ServerTemplate,Job,Run,ServiceInstance,Pool,User,RunLog
@@ -235,14 +235,16 @@ def install(app,db,current):
         batch,_=owned(s,identity,user);return view(s,batch)
 
     @app.get('/api/v1/orchestrations/{identity}/services/{service_id}/logs')
-    def logs(identity:str,service_id:str,job_id:str|None=None,user=Depends(current),s=Depends(db)):
+    def logs(identity:str,service_id:str,job_id:str|None=None,after:int=Query(-1,ge=-1),limit:int=Query(256,ge=1,le=256),cursor_run:str|None=None,user=Depends(current),s=Depends(db)):
         owned(s,identity,user);item=s.get(ServiceInstance,service_id)
         if not item or item.orchestration_batch_id!=identity:raise HTTPException(404,'service not found')
         job=s.get(Job,job_id or item.current_job_id)
         if not job or job.service_instance_id!=item.id:raise HTTPException(404,'service execution not found')
         run=s.scalar(select(Run).where(Run.job_id==job.id).order_by(Run.attempt.desc()))
-        chunks=s.scalars(select(RunLog).where(RunLog.run_id==run.id).order_by(RunLog.sequence)) if run else []
-        return {'job_id':job.id,'content':''.join(x.content for x in chunks)}
+        if not run:return {'job_id':job.id,'content':'','chunks':[],'next_after':after,'complete':False}
+        from .execution_logs import read
+        data=read(s,run,-1 if cursor_run and cursor_run!=run.id else after,limit)
+        return {**data,'job_id':job.id,'content':''.join(x['content'] for x in data['chunks'])}
 
     @app.post('/api/v1/orchestrations/{identity}/services/{service_id}/control')
     def control(identity:str,service_id:str,body:services.Control,user=Depends(current),s=Depends(db)):

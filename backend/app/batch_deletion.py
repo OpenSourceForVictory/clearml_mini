@@ -12,6 +12,8 @@ from .core import (
     Run,
     RunArtifact,
     RunLog,
+    RunLogChunk,
+    RunLogState,
     ServiceInstance,
     now,
 )
@@ -54,11 +56,13 @@ def remove(s, identity, user):
     # explicit order is required on PostgreSQL because these tables do not use
     # database-level ON DELETE CASCADE.
     job_ids = [item.id for item in jobs]
-    run_ids = list(s.scalars(select(Run.id).where(Run.job_id.in_(job_ids)))) if job_ids else []
+    run_ids = list(s.scalars(select(Run.id).where(Run.job_id.in_(job_ids)).order_by(Run.id).with_for_update())) if job_ids else []
     execution_ids = list(s.scalars(select(ExecutionData.id).where(ExecutionData.run_id.in_(run_ids)))) if run_ids else []
     for model, column, values in (
         (DataCleanupItem, DataCleanupItem.data_id, execution_ids),
         (ExecutionData, ExecutionData.id, execution_ids),
+        (RunLogChunk, RunLogChunk.run_id, run_ids),
+        (RunLogState, RunLogState.run_id, run_ids),
         (RunLog, RunLog.run_id, run_ids),
         (EpisodeRecord, EpisodeRecord.run_id, run_ids),
         (RunArtifact, RunArtifact.run_id, run_ids),

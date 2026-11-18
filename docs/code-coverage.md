@@ -72,3 +72,5 @@ PostgreSQL 集成测试需管理员准备一次性测试库、运行迁移并提
 回连恢复新增 `test_reconnect_resilience.py`，覆盖后台依赖阻塞/失败分类、心跳能力更新、可选能力与验收边界、超时配置、当前凭据继续验收、旧修订/发布拒绝及执行器重启恢复。部署测试严格校验新增超时变量白名单，仍禁止暴露端口/特权/无关依赖。完整记录见 [回连恢复验证](validation/resilient-node-reconnect/README.md)。
 
 2026-11-18 复测将 `MIGRATION_DRIVER_TEST_URL` 指向一次性 PostgreSQL，与全量覆盖命令在同一进程树中启用已有真实迁移用例；不再仅单独运行后口头计入覆盖率。`TEST_DATABASE_URL` 同样仅使用此一次性环境，验证 Agent 并发修复。原 78.51% scripts 行覆盖率失败证据保留，不降低门槛。
+
+日志 v2 的 worker/log_stream.py、backend/app/execution_logs.py 与 runner/log_capture.py 纳入“业务执行与结果”关键功能（90% 行 / 80% 分支）和各自目录分母；不排除新增日志路径。实际 systemd/Docker 子进程和浏览器未插桩部分不计入 Python 覆盖率。

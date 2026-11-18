@@ -21,3 +21,5 @@ PYTEST_ADDOPTS=--import-mode=importlib .venv/bin/python -m pytest backend/tests/
 发布镜像 `mini-eval-api:batch-delete-fe7886e-20261118` 以先前 startup-lease-0205 镜像为基础，仅替换 backend/app/batch_deletion.py。发布前比对 API 环境配置、确认零活跃执行、暂时关闭节点准入并备份数据库；只重建 API，健康后恢复全部 6 节点原准入状态。无需迁移、前端重建或节点升级。备份与私有操作记录留在 .runtime/batch-delete-release-20261118，不提交。
 
 重试用户已尝试删除的上述批次，API 成功返回 deleted=true、deleted_jobs=3、deleted_runs=3；重复删除同样成功。容器文件 SHA256 与提交代码一致，6 节点启用、held_executions=0。此为当前平台真实 PostgreSQL 删除验收，不代表其他独立部署已更新。
+
+新增日志 v2 表的删除顺序、Run 行锁及 PostgreSQL 日志上传/删除竞态，见[有界日志验证](../bounded-execution-logs/README.md)。该功能尚未发布，不能与本页此前的删除修复部署混同。

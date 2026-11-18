@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/bounded-logs-live/check.py", line 58, in <module>
+    assert marker in content,(mode,service,'missing tail',result.get('complete'))
+           ^^^^^^^^^^^^^^^^^
+AssertionError: ('docker', False, 'missing tail', {'status': 'SUCCEEDED', 'exit_code': 0, 'metrics': None, 'error': None, 'log_gap': False})

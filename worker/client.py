@@ -266,6 +266,8 @@ class Worker:
                         '--benchmark='+task['benchmark'], '--episodes='+str(task['episodes'])]
         if runtime:
             command[0] = runtime['interpreter']
+        if task.get('log_protocol') == 2:
+            command = [command[0], '-m', 'runner.log_capture', '/tmp/mini-eval-output/.mini-eval-protocol', *command]
         if task['timeout_seconds'] == 0:
             # No total deadline; Worker lease watchdog and cancellation still own cleanup.
             # Bypass even an old image's supervisor, which interprets zero as immediate expiry.
@@ -347,6 +349,22 @@ class Worker:
             self.save()
         return True
 
+    def send_protocol_events(self, execution, path):
+        offset = self.state.get('protocol_event_offset', 0)
+        if not path.exists():return True
+        with path.open('rb') as source:
+            source.seek(offset)
+            for _ in range(16):
+                line = source.readline(65537)
+                if not line:return True
+                if not line.endswith(b'\n'):return False
+                event = json.loads(line)
+                self.api.post(f'worker/executions/{execution}/episodes', event)
+                offset += len(line)
+                self.state['protocol_event_offset'] = offset
+                self.save()
+        return False
+
     def send_logs(self, execution, output):
         # Persist the exact pending chunk before sending; response loss cannot change a retry's body.
         output = output.encode()[:MAX_LOG_BYTES].decode(errors='ignore')
@@ -376,6 +394,13 @@ class Worker:
         return self.state['offset'] >= len(output)
 
     def execute(self, task):
+        # Existing execution journals keep their negotiated protocol across upgrades.
+        if self.state is not None:
+            task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1)}
+        sender = collector = None
+        log_gap = False
+        log_drain_started = None
+        log_collect_started = None
         observed_exit_code = None
         execution = task['execution_id']
         if self.state is None:
@@ -493,6 +518,14 @@ class Worker:
                 if session.get('ever_ready'):
                     self.state['service_was_ready']=True;self.save()
                 probe_runner=ProbeRunner(task['client_spec']['service'],self.config,self.api,execution,epoch,self.workspace/'.probe-locks')
+            if task.get('log_protocol') == 2:
+                from .log_stream import Sender, DockerCollector
+                directory = execution_dirs(self.workspace, execution)
+                protocol_root = HostBackend(self).root if self.host_mode() else directory/'output'/'.mini-eval-protocol'
+                log_root = protocol_root/'logs' if self.host_mode() else directory/'diagnostic-logs'
+                if not self.host_mode():collector = DockerCollector(self.name(execution), log_root)
+                sender = Sender(Client(self.config), execution, log_root, Path(str(self.path)+'.logs'),
+                                stderr_source=None if self.host_mode() else protocol_root/'stderr-tail.json')
             while True:
                 if probe_runner:
                     if probe_runner.error:raise RuntimeError(probe_runner.error)
@@ -527,18 +560,24 @@ class Worker:
                         raise RuntimeError('container disappeared')
                 if not container['State']['Running']:
                     observed_exit_code = container['State'].get('ExitCode')
-                if self.host_mode(): output, err = HostBackend(self).logs()
+                if sender:
+                    final_path = protocol_root/'final.json'
+                    output = final_path.read_text() if final_path.exists() else ''
+                    err = ''
+                elif self.host_mode(): output, err = HostBackend(self).logs()
                 else:
                     output = docker('logs', self.name(execution), timeout=5).stdout
                     err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
                 try:
                     if task.get('benchmark') == 'cs-client':
-                        if task['client_spec']['template'].get('episode_reporting'):
+                        if sender:
+                            if not self.send_protocol_events(execution, protocol_root/'events.jsonl'):continue
+                        elif task['client_spec']['template'].get('episode_reporting'):
                             if not self.send_episode_journal(execution):
                                 continue
                         elif not self.send_episodes(execution, output):
                             continue
-                    logs_done = self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
+                    logs_done = True if sender else self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
                 except (urllib.error.URLError, TimeoutError):
                     continue
                 if is_service(task) and not probe_runner and container['State']['Running'] and not reply['cancel']:
@@ -557,6 +596,20 @@ class Worker:
                 if not container['State']['Running']:
                     if not logs_done:
                         continue
+                    if sender:
+                        if collector and collector.thread.is_alive():
+                            if log_collect_started is None:log_collect_started = time.monotonic()
+                            if time.monotonic()-log_collect_started < 5:
+                                time.sleep(min(.5,task['lease_seconds']/4));continue
+                        if log_drain_started is None:
+                            if collector:collector.close()
+                            log_drain_started = time.monotonic()
+                        log_gap = not sender.finish(timeout=0)
+                        if log_gap and time.monotonic()-log_drain_started < 5:
+                            time.sleep(min(.5,task['lease_seconds']/4))
+                            continue  # Keep heartbeats alive during the bounded final drain.
+                        if log_gap:LOG.warning('execution log final drain timed out; tail may be incomplete')
+                        sender.close()
                     result = None
                     for line in reversed(output.splitlines()):
                         try:
@@ -572,6 +625,7 @@ class Worker:
                     status = 'CANCELLED' if reply['cancel'] else ('SUCCEEDED' if not is_service(task) and code == 0 and (result or command_task) else 'FAILED')
                     body = {'status': status, 'exit_code': code, 'metrics': result if status == 'SUCCEEDED' else None,
                             'error': None if status == 'SUCCEEDED' else (err[-900:] or (f'missing protocol final result; runner exited with code {code}' if not command_task and not is_service(task) and code == 0 and not result else f'runner exited with code {code}'))}
+                    if sender:body['log_gap'] = log_gap
                     if task.get('benchmark') == 'cs-client':
                         self.upload_artifacts(task, deadline)
                     self.api.post(f'worker/executions/{execution}/complete', body)
@@ -583,7 +637,7 @@ class Worker:
         except StartupCancelled:
             self.stop_container(execution)
             try:
-                self.api.post(f'worker/executions/{execution}/complete', {'status': 'CANCELLED'})
+                self.api.post(f'worker/executions/{execution}/complete', {'status': 'CANCELLED', **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
             except APIError as exc:
                 if exc.status not in (404, 409):
                     raise
@@ -600,7 +654,7 @@ class Worker:
                 # through a failed completion, while retaining the journal on outages.
                 try:
                     self.api.post(f'worker/executions/{execution}/complete',
-                        {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': ('execution data rejected: '+str(exc))[:1000]})
+                        {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': ('execution data rejected: '+str(exc))[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
                 except APIError as failure:
                     if failure.status not in (404, 409):
                         raise
@@ -617,7 +671,7 @@ class Worker:
         except Exception as exc:
             self.stop_container(execution)
             try:
-                self.api.post(f'worker/executions/{execution}/complete', {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': str(exc)[:1000]})
+                self.api.post(f'worker/executions/{execution}/complete', {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': str(exc)[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
             except APIError as api_exc:
                 if api_exc.status not in (404, 409):
                     raise
@@ -626,6 +680,8 @@ class Worker:
             self.state = None
             self.save()
         finally:
+            if sender:sender.close()
+            if collector:collector.close()
             startup_done.set()
             if probe_runner:probe_runner.close()
             done.set()

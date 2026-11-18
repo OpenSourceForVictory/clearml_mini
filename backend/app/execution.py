@@ -72,6 +72,7 @@ class Metrics(BaseModel):
 
 
 class Finish(BaseModel):
+    log_gap: bool = False
     exit_code: int | None = Field(default=None, strict=True, ge=-255, le=255)
     status: Literal['SUCCEEDED', 'FAILED', 'CANCELLED']
     metrics: Optional[Metrics] = None
@@ -182,7 +183,7 @@ def install(app, db, current):
         return slot
 
     def run_for(s, execution_id, worker):
-        run = s.scalar(select(Run).where(Run.execution_id == execution_id))
+        run = s.scalar(select(Run).where(Run.execution_id == execution_id).with_for_update())
         if not run:
             raise HTTPException(404, 'execution not found')
         slot_for(s, run.slot_id, worker)
@@ -431,8 +432,15 @@ def install(app, db, current):
             if job.client_spec['template'].get('execution_mode') == 'host':
                 task['host_revision'] = worker.host_revision
                 task['host_profile'] = worker.host_environments[job.client_spec['template']['host_runtime']['environment_name']]
+        template = (job.client_spec or {}).get('template', {})
+        if ('bounded_logs_v2' in (slot.software or {}).get('capabilities', [])
+                and (template.get('execution_mode') == 'host' or template.get('runtime'))):
+            task['log_protocol'] = 2
         s.commit()
         return {'task': task, 'cleanup': []}
+
+    from . import execution_logs
+    execution_logs.install(app, db, worker_auth)
 
     @app.post('/api/v1/worker/executions/{execution_id}/logs')
     def logs(execution_id: str, body: LogBody, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -513,6 +521,12 @@ def install(app, db, current):
             if p['completed'] != job.episodes or (not command and abs(p['success_rate'] - body.metrics.success_rate) > 1e-9):
                 raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
         status = 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else body.status
+        if body.log_gap:
+            from .core import RunLogState
+            logs = s.get(RunLogState, run.id)
+            if not logs:
+                logs = RunLogState(run_id=run.id); s.add(logs)
+            logs.truncated = True
         run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' and body.metrics else None
         run.exit_code = body.exit_code
         run.cleanup_confirmed = True

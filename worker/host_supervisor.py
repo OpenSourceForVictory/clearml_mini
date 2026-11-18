@@ -17,6 +17,9 @@ def main():
     if config.get('npu_device'):
         from .npu_host import verify_devices
         verify_devices(config['npu_device'])
+    if config.get('log_protocol') == 2:
+        from runner.log_capture import capture
+        return capture(config['command'], root, cwd=config['cwd'], env=config['environment'])
     child=subprocess.Popen(config['command'],cwd=config['cwd'],env=config['environment'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     selector=selectors.DefaultSelector();selector.register(child.stdout,selectors.EVENT_READ,'stdout');selector.register(child.stderr,selectors.EVENT_READ,'stderr')
     handles={k:(root/(k+'.log')).open('wb') for k in ('stdout','stderr')};sizes={'stdout':0,'stderr':0};tail=b''

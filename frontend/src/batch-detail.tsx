@@ -1,3 +1,4 @@
+import {ExecutionLogs} from './execution-logs';
 import {ExecutionPlacement,type Placement} from './execution-placement';
 import './batch-detail.css';
 import {BatchParameters} from './batch-parameters';
@@ -105,10 +106,5 @@ function AttemptInspector({jobId,onClose}:{jobId:string;onClose:()=>void}) {
   </section>;
 }
 function AttemptLogs({jobId,runId}:{jobId:string;runId:string}) {
-  const [logs,setLogs]=useState(''),[error,setError]=useState('');
-  useEffect(()=>{let active=true,cursor=-1,timer:ReturnType<typeof setTimeout>;
-    async function load(){try{const r=await api<{chunks:{content:string}[];next_after:number}>(`jobs/${jobId}/logs?run_id=${runId}&after=${cursor}&limit=100`);if(active){cursor=r.next_after;setLogs(old=>(old+r.chunks.map(c=>c.content).join('')).slice(-262144));setError('');}}catch(e){if(active)setError(String(e));}finally{if(active)timer=setTimeout(load,2000);}}
-    void load();return()=>{active=false;clearTimeout(timer);};
-  },[jobId,runId]);
-  return <><h3>执行日志</h3>{error&&<p role="alert">{error}</p>}<pre className="logs">{logs||'暂无日志'}</pre></>;
+ return <><h3>执行日志</h3><ExecutionLogs path={`jobs/${jobId}/logs?run_id=${runId}`}/></>;
 }

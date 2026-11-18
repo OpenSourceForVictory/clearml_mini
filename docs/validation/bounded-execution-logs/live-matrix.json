@@ -1,0 +1,101 @@
+{
+  "cases": [
+    {
+      "mode": "host",
+      "role": "client",
+      "integration": "command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.0032784290378913,
+      "log_gap": false
+    },
+    {
+      "mode": "host",
+      "role": "client",
+      "integration": "direct",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.0038497479399666,
+      "log_gap": false
+    },
+    {
+      "mode": "host",
+      "role": "client",
+      "integration": "sdk-command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 10,
+      "max_heartbeat_gap": 2.0758517660433426,
+      "log_gap": false
+    },
+    {
+      "mode": "host",
+      "role": "service",
+      "integration": "service",
+      "status": "FAILED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 9,
+      "max_heartbeat_gap": 2.0224151449510828,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.01184062496759,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "direct",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.0104933340335265,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "sdk-command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 10,
+      "max_heartbeat_gap": 2.064459193032235,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "service",
+      "integration": "service",
+      "status": "FAILED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 9,
+      "max_heartbeat_gap": 2.024074897984974,
+      "log_gap": false
+    }
+  ],
+  "boundary": "real local systemd and Docker; loopback control API fixture, CPU-only diagnostic programs, not model evaluation"
+}

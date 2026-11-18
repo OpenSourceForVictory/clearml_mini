@@ -175,6 +175,7 @@ class HostBackend:
         login_source=host.get('environment_source')=='login'
         platform_python=sys.executable if generic or login_source else profile['python']
         launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[platform_python,'-m',module],'environment':platform_env if login_source else env,'cwd':values['work_dir']}
+        if task.get('log_protocol') == 2:launch['log_protocol']=2
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
         if account:

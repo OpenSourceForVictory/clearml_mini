@@ -1,0 +1,14 @@
+{
+  "1": {
+    "requests": 8,
+    "sql_statements": 64,
+    "global_lock_calls": 8,
+    "elapsed_ms": 84.82
+  },
+  "2": {
+    "requests": 1,
+    "sql_statements": 6,
+    "global_lock_calls": 0,
+    "elapsed_ms": 13.2
+  }
+}

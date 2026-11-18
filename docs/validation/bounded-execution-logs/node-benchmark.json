@@ -1,0 +1,18 @@
+{
+  "1": {
+    "max_rss_kib": 43040,
+    "elapsed_seconds": 0.09,
+    "user_seconds": 0.03,
+    "system_seconds": 0.02,
+    "diagnostic_bytes": 262155,
+    "input_stdout_bytes": 16777217
+  },
+  "2": {
+    "max_rss_kib": 42752,
+    "elapsed_seconds": 0.7,
+    "user_seconds": 0.3,
+    "system_seconds": 0.37,
+    "diagnostic_bytes": 549723,
+    "input_stdout_bytes": 16777217
+  }
+}

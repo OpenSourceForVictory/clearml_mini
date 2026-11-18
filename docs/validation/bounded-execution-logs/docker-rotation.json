@@ -1,0 +1,53 @@
+{
+  "cases": [
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.010668532922864,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "direct",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 2,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.009708096040413,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "client",
+      "integration": "sdk-command",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 10,
+      "max_heartbeat_gap": 2.059010779019445,
+      "log_gap": false
+    },
+    {
+      "mode": "docker",
+      "role": "service",
+      "integration": "service",
+      "status": "FAILED",
+      "exit_code": 0,
+      "tail_present": true,
+      "log_requests": 3,
+      "heartbeats": 8,
+      "max_heartbeat_gap": 2.024103460018523,
+      "log_gap": false
+    }
+  ],
+  "boundary": "real local systemd and Docker; loopback control API fixture, CPU-only diagnostic programs, not model evaluation"
+}

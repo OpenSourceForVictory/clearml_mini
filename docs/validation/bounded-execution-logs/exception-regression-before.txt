@@ -1,0 +1,9 @@
+...............F..................................                       [100%]
+=================================== FAILURES ===================================
+______ test_exception_completion_explicitly_marks_unflushed_logs[cancel] _______
+backend/tests/test_log_sender.py:216: in test_exception_completion_explicitly_marks_unflushed_logs
+    assert body['log_gap'] and body['status']==('CANCELLED' if failure=='cancel' else 'FAILED')
+E   KeyError: 'log_gap'
+=========================== short test summary info ============================
+FAILED backend/tests/test_log_sender.py::test_exception_completion_explicitly_marks_unflushed_logs[cancel]
+1 failed, 49 passed in 16.43s

@@ -245,6 +245,27 @@ class RunLog(Base):
     content: Mapped[str] = mapped_column(Text)
 
 
+class RunLogState(Base):
+    __tablename__ = 'run_log_states'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), primary_key=True)
+    next_sequence: Mapped[int] = mapped_column(BigInteger, default=0, server_default='0')
+    first_sequence: Mapped[int] = mapped_column(BigInteger, default=0, server_default='0')
+    retained_bytes: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    last_digest: Mapped[Optional[str]] = mapped_column(String(64))
+    truncated: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+
+
+class RunLogChunk(Base):
+    __tablename__ = 'run_log_chunks'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), primary_key=True)
+    sequence: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    content: Mapped[str] = mapped_column(Text)
+    stream: Mapped[str] = mapped_column(String(10))
+    gap: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    digest: Mapped[str] = mapped_column(String(64))
+
+
 class Event(Base):
     __tablename__ = 'job_events'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)

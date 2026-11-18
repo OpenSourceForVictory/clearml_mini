@@ -1,0 +1,10 @@
+{
+  "base": "scripts.test_coverage full suite; original failure retained",
+  "recheck": "final-source affected Worker/Runner and API tests",
+  "purged_before_merge": [
+    "runner/log_capture.py",
+    "worker/log_stream.py",
+    "worker/client.py"
+  ],
+  "subprocess_coverage_merged": false
+}
