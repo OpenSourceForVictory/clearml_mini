@@ -1,7 +1,20 @@
-"""Logical history deletion; never discards execution/resource ownership records."""
+"""Batch deletion with a durable tombstone and removal of batch-owned work."""
 from fastapi import HTTPException
 from sqlalchemy import select
-from .core import EvaluationBatch, Job, Run, ServiceInstance, now
+from .core import (
+    DataCleanupItem,
+    EpisodeRecord,
+    EvaluationBatch,
+    EvaluationOrchestration,
+    Event,
+    ExecutionData,
+    Job,
+    Run,
+    RunArtifact,
+    RunLog,
+    ServiceInstance,
+    now,
+)
 from .scheduling import lock, TERMINAL
 
 
@@ -35,10 +48,40 @@ def remove(s, identity, user):
         raise HTTPException(409, 'batch tasks must be terminal and cleaned before deletion')
     if any(item.desired_running for item in services):
         raise HTTPException(409, 'batch services must be stopped and cleaned before deletion')
+
+    # Keep the batch row as a tombstone so idempotency keys and deleted-state
+    # guards remain effective, but remove all task-owned execution data.  The
+    # explicit order is required on PostgreSQL because these tables do not use
+    # database-level ON DELETE CASCADE.
+    job_ids = [item.id for item in jobs]
+    run_ids = list(s.scalars(select(Run.id).where(Run.job_id.in_(job_ids)))) if job_ids else []
+    execution_ids = list(s.scalars(select(ExecutionData.id).where(ExecutionData.run_id.in_(run_ids)))) if run_ids else []
+    for model, column, values in (
+        (DataCleanupItem, DataCleanupItem.data_id, execution_ids),
+        (ExecutionData, ExecutionData.id, execution_ids),
+        (RunLog, RunLog.run_id, run_ids),
+        (EpisodeRecord, EpisodeRecord.run_id, run_ids),
+        (RunArtifact, RunArtifact.run_id, run_ids),
+        (Event, Event.job_id, job_ids),
+        (Run, Run.id, run_ids),
+        (Job, Job.id, job_ids),
+    ):
+        if values:
+            for row in s.scalars(select(model).where(column.in_(values))):
+                s.delete(row)
+    for item in services:
+        s.delete(item)
+    orchestration = s.get(EvaluationOrchestration, identity)
+    if orchestration:
+        s.delete(orchestration)
     batch.deleted_at = now()
     batch.scheduling_paused = True
     batch.control_revision += 1
     batch.control_updated_at = batch.deleted_at
     from .administration import audit
-    audit(s, user, 'batch.delete', identity)
-    return {'id': identity, 'deleted': True}
+    audit(s, user, 'batch.delete', identity, {
+        'job_count': len(job_ids),
+        'run_count': len(run_ids),
+        'service_count': len(services),
+    })
+    return {'id': identity, 'deleted': True, 'deleted_jobs': len(job_ids), 'deleted_runs': len(run_ids)}

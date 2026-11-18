@@ -18,7 +18,7 @@
 | 宿主机和容器目录 | docs/host-execution.md、directory-mounts.md、worker-setup.md | approved 环境、cgroup 委派、挂载能力、磁盘门槛 |
 
 宿主机执行的控制端短时忙碌：`worker/client.py` 在执行心跳 HTTP 503 时保留正在运行的单元并重试，租约 watchdog 仍生效；其他 HTTP 拒绝不按瞬时故障吞掉。定位时对照 `backend/tests/test_worker_execution_recovery.py` 与 `docs/host-execution.md`。
-| 运行结果 | frontend/src/batch-history.tsx、batch-detail.tsx；docs/batch-monitoring.md、batch-reports.md | 重试历史、真实回合分母、取消与删除语义 |
+| 运行结果 | frontend/src/batch-history.tsx、batch-detail.tsx；backend/app/batch_deletion.py；docs/batch-monitoring.md、batch-reports.md、interface-pages.md | 重试历史、真实回合分母、取消与删除语义；删除批次会清理其任务/运行数据并保留删除墓碑与审计 |
 
 CPU/内存预算：资源池 cpu_per_job、ram_gb_per_job 是缺省申请而非上限；0 表示未申请的任务不预约该轴，Worker 不设置相应运行额度。模板或提交的明确申请按节点配置容量、Agent host 样本和现有预约准入。Agent host 心跳有 cpu_count、cpu_utilization、memory_total_mb、memory_available_mb；没有“剩余 CPU 核数”。验证见 test_unlimited_cpu_memory.py、test_pair_capacity_diagnostics.py、test_resource_reporting.py，说明见 docs/template-resource-requirements.md 和 docs/node-resource-reporting.md。
 
