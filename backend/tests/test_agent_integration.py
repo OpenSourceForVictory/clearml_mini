@@ -37,7 +37,10 @@ from pathlib import Path
 p=Path(os.environ['TEST_UNITS']);s=json.loads(p.read_text());action,name=sys.argv[-2:]
 if action=='start':s[name]='active'
 elif action=='stop':s[name]='inactive'
-p.write_text(json.dumps(s));print(s.get(name,'inactive'))
+if action in ('start','stop'):
+    temporary=p.with_name(p.name+'.'+str(os.getpid())+'.tmp')
+    temporary.write_text(json.dumps(s));temporary.replace(p)
+print(s.get(name,'inactive'))
 ''');tool.chmod(0o755)
     config=tmp_path/'config.json';config.write_text(json.dumps({'api_url':f'http://127.0.0.1:{port}','token':token['Authorization'].split()[1],'state_dir':str(tmp_path/'control'),'services':[{'scope':'user','name':f'mini-eval-worker@gpu{i}.service'} for i in range(2)]}));config.chmod(0o600)
     child_env={**os.environ,'PATH':str(bin)+':'+os.environ['PATH'],'TEST_UNITS':str(state)}

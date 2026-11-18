@@ -1,0 +1,83 @@
+ssssssssssssssssssssssssssssssssssssssssssssssssssss.................... [  4%]
+........................F............................................... [  8%]
+........................................................................ [ 12%]
+........................................................................ [ 16%]
+.ss..................................................................... [ 20%]
+......................ssss.............................................. [ 24%]
+........................................................................ [ 28%]
+.....ssssssssssssssssssssssss.................sss....................... [ 32%]
+........................................................................ [ 36%]
+..........................ssss.......................................... [ 40%]
+............................sssss............sss........................ [ 44%]
+........................................................................ [ 49%]
+........................................................................ [ 53%]
+........................................................................ [ 57%]
+........................................................................ [ 61%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+........................................................................ [ 73%]
+.................................ssssssssssssssssssssssssssssssssss..... [ 77%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........s............................................................... [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 98%]
+..............s...................                                       [100%]
+=================================== FAILURES ===================================
+_____________ test_real_agent_http_drain_restart_and_event_replay ______________
+backend/tests/test_agent_integration.py:60: in test_real_agent_http_drain_restart_and_event_replay
+    assert set(json.loads(state.read_text()).values())=={'active'}
+/opt/anaconda3/lib/python3.13/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+/opt/anaconda3/lib/python3.13/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+/opt/anaconda3/lib/python3.13/json/decoder.py:363: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_worker_retention.py::test_cross_process_lock_and_offline_receipt
+  /opt/anaconda3/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=376940) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/host-recovery-full-20261119/tests.xml -
+=========================== short test summary info ============================
+FAILED backend/tests/test_agent_integration.py::test_real_agent_http_drain_restart_and_event_replay
+1 failed, 1628 passed, 133 skipped, 2 warnings in 1122.61s (0:18:42)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/host-recovery-full-20261119/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/host-recovery-full-20261119/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/host-recovery-full-20261119/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 152 | 89.47% | 79.93% |
+| backend/app | 42 | 95.20% | 81.43% |
+| worker | 23 | 89.88% | 77.69% |
+| node_agent | 8 | 91.67% | 84.29% |
+| runner | 25 | 87.87% | 79.37% |
+| onboarding | 9 | 97.49% | 84.15% |
+| scripts | 45 | 78.38% | 78.20% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 96.64% | 86.81% |
+| 节点纳管与升级 | 18 | 95.61% | 83.52% |
+| 业务执行与结果 | 29 | 91.77% | 82.74% |
+| 节点监控 | 8 | 91.67% | 84.29% |
+| 运行模板注册管理 | 5 | 94.12% | 76.89% |
+| 评测结果与批次管理 | 4 | 96.89% | 89.02% |
+| 任务集合与编排 | 4 | 95.35% | 79.14% |
+
+## 门槛检查
+
+scripts: line 78.38% < 80.00%
+

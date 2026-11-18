@@ -16,3 +16,5 @@
 使用 scripts.test_coverage 的 project.coveragerc 与 scripts.coverage_report 同一分母和门槛，只收集本次专项并合并同版本数据；完整结果见 coverage.md。专项总行 32.96%、分支 18.03%，全项目覆盖率门槛未达到；未合并旧代码结果，未排除未测业务代码。真实 systemd 子进程和前端未插桩，不计入覆盖率。3 项跳过来自 test_host_backend 的真实 systemd opt-in（HOST_EXECUTION_TEST 未开启）；另行运行的 systemd 验证范围见上文，不替代全部跳过用例。本次没有真实 Docker 验收。
 
 Worker 0.21.1；API claim 仅新增可选实例身份，无数据库迁移。尚未发布或更新现场节点。同步 docs/host-execution.md、界面执行指南和 Skill project-map。未知原错误仍需现场最早启动日志确认，禁止清空 journal 强制重复启动。
+
+后续按用户要求执行的全量及未达标项见 [2026-11-19 全量记录](../host-recovery-full-20261119/README.md)。

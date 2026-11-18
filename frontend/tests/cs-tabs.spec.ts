@@ -10,6 +10,7 @@ async function openWorkbench(page:Page, role='admin') {
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');
     let body:any=[];
     if(path==='auth/me') body={id:'user-1',username:'tester',role};
+    else if(path==='execution-limits') body={client_execution_max_seconds:7200,client_execution_default_seconds:300};
     else if(path==='client-templates') body=[template];
     else if(path==='suites/manage') body={items:[],total:0};
     else if(path==='suites/preview') {const doc=JSON.parse(route.request().postDataJSON().content);body={valid:true,errors:[],document:doc,task_count:doc.cases.length,total_episodes:3};}

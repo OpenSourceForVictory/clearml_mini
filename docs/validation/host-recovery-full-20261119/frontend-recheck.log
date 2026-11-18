@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 frontend/tests/cs-tabs.spec.ts:35:1 › collection management publishes and hands off to the business wizard (771ms)
+  ✓  2 frontend/tests/cs-tabs.spec.ts:46:1 › member keeps own collection and source registration without admin controls (311ms)
+  ✓  3 frontend/tests/cs-tabs.spec.ts:52:1 › results collection subtab preserves draft and hands off to wizard for members (740ms)
+
+  3 passed (2.2s)

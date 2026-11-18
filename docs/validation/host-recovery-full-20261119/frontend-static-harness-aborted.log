@@ -1,0 +1,69 @@
+
+Running 148 tests using 1 worker
+
+  ✓    1 tests/admin-usability.spec.ts:2:35 › machine filters and management layout desktop (581ms)
+  ✓    2 tests/admin-usability.spec.ts:2:35 › machine filters and management layout mobile (338ms)
+  ✓    3 tests/admin-usability.spec.ts:54:1 › NPU server uses accelerator count label (155ms)
+  ✓    4 tests/administration.spec.ts:2:1 › management navigation and machine roles use a selected detail (345ms)
+  ✓    5 tests/administration.spec.ts:32:37 › pool creation makes NPU support explicit: * (308ms)
+  ✓    6 tests/administration.spec.ts:32:37 › pool creation makes NPU support explicit: virtual (245ms)
+  ✓    7 tests/batch-controls.spec.ts:37:1 › pause resume and cancel confirmation use versions without resetting filters (2.6s)
+  ✓    8 tests/batch-controls.spec.ts:51:1 › lost control response retries original version instead of applying a new action (2.3s)
+  ✓    9 tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (183ms)
+  ✓   10 tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (362ms)
+  ✓   11 tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (221ms)
+  ✓   12 tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (284ms)
+  ✓   13 tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (279ms)
+  ✓   14 tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (280ms)
+  ✘   15 tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (118ms)
+  ✓   16 tests/batch-monitoring.spec.ts:29:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.5s)
+  ✓   17 tests/batch-monitoring.spec.ts:39:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.2s)
+  ✓   18 tests/batch-monitoring.spec.ts:45:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.1s)
+  ✓   19 tests/batch-monitoring.spec.ts:53:1 › detail tabs preserve filtering and retry selection and contain narrow tables (249ms)
+  ✓   20 tests/batch-monitoring.spec.ts:71:1 › client placement is a separate column with GPU zero and unassigned states (118ms)
+  ✓   21 tests/batch-monitoring.spec.ts:78:1 › episode expansion separates protocol results, process exits and unreported rounds (6.5s)
+  ✓   22 tests/batch-reports.spec.ts:33:1 › cross-page selection limit, back preserves draft/page and direct refresh (451ms)
+  ✓   23 tests/batch-reports.spec.ts:43:1 › authenticated JSON CSV downloads and failed download creates no file (281ms)
+  ✓   24 tests/batch-reports.spec.ts:53:1 › manual refresh preserves snapshot on error, no overlapping refresh (3.9s)
+  ✘   25 tests/batch-reports.spec.ts:59:1 › switching comparison rejects stale response and private batch clears data (81ms)
+
+
+  1) tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses 
+
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:18081/src/api.ts
+
+      66 | test('API handles empty success, invalid success and non-JSON unauthorized responses',async({page})=>{
+      67 |  await setup(page);
+    > 68 |  const call=()=>page.evaluate(async()=>{
+         |                      ^
+      69 |   const modulePath='/src/api.ts';const {api}=await import(modulePath);
+      70 |   try{return {value:await api('diagnostic-test')};}catch(e){return {error:String(e)};}
+      71 |  });
+        at call (/home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:68:22)
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:73:15
+
+    Error Context: test-results/batch-history-API-handles--14aab-JSON-unauthorized-responses/error-context.md
+
+  2) tests/batch-reports.spec.ts:59:1 › switching comparison rejects stale response and private batch clears data 
+
+    Test was interrupted.
+
+    Error: page.evaluate: Test ended.
+
+      59 | test('switching comparison rejects stale response and private batch clears data',async({page})=>{
+      60 |  const ctl=await setup(page);ctl.delay();const requested=page.waitForRequest(r=>r.url().includes('left_id=a'));await page.goto('/#/cs/compare/a/b');await requested;
+    > 61 |  await page.evaluate(()=>{location.hash='/cs/compare/c/d';});await expect(page.getByRole('heading',{name:'左侧：批次 c'})).toBeVisible();await expect(page.getByRole('heading',{name:'左侧：批次 a'})).toHaveCount(0);
+         |             ^
+      62 |  await page.evaluate(()=>{location.hash='/cs/compare/private/d';});await expect(page.getByRole('alert')).toContainText('batch not found');await expect(page.getByRole('heading',{name:'左侧：批次 c'})).toHaveCount(0);
+      63 | });
+      64 |
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-reports.spec.ts:61:13
+
+    Error Context: test-results/batch-reports-switching-co-13461-d-private-batch-clears-data/error-context.md
+
+  1 failed
+    tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses 
+  1 interrupted
+    tests/batch-reports.spec.ts:59:1 › switching comparison rejects stale response and private batch clears data 
+  123 did not run
+  23 passed (33.8s)

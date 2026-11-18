@@ -154,3 +154,7 @@ Worker0.20.5：client.execute初始握手后使用专用线程发送started=fals
 日志 v2 API：backend/app/execution_logs.py、core.RunLogState/RunLogChunk、迁移 y518b90；256 KiB/256 块滚动窗口、Run 行锁、ACK 摘要与游标缺口；旧 run_logs 不改写。Worker 0.21.0 按 bounded_logs_v2 协商；runner/log_capture.py 与 worker/log_stream.py 提供有界采集、独立协议记录和上传，旧 journal 不切换。只有所选节点升级后新执行才启用，不能声称已自动修复其他部署。见 docs/execution-logs.md，专项及 PostgreSQL 竞态测试 test_execution_logs_v2/test_execution_logs_postgres。
 
 Worker0.21.1 启动失败恢复：client.execute 将 terminal_failure 在停止/上报前保存到执行 journal，恢复只重放失败与清理，不重复创建；created/launch.started 是尝试标记，不是运行确认。execution.claim 附可选 service_instance_id；missing host unit 包含执行身份和判定来源。不同卡 Worker 独立 journal/unit，服务显示名称不作为身份。见 docs/host-execution.md“启动标记与失败恢复”、backend/tests/test_host_failure_recovery.py、test_service_instance_claim_identity.py；现场首次启动根因未确认，不能将模拟双 Worker 验证描述成真实 NPU 模型验收。
+
+全量验证入口与夹具：python -m scripts.test_coverage 使用项目统一覆盖分母；浏览器测试需要 Vite（部分用例动态加载 /src/api.ts），不能统一替换成静态 dist 服务。集合跳转运行向导的模拟 API 必须返回 execution-limits，缺失时页面按设计拒绝继续。2026-11-19 首轮失败、复测与跳过证据见 docs/validation/host-recovery-full-20261119/README.md，不用复测通过覆盖首轮失败记录。
+
+Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，并原子 replace；只读 inspect 不得重写 JSON，否则断言与后台轮询并发时可能读到空文件。该夹具修正不改变实际 Agent 生命周期，失败证据见上述全量验证记录。
