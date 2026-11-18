@@ -148,3 +148,5 @@ Worker0.20.5：client.execute初始握手后使用专用线程发送started=fals
 批次运行配置：frontend/src/batch-parameters.tsx按向导四组读取jobs.client_spec和orchestrations定义；batch-detail传入monitor已保存的suite_id。显示客户端/服务端模板名称版本、逐任务最终参数及parameter_sources、独立资源预约/硬限制；0与缺失区分。无实时模板补历史、不转储节点环境、不重跑预检。专项batch-run-configuration.spec.ts，操作docs/batch-monitoring.md，真实结束批次只读证据docs/validation/batch-run-configuration/README.md。仅前端发布。
 
 0.20.5及配置页实验发布：docs/validation/startup-lease-release/README.md。仅local4090-151与ascend910b3-29组件升级；真实API/systemd下3任务9GPU回合和NPU服务通过，35秒慢登录是安装代码+模拟API/systemd隔离验证，勿合并宣称完整端到端长登录验证。原接单状态恢复、 held=0，测试模板归档，其他故障平台未确认升级。
+
+批次删除外键回归：batch_deletion.remove 每层删除显式 flush，确保服务任务先于 ServiceInstance 删除，保持事务回滚；test_batch_deletion_records.py 必须先 tick 生成真实数据库服务记录，不能只提交编排定义后取消。SQLite 外键验证不等于现场 PostgreSQL 验收，见 docs/validation/batch-delete-foreign-keys/README.md。

@@ -70,3 +70,7 @@ CPU/内存调度预约与执行硬上限分别显示；总执行时限0显示不
 本功能仅更新前端，无数据库迁移、Worker升级或调度行为变更。验证证据与部署边界见[运行配置验证](validation/batch-run-configuration/README.md)。
 
 运行配置页已发布到实验平台，并在正式静态前端复验已有direct/SDK批次；部署范围与证据见[发布验收](validation/startup-lease-release/README.md)，不代表其他用户部署已更新。
+
+
+### 已调度服务批次删除的外键修正（2026-11-18）
+包含实际服务实例及服务任务的批次，旧实现可能在同一次 ORM flush 中先删除服务实例，导致外键异常并返回 500。现在每层子记录删除后显式 flush，再删除父记录；全部操作仍在同一事务内，失败整体回滚。无需数据库迁移或 Worker 升级，需更新平台 API。专项复现与验证边界见 [验证记录](validation/batch-delete-foreign-keys/README.md)。这不替代其他部署的异常日志核对。

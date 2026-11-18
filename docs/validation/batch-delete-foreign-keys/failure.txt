@@ -1,0 +1,9 @@
+SQLite foreign_keys=ON; service instantiated by scheduler before cancellation.
+E       sqlalchemy.exc.IntegrityError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+E       (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E       [SQL: DELETE FROM service_instances WHERE service_instances.id = ?]
+E       [parameters: ('c132c4df-91d5-4061-b690-ec6decc0be32',)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+
+1 failed: test_scheduled_service_batch_deletion_with_foreign_keys

@@ -10,3 +10,6 @@
 无。
 ## Impact
 frontend/src/api.ts、批次测试、操作指南及 Skill。无需数据库迁移，不改变删除准入规则。
+
+## 后续复现修正（2026-11-18）
+补充实际服务实例的数据库外键失败回归，并修正 backend/app/batch_deletion.py 的删除 flush 顺序。仍保持单事务及原有删除准入条件，无迁移。

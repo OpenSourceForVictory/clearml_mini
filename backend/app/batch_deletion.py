@@ -69,6 +69,11 @@ def remove(s, identity, user):
         if values:
             for row in s.scalars(select(model).where(column.in_(values))):
                 s.delete(row)
+            # Marking rows deleted does not order SQL across unrelated ORM
+            # mappers. Flush each dependency layer before deleting its parents;
+            # notably Job -> ServiceInstance must not share an unordered flush.
+            # This remains one transaction, so any later failure rolls it back.
+            s.flush()
     for item in services:
         s.delete(item)
     orchestration = s.get(EvaluationOrchestration, identity)
