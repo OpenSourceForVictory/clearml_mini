@@ -11,7 +11,7 @@ import {ArtifactList,EpisodeList} from './cs';
 export const statusLabels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 type Reason={code:string;message:string};
 type Case={placement?:Placement|null;task_type?:string;job_id:string;case_id:string;task_name:string;status:string;attempt:number;run_id:string;episodes:number;seed:number;episode_reporting:boolean;progress:{completed:number;successes:number};node_name:string|null;gpu_index:number|null;reason_codes:string[];waiting:null|{reasons:Reason[];nodes:{node_name:string;gpu_index:number;reasons:Reason[]}[]};config:{pool_name:string;endpoint:string|null;endpoint_mode?:string|null;endpoint_candidates?:{url:string;mode:string}[];client_name:string;client_version:string;gpu_mode:string;requested_vram_gb:number};error:string|null};
-type Monitor={orchestrated?:boolean;scheduling_paused:boolean;control_revision:number;checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{cancel_requested_tasks:number;cleanup_pending_tasks:number;states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
+type Monitor={suite_id?:string|null;orchestrated?:boolean;scheduling_paused:boolean;control_revision:number;checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{cancel_requested_tasks:number;cleanup_pending_tasks:number;states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
 type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:string;message?:string;attempt:number}[]};
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
@@ -62,11 +62,11 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       </section>
       <nav className="batch-detail-tabs" aria-label="批次详情分类">
         <button aria-pressed={tab==='tasks'} onClick={()=>setTab('tasks')}>任务与结果</button>
-        <button aria-pressed={tab==='parameters'} onClick={()=>{setTab('parameters');setShowParameters(true);}}>运行参数</button>
+        <button aria-pressed={tab==='parameters'} onClick={()=>{setTab('parameters');setShowParameters(true);}}>运行配置</button>
         <button aria-pressed={tab==='services'} onClick={()=>{setTab('services');setShowServices(true);}}>服务端与关联</button>
       </nav>
-      <section hidden={tab!=='parameters'} aria-label="批次参数页">{showParameters&&<BatchParameters cases={b.cases} maxConcurrent={b.max_concurrent}/>}</section>
-      <section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行参数或任务执行配置中查看。</p>}</section>
+      <section hidden={tab!=='parameters'} aria-label="批次配置页">{showParameters&&<BatchParameters key={id} batchId={id} suiteId={b.suite_id} cases={b.cases} maxConcurrent={b.max_concurrent} orchestrated={b.orchestrated} onServices={()=>{setTab('services');setShowServices(true);}}/>}</section>
+      <section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行配置或任务执行配置中查看。</p>}</section>
       <section hidden={tab!=='tasks'} aria-label="批次任务页">
       {b.orchestrated&&tab==='tasks'&&<ServiceStartupSummary id={id} onDetails={()=>{setTab('services');setShowServices(true);}}/>}
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>

@@ -55,9 +55,9 @@ test('detail tabs preserve filtering and retry selection and contain narrow tabl
   expect(await page.locator('.batch-detail-tabs').evaluate(el=>getComputedStyle(el).flexDirection)).toBe('row');
   await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
   await page.getByLabel('选择补跑 case0').check();
-  await page.getByRole('button',{name:'运行参数',exact:true}).click();
+  await page.getByRole('button',{name:'运行配置',exact:true}).click();
   await expect(page.getByRole('region',{name:'批次任务页'})).toBeHidden();
-  await expect(page.getByRole('heading',{name:'本次运行参数',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'本次运行配置',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'服务端与关联',exact:true}).click();
   await expect(page.getByText('本批次没有平台托管的服务编排。',{exact:false})).toBeVisible();
   await page.getByRole('button',{name:'任务与结果',exact:true}).click();

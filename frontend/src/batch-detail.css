@@ -36,3 +36,13 @@
 .service-instance-table td { vertical-align:top; overflow-wrap:anywhere; }
 .service-instance-table small { display:block; margin-top:4px; }
 .service-instance-table .logs { max-height:360px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+.batch-parameters .run-config-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;margin:16px 0}.run-config-nav button{background:#f0f6f2;color:#22623b;border:1px solid #dbe5de;padding:8px 12px;border-radius:6px}
+.run-config-section{border:1px solid #dbe5de;border-radius:10px;padding:18px;margin:18px 0;scroll-margin-top:20px;min-width:0}
+.run-config-section h4{margin-top:0;color:#22623b}
+.run-config-section h5{font-size:14px;margin:18px 0 8px}
+.run-config-fields{display:grid;grid-template-columns:minmax(130px,200px) minmax(0,1fr);gap:10px 16px;margin:12px 0}
+.run-config-fields dt{color:#627168}.run-config-fields dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.run-config-service{border-top:2px solid #e0e7e2;margin-top:18px;padding-top:4px}
+.run-config-table{max-width:100%;overflow:auto}.run-config-table table{width:100%;text-align:left}.run-config-table td,.run-config-table th{padding:8px;vertical-align:top;overflow-wrap:anywhere}
+.batch-parameters details{margin:12px 0}.batch-parameters details pre{max-height:360px;overflow:auto}
+@media(max-width:600px){.run-config-fields{grid-template-columns:1fr;gap:4px}.run-config-fields dd{margin-bottom:12px}.run-config-section{padding:12px}.batch-parameters select{max-width:100%}}

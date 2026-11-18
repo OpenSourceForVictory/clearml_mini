@@ -144,3 +144,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 Worker0.20.4 登录环境名称改用进程环境语义：非空UTF-8，NUL/首个等号为分隔符，不再应用Shell标识符正则；函数过滤、大小/编码限制和平台覆盖不变。test_host_shell_episode.py 验证特殊名称及含等号/命令样式的字面值传到真实子进程；模板字段规则不变。见 docs/host-execution.md“登录环境名称兼容”。
 
 Worker0.20.5：client.execute初始握手后使用专用线程发送started=false启动心跳，覆盖start_lock、登录环境和create/start；启动结束join再恢复运行心跳。取消/终止拒绝交主线程清理，watchdog仍独立保护，晚响应不复活失效租约。test_worker_startup_lease.py覆盖真实慢Shell、线程和三次连续执行，外部API/Docker/systemd故障注入；非现场根因确认/真机评测。配置与升级边界见docs/host-execution.md启动续租章节。
+
+批次运行配置：frontend/src/batch-parameters.tsx按向导四组读取jobs.client_spec和orchestrations定义；batch-detail传入monitor已保存的suite_id。显示客户端/服务端模板名称版本、逐任务最终参数及parameter_sources、独立资源预约/硬限制；0与缺失区分。无实时模板补历史、不转储节点环境、不重跑预检。专项batch-run-configuration.spec.ts，操作docs/batch-monitoring.md，真实结束批次只读证据docs/validation/batch-run-configuration/README.md。仅前端发布。
