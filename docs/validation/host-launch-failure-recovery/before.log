@@ -1,0 +1,12 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_launch_failure_survives_failed_completion ________________
+.runtime/test_missing_host_cause.py:21: in test_launch_failure_survives_failed_completion
+    assert completions[1]['error']==completions[0]['error']=='host launch failed: test-cgroup-resource'
+E   AssertionError: assert 'previously c...ate execution' == 'host launch ...roup-resource'
+E     
+E     - host launch failed: test-cgroup-resource
+E     + previously created host unit is missing; refusing duplicate execution
+=========================== short test summary info ============================
+FAILED .runtime/test_missing_host_cause.py::test_launch_failure_survives_failed_completion
+1 failed in 0.07s

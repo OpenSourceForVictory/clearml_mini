@@ -1,0 +1,24 @@
+[
+  {
+    "log_protocol": 1,
+    "instances": 2,
+    "simultaneously_running": true,
+    "distinct_units": true,
+    "ports": [
+      40899,
+      41251
+    ],
+    "worker_recovery": true
+  },
+  {
+    "log_protocol": 2,
+    "instances": 2,
+    "simultaneously_running": true,
+    "distinct_units": true,
+    "ports": [
+      38887,
+      57643
+    ],
+    "worker_recovery": true
+  }
+]

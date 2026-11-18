@@ -201,6 +201,8 @@ class HostBackend:
         path=self.root/'launch.json';launch=json.loads(path.read_text())
         if launch['started']:raise RuntimeError('refusing duplicate host launch')
         owner=path.stat()
+        # This is a durable launch-attempt marker, not proof of a running unit.
+        # Writing it after systemd-run would permit duplicate launch after a crash.
         launch['started']=True;atomic_json(path,launch)
         if self.system:os.chown(path,owner.st_uid,owner.st_gid)
         properties={'Description':'Mini Eval execution '+task['execution_id'],'TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}

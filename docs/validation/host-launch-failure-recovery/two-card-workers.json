@@ -1,0 +1,28 @@
+[
+  {
+    "log_protocol": 1,
+    "instances": 2,
+    "independent_worker_process_objects": 2,
+    "physical_accelerator_execution": false,
+    "simultaneously_running": true,
+    "distinct_units": true,
+    "ports": [
+      38323,
+      34639
+    ],
+    "worker_recovery": true
+  },
+  {
+    "log_protocol": 2,
+    "instances": 2,
+    "independent_worker_process_objects": 2,
+    "physical_accelerator_execution": false,
+    "simultaneously_running": true,
+    "distinct_units": true,
+    "ports": [
+      55915,
+      60939
+    ],
+    "worker_recovery": true
+  }
+]

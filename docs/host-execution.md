@@ -191,3 +191,13 @@ API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在�
 Worker0.20.5已发布到实验平台，并升级local4090-151及ascend910b3-29，验证3个串行任务共9回合GPU与真实NPU服务；另用安装代码隔离验证35秒慢登录续租。用户其他故障平台未确认更新，验证范围见[发布验收](validation/startup-lease-release/README.md)。
 
 Worker 0.21.0 的日志 v2 将宿主机诊断日志改为滚动窗口，stdout/stderr 均可持续查看；最终结果与回合事件独立保存。日志上传独立于心跳，退出补传有界。旧执行 journal 维持原模式，不能恢复此前已丢弃的日志。参见 [执行日志说明](execution-logs.md)。
+
+## 启动标记与失败恢复（Worker 0.21.1）
+
+Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json 的 `started=true` 表示已进入启动尝试，均不代表业务已运行或就绪。标记必须先于外部启动操作落盘，避免进程崩溃后重复执行。实际运行由 systemd 查询确认，就绪另由服务探测确认。不要将标记手动改回 false 或删除 journal 来绕过重复启动保护。
+
+已复现的缺陷：首次启动失败、失败完成请求又因接口故障未送达，恢复时原错误被 `previously created host unit is missing` 覆盖。0.21.1 在停止/清理和失败上报之前保存首次失败请求，重试及 Worker 重启后重报原错误与退出码，不进入创建流程。若清理失败，保留记录等待恢复；已被平台接受的请求沿用 404/409 清理流程。
+
+旧 journal 没有保存的错误无法补回。找不到 unit、没有可靠退出记录且本地标记已尝试创建或平台状态为 RUNNING 时，仍拒绝重复执行；提示附 execution_id、service_instance_id（旧 API 为 unknown）、unit、source。同名服务实例使用不同执行 ID；不同卡 Worker 的 journal、每次执行控制目录与 systemd unit 独立，清理只针对该执行。
+
+需要更新并重启节点各卡 Worker 才生效，不能仅替换文件后保留旧进程。更新 API 后 claim 附带服务实例 ID，无数据库迁移。应先排空并按节点升级流程操作。修复原始启动问题后从平台重试产生新执行，不承诺自动恢复旧失败任务。专项验证与未覆盖边界见 [验证记录](validation/host-launch-failure-recovery/README.md)。

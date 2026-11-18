@@ -455,6 +455,12 @@ class Worker:
         thread = threading.Thread(target=watchdog, daemon=True)
         thread.start()
         probe_runner=None
+        def remember_failure(body):
+            # Preserve the first terminal result even if completion or cleanup
+            # fails. A later missing-unit check must not replace its cause.
+            self.state.setdefault('terminal_failure', body)
+            self.save()
+            return self.state['terminal_failure']
         try:
             while True:
                 if self.stop_event.is_set() or lease_lost.is_set() or time.monotonic() >= deadline[0]:
@@ -476,6 +482,13 @@ class Worker:
                 self.state = None
                 self.save()
                 return
+            if self.state.get('terminal_failure'):
+                self.stop_container(execution)
+                self.api.post(f'worker/executions/{execution}/complete', self.state['terminal_failure'])
+                self.remove(execution)
+                self.state = None
+                self.save()
+                return
             check_startup()
             startup_thread = threading.Thread(target=renew_startup, daemon=True,
                                               name='startup-lease-'+execution)
@@ -488,7 +501,12 @@ class Worker:
                     if not container:
                         if self.state['created'] or task['status'] == 'RUNNING':
                             kind = 'host unit' if self.host_mode() else 'Docker container'
-                            raise RuntimeError(f'previously created {kind} is missing; refusing duplicate execution')
+                            detail = ''
+                            if self.host_mode():
+                                source = 'journal-created' if self.state['created'] else 'control-plane-running'
+                                detail = (f"; execution_id={execution}; service_instance_id={task.get('service_instance_id') or 'unknown'}"
+                                          f"; unit={HostBackend(self).unit(execution)}; source={source}")
+                            raise RuntimeError(f'previously created {kind} is missing; refusing duplicate execution'+detail)
                         # Crash before create is safe to fail; never recreate an uncertain execution.
                         self.state['created'] = True
                         self.save()
@@ -626,6 +644,8 @@ class Worker:
                     body = {'status': status, 'exit_code': code, 'metrics': result if status == 'SUCCEEDED' else None,
                             'error': None if status == 'SUCCEEDED' else (err[-900:] or (f'missing protocol final result; runner exited with code {code}' if not command_task and not is_service(task) and code == 0 and not result else f'runner exited with code {code}'))}
                     if sender:body['log_gap'] = log_gap
+                    if status == 'FAILED':
+                        body = remember_failure(body)
                     if task.get('benchmark') == 'cs-client':
                         self.upload_artifacts(task, deadline)
                     self.api.post(f'worker/executions/{execution}/complete', body)
@@ -646,6 +666,8 @@ class Worker:
             self.state = None
             self.save()
         except APIError as exc:
+            if exc.status in (400, 413, 422):
+                remember_failure({'status': 'FAILED', 'exit_code': observed_exit_code, 'error': ('execution data rejected: '+str(exc))[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
             self.stop_container(execution)
             if exc.status in (404, 409):
                 self.cleanup(execution)
@@ -654,7 +676,7 @@ class Worker:
                 # through a failed completion, while retaining the journal on outages.
                 try:
                     self.api.post(f'worker/executions/{execution}/complete',
-                        {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': ('execution data rejected: '+str(exc))[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
+                        self.state['terminal_failure'])
                 except APIError as failure:
                     if failure.status not in (404, 409):
                         raise
@@ -669,9 +691,10 @@ class Worker:
             self.stop_container(execution)
             raise
         except Exception as exc:
+            failure = remember_failure({'status': 'FAILED', 'exit_code': observed_exit_code, 'error': str(exc)[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
             self.stop_container(execution)
             try:
-                self.api.post(f'worker/executions/{execution}/complete', {'status': 'FAILED', 'exit_code': observed_exit_code, 'error': str(exc)[:1000], **({'log_gap': True} if task.get('log_protocol') == 2 else {})})
+                self.api.post(f'worker/executions/{execution}/complete', failure)
             except APIError as api_exc:
                 if api_exc.status not in (404, 409):
                     raise

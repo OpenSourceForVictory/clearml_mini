@@ -421,6 +421,8 @@ def install(app, db, current):
                 'vram_reserve_mb': pool.vram_reserve_gb * 1024,
                 'timeout_seconds': execution_timeout(job),
                 'lease_seconds': seconds('LEASE_SECONDS', 30)}
+        if job.service_instance_id:
+            task['service_instance_id'] = job.service_instance_id
         if job.client_spec:
             resources=job.client_spec.get('resources',{})
             task['reserved_cpus']=run.reserved_cpu

@@ -152,3 +152,5 @@ Worker0.20.5：client.execute初始握手后使用专用线程发送started=fals
 批次删除外键回归：batch_deletion.remove 每层删除显式 flush，确保服务任务先于 ServiceInstance 删除，保持事务回滚；test_batch_deletion_records.py 必须先 tick 生成真实数据库服务记录，不能只提交编排定义后取消。SQLite 外键验证不等于现场 PostgreSQL 验收，见 docs/validation/batch-delete-foreign-keys/README.md。
 
 日志 v2 API：backend/app/execution_logs.py、core.RunLogState/RunLogChunk、迁移 y518b90；256 KiB/256 块滚动窗口、Run 行锁、ACK 摘要与游标缺口；旧 run_logs 不改写。Worker 0.21.0 按 bounded_logs_v2 协商；runner/log_capture.py 与 worker/log_stream.py 提供有界采集、独立协议记录和上传，旧 journal 不切换。只有所选节点升级后新执行才启用，不能声称已自动修复其他部署。见 docs/execution-logs.md，专项及 PostgreSQL 竞态测试 test_execution_logs_v2/test_execution_logs_postgres。
+
+Worker0.21.1 启动失败恢复：client.execute 将 terminal_failure 在停止/上报前保存到执行 journal，恢复只重放失败与清理，不重复创建；created/launch.started 是尝试标记，不是运行确认。execution.claim 附可选 service_instance_id；missing host unit 包含执行身份和判定来源。不同卡 Worker 独立 journal/unit，服务显示名称不作为身份。见 docs/host-execution.md“启动标记与失败恢复”、backend/tests/test_host_failure_recovery.py、test_service_instance_claim_identity.py；现场首次启动根因未确认，不能将模拟双 Worker 验证描述成真实 NPU 模型验收。
