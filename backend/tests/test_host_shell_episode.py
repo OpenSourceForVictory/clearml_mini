@@ -24,7 +24,7 @@ def test_login_environment_reads_only_exported_values(monkeypatch):
 
 @pytest.mark.parametrize('output',[
     b'no marker',b'\0MINI_EVAL_LOGIN_ENV\0INVALID\0',
-    b'\0MINI_EVAL_LOGIN_ENV\0BAD-NAME=value\0',
+    b'\0MINI_EVAL_LOGIN_ENV\0=secret\0',
     b'\0MINI_EVAL_LOGIN_ENV\0PATH=x',
 ])
 def test_login_environment_rejects_invalid_output(monkeypatch,output):
@@ -348,7 +348,7 @@ def test_login_environment_real_bash_exported_modules(monkeypatch):
 
 
 @pytest.mark.parametrize('entry',[
-    b'BASH_FUNC_module%=secret', b'OTHER%%=secret',
+    b'=secret', b'\xff=secret',
     b'VALUE='+b'x'*16385, b'VALUE=\xff',
     b'BASH_FUNC_module%%='+b'x'*131072,
 ])
@@ -366,3 +366,21 @@ def test_login_environment_function_filter_preserves_normal_names_and_boundary(m
     monkeypatch.setattr('worker.host_identity.subprocess.run',lambda *a,**kw:result)
     assert login_environment(pwd.getpwuid(os.geteuid()))=={
         'BASH_FUNC_label':'ordinary','VALUE':'x'*16384}
+
+
+def test_login_environment_special_names_reach_real_child(monkeypatch):
+    expected={'MY-FLAG':'yes','app.setting':'a=b','WITH SPACE':'literal',
+              '变量':'值','OTHER%%':'ok','BASH_FUNC_module%':'ordinary',
+              'SHELL_LITERAL':'$(echo should-not-run); $HOME', 'EMPTY':''}
+    raw=b'\0MINI_EVAL_LOGIN_ENV\0'+b''.join(
+        key.encode()+b'='+value.encode()+b'\0' for key,value in expected.items())
+    real_run=subprocess.run
+    with monkeypatch.context() as patch:
+        patch.setattr('worker.host_identity.subprocess.run',lambda *a,**kw:SimpleNamespace(
+            returncode=0,stdout=raw,stderr=b''))
+        captured=login_environment(pwd.getpwuid(os.geteuid()))
+    assert captured==expected
+    result=real_run([sys.executable,'-c',
+        'import json,os,sys; print(json.dumps({k:os.environ[k] for k in json.loads(sys.argv[1])}))',
+        json.dumps(list(expected))],env=captured,capture_output=True,text=True,check=True,timeout=5)
+    assert json.loads(result.stdout)==expected

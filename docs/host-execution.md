@@ -167,3 +167,11 @@ API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在�
 验证：真实 /bin/bash 导出 ml/module 的回归在修复前稳定复现 invalid，修复后读取成功；验证普通环境保留、16 KiB 边界、无效名称/编码及总量超限继续拒绝。仅相关测试和本地真实 Bash 验证，不代表故障节点已升级或完成模型业务验收，未重新统计全量目录覆盖率。
 
 本次相关回归：test_host_shell_episode.py、test_host_backend_lifecycle.py、test_worker_docker_contracts.py 共 98 passed（一个既有 Starlette 弃用警告）；前端 TypeScript 检查及 OpenSpec strict 校验通过。失败与成功测试输出保留于本地 /tmp/login-functions-before.log、/tmp/login-functions-after.log。
+
+## 登录环境名称兼容（Worker 0.20.4）
+
+0.20.3 虽已过滤 Bash 函数，但仍按 Shell 标识符正则拒绝 MY-FLAG 等合法进程环境名称。0.20.4 接受非空 UTF-8 名称（包括中划线、点、空格和中文），通过 env 字典原样传递，不执行 Shell 插值。读取格式以 NUL 分隔条目、首个等号分隔名称和值；名称不能含这两个分隔符，值可包含等号。空名称、缺等号、无效编码、单值超过16 KiB或总量超过128 KiB仍拒绝，BASH_FUNC_*%%仍过滤。Shell 的 $变量 语法未改变，特殊名称需由程序通过环境 API 读取；模板字段校验规则不受本次修改影响。
+
+节点需更新 Worker 至0.20.4，空闲时重启对应服务，再重新提交任务；无需数据库迁移或修改 API。专项测试覆盖真实子进程读取特殊名称/字面值，以及原有函数过滤、大小和编码失败路径。仅本地验证，未部署至故障节点，未重新统计全量覆盖率。
+
+本次相关测试99项通过，含真实子进程环境读取、宿主机生命周期与Docker回归；前端TypeScript与OpenSpec strict通过。修复前特殊名称回归失败，证据保留在 /tmp/login-names-before.log，修复后结果在 /tmp/login-names-after.log。一个既有Starlette弃用警告；未运行全量覆盖率门槛验收。

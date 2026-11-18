@@ -140,3 +140,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 登录读取超时：Worker0.20.2 的 host_identity.login_environment 默认60秒，host_backend从节点Worker JSON顶层 host_login_timeout_seconds 传入整数1–300。超时报账号及实际时限，不输出环境值；显式环境/Docker不读取该设置。平台 STARTUP_TIMEOUT_SECONDS（默认120）与租约仍独立有效。test_host_shell_episode.py包含真实11秒Shell与边界/脱敏回归。配置与升级操作见 docs/host-execution.md“登录环境读取超时”；界面暂无配置字段。
 
 登录函数兼容：Worker0.20.3 的 host_identity.login_environment 在普通变量校验前过滤 BASH_FUNC_*%%，修正 ml/module 导出导致 invalid；总环境上限先校验，普通变量名/长度/编码保护保留。test_host_shell_episode.py 使用真实 Bash 输出复现并回归；不传函数定义，不改变 Docker。操作及验证边界见 docs/host-execution.md“登录环境包含 Modules 导出函数”。
+
+Worker0.20.4 登录环境名称改用进程环境语义：非空UTF-8，NUL/首个等号为分隔符，不再应用Shell标识符正则；函数过滤、大小/编码限制和平台覆盖不变。test_host_shell_episode.py 验证特殊名称及含等号/命令样式的字面值传到真实子进程；模板字段规则不变。见 docs/host-execution.md“登录环境名称兼容”。

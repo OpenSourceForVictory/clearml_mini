@@ -5,9 +5,7 @@ from pathlib import Path
 import pwd
 import subprocess
 import uuid
-import re
 
-_ENV_NAME=re.compile(rb'[A-Za-z_][A-Za-z0-9_]*\Z')
 _ENV_MARKER=b'\0MINI_EVAL_LOGIN_ENV\0'
 
 
@@ -50,9 +48,9 @@ def login_environment(account, timeout_seconds=60):
         # Keep their exported effects (PATH etc.), never forward function bodies.
         if key.startswith(b'BASH_FUNC_') and key.endswith(b'%%'):
             continue
-        if not _ENV_NAME.fullmatch(key) or len(value)>16384:
+        if not key or len(value)>16384:
             raise RuntimeError('business account login environment is invalid')
-        try:values[key.decode('ascii')]=value.decode('utf-8')
+        try:values[key.decode('utf-8')]=value.decode('utf-8')
         except UnicodeError as exc:
             raise RuntimeError('business account login environment is invalid') from exc
     return values
