@@ -124,7 +124,7 @@ def collect(options):
             for index in chosen:
                 path=base/options['node_name']/(kind+str(index))
                 workspace_paths.append({'index':index,'workspace_root':str(path),
-                    'assets_root':str(path/'assets'),'cache_root':str(path/'cache')})
+                    'assets_root':str(base/options['node_name']/'assets'),'cache_root':str(base/options['node_name']/'cache')})
     runner_ready=True
     docker_selected=options['mode'] in ('docker','both') or (options['mode']=='preserve' and any('docker' in c['execution_modes'] for c in configs))
     if docker_selected:

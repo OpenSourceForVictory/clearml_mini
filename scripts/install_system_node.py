@@ -91,7 +91,7 @@ def _install(credential,selection,instance='gpu'):
     planned=plan(config,instance,selection,indices,CONTROL)
     for name,_,value in planned:
         workspace=base/node_name/(kind+str(value['gpu_index']))
-        value.update(workspace_root=str(workspace),assets_root=str(workspace/'assets'),cache_root=str(workspace/'cache'))
+        value.update(workspace_root=str(workspace),assets_root=str(base/node_name/'assets'),cache_root=str(base/node_name/'cache'))
         if (UNIT_DIR/('mini-eval-worker-managed-'+name+'.service')).exists():raise ValueError('managed Worker unit already exists')
         if kind=='npu' and 'host' in credential.get('execution_modes',['docker','host']):
             from worker.npu_host import probe
@@ -115,10 +115,10 @@ def _install(credential,selection,instance='gpu'):
         create_workspace=not workspace.exists()
         workspace.mkdir(mode=0o711,parents=True,exist_ok=True)
         if create_workspace:os.chown(workspace,acc.pw_uid,acc.pw_gid)
-        for dirname in ('assets','cache','runs'):
-            d=checked_path(workspace/dirname)
+        for directory,mode in ((value['assets_root'],0o755),(value['cache_root'],0o755),(workspace/'runs',0o700)):
+            d=checked_path(directory)
             if not d.exists():
-                d.mkdir(mode=0o700 if dirname=='runs' else 0o755)
+                d.mkdir(mode=mode)
                 os.chown(d,acc.pw_uid,acc.pw_gid)
         check_paths(acc,[('platform code',str(app),os.R_OK|os.X_OK),
             ('workspace',str(workspace),os.R_OK|os.W_OK|os.X_OK),

@@ -53,15 +53,15 @@ def test_multicard_private_config_and_system_services(setup,kind):
         assert value['host_execution']['user']=='root'
         assert value['host_execution']['allow_root_business'] is True
         assert value['workspace_root']==str(m.WORKSPACES/'test'/f'{kind}{value["gpu_index"]}')
-        assert value['assets_root']==str(Path(value['workspace_root'])/'assets')
-        assert value['cache_root']==str(Path(value['workspace_root'])/'cache')
+        assert value['assets_root']==str(m.WORKSPACES/'test'/'assets')
+        assert value['cache_root']==str(m.WORKSPACES/'test'/'cache')
         assert Path(path).stat().st_mode&0o777==0o600
         assert (control/'.config').stat().st_mode&0o777==0o700
         assert service['scope']=='system'
         REAL_RUN(['systemd-analyze','verify','--man=no',str(units/service['name'])],check=True,capture_output=True)
         assert 'User=root\n' in (units/service['name']).read_text()
         assert '\nWorkingDirectory='+result['app_dir']+'\n' in (units/service['name']).read_text()
-        assert (Path(value['workspace_root'])/'cache').stat().st_mode&0o777==0o755
+        assert Path(value['cache_root']).stat().st_mode&0o777==0o755
         if kind=='npu':
             assert value['npu_runtime']['host']['user']=='root'
             assert value['npu_runtime']['allow_shared'] is False
@@ -85,17 +85,46 @@ def test_root_management_account_is_used_for_host_business(setup,monkeypatch):
 def test_custom_workspace_root_creates_machine_and_device_directories(setup,tmp_path,kind):
     credential,_,_,_=setup
     base=tmp_path/'shared'
-    preserved=base/'test'/f'{kind}0'/'assets'
+    preserved=base/'test'/'assets'
     preserved.mkdir(parents=True)
     marker=preserved/'keep.txt';marker.write_text('existing asset')
     result=m.install({**credential,'workspace_root':str(base),'accelerator_type':kind},'all')
     values=[json.loads(Path(path).read_text()) for path in result['config_paths']]
     assert {value['workspace_root'] for value in values}=={str(base/'test'/f'{kind}{index}') for index in (0,1)}
+    assert {value['assets_root'] for value in values}=={str(base/'test'/'assets')}
+    assert {value['cache_root'] for value in values}=={str(base/'test'/'cache')}
+    assert all(not (Path(value['workspace_root'])/'assets').exists() for value in values)
     for value in values:
         for key in ('workspace_root','assets_root','cache_root'):
             assert Path(value[key]).is_dir()
         assert (Path(value['workspace_root'])/'runs').is_dir()
     assert marker.read_text()=='existing asset'
+
+
+def test_shared_directories_pass_worker_validation_and_preserve_cache(setup,tmp_path):
+    from worker.workspace import validate_storage
+    credential,_,_,_=setup
+    base=tmp_path/'shared'
+    cache=base/'test'/'cache';cache.mkdir(parents=True)
+    cached=cache/'model';cached.write_text('cached data')
+    old_mode=cache.stat().st_mode
+    result=m.install({**credential,'workspace_root':str(base)},'all')
+    for path in result['config_paths']:
+        value=json.loads(Path(path).read_text())
+        value['min_free_disk_gb']=0
+        validate_storage(value,value['state_path'],path)
+    assert cached.read_text()=='cached data'
+    assert cache.stat().st_mode==old_mode
+
+
+def test_shared_asset_symlink_is_rejected_before_services_start(setup,tmp_path):
+    credential,calls,_,_=setup
+    machine=tmp_path/'shared'/'test';machine.mkdir(parents=True)
+    target=tmp_path/'assets';target.mkdir()
+    (machine/'assets').symlink_to(target,target_is_directory=True)
+    with pytest.raises(ValueError,match='symlink'):
+        m.install({**credential,'workspace_root':str(machine.parent)},'all')
+    assert ['worker','start'] not in calls
 
 
 @pytest.mark.parametrize('value',['relative/work','/root/private','/tmp/../escape'])
@@ -125,7 +154,7 @@ def test_failure_rolls_back_new_units_but_retains_business_data(setup,monkeypatc
     monkeypatch.setattr('scripts.install_node.install_updater',fail)
     with pytest.raises(RuntimeError,match='injected'):m.install(credential,'all')
     assert not control.exists() and not list(units.iterdir()) and not m.UPDATER_ROOT.exists()
-    assert (m.WORKSPACES/'test/gpu0/cache').is_dir()
+    assert (m.WORKSPACES/'test/cache').is_dir()
     assert any(c[:3]==['systemctl','disable','--now'] for c in calls)
 
 

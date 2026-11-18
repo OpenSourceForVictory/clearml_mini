@@ -28,7 +28,12 @@
 #### Scenario: 多卡节点
 
 - **WHEN** 管理员配置 `/data/eval` 并纳管名为 `node-a` 的 GPU 0 和 GPU 1
-- **THEN** 安装计划和本地配置分别使用 `/data/eval/node-a/gpu0` 与 `/data/eval/node-a/gpu1`，各自拥有独立资产与缓存目录
+- **THEN** 安装计划和本地配置分别使用 `/data/eval/node-a/gpu0` 与 `/data/eval/node-a/gpu1` 作为工作目录，两卡均使用 `/data/eval/node-a/assets` 和 `/data/eval/node-a/cache` 作为共享资产与缓存目录
+
+#### Scenario: 不同机器
+
+- **WHEN** 两台机器使用同一个工作目录根路径
+- **THEN** 各机器的资产和缓存目录由机器名区分，不自动跨机器共享
 
 #### Scenario: 目录已存在
 

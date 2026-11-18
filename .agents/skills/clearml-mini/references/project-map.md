@@ -57,7 +57,7 @@ Agent JSON 并发维护：所有修改 Worker.connection 的管理路径（Agent
 
 SSH 纳管部署排查：docs/ssh-onboarding-executor.md；默认 Compose 自动启动 onboarding 服务（onboarding/Dockerfile），专用 socket 卷连接 API，状态卷仅执行器持有；onboarding.healthcheck 检查本地协议，无 API 依赖环。旧显式 ONBOARDING_SOCKET 及父目录 bind mount 保留兼容宿主机 mini-eval-onboarding.service。发布检查 scripts/fleet_rollout.py 保护环境和挂载，不能把执行器缺失误判成目标 SSH 密码错误。
 
-统一 root 纳管/普通业务身份：docs/root-managed-host.md；scripts/install_system_node.py 创建 root 系统服务，并将新 root SSH 纳管账号写入 host_execution；SSH 表单的工作目录根路径经 onboarding/probe.py 预览，安装时按机器名和设备名创建工作、资产、缓存目录。worker/host_identity.py 负责身份/权限/资源检查。host_execution 是节点批准配置，模板不能覆盖；旧用户服务升级保留身份。覆盖率门槛见 backend/tests/managed-host.coveragerc，真实测试需 MANAGED_HOST_TEST=1 和隔离 systemd 环境。
+统一 root 纳管/普通业务身份：docs/root-managed-host.md；scripts/install_system_node.py 创建 root 系统服务，并将新 root SSH 纳管账号写入 host_execution；SSH 表单的工作目录根路径经 onboarding/probe.py 预览，安装时按机器名和设备名创建独立工作目录，资产和缓存使用机器目录下的 assets、cache，同机各卡共享；重新纳管保留原路径。worker/host_identity.py 负责身份/权限/资源检查。host_execution 是节点批准配置，模板不能覆盖；旧用户服务升级保留身份。覆盖率门槛见 backend/tests/managed-host.coveragerc，真实测试需 MANAGED_HOST_TEST=1 和隔离 systemd 环境。
 
 宿主机业务身份：host_identity.settings 校验节点批准的 SSH 账号；root 账号需 uid/gid=0，NPU host 必须使用同一身份。host_identity.properties 对 root 保留 CAP_DAC_OVERRIDE、CAP_DAC_READ_SEARCH，普通账号仍清空 capabilities；NPU DevicePolicy=closed 与任务额度继续应用。新纳管默认使用 SSH 账号，已有安装和重新纳管保留本地身份；Docker 不受影响。操作与敏感文件/NFS root_squash 边界见 docs/root-managed-host.md，回归 test_system_node_installer.py、test_managed_host.py、test_host_backend_lifecycle.py。
 

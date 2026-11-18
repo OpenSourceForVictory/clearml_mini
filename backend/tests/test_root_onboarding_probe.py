@@ -29,14 +29,19 @@ def environment(tmp_path,monkeypatch):
         calls.append(argv)
         return N(returncode=0,stdout='0, RTX, GPU-A\n1, RTX, GPU-B\n' if argv[0]=='nvidia-smi' else '')
     monkeypatch.setattr(probe.subprocess,'run',run)
-    options={'node_name':'fresh','mode':'host','gpus':'all','api_url':'http://test'}
+    options={'node_name':'fresh','mode':'host','gpus':'all','api_url':'http://test',
+             'business_user':'root','workspace_root':str(tmp_path/'workspaces')}
     return options,calls,home,units
 
 
 def test_root_gpu_does_not_need_user_session(environment):
     options,calls,*_=environment;result=probe.collect(options)
     assert not result['issues'] and result['selected_gpus']==[0,1]
-    assert result['business_user']=='mini-eval' and result['business_uid']==29000
+    assert result['business_user']=='root' and result['business_uid']==0
+    base=Path(options['workspace_root'])/'fresh'
+    assert result['workspace_paths']==[
+        {'index':i,'workspace_root':str(base/f'gpu{i}'),'assets_root':str(base/'assets'),'cache_root':str(base/'cache')}
+        for i in (0,1)]
     assert not any('--user' in c for c in calls)
 
 
@@ -53,7 +58,7 @@ def test_existing_identity_not_replaced(environment):
 def test_conflicting_uid_stops_probe(environment,monkeypatch):
     import pwd
     options,*_=environment
-    monkeypatch.setattr(pwd,'getpwuid',lambda _:N(pw_name='other'))
+    monkeypatch.setattr(pwd,'getpwnam',lambda _:N(pw_uid=1234,pw_gid=1234))
     assert 'business_identity_conflict' in probe.collect(options)['issues']
 
 @pytest.mark.parametrize('valid',[True,False])
@@ -97,13 +102,17 @@ def test_both_execution_modes_probe_docker_and_expose_gpu_policy(environment):
 def test_custom_layout_probe_preserves_business_user_and_services(environment):
     import json
     options,_,home,_=environment
-    p=home/'legacy.json';p.write_text(json.dumps(dict(node_name='fresh',state_path=str(home/'state.json'),gpu_index=0,npu_runtime={'host':{'user':'original-business'}})))
+    p=home/'legacy.json';p.write_text(json.dumps(dict(node_name='fresh',state_path=str(home/'state.json'),gpu_index=0,
+        workspace_root='/legacy/gpu0',assets_root='/legacy/gpu0/assets',cache_root='/legacy/gpu0/cache',
+        npu_runtime={'host':{'user':'original-business'}})))
     installation={'layout':{'config_paths':[str(p)],'services':[{'scope':'system','name':'mini-eval-worker-legacy.service'}]},'fingerprint':'hash'}
     options.update(gpus='0',node_id='original',layout_source='def discover(*a): return '+repr(installation))
     result=probe.collect(options)
     assert result['issues']==[] and result['existing']
     assert result['business_user']=='original-business' and result['installation']==installation
     assert result['services']==installation['layout']['services']
+    assert result['workspace_paths']==[{'index':0,'workspace_root':'/legacy/gpu0',
+        'assets_root':'/legacy/gpu0/assets','cache_root':'/legacy/gpu0/cache'}]
 
 
 def test_existing_npu_probe_shows_sharing_without_full_config(environment,monkeypatch):

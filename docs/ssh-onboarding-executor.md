@@ -84,7 +84,7 @@ root 系统宿主机支持 cgroup v1、v2 和混合层级，以实际 CPU、内�
 
 Docker-only 纳管不运行宿主机 systemd 限制探针；只要求 Docker daemon 可用。runner 镜像是否存在仅作为提示，不阻止安装，不自动拉取、构建或试运行容器。页面按实际镜像提供命令：默认 runner 在项目根目录或完整节点安装包解压目录执行 `docker build -f runner/Dockerfile -t mini-eval-runner:dev .`；自定义镜像执行 `docker pull <实际镜像名>`。离线或仓库失败由管理员准备镜像后再运行业务。模板镜像继续由机器“容器环境”批准、Worker 探测及调度检查；纳管成功不表示容器资源限制、NPU/CANN 或模型业务已验收。
 
-新 root SSH 纳管可填写工作目录根路径，留空使用 `/var/lib/mini-eval/workspaces`。检查计划逐卡预览 `根路径/机器名/gpu0` 或 `根路径/机器名/npu3` 及对应资产、缓存目录；安装器复核后创建缺失目录。已有目录及文件保留，重新纳管保留原每卡目录，不随新输入迁移。
+新 root SSH 纳管可填写工作目录根路径，留空使用 `/var/lib/mini-eval/workspaces`。检查计划逐卡预览 `根路径/机器名/gpu0` 或 `根路径/机器名/npu3` 作为独立工作目录；资产、缓存分别使用 `根路径/机器名/assets`、`根路径/机器名/cache`，由同机各卡共享。安装器复核后创建缺失目录。已有目录及文件保留，重新纳管保留原每卡目录，不随新输入迁移。
 
 已有 root 自定义目录安装可从独立 updater 的可信布局原位恢复，保留 Worker 单元、业务账号和数据路径。布局、配置或服务变化需重新检查；缺失布局、权限不可信、遗漏设备和恢复记录未清理仍拒绝。安装包必须包含 scripts/node_layout.py，API 与执行器同步发布。详见 [重新纳管](node-reenrollment.md)。真实验证范围及失败记录见 [cgroup 与重新纳管验证](validation/cgroup-runtime/README.md)。
 

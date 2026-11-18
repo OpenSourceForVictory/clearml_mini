@@ -18,7 +18,7 @@
 
 运行模板指南和宿主机批准环境页说明：NPU 宿主机任务会以批准的业务账号加载节点安装的 CANN `set_env.sh`，用户无需在每张卡或模板重复填写标准 CANN 库路径；业务 Python 依赖仍需自行准备，Docker 仍使用镜像内环境。定向 Python 回归及前端 TypeScript/Vite 构建结果见 [CANN 环境加载验证](validation/auto-cann-host-environment/README.md)；未在缺少 `torch_npu` 业务环境的 29 节点宣称真实服务验收。
 
-宿主机身份提示：新 SSH 纳管使用纳管账号作为业务账号，root SSH 纳管即为 root 业务；已有节点保留原身份。界面模板和批准环境 JSON 不提供身份切换。root 可读取本机敏感文件；业务仅在模板选择登录环境时读取该账号的导出变量，NFS root_squash 可能继续拒绝访问。新纳管填写工作目录根路径后，安装计划逐卡显示 `根路径/机器名/设备名` 和资产、缓存目录。旧版本 root 手工批准的验证范围见 [root 业务身份验证](validation/opt-in-root-host-business/README.md)。
+宿主机身份提示：新 SSH 纳管使用纳管账号作为业务账号，root SSH 纳管即为 root 业务；已有节点保留原身份。界面模板和批准环境 JSON 不提供身份切换。root 可读取本机敏感文件；业务仅在模板选择登录环境时读取该账号的导出变量，NFS root_squash 可能继续拒绝访问。新纳管填写工作目录根路径后，安装计划逐卡显示 `根路径/机器名/设备名` 作为独立工作目录，资产、缓存使用机器目录下的 `assets`、`cache`，同机各卡共享。旧版本 root 手工批准的验证范围见 [root 业务身份验证](validation/opt-in-root-host-business/README.md)。
 
 宿主机环境指南说明模板业务变量和允许覆盖列表的边界：设备可见变量与 `MINI_EVAL_*` 由平台保留，Worker 启动前再次拒绝异常任务覆盖，分配的 GPU UUID 在业务变量合并后写入；这不是 GPU 硬隔离。定向测试及失败边界见 [设备环境验证](validation/host-device-environment-boundary/README.md)。
 
