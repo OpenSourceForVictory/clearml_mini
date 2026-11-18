@@ -138,3 +138,5 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 可选限制真机修正：Worker0.20.1 的 resource_limits.verify_group 只读取有限 CPU/内存轴的 cgroup 文件，兼容 systemd 未启用不限轴控制器；有限轴缺文件和原 pids 限制仍拒绝。专项 test_resource_limits.py 覆盖 v1/v2。部署与真机边界见 docs/validation/episode-limits-live/README.md。
 
 登录读取超时：Worker0.20.2 的 host_identity.login_environment 默认60秒，host_backend从节点Worker JSON顶层 host_login_timeout_seconds 传入整数1–300。超时报账号及实际时限，不输出环境值；显式环境/Docker不读取该设置。平台 STARTUP_TIMEOUT_SECONDS（默认120）与租约仍独立有效。test_host_shell_episode.py包含真实11秒Shell与边界/脱敏回归。配置与升级操作见 docs/host-execution.md“登录环境读取超时”；界面暂无配置字段。
+
+登录函数兼容：Worker0.20.3 的 host_identity.login_environment 在普通变量校验前过滤 BASH_FUNC_*%%，修正 ml/module 导出导致 invalid；总环境上限先校验，普通变量名/长度/编码保护保留。test_host_shell_episode.py 使用真实 Bash 输出复现并回归；不传函数定义，不改变 Docker。操作及验证边界见 docs/host-execution.md“登录环境包含 Modules 导出函数”。

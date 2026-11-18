@@ -46,6 +46,10 @@ def login_environment(account, timeout_seconds=60):
     for entry in raw[:-1].split(b'\0'):
         if b'=' not in entry:raise RuntimeError('business account login environment is invalid')
         key,value=entry.split(b'=',1)
+        # Bash exports functions as environment entries, not ordinary variables.
+        # Keep their exported effects (PATH etc.), never forward function bodies.
+        if key.startswith(b'BASH_FUNC_') and key.endswith(b'%%'):
+            continue
         if not _ENV_NAME.fullmatch(key) or len(value)>16384:
             raise RuntimeError('business account login environment is invalid')
         try:values[key.decode('ascii')]=value.decode('utf-8')

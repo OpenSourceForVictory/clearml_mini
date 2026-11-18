@@ -329,3 +329,40 @@ def test_login_environment_real_shell_takes_more_than_old_limit(tmp_path):
     test_account=SimpleNamespace(pw_shell=str(shell),pw_dir=str(tmp_path),
         pw_name=account.pw_name,pw_uid=account.pw_uid,pw_gid=account.pw_gid)
     assert login_environment(test_account)['HOME']==str(tmp_path)
+
+
+def test_login_environment_real_bash_exported_modules(monkeypatch):
+    # Generate actual Bash serialization without modifying the account's profile.
+    result=subprocess.run(['/bin/bash','--noprofile','--norc','-c',
+        "ml() { :; }; module() { :; }; export -f ml module; "
+        "export LD_LIBRARY_PATH=/approved/cann/lib64; "
+        "printf '\\0MINI_EVAL_LOGIN_ENV\\0'; /usr/bin/env -0"],
+        env={'PATH':'/usr/bin:/bin'},capture_output=True,check=True,timeout=5)
+    assert b'BASH_FUNC_ml%%=' in result.stdout
+    assert b'BASH_FUNC_module%%=' in result.stdout
+    monkeypatch.setattr('worker.host_identity.subprocess.run',lambda *a,**kw:result)
+    values=login_environment(pwd.getpwuid(os.geteuid()))
+    assert values['LD_LIBRARY_PATH']=='/approved/cann/lib64'
+    assert values['PATH']=='/usr/bin:/bin'
+    assert not any(key.startswith('BASH_FUNC_') for key in values)
+
+
+@pytest.mark.parametrize('entry',[
+    b'BASH_FUNC_module%=secret', b'OTHER%%=secret',
+    b'VALUE='+b'x'*16385, b'VALUE=\xff',
+    b'BASH_FUNC_module%%='+b'x'*131072,
+])
+def test_login_environment_function_filter_keeps_validation(monkeypatch,entry):
+    result=SimpleNamespace(returncode=0,stdout=b'\0MINI_EVAL_LOGIN_ENV\0'+entry+b'\0',stderr=b'')
+    monkeypatch.setattr('worker.host_identity.subprocess.run',lambda *a,**kw:result)
+    with pytest.raises(RuntimeError,match='environment') as error:
+        login_environment(pwd.getpwuid(os.geteuid()))
+    assert 'secret' not in str(error.value)
+
+
+def test_login_environment_function_filter_preserves_normal_names_and_boundary(monkeypatch):
+    result=SimpleNamespace(returncode=0,stdout=b'\0MINI_EVAL_LOGIN_ENV\0'
+        b'BASH_FUNC_label=ordinary\0BASH_FUNC_ml%%=() { :; }\0VALUE='+b'x'*16384+b'\0',stderr=b'')
+    monkeypatch.setattr('worker.host_identity.subprocess.run',lambda *a,**kw:result)
+    assert login_environment(pwd.getpwuid(os.geteuid()))=={
+        'BASH_FUNC_label':'ordinary','VALUE':'x'*16384}

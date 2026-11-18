@@ -157,3 +157,13 @@ API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在�
 验证包含默认/自定义/非法值、超时诊断不泄露输出、节点设置传递，以及真实子进程 Shell 等待 11 秒后成功的回归。它验证慢登录读取，不代表故障节点或真实模型已复测；导出函数导致无效环境的问题不在本次超时修复范围内。
 
 本次专项验证：`test_host_shell_episode.py`、`test_host_backend_lifecycle.py`、`test_worker_docker_contracts.py` 共 91 passed，一条既有 Starlette 弃用警告；TypeScript 与 OpenSpec 严格校验通过。未运行全量测试或完整覆盖率统计，不据此宣称全仓覆盖率达标。代码修改不等于故障节点已更新或复测。
+
+## 登录环境包含 Modules 导出函数（Worker 0.20.3）
+
+触发条件：账号登录脚本导出 ml/module 等 Bash 函数，env 中出现 BASH_FUNC_ml%% / BASH_FUNC_module%%；旧 Worker 将其误判为非法变量名，业务启动前报 business account login environment is invalid。0.20.3 只跳过 BASH_FUNC_*%% 函数定义，保留登录脚本已设置的 PATH、LD_LIBRARY_PATH 等变量；其他非法名称、编码、普通变量长度及总环境大小校验继续有效。不会执行或继续传递导出函数；业务脚本如需再次调用 module load，须自行初始化 Modules。
+
+升级故障节点 Worker 至 0.20.3，等待空闲后重启对应 Worker 服务并重新提交任务；多卡节点须更新对应服务实际使用的安装文件。临时补丁位于 worker/host_identity.py 的 login_environment：在 key,value=entry.split(b'=',1) 后、普通变量校验前跳过上述函数项。无需更改系统 Modules、模板或数据库，单独更新 API 不生效。
+
+验证：真实 /bin/bash 导出 ml/module 的回归在修复前稳定复现 invalid，修复后读取成功；验证普通环境保留、16 KiB 边界、无效名称/编码及总量超限继续拒绝。仅相关测试和本地真实 Bash 验证，不代表故障节点已升级或完成模型业务验收，未重新统计全量目录覆盖率。
+
+本次相关回归：test_host_shell_episode.py、test_host_backend_lifecycle.py、test_worker_docker_contracts.py 共 98 passed（一个既有 Starlette 弃用警告）；前端 TypeScript 检查及 OpenSpec strict 校验通过。失败与成功测试输出保留于本地 /tmp/login-functions-before.log、/tmp/login-functions-after.log。
