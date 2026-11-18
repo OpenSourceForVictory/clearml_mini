@@ -22,8 +22,9 @@ def setup(tmp_path,monkeypatch):
     monkeypatch.setattr(m,'UPDATER_ROOT',tmp_path/'updater');monkeypatch.setattr(m,'UNIT_DIR',units);monkeypatch.setattr(m,'INSTALL_LOCK',tmp_path/'install.lock')
     monkeypatch.setattr(m,'__file__',str(source/'scripts/install_system_node.py'))
     monkeypatch.setattr(os,'geteuid',lambda:0)
-    acc=N(pw_name='mini-eval',pw_uid=os.getuid(),pw_gid=os.getgid(),pw_dir=str(tmp_path/'business'))
-    monkeypatch.setattr(m,'account',lambda *a:acc)
+    acc=N(pw_name='root',pw_uid=0,pw_gid=0,pw_dir='/root')
+    monkeypatch.setattr(m.pwd,'getpwnam',lambda name:acc if name=='root' else missing())
+    monkeypatch.setattr(os,'chown',lambda *args:None)
     calls=[]
     monkeypatch.setattr(m.subprocess,'run',lambda args,**kw:(calls.append(args) or N(returncode=0,stdout='',stderr='')))
     monkeypatch.setattr('scripts.install_worker.identity',lambda *a:None)
@@ -49,16 +50,20 @@ def test_multicard_private_config_and_system_services(setup,kind):
     assert {v['gpu_index'] for v in values}=={0,1}
     assert len({v['state_path'] for v in values})==2
     for value,path,service in zip(values,result['config_paths'],result['services']):
-        assert value['host_execution']['user']=='mini-eval'
+        assert value['host_execution']['user']=='root'
+        assert value['host_execution']['allow_root_business'] is True
+        assert value['workspace_root']==str(m.WORKSPACES/'test'/f'{kind}{value["gpu_index"]}')
+        assert value['assets_root']==str(Path(value['workspace_root'])/'assets')
+        assert value['cache_root']==str(Path(value['workspace_root'])/'cache')
         assert Path(path).stat().st_mode&0o777==0o600
         assert (control/'.config').stat().st_mode&0o777==0o700
         assert service['scope']=='system'
         REAL_RUN(['systemd-analyze','verify','--man=no',str(units/service['name'])],check=True,capture_output=True)
         assert 'User=root\n' in (units/service['name']).read_text()
         assert '\nWorkingDirectory='+result['app_dir']+'\n' in (units/service['name']).read_text()
-        assert (Path(value['workspace_root'])/'cache').stat().st_mode&0o777==0o700
+        assert (Path(value['workspace_root'])/'cache').stat().st_mode&0o777==0o755
         if kind=='npu':
-            assert value['npu_runtime']['host']['user']=='mini-eval'
+            assert value['npu_runtime']['host']['user']=='root'
             assert value['npu_runtime']['allow_shared'] is False
         else:
             assert value['gpu_runtime']['allow_shared'] is False
@@ -66,6 +71,39 @@ def test_multicard_private_config_and_system_services(setup,kind):
     before={p:p.read_bytes() for p in units.iterdir()}
     with pytest.raises(ValueError,match='re-enrollment'):m.install(credential,'all')
     assert all(p.read_bytes()==data for p,data in before.items())
+
+
+def test_root_management_account_is_used_for_host_business(setup,monkeypatch):
+    credential,_,_,_=setup
+    monkeypatch.setattr(os,'chown',lambda *args:None)
+    result=m.install({**credential,'business_user':'root','business_uid':0,'business_gid':0},'0')
+    value=json.loads(Path(result['config_paths'][0]).read_text())
+    assert value['host_execution']=={'approved':True,'user':'root','uid':0,'gid':0,'allow_root_business':True}
+
+
+@pytest.mark.parametrize('kind',['gpu','npu'])
+def test_custom_workspace_root_creates_machine_and_device_directories(setup,tmp_path,kind):
+    credential,_,_,_=setup
+    base=tmp_path/'shared'
+    preserved=base/'test'/f'{kind}0'/'assets'
+    preserved.mkdir(parents=True)
+    marker=preserved/'keep.txt';marker.write_text('existing asset')
+    result=m.install({**credential,'workspace_root':str(base),'accelerator_type':kind},'all')
+    values=[json.loads(Path(path).read_text()) for path in result['config_paths']]
+    assert {value['workspace_root'] for value in values}=={str(base/'test'/f'{kind}{index}') for index in (0,1)}
+    for value in values:
+        for key in ('workspace_root','assets_root','cache_root'):
+            assert Path(value[key]).is_dir()
+        assert (Path(value['workspace_root'])/'runs').is_dir()
+    assert marker.read_text()=='existing asset'
+
+
+@pytest.mark.parametrize('value',['relative/work','/root/private','/tmp/../escape'])
+def test_invalid_workspace_root_rejected_before_installation(setup,value):
+    credential,calls,control,_=setup
+    with pytest.raises(ValueError):m.install({**credential,'workspace_root':value},'all')
+    assert ['worker','start'] not in calls
+    assert not control.exists()
 
 
 def test_gpu_sharing_and_both_execution_modes_are_installed(setup):
@@ -87,7 +125,7 @@ def test_failure_rolls_back_new_units_but_retains_business_data(setup,monkeypatc
     monkeypatch.setattr('scripts.install_node.install_updater',fail)
     with pytest.raises(RuntimeError,match='injected'):m.install(credential,'all')
     assert not control.exists() and not list(units.iterdir()) and not m.UPDATER_ROOT.exists()
-    assert (m.WORKSPACES/'gpu-gpu0/cache').is_dir()
+    assert (m.WORKSPACES/'test/gpu0/cache').is_dir()
     assert any(c[:3]==['systemctl','disable','--now'] for c in calls)
 
 
@@ -131,33 +169,14 @@ def test_npu_sharing_requires_explicit_installer_choice(setup):
     result=m.install({**credential,'accelerator_type':'npu','npu_sharing':'enabled'},'all')
     assert all(json.loads(Path(p).read_text())['npu_runtime']['allow_shared'] is True for p in result['config_paths'])
 
-@pytest.mark.parametrize('issue',['uid','gid','home','privileged','range','nonroot'])
-def test_account_rejection_before_mutation(monkeypatch,issue):
-    monkeypatch.setattr(os,'geteuid',lambda:1000 if issue=='nonroot' else 0)
-    user=N(pw_name='mini-eval',pw_uid=29001 if issue=='uid' else 29000,pw_gid=29000,pw_dir='wrong' if issue=='home' else str(m.BUSINESS_HOME))
-    group=N(gr_name='mini-eval',gr_gid=29001 if issue=='gid' else 29000)
-    monkeypatch.setattr(m.pwd,'getpwnam',lambda _:user);monkeypatch.setattr(m.grp,'getgrnam',lambda _:group)
-    monkeypatch.setattr(m.pwd,'getpwuid',lambda _:user);monkeypatch.setattr(m.grp,'getgrgid',lambda _:group)
-    monkeypatch.setattr(m.grp,'getgrall',lambda:[N(gr_name='sudo',gr_mem=['mini-eval'])] if issue=='privileged' else [])
-    monkeypatch.setattr(m.subprocess,'run',lambda *a,**k:pytest.fail('unexpected mutation'))
-    with pytest.raises(ValueError):m.account(0 if issue=='range' else 29000)
-
-
-def test_account_creation_then_idempotence(monkeypatch):
-    monkeypatch.setattr(os,'geteuid',lambda:0);calls=[];users={};groups={}
-    user=N(pw_name='mini-eval',pw_uid=29000,pw_gid=29000,pw_dir=str(m.BUSINESS_HOME))
-    group=N(gr_name='mini-eval',gr_gid=29000)
-    monkeypatch.setattr(m.pwd,'getpwnam',lambda name:users[name]);monkeypatch.setattr(m.grp,'getgrnam',lambda name:groups[name])
-    monkeypatch.setattr(m.pwd,'getpwuid',lambda _:users['mini-eval']);monkeypatch.setattr(m.grp,'getgrgid',lambda _:groups['mini-eval'])
-    monkeypatch.setattr(m.grp,'getgrall',lambda:[])
-    def run(args,**kw):
-        calls.append(args)
-        if args[0]=='groupadd':groups['mini-eval']=group
-        if args[0]=='useradd':users['mini-eval']=user
-    monkeypatch.setattr(m.subprocess,'run',run)
-    assert m.account()==user
-    assert '--shell' in calls[1] and '/usr/sbin/nologin' in calls[1]
-    assert m.account()==user and len(calls)==2
+@pytest.mark.parametrize('user,uid,gid',[
+    ('root',1,0),('root',0,1),('missing',1000,1000),('operator',1001,1001),
+])
+def test_business_account_conflicts_are_rejected(setup,user,uid,gid):
+    credential,calls,control,_=setup
+    with pytest.raises(ValueError):m.install({**credential,'business_user':user,'business_uid':uid,'business_gid':gid},'all')
+    assert not control.exists()
+    assert ['worker','start'] not in calls
 
 
 def test_discover_npu_parses_physical_indices(monkeypatch):

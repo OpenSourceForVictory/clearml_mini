@@ -13,6 +13,14 @@ def form(**kw):
     return dict(host='127.0.0.1',port=22,username='test',node_name='ssh-test',api_url='http://127.0.0.1:18093',mode='host',gpus='all',password='SECRET-PASSWORD',request_id='request-one',**kw)
 
 
+def test_root_business_identity_and_workspace_root_contract():
+    value=validate({**form(),'username':'root','business_user':'root','workspace_root':'/data/eval'})
+    assert (value['business_uid'],value['business_gid'],value['workspace_root'])==(0,0,'/data/eval')
+    for root in ('relative/path','/','/tmp/../escape','/data/eval\nother'):
+        with pytest.raises(Rejected):validate({**form(),'username':'root','workspace_root':root})
+    with pytest.raises(Rejected):validate({**form(),'username':'root','business_user':'mini-eval'})
+
+
 def test_npu_sharing_form_is_explicit_and_gpu_cannot_set_it():
     assert validate(form(accelerator_type='npu'))['npu_sharing']=='preserve'
     assert validate(form(accelerator_type='npu',npu_sharing='enabled'))['npu_sharing']=='enabled'

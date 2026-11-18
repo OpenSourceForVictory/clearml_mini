@@ -53,18 +53,16 @@ def test_identity_drift_and_unprivileged_manager(monkeypatch):
 def test_account_conflict_never_mutates_users(monkeypatch):
     monkeypatch.setattr(os,'geteuid',lambda:0)
     def missing(_):raise KeyError()
-    monkeypatch.setattr(install_system_node.grp,'getgrnam',missing)
     monkeypatch.setattr(pwd,'getpwnam',missing)
-    monkeypatch.setattr(pwd,'getpwuid',lambda _:N(pw_name='another-user'))
     monkeypatch.setattr(install_system_node.subprocess,'run',lambda *a,**k:pytest.fail('account mutated before validation'))
-    with pytest.raises(ValueError,match='another account'):install_system_node.account()
+    with pytest.raises(ValueError,match='does not exist'):install_system_node.approved_account({'business_user':'missing'})
 
 
 def test_onboarding_identity_fields_are_bounded():
     from onboarding.contracts import validate,Rejected
     from backend.tests.test_ssh_onboarding import form
     f=validate({**form(),'username':'root','accelerator_type':'npu'})
-    assert f['business_uid']==29000 and f['business_gid']==29000
+    assert f['business_uid']==0 and f['business_gid']==0 and f['business_user']=='root'
     for override in ({'business_uid':0},{'business_gid':True},{'accelerator_type':'auto'},{'business_user':'root'}):
         with pytest.raises(Rejected):validate({**form(),**override})
 

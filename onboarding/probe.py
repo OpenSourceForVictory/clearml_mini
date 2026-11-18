@@ -40,6 +40,7 @@ def collect(options):
         v=json.loads(p.read_text())
         if not isinstance(v,dict) or 'state_path' not in v:continue
         configs.append({'path':str(p),'node_name':v.get('node_name'),'gpu_index':v.get('gpu_index',0),'mock':v.get('mock',False),'gpu_uuid':('mock:'+v.get('node_name','')+':'+str(v.get('gpu_index',0))) if v.get('mock') else None,
+                        'workspace_root':v.get('workspace_root'),'assets_root':v.get('assets_root'),'cache_root':v.get('cache_root'),
                         'npu_sharing':v.get('npu_runtime',{}).get('allow_shared') is True if v.get('accelerator_type')=='npu' else None,
                         'gpu_sharing':v.get('gpu_runtime',{}).get('allow_shared') is True if v.get('accelerator_type','gpu')=='gpu' and isinstance(v.get('gpu_runtime'),dict) else None,
                         'execution_modes':v.get('execution_modes',['docker','host'])})
@@ -96,16 +97,34 @@ def collect(options):
     if not configs and os.geteuid()!=0:issues.append('new_node_requires_root')
     if os.geteuid()==0 and not configs and (options.get('node_id') or Path('/etc/systemd/system/mini-eval-agent.service').exists()):issues.append('existing_installation_requires_identity_migration')
     if os.geteuid()==0 and not configs:
-        import pwd,grp
-        uid=options.get('business_uid',29000);gid=options.get('business_gid',29000)
-        for fn,number,attr in ((pwd.getpwuid,uid,'pw_name'),(grp.getgrgid,gid,'gr_name')):
-            try:
-                if getattr(fn(number),attr)!='mini-eval':issues.append('business_identity_conflict')
-            except KeyError:pass
-        for fn,name,attr,number in ((pwd.getpwnam,'mini-eval','pw_uid',uid),(grp.getgrnam,'mini-eval','gr_gid',gid)):
-            try:
-                if getattr(fn(name),attr)!=number:issues.append('business_identity_conflict')
-            except KeyError:pass
+        import pwd
+        requested=options.get('business_user') or 'root'
+        uid=options.get('business_uid',0 if requested=='root' else 29000);gid=options.get('business_gid',0 if requested=='root' else 29000)
+        try:
+            if pwd.getpwnam(requested).pw_uid != uid or pwd.getpwnam(requested).pw_gid != gid: issues.append('business_identity_conflict')
+        except KeyError:
+            issues.append('business_identity_conflict')
+    workspace_paths=[]
+    if configs:
+        workspace_paths=[{'index':c['gpu_index'],'workspace_root':c['workspace_root'],
+            'assets_root':c['assets_root'] or str(Path(c['workspace_root'])/'assets') if c['workspace_root'] else None,
+            'cache_root':c['cache_root'] or str(Path(c['workspace_root'])/'cache') if c['workspace_root'] else None}
+            for c in configs]
+    else:
+        base=Path(options.get('workspace_root') or '/var/lib/mini-eval/workspaces')
+        forbidden=('/proc','/sys','/dev','/run','/etc','/boot','/root')
+        if (not base.is_absolute() or str(base)=='/' or '..' in base.parts or ',' in str(base)
+                or any(ord(c)<32 or ord(c)==127 for c in str(base))
+                or any(base==Path(p) or Path(p) in base.parents for p in forbidden)
+                or any(part.is_symlink() for part in (base,*base.parents))):
+            issues.append('invalid_workspace_root')
+        else:
+            nearest=next((part for part in (base,*base.parents) if part.exists()),None)
+            if nearest and not os.access(nearest,os.W_OK|os.X_OK):issues.append('workspace_root_not_writable')
+            for index in chosen:
+                path=base/options['node_name']/(kind+str(index))
+                workspace_paths.append({'index':index,'workspace_root':str(path),
+                    'assets_root':str(path/'assets'),'cache_root':str(path/'cache')})
     runner_ready=True
     docker_selected=options['mode'] in ('docker','both') or (options['mode']=='preserve' and any('docker' in c['execution_modes'] for c in configs))
     if docker_selected:
@@ -117,7 +136,7 @@ def collect(options):
         with urllib.request.build_opener(NoRedirect()).open(options['api_url'].rstrip('/')+'/healthz',timeout=10) as response:
             if response.status!=200:issues.append('node_cannot_reach_API')
     except Exception:issues.append('node_cannot_reach_API')
-    return {'installation':installation,'runner_image_ready':runner_ready,'cgroup_mode':'v2' if Path('/sys/fs/cgroup/cgroup.controllers').exists() else 'v1-or-hybrid','uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else ('mini-eval' if os.geteuid()==0 else None),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',29000),'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
+    return {'installation':installation,'runner_image_ready':runner_ready,'cgroup_mode':'v2' if Path('/sys/fs/cgroup/cgroup.controllers').exists() else 'v1-or-hybrid','uid':os.getuid(),'accelerator_type':kind,'business_user':installed_identity.get('user') if configs else options.get('business_user'),'business_uid':installed_identity.get('uid') if configs else options.get('business_uid',0 if options.get('business_user')=='root' else 29000),'business_gid':installed_identity.get('gid') if configs else options.get('business_gid',0 if options.get('business_user')=='root' else 29000),'workspace_paths':workspace_paths,'home':str(home),'python':sys.executable,'python_version':sys.version.split()[0],
             'gpus':gpus,'selected_gpus':chosen,'existing':bool(configs),'services':services,
             'configs':configs,'issues':sorted(set(issues)),'free_disk_gb':round(shutil.disk_usage(home).free/1024**3,1)}
 

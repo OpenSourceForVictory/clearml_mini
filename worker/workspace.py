@@ -59,12 +59,12 @@ def checked_path(value):
     if (not path.is_absolute() or path == Path('/') or '..' in path.parts or ',' in str(value)
             or any(ord(c) < 32 or ord(c) == 127 for c in str(value))):
         raise ValueError('expected an absolute directory without commas, control characters or ..')
-    for part in (path, *path.parents):
-        if part.is_symlink():
-            raise ValueError(f'directory contains a symlink: {part}')
     for forbidden in ('/proc', '/sys', '/dev', '/run', '/etc', '/boot', '/root'):
         if path == Path(forbidden) or Path(forbidden) in path.parents:
             raise ValueError(f'sensitive or special directory is not allowed: {path}')
+    for part in (path, *path.parents):
+        if part.is_symlink():
+            raise ValueError(f'directory contains a symlink: {part}')
     if any(x in ('.ssh', '.gnupg', '.aws', '.config', '.kube') for x in path.parts):
         raise ValueError(f'credential directory is not allowed: {path}')
     return path

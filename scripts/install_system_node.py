@@ -1,7 +1,6 @@
 """New root-managed installation. Existing identities require explicit re-enrollment."""
 import fcntl
 import re
-import grp
 import json
 import os
 from pathlib import Path
@@ -11,34 +10,36 @@ import subprocess
 import sys
 
 CONTROL=Path('/var/lib/mini-eval/control')
-BUSINESS_HOME=Path('/var/lib/mini-eval/business')
 WORKSPACES=Path('/var/lib/mini-eval/workspaces')
 UNIT_DIR=Path('/etc/systemd/system')
 INSTALL_LOCK=Path('/run/lock/mini-eval-system-install.lock')
 UPDATER_ROOT=Path('/opt/mini-eval-updater')
 
 
-def account(uid=29000,gid=29000):
-    if os.geteuid()!=0:raise ValueError('root installation requires root')
-    if not 1000<=uid<=60000 or not 1000<=gid<=60000:raise ValueError('business UID/GID must be between 1000 and 60000')
-    try:g=grp.getgrnam('mini-eval')
-    except KeyError:g=None
-    try:u=pwd.getpwnam('mini-eval')
-    except KeyError:u=None
-    if g and g.gr_gid!=gid:raise ValueError('mini-eval GID differs; coordinate shared-storage identity first')
-    if u and (u.pw_uid!=uid or u.pw_gid!=gid or u.pw_dir!=str(BUSINESS_HOME)):
-        raise ValueError('mini-eval account differs; do not replace an existing account')
-    for lookup,number,name in ((pwd.getpwuid,uid,'pw_name'),(grp.getgrgid,gid,'gr_name')):
-        try:found=lookup(number)
-        except KeyError:continue
-        if getattr(found,name)!='mini-eval':raise ValueError('business UID/GID belongs to another account')
-    if u and any(x.gr_name in ('sudo','wheel','docker','root') and u.pw_name in x.gr_mem for x in grp.getgrall()):
-        raise ValueError('business account must not belong to privileged groups')
-    if not g:subprocess.run(['groupadd','--gid',str(gid),'mini-eval'],check=True,capture_output=True)
-    if not u:
-        subprocess.run(['useradd','--uid',str(uid),'--gid',str(gid),'--home-dir',str(BUSINESS_HOME),
-                        '--create-home','--shell','/usr/sbin/nologin','--password','!','mini-eval'],check=True,capture_output=True)
-    return pwd.getpwnam('mini-eval')
+def approved_account(credential):
+    user=credential.get('business_user') or 'root'
+    if not isinstance(user,str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.-]*',user):
+        raise ValueError('approved business account is required')
+    try: acc=pwd.getpwnam(user)
+    except KeyError: raise ValueError('business account does not exist') from None
+    if user == 'root':
+        if int(credential.get('business_uid', 0)) != 0 or int(credential.get('business_gid', 0)) != 0:
+            raise ValueError('root business identity must use UID/GID 0')
+    elif acc.pw_uid==0:
+        raise ValueError('root business identity must use root account')
+    if 'business_uid' in credential and int(credential['business_uid'])!=acc.pw_uid:
+        raise ValueError('business UID differs from the SSH account')
+    if 'business_gid' in credential and int(credential['business_gid'])!=acc.pw_gid:
+        raise ValueError('business GID differs from the SSH account')
+    return acc
+
+
+def workspace_base(credential):
+    from worker.workspace import checked_path
+    value=credential.get('workspace_root') or str(WORKSPACES)
+    if not isinstance(value,str) or len(value)>4096:
+        raise ValueError('invalid workspace root')
+    return checked_path(value)
 
 
 def discover_npu():
@@ -53,6 +54,7 @@ def _install(credential,selection,instance='gpu'):
     from scripts.install_node import install_updater
     from worker.storage import atomic_json
     from worker.host_identity import verify_system,check_paths
+    from worker.workspace import checked_path
     from worker.updater import Updater
     identity(credential)
     if os.geteuid()!=0:raise ValueError('root system installation requires root')
@@ -69,7 +71,8 @@ def _install(credential,selection,instance='gpu'):
         raise ValueError('invalid GPU sharing choice')
     if credential.get('execution_modes') != ['host']:
         subprocess.run(['docker','info'],check=True,capture_output=True,timeout=30)
-    acc=account(int(credential.get('business_uid',29000)),int(credential.get('business_gid',29000)))
+    acc=approved_account(credential)
+    base=workspace_base(credential)
     if 'host' in credential.get('execution_modes',['docker','host']):verify_system(acc)
     kind=credential.get('accelerator_type','gpu')
     if kind=='npu':
@@ -77,18 +80,23 @@ def _install(credential,selection,instance='gpu'):
         if not indices or not set(indices)<=set(available):raise ValueError('selected NPU does not exist')
     else:indices=discover(credential,selection)
     if len(indices)!=len(set(indices)):raise ValueError('duplicate device index')
-    config={**credential,'host_execution':{'approved':True,'user':acc.pw_name,'uid':acc.pw_uid,'gid':acc.pw_gid},'workspace_root':str(WORKSPACES)}
+    node_name=credential['node_name']
+    if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',node_name) or node_name in ('.','..'):
+        raise ValueError('invalid node name for workspace')
+    config={**credential,'host_execution':{'approved':True,'user':acc.pw_name,'uid':acc.pw_uid,'gid':acc.pw_gid,**({'allow_root_business':True} if acc.pw_uid==0 else {})}}
     if kind=='npu':
         config['npu_runtime']={'approved':True,'allow_shared':credential.get('npu_sharing')=='enabled','host':{'approved':True,'user':acc.pw_name,'environment':{}}}
     else:
         config['gpu_runtime']={'allow_shared':credential.get('gpu_sharing')=='enabled'}
     planned=plan(config,instance,selection,indices,CONTROL)
     for name,_,value in planned:
+        workspace=base/node_name/(kind+str(value['gpu_index']))
+        value.update(workspace_root=str(workspace),assets_root=str(workspace/'assets'),cache_root=str(workspace/'cache'))
         if (UNIT_DIR/('mini-eval-worker-managed-'+name+'.service')).exists():raise ValueError('managed Worker unit already exists')
         if kind=='npu' and 'host' in credential.get('execution_modes',['docker','host']):
             from worker.npu_host import probe
             probe(value)
-    for path in (CONTROL,CONTROL/'.local',CONTROL/'.local/share',WORKSPACES):
+    for path in (CONTROL,CONTROL/'.local',CONTROL/'.local/share'):
         if path.is_symlink():raise ValueError('managed installation path must not be a symlink')
         path.mkdir(parents=True,exist_ok=True,mode=0o755);path.chmod(0o755)
     for path in (CONTROL/'.config',CONTROL/'.config/mini-eval',CONTROL/'.local/state'):
@@ -103,10 +111,20 @@ def _install(credential,selection,instance='gpu'):
     quote=lambda x:json.dumps(str(x).replace('%','%%'))
     for name,target,value in planned:
         # Probe both device identity and business directory access before enabling any service.
-        workspace=Path(value['workspace_root']);workspace.mkdir(mode=0o711,parents=True,exist_ok=True)
+        workspace=checked_path(value['workspace_root'])
+        create_workspace=not workspace.exists()
+        workspace.mkdir(mode=0o711,parents=True,exist_ok=True)
+        if create_workspace:os.chown(workspace,acc.pw_uid,acc.pw_gid)
         for dirname in ('assets','cache','runs'):
-            d=workspace/dirname;d.mkdir(mode=0o700,exist_ok=True);os.chown(d,acc.pw_uid,acc.pw_gid)
-        check_paths(acc,[('platform code',str(app),os.R_OK|os.X_OK),('workspace',str(workspace),os.X_OK)])
+            d=checked_path(workspace/dirname)
+            if not d.exists():
+                d.mkdir(mode=0o700 if dirname=='runs' else 0o755)
+                os.chown(d,acc.pw_uid,acc.pw_gid)
+        check_paths(acc,[('platform code',str(app),os.R_OK|os.X_OK),
+            ('workspace',str(workspace),os.R_OK|os.W_OK|os.X_OK),
+            ('assets',value['assets_root'],os.R_OK|os.X_OK),
+            ('cache',value['cache_root'],os.R_OK|os.W_OK|os.X_OK),
+            ('runs',str(workspace/'runs'),os.R_OK|os.W_OK|os.X_OK)])
         atomic_json(target,value)
         unitname='mini-eval-worker-managed-'+name+'.service'
         unit=UNIT_DIR/unitname

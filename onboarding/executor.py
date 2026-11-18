@@ -110,7 +110,7 @@ class Operations:
 
     def probe(self,remote,form,runner_image):
         source=Path(__file__).with_name('probe.py').read_text()
-        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts.update({k:form.get(k,default) for k,default in (('accelerator_type','gpu'),('business_uid',29000),('business_gid',29000))});opts['ascend_source']=(Path(__file__).resolve().parents[1]/'node_agent/ascend.py').read_text();opts['layout_source']=(Path(__file__).resolve().parents[1]/'scripts/node_layout.py').read_text();opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
+        opts={k:form[k] for k in ('node_name','mode','gpus','api_url')};opts.update({k:form.get(k,default) for k,default in (('accelerator_type','gpu'),('business_uid',0 if form.get('username')=='root' else 29000),('business_gid',0 if form.get('username')=='root' else 29000),('business_user',form.get('username','')),('workspace_root',''))});opts['ascend_source']=(Path(__file__).resolve().parents[1]/'node_agent/ascend.py').read_text();opts['layout_source']=(Path(__file__).resolve().parents[1]/'scripts/node_layout.py').read_text();opts['node_id']=form.get('node_id');opts['runner_image']=runner_image
         _,data,_=remote.run([form['python'],'-c',source],json.dumps(opts).encode()+b'\n',timeout=120)
         plan=json.loads(data)
         if not isinstance(plan,dict) or not isinstance(plan.get('issues'),list):raise Rejected('invalid_probe_response')
@@ -217,7 +217,7 @@ class Operations:
             with self.remote_factory(form) as remote:
                 plan=self.probe(remote,form,secret['runner_image'])
                 prior=self.jobs[identity]['plan']
-                if plan.get('installation')!=prior.get('installation') or plan['issues'] or any(plan[k]!=prior[k] for k in ('home','python','gpus','selected_gpus','configs','services','existing')):raise Rejected('environment_changed_repeat_check')
+                if plan.get('installation')!=prior.get('installation') or plan['issues'] or any(plan.get(k)!=prior.get(k) for k in ('home','python','gpus','selected_gpus','configs','services','existing','workspace_paths','business_user','business_uid','business_gid')):raise Rejected('environment_changed_repeat_check')
                 devices=[{'index':x['index'],'uuid':x['uuid']} for x in plan['gpus'] if x['index'] in plan['selected_gpus']]
                 self.update(identity,stage='TRANSFER')
                 _,raw,_=remote.run(['mktemp','-d','/tmp/mini-eval-node.XXXXXXXX']);remote_dir=raw.decode().strip()
@@ -230,7 +230,7 @@ class Operations:
                     credential=control.call('admin/ssh-enrollment/begin',{'node_id':form.get('node_id') or None,'node_name':form['node_name'],'roles':form['roles'],'expected_revision':form['expected_revision'],'release_id':package['release_id'],'devices':devices,'operation_id':identity})
                     node_id=credential['id'];self.update(identity,node_id=node_id,installation_revision=credential['revision'])
                     credential.update(api_url=form['api_url'],runner_image=secret['runner_image'],execution_modes='preserve' if form['mode']=='preserve' else ['host','docker'] if form['mode']=='both' else [form['mode']],pool_id=None,mock=False)
-                    credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_uid=form.get('business_uid',29000),business_gid=form.get('business_gid',29000),npu_sharing=form.get('npu_sharing','preserve'),gpu_sharing=form.get('gpu_sharing','preserve'))
+                    credential.update(accelerator_type=form.get('accelerator_type','gpu'),business_user=form.get('business_user') or form.get('username'),business_uid=form.get('business_uid',0 if form.get('username')=='root' else 29000),business_gid=form.get('business_gid',0 if form.get('username')=='root' else 29000),workspace_root=form.get('workspace_root',''),npu_sharing=form.get('npu_sharing','preserve'),gpu_sharing=form.get('gpu_sharing','preserve'))
                     remote.upload(remote_dir+'/credential.json',json.dumps(credential).encode())
                     args=[plan['python'],'-B',remote_dir+'/scripts/install_node.py','--credential',remote_dir+'/credential.json']
                     if plan.get('installation'):
