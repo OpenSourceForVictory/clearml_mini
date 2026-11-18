@@ -135,7 +135,8 @@ class HostBackend:
         env={}
         if host.get('environment_source')=='login':
             from .host_identity import login_environment
-            env.update(login_environment(account or pwd.getpwuid(os.geteuid())))
+            env.update(login_environment(account or pwd.getpwuid(os.geteuid()),
+                                         timeout_seconds=w.config.get('host_login_timeout_seconds',60)))
         login_path=env.get('PATH','/usr/local/bin:/usr/bin:/bin')
         login_pythonpath=env.get('PYTHONPATH','')
         env.update({'PATH':str(Path(profile['python']).parent)+':'+login_path,

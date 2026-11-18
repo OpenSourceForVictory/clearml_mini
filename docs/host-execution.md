@@ -137,3 +137,23 @@ API配置为 `host_runtime.episode_error_policy: "stop" | "continue"`。stop在�
 本次验证：宿主机/SDK/回合记录专项67项通过；新增补充场景13项通过；策略规范化与旧Worker诊断复查3项通过（以上存在用例重叠，不合计）。保留Starlette弃用提示；前端构建保留大分块提示。
 
 模板界面18项通过（包含策略复制和切换），TypeScript类型检查、前端构建和OpenSpec strict校验通过。
+
+## 登录环境读取超时（Worker 0.20.2）
+
+旧版本 `worker/host_identity.py` 的 `login_environment()` 固定只等 10 秒。用户确认账号登录初始化超过 10 秒时，Worker 在业务程序启动前报 `business account login environment could not be loaded`；这不是业务程序执行超时。0.20.2 默认改为 60 秒，超时明确报告 `business account login environment timed out after 60 seconds (user: <账号>)`，不输出变量值或 Shell 输出。
+
+需要更长或更短时，由节点管理员在**相应每卡 Worker 使用的 JSON 配置顶层**添加一项，保留已有其他字段：
+
+```json
+"host_login_timeout_seconds": 90
+```
+
+只接受 1–300 的整数（不接受字符串、布尔值或 0）。界面暂无该设置，不是在模板 environment、节点 CANN environment 或平台 `.env` 中设置。未配置时按 60 秒，不需修改旧配置。仅登录环境模式读取此设置，显式环境和 Docker 不受影响。
+
+通过 `systemctl show <Worker服务名> -p ExecStart -p WorkingDirectory` 找到正在运行的安装目录及 `--config` 路径。升级至 Worker 0.20.2，待该 Worker 空闲后 `sudo systemctl restart <Worker服务名>`；多卡节点按实际需要配置并重启各卡 Worker。只改 API 或任务总超时时间不会更新已安装 Worker。
+
+平台 `STARTUP_TIMEOUT_SECONDS`（代码默认 120 秒）是独立的总启动等待预算。若将登录读取设置到接近或超过该预算，还需留出环境检查、CANN 初始化等耗时并核对部署的启动预算；本次修复不自动调整它，也不延长心跳租约或业务总执行时限。
+
+验证包含默认/自定义/非法值、超时诊断不泄露输出、节点设置传递，以及真实子进程 Shell 等待 11 秒后成功的回归。它验证慢登录读取，不代表故障节点或真实模型已复测；导出函数导致无效环境的问题不在本次超时修复范围内。
+
+本次专项验证：`test_host_shell_episode.py`、`test_host_backend_lifecycle.py`、`test_worker_docker_contracts.py` 共 91 passed，一条既有 Starlette 弃用警告；TypeScript 与 OpenSpec 严格校验通过。未运行全量测试或完整覆盖率统计，不据此宣称全仓覆盖率达标。代码修改不等于故障节点已更新或复测。

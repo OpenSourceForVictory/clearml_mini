@@ -37,7 +37,8 @@ def test_login_environment_timeout_has_no_values(monkeypatch):
     account=pwd.getpwuid(os.geteuid())
     def timeout(*a,**k):raise subprocess.TimeoutExpired('login shell',10)
     monkeypatch.setattr('worker.host_identity.subprocess.run',timeout)
-    with pytest.raises(RuntimeError,match='could not be loaded') as error:login_environment(account)
+    with pytest.raises(RuntimeError,match='timed out after 60 seconds') as error:login_environment(account)
+    assert account.pw_name in str(error.value)
     assert 'SECRET=' not in str(error.value)
 
 
@@ -176,9 +177,15 @@ def test_host_backend_keeps_login_values_in_business_only(tmp_path,monkeypatch):
     w=worker(tmp_path,['python3','business.py'])
     task=w.state['task'];task['client_spec']['template']['host_runtime']['environment_source']='login'
     monkeypatch.setattr('worker.host_backend.probe',lambda *a,**k:None)
-    monkeypatch.setattr('worker.host_identity.login_environment',lambda account:{
-        'PATH':'/custom/bin','PYTHONPATH':'/business/lib','MY_FLAG':'yes','CUDA_VISIBLE_DEVICES':'wrong','MINI_EVAL_INPUT':'wrong'})
+    w.config['host_login_timeout_seconds']=90
+    observed=[]
+    def capture(account,timeout_seconds):
+        observed.append(timeout_seconds)
+        return {'PATH':'/custom/bin','PYTHONPATH':'/business/lib','MY_FLAG':'yes',
+                'CUDA_VISIBLE_DEVICES':'wrong','MINI_EVAL_INPUT':'wrong'}
+    monkeypatch.setattr('worker.host_identity.login_environment',capture)
     backend=HostBackend(w);backend.create(task)
+    assert observed==[90]
     config=json.loads((w.workspace/'runs'/task['execution_id']/'input.json').read_text())
     launch=json.loads((backend.root/'launch.json').read_text())
     business=config['_resolved_environment']
@@ -283,3 +290,42 @@ def test_continue_all_episodes_error_without_success_final(tmp_path):
     assert [e['episode_id'] for e in events if e['status']=='ERROR']==[1,2,3]
     assert '3 of 3 business episodes' in result.stderr
     assert '"final"' not in result.stdout
+
+
+@pytest.mark.parametrize('timeout',[1,60,90,300])
+def test_login_environment_passes_node_timeout(monkeypatch,timeout):
+    account=pwd.getpwuid(os.geteuid())
+    def capture(*a,**kw):
+        assert kw['timeout']==timeout
+        return SimpleNamespace(returncode=0,stdout=b'\0MINI_EVAL_LOGIN_ENV\0OK=yes\0')
+    monkeypatch.setattr('worker.host_identity.subprocess.run',capture)
+    assert login_environment(account,timeout)['OK']=='yes'
+
+
+@pytest.mark.parametrize('timeout',[0,-1,301,True,1.5,'60',None])
+def test_login_environment_rejects_invalid_node_timeout(monkeypatch,timeout):
+    def unexpected(*a,**kw):raise AssertionError('must not launch invalid configuration')
+    monkeypatch.setattr('worker.host_identity.subprocess.run',unexpected)
+    with pytest.raises(ValueError,match='host_login_timeout_seconds'):
+        login_environment(pwd.getpwuid(os.geteuid()),timeout)
+
+
+def test_login_environment_custom_timeout_redacts_output(monkeypatch):
+    def timeout(*a,**kw):
+        raise subprocess.TimeoutExpired('shell',kw['timeout'],output=b'SECRET=value',stderr=b'PRIVATE=value')
+    monkeypatch.setattr('worker.host_identity.subprocess.run',timeout)
+    with pytest.raises(RuntimeError,match='timed out after 90 seconds') as error:
+        login_environment(pwd.getpwuid(os.geteuid()),90)
+    assert 'SECRET' not in str(error.value) and 'PRIVATE' not in str(error.value)
+    assert error.value.__suppress_context__
+
+
+def test_login_environment_real_shell_takes_more_than_old_limit(tmp_path):
+    # A real bounded subprocess, without editing the account's startup files.
+    account=pwd.getpwuid(os.geteuid())
+    shell=tmp_path/'slow-shell'
+    shell.write_text('#!/bin/sh\nsleep 11\nexec /bin/bash "$@"\n')
+    shell.chmod(0o700)
+    test_account=SimpleNamespace(pw_shell=str(shell),pw_dir=str(tmp_path),
+        pw_name=account.pw_name,pw_uid=account.pw_uid,pw_gid=account.pw_gid)
+    assert login_environment(test_account)['HOME']==str(tmp_path)

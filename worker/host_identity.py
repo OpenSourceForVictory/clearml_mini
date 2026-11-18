@@ -11,8 +11,10 @@ _ENV_NAME=re.compile(rb'[A-Za-z_][A-Za-z0-9_]*\Z')
 _ENV_MARKER=b'\0MINI_EVAL_LOGIN_ENV\0'
 
 
-def login_environment(account):
+def login_environment(account, timeout_seconds=60):
     """Capture exported login variables under the approved business identity."""
+    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= 300:
+        raise ValueError('host_login_timeout_seconds must be an integer between 1 and 300')
     shell=account.pw_shell
     if not shell or not Path(shell).is_absolute() or not os.access(shell,os.X_OK):
         raise RuntimeError('business account login shell is unavailable')
@@ -27,7 +29,12 @@ def login_environment(account):
         result=subprocess.run(['-'+Path(shell).name,'-c',
                                "printf '\\0MINI_EVAL_LOGIN_ENV\\0'; /usr/bin/env -0"],
             executable=shell,env=seed,cwd=account.pw_dir,stdin=subprocess.DEVNULL,
-            capture_output=True,timeout=10,**identity)
+            capture_output=True,timeout=timeout_seconds,**identity)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f'business account login environment timed out after {timeout_seconds} seconds '
+            f'(user: {account.pw_name}); check login startup scripts or node host_login_timeout_seconds'
+        ) from None
     except (OSError,subprocess.SubprocessError) as exc:
         raise RuntimeError('business account login environment could not be loaded') from exc
     if result.returncode or _ENV_MARKER not in result.stdout:
