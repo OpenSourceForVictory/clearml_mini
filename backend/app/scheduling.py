@@ -59,7 +59,7 @@ def transition(s, run, status, message=None):
 def execution_timeout(job):
     if getattr(job, 'benchmark', None) == 'inference-service': return 31536000
     limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
-    return min(limit, job.client_spec['timeout_seconds']) if job.client_spec else limit
+    return job.client_spec['timeout_seconds'] if job.client_spec else limit
 
 
 def reconcile(s, at):
@@ -74,7 +74,13 @@ def reconcile(s, at):
         overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
         startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
-            transition(s, run, 'TIMED_OUT', 'worker lease or execution deadline expired')
+            if overrun:
+                message = f'客户端执行总时限已到（{execution_timeout(s.get(Job, run.job_id))} 秒，全部回合共用）'
+            elif startup:
+                message = f'执行启动超时（{seconds("STARTUP_TIMEOUT_SECONDS", 120)} 秒）'
+            else:
+                message = f'执行心跳租约过期（额外宽限 {seconds("LOST_WORKER_GRACE_SECONDS", 30)} 秒）'
+            transition(s, run, 'TIMED_OUT', message)
             run.cleanup_confirmed = False
             s.get(Slot, run.slot_id).quarantined = True
 

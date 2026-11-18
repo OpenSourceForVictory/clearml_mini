@@ -7,7 +7,8 @@ async function setup(page:Page,resource_requirements?:any){
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
-  if(path==='auth/me')data={id:'user',username:'User',role:'user'};
+  if(path==='execution-limits')data={client_execution_max_seconds:3600,client_execution_default_seconds:300};
+ if(path==='auth/me')data={id:'user',username:'User',role:'user'};
   if(path==='pools')data=[{id:'pool',name:'Shared lab'}];
   if(path==='client-templates'||path==='runtime-templates/client')data=[client];
   if(path==='runtime-templates/server')data=[server];

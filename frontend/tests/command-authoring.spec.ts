@@ -3,6 +3,7 @@ for(const mode of ['docker','host'])test('ordinary command template registration
  let sent:any;
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+ if(path==='execution-limits')data={client_execution_max_seconds:3600,client_execution_default_seconds:300};
  if(path==='auth/me')data={username:'admin',role:'admin'};
  if(path==='client-templates'&&sent)data=[{id:'new',enabled:true,...sent}];
  if(path==='admin/client-templates'&&route.request().method()==='POST'){sent=route.request().postDataJSON();data={id:'new',...sent};}
@@ -22,6 +23,7 @@ test('command collection normalizes episodes and wizard submits without inferenc
  const template={id:'cmd',name:'batch-script',version:'v1',task_type:'command',enabled:true,execution_mode:'docker',integration_mode:'direct',image:'test:1',command:['python','batch.py'],protocols:['http'],episode_reporting:false};
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+ if(path==='execution-limits')data={client_execution_max_seconds:3600,client_execution_default_seconds:300};
  if(path==='auth/me')data={username:'member',role:'user'};
  if(path==='client-templates')data=[template];
  if(path==='pools')data=[{id:'pool',name:'CPU pool'}];

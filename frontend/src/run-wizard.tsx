@@ -23,6 +23,22 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const [resourceDrafts,setResourceDrafts]=useState<Record<string,Record<string,any>>>({});
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [serviceMode,setServiceMode]=useState<'external'|'managed'|'none'>('external'),[servers,setServers]=useState<ServerTemplate[]>([]),[serviceRows,setServiceRows]=useState([newService()]),[stopAfter,setStopAfter]=useState(true);
+  const [executionLimit,setExecutionLimit]=useState<number|null>(null),[limitError,setLimitError]=useState(''),[limitReload,setLimitReload]=useState(0);
+  const timeoutEdited=useRef(false);
+  useEffect(()=>{
+    let active=true;setExecutionLimit(null);setLimitError('');
+    api<{client_execution_max_seconds:number;client_execution_default_seconds:number}>('execution-limits').then(data=>{
+      if(!active)return;
+      if(!Number.isSafeInteger(data.client_execution_max_seconds)||data.client_execution_max_seconds<1||!Number.isSafeInteger(data.client_execution_default_seconds)||data.client_execution_default_seconds<1||data.client_execution_default_seconds>data.client_execution_max_seconds)throw Error('平台执行时限响应无效');
+      setExecutionLimit(data.client_execution_max_seconds);
+      if(!timeoutEdited.current)setDraft(old=>({...old,timeout_seconds:data.client_execution_default_seconds}));
+    }).catch(e=>{if(active)setLimitError(String(e))});
+    return()=>{active=false;};
+  },[limitReload]);
+  function validateTimeout(){
+    if(executionLimit===null)throw Error('请先读取平台执行时限上限');
+    if(!Number.isInteger(draft.timeout_seconds)||draft.timeout_seconds<1||draft.timeout_seconds>executionLimit)throw Error(`每项总执行时限须为 1–${executionLimit} 秒的整数`);
+  }
   const [values,setValues]=useState<ValuesDraft>({}),[extraTemplates,setExtraTemplates]=useState<Template[]>([]),[copy,setCopy]=useState<{kind:'client'|'server';source:CopyTemplate}|null>(null);
   const [saveSuite,setSaveSuite]=useState(false),[suiteName,setSuiteName]=useState(''),[suiteVersion,setSuiteVersion]=useState('1'),[suiteDefaults,setSuiteDefaults]=useState<Record<string,unknown>>({});
   const allTemplates=[...templates,...extraTemplates.filter(t=>!templates.some(x=>x.id===t.id))];
@@ -63,6 +79,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   }
   function editAddress(index:number,change:Partial<{url:string;mode:'exclusive'|'shared'}>){addressDirty.current=true;setAddresses(old=>old.map((e,i)=>i===index?{...e,...change}:e));}
   function body(){
+    validateTimeout();
     const environment=JSON.parse(draft.environment);
     if(!environment||Array.isArray(environment)||typeof environment!=='object'||Object.values(environment).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
     if(!draft.title.trim())throw Error('请填写批次名称');
@@ -104,6 +121,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       if(step===0)parseCases(cases);
       if(step===1){
         if(!template)throw Error('请选择可用的客户端模板');
+        validateTimeout();
         parseValues(template.parameter_schema,values);
         const env=JSON.parse(draft.environment);if(!env||Array.isArray(env)||typeof env!=='object'||Object.values(env).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
         if(Object.keys(env).some(k=>!(template.runtime||template.host_runtime)?.overridable_env?.includes(k)))throw Error('启动变量包含模板未允许覆盖的键');
@@ -129,7 +147,9 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
-      <Field label="每项总超时秒"><input type="number" required min={1} max={3600} value={draft.timeout_seconds} onChange={e=>update('timeout_seconds',Number(e.target.value))}/></Field></div>
+      <Field label="每项总超时秒"><input type="number" required min={1} max={executionLimit??undefined} value={draft.timeout_seconds} onChange={e=>{timeoutEdited.current=true;update('timeout_seconds',Number(e.target.value))}}/></Field></div>
+      <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
+      {limitError&&<p role="alert">平台执行时限读取失败：{limitError}</p>}<button type="button" onClick={()=>{setPreview(null);setLimitReload(n=>n+1)}}>刷新执行时限</button>
       {template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
       {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/></>}
       <Field label="启动变量覆盖 JSON"><textarea rows={3} value={draft.environment} onChange={e=>update('environment',e.target.value)}/></Field>
@@ -161,7 +181,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         <dt>任务与回合</dt><dd>{cases.length} 项任务，{ordinaryOnce?0:cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合</dd>
         <dt>客户端</dt><dd>{template?.name} / {template?.version}</dd><dt>推理服务</dt><dd>{serviceMode==='managed'?serviceRows.map(s=><p key={s.key}>{s.key} · {servers.find(t=>t.id===s.template_id)?.name} · {s.mode==='exclusive'?'独占':'共享'} · 自动地址</p>):serviceMode==='none'?'无需服务':addresses.map((e,i)=><p key={i}>{e.url} · {e.mode==='exclusive'?'独占':'共享'}</p>)}</dd>
         <dt>资源</dt><dd>{pools.find(p=>p.id===draft.pool_id)?.name} · {template?.resource_requirements?'按模板及本次覆盖申请':(draft.gpu_mode==='shared'?'共享':'独占')+' · 每项 '+draft.requested_vram_gb+' GiB'} · 最大并发 {draft.max_concurrent} · {draft.required_gpu_model||'不限定 GPU 型号'}</dd>
-        <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项 {draft.timeout_seconds} 秒</dd>
+        <dt>超时</dt><dd>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.timeout_seconds} 秒（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</dd>
         <dt>启动变量</dt><dd><code>{draft.environment}</code></dd>
       </dl>
       <button type="button" onClick={()=>void inspect()}>重新检查</button>

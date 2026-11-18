@@ -1,11 +1,13 @@
 import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page){
+  let executionLimit=7200,limitFailure=false;
   const requests:{body:any;key:string}[]=[];let checks=0,fail:boolean|string=false,delay=0,loseResponse=false,reporting=true;let serverChecks:any[]|undefined,clientReasons:any[]|undefined;
   const suite={id:'suite',name:'Three tasks',version:'v1',template_id:'t',cases:[1,2,3].map(i=>({case_id:'case-'+i,task_name:'task-'+i,episodes:4,seed:10+i,parameters:{variant:i}}))};
   const batch=(body:any,id='batch')=>({id,title:body.title,status:'PENDING',total:body.cases.length||3,succeeded:0,finished:0,total_episodes:body.cases.reduce((n:number,c:any)=>n+c.episodes,0)||12,cases:[]});
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+    if(path==='execution-limits'){if(limitFailure){await route.fulfill({status:503,json:{detail:'unavailable'}});return;}data={client_execution_max_seconds:executionLimit,client_execution_default_seconds:Math.min(300,executionLimit)};}
     if(path==='auth/me')data={id:'user',username:'user',role:'user'};
     if(path==='suites/manage')data={items:[{...suite,tags:[],status:'published',task_count:3,total_episodes:12}],total:1};
     if(path==='suites/suite')data={...suite,tags:[],status:'published',description:'',source:'',revision:0,archived:false};
@@ -36,7 +38,7 @@ async function setup(page:Page){
   await wizard.getByLabel('推理服务地址',{exact:true}).fill('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await wizard.getByLabel('客户端资源池',{exact:true}).selectOption('pool');await wizard.getByLabel('最大并发任务数').fill('2');
-  return {wizard,requests,suite,loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean|string)=>{fail=x;},setDelay:(x:number)=>{delay=x;},setServerChecks:(x:any[])=>{serverChecks=x;},setClientReasons:(x:any[])=>{clientReasons=x;}};
+  return {wizard,requests,suite,setExecutionLimit:(n:number)=>{executionLimit=n;},setLimitFailure:(v:boolean)=>{limitFailure=v;},loseNextResponse:()=>{loseResponse=true;},withoutEpisodeReporting:()=>{reporting=false;},checks:()=>checks,setFail:(x:boolean|string)=>{fail=x;},setDelay:(x:number)=>{delay=x;},setServerChecks:(x:any[])=>{serverChecks=x;},setClientReasons:(x:any[])=>{clientReasons=x;}};
 }
 
 test('preflight names client environment and per-card server blockers',async({page})=>{
@@ -181,4 +183,27 @@ test('editing address invalidates inspection and removing a row preserves the re
  await wizard.getByRole('button',{name:'提交排队',exact:true}).click();
  await expect.poll(()=>requests.length).toBe(1);
  expect(requests[0].body.client.endpoints).toEqual([{url:'ws://changed:9000',mode:'shared'}]);
+});
+
+test('execution limit is dynamic, validates inputs and keeps user value on refresh failure',async({page})=>{
+ const ctl=await setup(page),w=ctl.wizard;
+ await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'上一步',exact:true}).click();
+ await expect(w).toContainText('平台上限 7200 秒');
+ const timeout=w.getByLabel('每项总超时秒',{exact:true});
+ await expect(timeout).toHaveAttribute('max','7200');
+ await timeout.fill('7201');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(timeout).toBeVisible();
+ await timeout.fill('7200');
+ ctl.setLimitFailure(true);await w.getByRole('button',{name:'刷新执行时限'}).click();
+ await expect(w.getByRole('alert')).toContainText('平台执行时限读取失败');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(timeout).toBeVisible();
+ ctl.setLimitFailure(false);await w.getByRole('button',{name:'刷新执行时限'}).click();
+ await expect(w).toContainText('平台上限 7200 秒');await expect(timeout).toHaveValue('7200');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w).toContainText('每项总执行时限 7200 秒');
+ await w.getByRole('button',{name:'提交排队',exact:true}).click();
+ await expect.poll(()=>ctl.requests.length).toBe(1);
+ expect(ctl.requests[0].body.client.timeout_seconds).toBe(7200);
+ await expect.poll(()=>ctl.checks()).toBeGreaterThan(0);
 });

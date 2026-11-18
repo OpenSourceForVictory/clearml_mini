@@ -5,7 +5,8 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let body:any=[];
-    if(path==='auth/me')body={id:'user',username:'user',role:'user'};
+    if(path==='execution-limits')body={client_execution_max_seconds:3600,client_execution_default_seconds:300};
+ if(path==='auth/me')body={id:'user',username:'user',role:'user'};
     if(path==='client-templates'){
       if(route.request().method()==='POST'){body={id:'image-1',enabled:true,...route.request().postDataJSON()};templates.push(body);}else body=templates;
     }
@@ -49,7 +50,8 @@ test('node runtime preserves drafts, reports missing assets and prevents stale s
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let body:any=[];
-    if(path==='auth/me')body={id:'admin',username:'admin',role:'admin'};
+    if(path==='execution-limits')body={client_execution_max_seconds:3600,client_execution_default_seconds:300};
+ if(path==='auth/me')body={id:'admin',username:'admin',role:'admin'};
     if(path==='admin/nodes')body=[{id:'node',node_name:'host',enabled:true,max_concurrent:1,cpu_capacity:4,ram_gb_capacity:8}];
     if(path==='admin/health')body={runner_image:'runner:1'};
     if(path==='admin/nodes/node/storage')body={revision:0,config:null,slots:[]};

@@ -117,3 +117,7 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 客户端启动前连通性诊断：更新客户端 Worker 后，journal 中 `client connectivity passed/failed` 记录目标 origin（协议、主机、端口）、检查耗时、超时上限，成功记录方式（HEAD/TCP/TLS）与 HTTP 状态（TCP/TLS 为 -），失败记录异常类型和原因分类；任务错误保留 `client_service_unreachable` 并附带分类（timeout、dns、connection_refused、tls、http_response 等）。不记录路径、查询、凭据、响应正文或原始异常文本。HTTP(S) HEAD 收到 405 仍判定可达。WS 所有路径仅检查 TCP，WSS 检查 TCP/TLS 并使用系统默认信任校验证书；不再发送 HEAD 或 WebSocket 握手，不验证路径、业务认证、子协议或模型就绪。DNS 结果逐项校验并固定数值地址后连接；业务是否就绪仍以服务端就绪检查为准。此修复针对 WS 服务拒绝 HEAD 导致 unsupported http method: HEAD / ClientResponseError 400 的误判。默认 3 秒、不读取环境代理不变。查看客户端 `journalctl -u 'mini-eval-worker-*' --since '10 minutes ago'` 并对照失败时间。无需数据库迁移；仅更新平台 API 不会更新已纳管节点的 Worker。
 
 两端运行位置：批次默认“任务与结果”页提供独立“客户端分配位置”列；托管服务启动摘要和“服务端与关联”详情展示服务端分配位置。位置来自当前任务最新执行尝试的 Run.slot_id，包含节点、GPU/NPU 类型、卡号及型号；悬停可查看设备身份。位置表示资源分配，预约/运行/停止仍以状态为准。尚无分配或历史槽位不可用时明确提示，重试不会回退显示旧尝试的位置；软删除但仍保留的槽位可显示历史位置。外部服务只展示地址，不推测其节点或卡。旧 API 缺少 placement 时显示位置信息不可用，需要同步更新平台 API 和前端；无需数据库迁移或 Worker 升级。
+
+### 客户端总执行时限
+
+`backend/app/clients.py` 的认证接口 `/api/v1/execution-limits` 返回 `EXECUTION_TIMEOUT_SECONDS` 上限与默认值；客户端提交按该上限校验。`scheduling.py` 对已提交客户端使用快照时限，不因后续降低平台上限截短，并区分总时限、启动超时和租约过期。`frontend/src/run-wizard.tsx` 动态显示上限并阻止未加载配置时提交。操作见 `docs/operations.md`，验证见 `backend/tests/test_client_execution_limits.py` 和 `frontend/tests/run-wizard.spec.ts`；变更不涉及 Worker 升级或数据库迁移。

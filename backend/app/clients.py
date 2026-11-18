@@ -110,7 +110,7 @@ class ClientRequest(BaseModel):
     task_name: str = Field(min_length=1, max_length=200)
     seed: int = Field(default=0, ge=0, le=2147483647)
     request_timeout_seconds: int = Field(default=10, ge=1, le=120)
-    timeout_seconds: int = Field(default=300, ge=1, le=3600)
+    timeout_seconds: int = Field(default=300, ge=1)
     parameters: dict = Field(default_factory=dict)
     parameter_overrides: dict = Field(default_factory=dict)
     environment: dict[str, str] = Field(default_factory=dict)
@@ -168,8 +168,9 @@ def snapshot(s, body, owner_id=None):
         raise HTTPException(400,'template platform bindings require an inference service')
     if any(endpoint_parts(url)[0].scheme not in t.protocols for url in urls):
         raise HTTPException(400, 'endpoint protocol does not match client template')
-    if body.timeout_seconds > seconds('EXECUTION_TIMEOUT_SECONDS', 3600):
-        raise HTTPException(400, 'client timeout exceeds platform execution limit')
+    limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
+    if body.timeout_seconds > limit:
+        raise HTTPException(400, f'客户端每项总执行时限 {body.timeout_seconds} 秒超过平台上限 {limit} 秒')
     parameters = body.parameters
     try:
         if t.parameter_schema is not None:
@@ -189,6 +190,11 @@ def snapshot(s, body, owner_id=None):
 
 
 def install(app, db, current):
+    @app.get('/api/v1/execution-limits')
+    def execution_limits(user=Depends(current)):
+        limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
+        return {'client_execution_max_seconds': limit, 'client_execution_default_seconds': min(300, limit)}
+
     def admin(user=Depends(current)):
         if user.role != 'admin':
             raise HTTPException(403, 'admin required')
