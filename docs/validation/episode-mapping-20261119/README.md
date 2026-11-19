@@ -38,3 +38,11 @@ backend/tests/test_integration_bundle.py
 随后同一代码版本通过 `coverage run --append` 运行 task_input、parameter_contract、sdk_reporting_contract、worker_upgrades 和新增的 environment_conflict 用例。报告按 scripts.test_coverage 相同 coveragerc、source分母及 scripts.coverage_report 规则生成，见 [覆盖率](coverage.md)。仅跑相关测试，全项目行/分支31.34%/16.08%，门禁未达到，不能声称本次全项目覆盖率达标；未合并之前不同代码版本数据。
 
 业务子进程真实执行，但未统一插桩到覆盖率；前端未插桩。31个跳过为24个真实Docker矩阵及7个systemd环境用例。新增管道测试替换Worker上报HTTP接收端，API契约由独立测试验证；不冒充真实平台端到端、GPU/NPU模型或远端节点验收。本轮没有跑全量测试，没有更新任何现场节点。
+
+## Seed专项补测
+
+修复后追加验证，运行 episode_mapping_pipeline、host_shell_episode、command_sdk、sdk_reporting_contract 四个测试文件，使用 `.venv/bin/python -m pytest -q -ra`（相同 importlib 设置）。[seed-verification.log](seed-verification.log)：105通过、0跳过，70.55秒；这是重跑相关测试，不能与前述264相加作为独立通过数。
+
+扩展Worker准备→真实业务子进程→事件上传矩阵为18组：直接协议/普通命令/SDK命令 × 日志协议1/2 × 初始seed 0/42/2147483647，每组实际启动10次短小Python程序，合计180次业务子进程。逐次断言输入JSON（顶层及task）、`${seed}`命令参数/环境、task.seed动态映射argv/env、MINI_EVAL_EPISODE_SEED与事件seed一致；期望分别为0至9、42至51、2147483647后回绕0至8。回合数均为1，固定字面量 `--fixed-seed 42` 始终不变。20条开始/结束事件还覆盖单次最多16条上传后的游标继续读取。
+
+整任务与Docker入口契约回归仍通过；未运行真实Docker容器、远程节点、GPU/NPU模型或前端浏览器。产品代码未再变化，未新增覆盖率统计，前述覆盖率边界及门禁未达标结论不变。

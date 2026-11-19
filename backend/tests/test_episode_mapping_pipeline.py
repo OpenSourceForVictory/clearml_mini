@@ -10,29 +10,35 @@ from worker.host_backend import HostBackend
 from worker.client import Worker
 
 
-@pytest.mark.parametrize('integration',['direct','sdk-command'])
+@pytest.mark.parametrize('integration',['direct','sdk-command','command'])
 @pytest.mark.parametrize('protocol',[1,2])
-def test_host_placeholders_and_mapping_agree_across_worker_runner(tmp_path,monkeypatch,integration,protocol):
+@pytest.mark.parametrize('initial_seed',[0,42,2147483647])
+def test_host_placeholders_and_mapping_agree_across_worker_runner(tmp_path,monkeypatch,integration,protocol,initial_seed):
     (tmp_path/'business.py').write_text('''import json,os,sys
 from pathlib import Path
 n,seed,inp,work,out=sys.argv[1:6]
 c=json.load(open(inp))
 i=int(os.environ['MINI_EVAL_EPISODE_ID'])
 assert n==os.environ['COUNT']=='1'
-assert int(seed)==c['task']['seed']==i-1
+assert int(seed)==c['seed']==c['task']['seed']==int(os.environ['MINI_EVAL_EPISODE_SEED'])
+assert int(seed)==int(os.environ['PLACEHOLDER_SEED'])==int(os.environ['MAPPED_SEED'])
 assert inp==os.environ['MINI_EVAL_INPUT']
 assert work==os.environ['MINI_EVAL_WORK_DIR']==c['platform']['paths']['work']
 assert out==os.environ['MINI_EVAL_OUTPUT_DIR']==c['platform']['paths']['output']
 assert Path(work).name==Path(out).name=='episode-'+str(i)
-assert sys.argv[6:]==['--count','1']
+assert sys.argv[6:]==['--fixed-seed','42','--count','1','--mapped-seed',seed]
+Path(out,'observed.json').write_text(json.dumps({'episode':i,'seed':int(seed),'episodes':c['episodes']}))
 Path(os.environ['MINI_EVAL_RESULT']).write_text('{"success":true}')
 print('{"final":{"success_rate":1,"episode_count":1,"runtime":0.01}}',flush=True)
 ''')
-    w=worker(tmp_path,['python3','business.py','${episodes}','${seed}','${input_path}','${work_dir}','${output_dir}'])
-    task=w.state['task'];task['episodes']=3;spec=task['client_spec'];spec['service_mode']='none'
-    template=spec['template'];template['integration_mode']=integration;template['episode_reporting']=True
-    template['host_runtime'].update(episode_launch='per_episode',command_mode='exec',environment={'COUNT':'${episodes}'})
-    template['platform_bindings']=[{'source':'task.episodes','target':'argv','name':'--count'}]
+    w=worker(tmp_path,['python3','business.py','${episodes}','${seed}','${input_path}','${work_dir}','${output_dir}','--fixed-seed','42'])
+    task=w.state['task'];task['episodes']=10;spec=task['client_spec'];spec['service_mode']='none';spec['seed']=initial_seed
+    template=spec['template'];template['integration_mode']='direct' if integration=='command' else integration;template['episode_reporting']=True
+    if integration=='command':template['task_type']='command'
+    template['host_runtime'].update(episode_launch='per_episode',command_mode='exec',environment={'COUNT':'${episodes}','PLACEHOLDER_SEED':'${seed}'})
+    template['platform_bindings']=[{'source':'task.episodes','target':'argv','name':'--count'},
+                                   {'source':'task.seed','target':'argv','name':'--mapped-seed'},
+                                   {'source':'task.seed','target':'env','name':'MAPPED_SEED'}]
     monkeypatch.setattr('worker.host_backend.probe',lambda *a:None)
     host=HostBackend(w);host.create(task)
     launch=json.loads((host.root/'launch.json').read_text())
@@ -46,11 +52,17 @@ print('{"final":{"success_rate":1,"episode_count":1,"runtime":0.01}}',flush=True
     w.api=SimpleNamespace(post=lambda path,event:sent.append(event))
     w.save=lambda:None
     if protocol==2:
-        assert Worker.send_protocol_events(w,task['execution_id'],host.root/'events.jsonl')
+        while not Worker.send_protocol_events(w,task['execution_id'],host.root/'events.jsonl'):pass
     else:
-        assert Worker.send_episode_journal(w,task['execution_id'])
-    assert [(e['episode_id'],e['status']) for e in sent]==[(i,s) for i in (1,2,3) for s in ('STARTED','COMPLETED')]
+        while not Worker.send_episode_journal(w,task['execution_id']):pass
+    assert [(e['episode_id'],e['status']) for e in sent]==[(i,s) for i in range(1,11) for s in ('STARTED','COMPLETED')]
     assert all(e['exit_code']==0 for e in sent if e['status']=='COMPLETED')
+    expected=[(initial_seed+i)%2147483648 for i in range(10)]
+    assert [e['seed'] for e in sent if e['status']=='COMPLETED']==expected
+    from worker.workspace import execution_dirs
+    output=execution_dirs(w.workspace,task['execution_id'])/'output'
+    observed=[json.loads((output/f'episode-{i}'/'observed.json').read_text()) for i in range(1,11)]
+    assert observed==[{'episode':i+1,'seed':seed,'episodes':1} for i,seed in enumerate(expected)]
 
 
 @pytest.mark.parametrize('protocol',[1,2])

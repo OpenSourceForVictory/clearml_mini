@@ -212,3 +212,5 @@ Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json
 升级节点组件包中的 Worker 与 Runner 后，提交新任务验证，不需要创建宿主机 Runner 镜像或数据库迁移。现有进程不会热更新。第二回合运行时第一回合就应能显示结果，无须等整任务退出。界面日志按执行尝试汇总，业务内部打印 episode1 不代表平台回合编号。
 
 验证及失败证据见 [参数映射回归记录](validation/episode-mapping-20261119/README.md)。
+
+逐回合种子公式为 `(初始 seed + 回合编号 - 1) % 2147483648`。例如初始42的10回合依次为42至51；初始2147483647依次为2147483647、0、1……。`${seed}`、`task.seed` 映射、单回合输入及 `MINI_EVAL_EPISODE_SEED` 一致；字面量 `--seed 42` 不自动改变。
