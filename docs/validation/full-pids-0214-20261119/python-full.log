@@ -1,0 +1,107 @@
+ss.....sss...........sssssssss....ssss....ssssssss...................... [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+.ss..................................................................... [ 19%]
+..........................................ssss.......................... [ 23%]
+........................................................................ [ 27%]
+..............................................................ssssssssss [ 31%]
+ssssssssssssss.................sss...................................... [ 35%]
+........................................................................ [ 39%]
+.......................ssss............................................. [ 43%]
+.........................sssss.......................................... [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+..............................ssssssssssssssssssssssssssssssssss........ [ 78%]
+........................................................................ [ 82%]
+........................................................................ [ 86%]
+.....s.................................................................. [ 90%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+...........s...................                                          [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_worker_retention.py::test_cross_process_lock_and_offline_receipt
+  /opt/anaconda3/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=3619868) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/full-pids-0214-20261119/tests.xml -
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/integration/test_agent_mount_loss.py:8: disposable privileged mount namespace required
+SKIPPED [1] backend/tests/integration/test_batch_controls_migration.py:6: separate disposable migration database required
+SKIPPED [1] backend/tests/integration/test_bundled_onboarding.py:8: requires isolated mini-eval-onboarding-test Compose project
+SKIPPED [1] backend/tests/integration/test_endpoint_migration.py:10: dedicated migration database required
+SKIPPED [1] backend/tests/integration/test_endpoint_race.py:12: dedicated PostgreSQL required
+SKIPPED [8] backend/tests/integration/test_orchestration_execution.py:55: real process/container execution opt-in
+SKIPPED [1] backend/tests/integration/test_orchestration_migration.py:8: dedicated disposable orchestration migration database required
+SKIPPED [1] backend/tests/integration/test_resource_migration.py:8: dedicated disposable resource migration database required
+SKIPPED [1] backend/tests/integration/test_retention_migration.py:6: separate disposable migration database required
+SKIPPED [1] backend/tests/integration/test_retention_mounts.py:7: explicit disposable mount-namespace test required
+SKIPPED [1] backend/tests/integration/test_retention_race.py:12: dedicated PostgreSQL required
+SKIPPED [4] backend/tests/integration/test_scheduling_sample.py:10: real host/docker sample opt-in
+SKIPPED [4] backend/tests/integration/test_scheduling_sample.py:16: real host/docker sample opt-in
+SKIPPED [2] backend/tests/test_directory_mounts.py:89: requires local Docker image
+SKIPPED [1] backend/tests/test_execution_logs_postgres.py:53: requires disposable PostgreSQL server
+SKIPPED [1] backend/tests/test_execution_logs_postgres.py:91: requires disposable PostgreSQL server
+SKIPPED [1] backend/tests/test_execution_logs_postgres.py:116: requires disposable PostgreSQL server
+SKIPPED [1] backend/tests/test_execution_logs_postgres.py:140: requires disposable PostgreSQL server
+SKIPPED [24] backend/tests/test_generic_commands.py:96: opt-in real Docker matrix
+SKIPPED [1] backend/tests/test_host_backend.py:33: set HOST_EXECUTION_TEST=1 for real systemd user units
+SKIPPED [1] backend/tests/test_host_backend.py:61: real systemd opt-in
+SKIPPED [1] backend/tests/test_host_backend.py:78: real systemd opt-in
+SKIPPED [4] backend/tests/test_host_working_directory.py:96: requires systemd user manager
+SKIPPED [1] backend/tests/test_managed_host.py:72: requires root, systemd and provisioned mini-eval test account
+SKIPPED [4] backend/tests/test_managed_host.py:81: requires root, systemd and provisioned mini-eval test account
+SKIPPED [16] backend/tests/test_service_readiness_execution.py:32: requires Docker and delegated systemd
+SKIPPED [2] backend/tests/test_service_readiness_execution.py:75: requires Docker and delegated systemd
+SKIPPED [2] backend/tests/test_service_readiness_execution.py:97: requires Docker and delegated systemd
+SKIPPED [2] backend/tests/test_service_readiness_execution.py:117: requires Docker and delegated systemd
+SKIPPED [4] backend/tests/test_service_recovery.py:47: requires local Docker image and real systemd opt-in
+SKIPPED [4] backend/tests/test_service_recovery.py:67: requires local Docker image and real systemd opt-in
+SKIPPED [2] backend/tests/test_service_recovery.py:87: requires local Docker image and real systemd opt-in
+SKIPPED [2] backend/tests/test_service_recovery.py:108: requires local Docker image and real systemd opt-in
+SKIPPED [1] backend/tests/test_template_examples.py:79: requires built mini-eval-template-examples:v1 image
+SKIPPED [1] backend/tests/test_worker_storage.py:96: set STORAGE_PROBE_TEST_IMAGE for real Docker probe
+1727 passed, 104 skipped, 2 warnings in 1205.26s (0:20:05)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/full-pids-0214-20261119/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/full-pids-0214-20261119/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/full-pids-0214-20261119/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 152 | 90.00% | 79.92% |
+| backend/app | 42 | 95.37% | 81.76% |
+| worker | 23 | 89.97% | 77.73% |
+| node_agent | 8 | 91.67% | 84.29% |
+| runner | 25 | 86.64% | 78.18% |
+| onboarding | 9 | 97.49% | 84.15% |
+| scripts | 45 | 80.81% | 78.20% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 97.48% | 88.19% |
+| 节点纳管与升级 | 18 | 95.67% | 83.65% |
+| 业务执行与结果 | 29 | 91.13% | 82.06% |
+| 节点监控 | 8 | 91.67% | 84.29% |
+| 运行模板注册管理 | 5 | 94.12% | 76.89% |
+| 评测结果与批次管理 | 4 | 97.58% | 90.24% |
+| 任务集合与编排 | 4 | 95.35% | 79.14% |
+
+## 门槛检查
+
+通过。测试是否成功需单独查看 tests.xml / test-exit.json。
+
