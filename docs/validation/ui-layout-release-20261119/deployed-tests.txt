@@ -1,0 +1,26 @@
+Running 20 tests using 1 worker
+
+(node:1386826) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (216ms)
+  ✓   2 tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (366ms)
+  ✓   3 tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (248ms)
+  ✓   4 tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (284ms)
+  ✓   5 tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (287ms)
+  ✓   6 tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (293ms)
+  ✓   7 tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (128ms)
+  ✓   8 tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (252ms)
+  ✓   9 tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (161ms)
+  ✓  10 tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (155ms)
+  ✓  11 tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (260ms)
+  ✓  12 tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (229ms)
+  ✓  13 tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (203ms)
+  ✓  14 tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (150ms)
+  ✓  15 tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (249ms)
+  ✓  16 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (204ms)
+  ✓  17 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (191ms)
+  ✓  18 tests/batch-run-configuration.spec.ts:88:1 › server business-only mappings are visible and missing platform values are not invented (160ms)
+  ✓  19 tests/batch-run-configuration.spec.ts:95:1 › legacy missing mappings differ from explicitly empty mappings (165ms)
+  ✓  20 tests/batch-run-configuration.spec.ts:102:1 › business mappings display without platform bindings, including implicit input and JSON (167ms)
+
+  20 passed (4.8s)

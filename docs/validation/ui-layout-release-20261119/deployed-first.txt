@@ -1,0 +1,48 @@
+Running 21 tests using 1 worker
+
+(node:1384034) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (190ms)
+  ✓   2 tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (361ms)
+  ✓   3 tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (223ms)
+  ✓   4 tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (284ms)
+  ✓   5 tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (293ms)
+  ✓   6 tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (276ms)
+  ✘   7 tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (129ms)
+(node:1384276) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (146ms)
+  ✓   9 tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (285ms)
+  ✓  10 tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (168ms)
+  ✓  11 tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (185ms)
+  ✓  12 tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (231ms)
+  ✓  13 tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (216ms)
+  ✓  14 tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (195ms)
+  ✓  15 tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (158ms)
+  ✓  16 tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (242ms)
+  ✓  17 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (211ms)
+  ✓  18 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (198ms)
+  ✓  19 tests/batch-run-configuration.spec.ts:88:1 › server business-only mappings are visible and missing platform values are not invented (170ms)
+  ✓  20 tests/batch-run-configuration.spec.ts:95:1 › legacy missing mappings differ from explicitly empty mappings (162ms)
+  ✓  21 tests/batch-run-configuration.spec.ts:102:1 › business mappings display without platform bindings, including implicit input and JSON (170ms)
+
+
+  1) tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses 
+
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:18000/src/api.ts
+
+      66 | test('API handles empty success, invalid success and non-JSON unauthorized responses',async({page})=>{
+      67 |  await setup(page);
+    > 68 |  const call=()=>page.evaluate(async()=>{
+         |                      ^
+      69 |   const modulePath='/src/api.ts';const {api}=await import(modulePath);
+      70 |   try{return {value:await api('diagnostic-test')};}catch(e){return {error:String(e)};}
+      71 |  });
+        at call (/home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:68:22)
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:73:15
+
+    Error Context: test-results/batch-history-API-handles--14aab-JSON-unauthorized-responses/error-context.md
+
+  1 failed
+    tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses 
+  20 passed (5.2s)
