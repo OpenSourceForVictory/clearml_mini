@@ -1,3 +1,4 @@
+import {ExecutionLocation} from './execution-location';
 import {ResultOutcomes,ExecutionOutcome,ProtocolOutcome,type Outcomes} from './result-outcomes';
 import {ExecutionLogs} from './execution-logs';
 import {ExecutionPlacement,type Placement} from './execution-placement';
@@ -102,7 +103,7 @@ function AttemptInspector({jobId,onClose}:{jobId:string;onClose:()=>void}) {
   return <section aria-label="任务排查"><h3>执行尝试与结果</h3><button onClick={onClose}>关闭任务排查</button>{error&&<p role="alert">{error}</p>}
     <label>执行尝试<select aria-label="执行尝试" value={run} onChange={e=>setRun(e.target.value)}>{data?.attempts.map(r=><option key={r.id} value={r.id}>尝试 {r.attempt} · {statusLabels[r.status]||r.status}</option>)}</select></label>
     {run&&<p>本次执行地址：{data?.attempts.find(r=>r.id===run)?.endpoint||'未分配'} · 服务执行：{data?.attempts.find(r=>r.id===run)?.service_execution_id||'外部服务或未分配'}</p>}
-    {run&&<React.Fragment key={run}><AttemptLogs jobId={jobId} runId={run}/><EpisodeList jobId={jobId} runId={run}/><ArtifactList jobId={jobId} runId={run}/></React.Fragment>}
+    {run&&<React.Fragment key={run}><ExecutionLocation jobId={jobId} runId={run}/><AttemptLogs jobId={jobId} runId={run}/><EpisodeList jobId={jobId} runId={run}/><ArtifactList jobId={jobId} runId={run}/></React.Fragment>}
   </section>;
 }
 function AttemptLogs({jobId,runId}:{jobId:string;runId:string}) {

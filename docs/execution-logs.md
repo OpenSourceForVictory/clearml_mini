@@ -31,3 +31,11 @@ Worker POST `/api/v1/worker/executions/{execution_id}/logs-v2`：`sequence` 从 
 客户端和服务实例面板展开后增量读取，关闭后停止轮询；终态日志读尽后停止自动刷新，可手动刷新。标注 stderr/system 来源；旧日志淘汰、采集断线或结束补传不完整时显示缺口提示。界面保留最新 256 KiB，不提供完整归档。
 
 验证范围、失败记录和性能取舍见[有界日志验证](validation/bounded-execution-logs/README.md)。
+
+## 按执行身份定位（开发中）
+
+任务详情 attempts 增加 `execution_id`；它与任务 ID、attempts.id（Run ID）不同。`GET /api/v1/jobs/{job_id}/attempts/{run_id}/execution-location` 按所选尝试返回已上报的节点目录、扫描时间和清理状态，不以存在清理操作为条件。无记录显示尚未上报，不根据节点当前配置拼接历史路径。目录不保证仍存在，`work/episode-N`/`output/episode-N` 不是独立日志归档。
+
+分作用域日志开发契约：`runner/process_log_contract.py` 定义 `process_logs_v1`、task/business/episode/service、规范执行 UUID 与非回合编号 0；游标绑定日志身份、generation 和序号，跨回合或重试游标拒绝。日志预算必须是有限整数且分片≤单 scope≤执行≤整机；这不是对业务 CPU/内存的限制。新能力尚未接入节点采集和发布，不能因存在契约或索引接口就认为回合日志已可用。
+
+执行目录显示使用节点扫描时记录的位置；进入清理暂存区的目录显示 `runs/.cleanup/<execution_id>`，不继续冒充原始执行目录。记录可能滞后于实际清理，以扫描和清理状态为准。

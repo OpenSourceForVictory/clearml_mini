@@ -86,3 +86,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 
 
 程序执行与协议结果分离的定向回归：279 通过、28 跳过，新共享统计模块 100% 行 / 100% 分支；完整项目分母覆盖率 43.05% / 21.72%，门槛未通过，不作为全项目覆盖验收。`backend/app/result_views.py` 纳入业务执行与结果关键功能组，未降低阈值。失败、跳过及前端验证见 [记录](validation/episode-result-diagnostics-20261119/README.md)。
+
+进程日志基础模块 `backend/app/process_logs.py`、`backend/app/execution_locations.py` 纳入“业务执行与结果”关键功能统计；Runner 契约沿用 `runner` 全目录统计，不排除尚未覆盖的分支。

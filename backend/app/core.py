@@ -538,3 +538,48 @@ class WorkerUpgrade(Base):
     error: Mapped[Optional[str]] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
+
+
+class ExecutionLogCatalog(Base):
+    __tablename__ = 'execution_log_catalog'
+    __table_args__ = (UniqueConstraint('execution_id','scope','episode_id'),)
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'),index=True)
+    execution_id: Mapped[str] = mapped_column(String(36))
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id'),index=True)
+    slot_id: Mapped[str] = mapped_column(ForeignKey('gpu_slots.id'))
+    scope: Mapped[str] = mapped_column(String(16))
+    episode_id: Mapped[int] = mapped_column(Integer,default=0)
+    generation: Mapped[str] = mapped_column(String(36))
+    root_path: Mapped[str] = mapped_column(String(4096))
+    status: Mapped[str] = mapped_column(String(20),default='open')
+    first_sequence: Mapped[int] = mapped_column(BigInteger,default=0)
+    next_sequence: Mapped[int] = mapped_column(BigInteger,default=0)
+    dropped_bytes: Mapped[int] = mapped_column(BigInteger,default=0)
+    truncated: Mapped[bool] = mapped_column(Boolean,default=False)
+    policy_revision: Mapped[int] = mapped_column(Integer,default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=now)
+
+
+class LogReadRequest(Base):
+    __tablename__ = 'execution_log_reads'
+    __table_args__ = (UniqueConstraint('budget_slot'),)
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    log_id: Mapped[str] = mapped_column(ForeignKey('execution_log_catalog.id'),index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'),index=True)
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id'),index=True)
+    budget_slot: Mapped[int] = mapped_column(Integer)
+    fingerprint: Mapped[str] = mapped_column(String(64),index=True)
+    generation: Mapped[str] = mapped_column(String(36))
+    query: Mapped[dict] = mapped_column(JSON_TYPE)
+    status: Mapped[str] = mapped_column(String(20),default='queued')
+    claim_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    response: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),index=True)
+
+
+class LogReadSubscriber(Base):
+    __tablename__ = 'execution_log_read_subscribers'
+    request_id: Mapped[str] = mapped_column(ForeignKey('execution_log_reads.id'),primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'),primary_key=True)
+    access_id: Mapped[str] = mapped_column(String(36),unique=True,default=uid)

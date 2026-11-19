@@ -7,7 +7,7 @@ from .core import (
     EvaluationBatch,
     EvaluationOrchestration,
     Event,
-    ExecutionData,
+    ExecutionData, ExecutionLogCatalog, LogReadRequest, LogReadSubscriber,
     Job,
     Run,
     RunArtifact,
@@ -58,7 +58,11 @@ def remove(s, identity, user):
     job_ids = [item.id for item in jobs]
     run_ids = list(s.scalars(select(Run.id).where(Run.job_id.in_(job_ids)).order_by(Run.id).with_for_update())) if job_ids else []
     execution_ids = list(s.scalars(select(ExecutionData.id).where(ExecutionData.run_id.in_(run_ids)))) if run_ids else []
+    read_ids=list(s.scalars(select(LogReadRequest.id).where(LogReadRequest.run_id.in_(run_ids)))) if run_ids else []
     for model, column, values in (
+        (LogReadSubscriber, LogReadSubscriber.request_id, read_ids),
+        (LogReadRequest, LogReadRequest.run_id, run_ids),
+        (ExecutionLogCatalog, ExecutionLogCatalog.run_id, run_ids),
         (DataCleanupItem, DataCleanupItem.data_id, execution_ids),
         (ExecutionData, ExecutionData.id, execution_ids),
         (RunLogChunk, RunLogChunk.run_id, run_ids),

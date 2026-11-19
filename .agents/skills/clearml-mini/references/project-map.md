@@ -177,3 +177,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 回合结果诊断（Worker/Runner 0.21.5，协议 17）：runner/episode_contract.py 的固定 EpisodeResultError 由 host_episode / command_sdk 抛出，sdk.py 受控上报 ERROR.error 和业务 exit_code。backend/app/result_views.py 统一两套统计，供 episodes、batches、monitoring、reports 使用；frontend/src/result-outcomes.tsx 统一展示。普通命令不参与协议成功率；原生 SDK 回合无独立进程不伪造退出码；旧单进程非零包装器退出码不推断为业务退出。操作与更新见 docs/host-execution.md、batch-monitoring.md、batch-reports.md；回归 test_result_outcomes.py、test_command_sdk.py 及 batch-monitoring.spec.ts。
 
 0.21.5 上线验收：docs/validation/episode-result-release-20261119/README.md；6 节点 13 槽位升级，真实本机宿主机逐回合与 Docker 普通命令、真实页面验证两套结果。本功能无新增迁移，但部署从 x407a89 补迁移至此前日志版本 y518b90；先备份和隔离恢复验证。非 GPU/NPU 模型验收。
+
+分作用域日志开发：runner/process_log_contract.py 定义身份/预算/游标；backend/app/execution_locations.py 按 Run 和 execution_id 查询历史目录，不使用当前节点配置推断。任务/批次共用 frontend/src/execution-location.tsx。新 Catalog/Read/Subscriber 模型及 z629c01 为后续按需日志读取基础，未完成 Worker 接入前不能宣称已支持回合文件。操作边界见 docs/execution-logs.md、database-migration.md；OpenSpec process-scoped-execution-logs 管理全链路实施。

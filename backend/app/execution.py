@@ -171,6 +171,8 @@ def install(app, db, current):
     memberships.install(app, db, admin)
     from .retention import install as install_retention
     install_retention(app, db, admin, current, worker_auth)
+    from .process_logs import install as install_process_logs
+    install_process_logs(app, db, current, worker_auth)
 
     @app.get("/api/v1/worker/self")
     def worker_self(worker=Depends(worker_auth), s: Session = Depends(db)):

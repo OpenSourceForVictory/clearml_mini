@@ -109,7 +109,7 @@ def detail(job: Job):
             'required_gpu_model': job.required_gpu_model,
             'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
             'finished_at': job.finished_at, 'error': job.error,
-            'attempts': [{'id': r.id, 'attempt': r.attempt, 'status': r.status,
+            'attempts': [{'id': r.id, 'execution_id': r.execution_id, 'attempt': r.attempt, 'status': r.status,
             'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
             'log_bytes': r.log_bytes, **endpoints.view(r, job.client_spec)} for r in job.runs]}
 
@@ -334,6 +334,9 @@ install_clients(app, db, current)
 install_batches(app, db, current)
 install_episodes(app, db, current)
 install_builds(app, db, current)
+
+from .execution_locations import install as install_execution_locations
+install_execution_locations(app, db, current)
 
 frontend = Path(os.getenv('FRONTEND_DIST', str(Path(__file__).resolve().parents[2] / 'frontend' / 'dist')))
 if frontend.is_dir():

@@ -196,3 +196,7 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 - Compose 更新的是平台服务，不会自动把已纳管节点的 Worker/Agent/Runner 更新到新版本。控制端迁移和健康检查通过后，按 [节点升级说明](worker-upgrades.md) 对需要更新的节点排空并升级。
 
 实现依据：[Compose 配置](../deploy/compose.yml)、[迁移脚本目录](../backend/alembic/versions/)。真实迁移补测与验证边界见 [2026-11-19 验证记录](validation/host-recovery-full-20261119/README.md)。
+
+## 开发中：分作用域日志迁移 z629c01
+
+`z629c01` 接在 `y518b90` 后，新增 execution_log_catalog、execution_log_reads 和 execution_log_read_subscribers。保留旧日志表与数据；目录展示本身不需要迁移，日志索引/按需请求接口需要。新表尚在开发验证中，不应仅根据本节对生产执行迁移。降级会删除新增索引及临时读取数据，默认回滚应保留表。实际发布时仍按前文核对目标镜像 heads、排空备份和恢复演练，不使用 stamp。
