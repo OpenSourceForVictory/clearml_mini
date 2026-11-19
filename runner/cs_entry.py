@@ -96,7 +96,7 @@ def main():
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:
         # Never print response payloads or authentication data from the remote service.
-        print('CS client startup failed: '+str(exc), file=sys.stderr, flush=True)
+        print('CS client execution or result processing failed: '+str(exc), file=sys.stderr, flush=True)
         raise SystemExit(2)
 
 

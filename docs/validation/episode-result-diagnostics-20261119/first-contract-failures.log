@@ -1,0 +1,108 @@
+ssss.................................................................... [ 31%]
+........................................................................ [ 63%]
+...........................................FFF.......................... [ 95%]
+...........                                                              [100%]
+=================================== FAILURES ===================================
+__________ test_invalid_sdk_result_never_emits_final_success[result1] __________
+backend/tests/test_sdk_reporting_contract.py:86: in test_invalid_sdk_result_never_emits_final_success
+    run(client, {'episodes':2,'seed':7}, tmp_path/'output')
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_episode_result: \u56de\u5408\u7ed3\u679c\u5b57\u6bb5\u65e0\u6548\uff1b\u8bf7\u68c0\u67e5 success\u3001metrics \u548c artifacts \u7684\u534f\u8bae\u683c\u5f0f\u3002"}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+__________ test_invalid_sdk_result_never_emits_final_success[result2] __________
+backend/tests/test_sdk_reporting_contract.py:86: in test_invalid_sdk_result_never_emits_final_success
+    run(client, {'episodes':2,'seed':7}, tmp_path/'output')
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_episode_result: \u56de\u5408\u7ed3\u679c\u5b57\u6bb5\u65e0\u6548\uff1b\u8bf7\u68c0\u67e5 success\u3001metrics \u548c artifacts \u7684\u534f\u8bae\u683c\u5f0f\u3002"}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+__________ test_invalid_sdk_result_never_emits_final_success[result3] __________
+backend/tests/test_sdk_reporting_contract.py:86: in test_invalid_sdk_result_never_emits_final_success
+    run(client, {'episodes':2,'seed':7}, tmp_path/'output')
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_episode_result: \u56de\u5408\u7ed3\u679c\u5b57\u6bb5\u65e0\u6548\uff1b\u8bf7\u68c0\u67e5 success\u3001metrics \u548c artifacts \u7684\u534f\u8bae\u683c\u5f0f\u3002"}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_episode_result: 回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics/tests.xml -
+=========================== short test summary info ============================
+FAILED backend/tests/test_sdk_reporting_contract.py::test_invalid_sdk_result_never_emits_final_success[result1]
+FAILED backend/tests/test_sdk_reporting_contract.py::test_invalid_sdk_result_never_emits_final_success[result2]
+FAILED backend/tests/test_sdk_reporting_contract.py::test_invalid_sdk_result_never_emits_final_success[result3]
+3 failed, 220 passed, 4 skipped, 1621 deselected, 1 warning in 173.27s (0:02:53)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 153 | 41.14% | 19.80% |
+| backend/app | 43 | 62.63% | 29.72% |
+| worker | 23 | 36.53% | 19.54% |
+| node_agent | 8 | 19.44% | 2.86% |
+| runner | 25 | 49.27% | 35.07% |
+| onboarding | 9 | 17.88% | 2.44% |
+| scripts | 45 | 13.59% | 1.91% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 61.18% | 35.07% |
+| 节点纳管与升级 | 18 | 21.96% | 2.34% |
+| 业务执行与结果 | 30 | 49.89% | 33.48% |
+| 节点监控 | 8 | 19.44% | 2.86% |
+| 运行模板注册管理 | 5 | 70.20% | 43.87% |
+| 评测结果与批次管理 | 4 | 74.92% | 50.00% |
+| 任务集合与编排 | 4 | 62.83% | 32.01% |
+
+## 门槛检查
+
+backend/app: line 62.63% < 80.00%
+backend/app: branch 29.72% < 70.00%
+worker: line 36.53% < 80.00%
+worker: branch 19.54% < 70.00%
+node_agent: line 19.44% < 80.00%
+node_agent: branch 2.86% < 70.00%
+runner: line 49.27% < 80.00%
+runner: branch 35.07% < 70.00%
+onboarding: line 17.88% < 80.00%
+onboarding: branch 2.44% < 70.00%
+scripts: line 13.59% < 80.00%
+scripts: branch 1.91% < 70.00%
+调度与资源: line 61.18% < 90.00%
+调度与资源: branch 35.07% < 80.00%
+节点纳管与升级: line 21.96% < 90.00%
+节点纳管与升级: branch 2.34% < 80.00%
+业务执行与结果: line 49.89% < 90.00%
+业务执行与结果: branch 33.48% < 80.00%
+节点监控: line 19.44% < 80.00%
+节点监控: branch 2.86% < 70.00%
+运行模板注册管理: line 70.20% < 80.00%
+运行模板注册管理: branch 43.87% < 70.00%
+评测结果与批次管理: line 74.92% < 80.00%
+评测结果与批次管理: branch 50.00% < 70.00%
+任务集合与编排: line 62.83% < 80.00%
+任务集合与编排: branch 32.01% < 70.00%
+

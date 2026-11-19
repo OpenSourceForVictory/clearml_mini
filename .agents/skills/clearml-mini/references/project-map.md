@@ -172,3 +172,6 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 业务PID上限（Worker0.21.4）：worker/resource_limits.execution_pids_limit统一校验节点null/缺省或正整数；host_backend在launch.resource_limits.pids持久化，systemd与两处verify使用同一快照。client.create按同一配置设置Docker --pids-limit（缺省/null为-1）；缺省/null使用TasksMax=infinity，不保证系统无限制。探测32不变。操作见docs/host-execution.md、worker-setup.md，回归test_execution_pids.py及验证记录docs/validation/execution-pids-20261119/README.md。
 
 0.21.4发布验证见docs/validation/unlimited-pids-20261119/README.md：6机13槽升级成功；宿主机客户端和NPU节点服务pids.max=max，Docker -1仍可能被运行时systemd scope默认限制为有限值，检查实际cgroup，不以参数代替生效证据。
+
+
+回合结果诊断（Worker/Runner 0.21.5，协议 17）：runner/episode_contract.py 的固定 EpisodeResultError 由 host_episode / command_sdk 抛出，sdk.py 受控上报 ERROR.error 和业务 exit_code。backend/app/result_views.py 统一两套统计，供 episodes、batches、monitoring、reports 使用；frontend/src/result-outcomes.tsx 统一展示。普通命令不参与协议成功率；原生 SDK 回合无独立进程不伪造退出码；旧单进程非零包装器退出码不推断为业务退出。操作与更新见 docs/host-execution.md、batch-monitoring.md、batch-reports.md；回归 test_result_outcomes.py、test_command_sdk.py 及 batch-monitoring.spec.ts。

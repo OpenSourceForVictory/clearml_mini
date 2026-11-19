@@ -232,3 +232,22 @@ Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json
 旧代码的256可能导致 `libgomp: Thread creation failed`；手工仅调大systemd值但未同步校验可能导致 `pids_limit_not_enforced`。新代码把显式PID值保存在launch快照中，systemd启动、Worker校验、supervisor校验统一使用快照。若仍失败，保留错误及实际限制，不删除执行标记强行重跑。验证范围见[PID上限回归记录](validation/execution-pids-20261119/README.md)。
 
 0.21.4真机验证发现Docker运行时仍可能给容器systemd scope设置默认TasksMax：即使传入`--pids-limit=-1`，Docker inspect可能将PidsLimit规范化为null，而容器内pids.max仍是有限值。本次两台节点观察到76745/57402，不能只检查命令参数就宣称最终无限制；需要结合实际cgroup与父级值。本修复不自动修改Docker daemon或全机systemd默认配置。验证见[默认不限制发布记录](validation/unlimited-pids-20261119/README.md)。
+
+
+## 程序执行与协议结果（Worker/Runner 0.21.5）
+
+批次列表、任务行、回合详情及 JSON/CSV 报告分别展示程序执行和平台协议结果。退出码 0 表示业务程序正常结束；结果缺失、重复或格式错误仍是结果校验异常，不能当成业务成功。例：三个业务子进程均退出 0 但没有 final，显示程序正常结束 3 次、协议结果异常 3 回合。任务生命周期仍可能为 FAILED，表示需要处理异常，不代表三个业务子进程都异常退出。
+
+逐回合宿主机直接协议必须在 stdout 单独一行输出唯一 final JSON；不加日志前缀，不写到 stderr：
+
+```json
+{"final":{"episode_count":1,"success_rate":1,"runtime":0.1}}
+```
+
+success_rate 按真实结果填写 0 或 1。SDK 包装命令则向 MINI_EVAL_RESULT 指定文件写入 `{"success":true}`（可带合法 metrics/artifacts），不能用 stdout final 替代这个文件。普通命令不要求协议结果。
+
+已知错误以 `episode_result_missing_final`、`episode_result_multiple_final`、`episode_result_invalid_final`、`episode_result_missing_result_file`、`episode_result_invalid_result_file` 或 `episode_result_invalid_episode_result` 分类，并附固定修复提示，不把业务原文复制到事件。继续/停止策略保持不变；未知业务异常仍保留 stderr 堆栈。原 `CS client startup failed` 改为能覆盖运行和结果处理的提示。
+
+业务子进程退出码与平台执行进程退出码分别显示。每回合启动按子进程统计；一次启动跑多回合只统计一次。原生 SDK 在同一进程内运行的回合没有独立退出码，显示不适用。历史单进程执行若只保存非零包装器退出码，无法确认是业务退出还是启动/结果处理失败，程序退出统计显示未上报，原包装器退出码仍保留供诊断；不伪造业务退出信息。
+
+无需数据库迁移或提升 Worker 协议版本（仍为 17）。需要更新平台 API/前端及实际节点 Worker/Runner；业务镜像自带 Runner 的需重建镜像，不能只更新平台页面。此次代码验证不等于节点已升级或真实模型验收。

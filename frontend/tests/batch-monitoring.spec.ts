@@ -1,7 +1,8 @@
 import {test,expect,type Page} from '@playwright/test';
+const outcomes={execution:{normal:3,abnormal:0,running:0,unknown:0,not_started:0},protocol:{planned:3,success:0,failure:0,invalid:3,errors:0,unreported:0,not_applicable_tasks:0,valid:0,success_rate:null}};
 async function setup(page:Page){
   let offline=false,run='r1',lose=false,delay=false;const requests:any[]=[];
-  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
+  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({outcomes,job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -13,7 +14,7 @@ async function setup(page:Page){
       if(path.includes('/private/')){await route.fulfill({status:404,json:{detail:'batch not found'}});return;}
       if(offline){await route.abort();return;}
       if(delay&&path.includes('/a/'))await new Promise(r=>setTimeout(r,900));
-      data={id:'a',title:path.includes('/b/')?'批次 B':'批次 A',max_concurrent:2,total:4,finished:3,total_episodes:8,cases:cases.map((c,i)=>({...c,run_id:i===0?run:c.run_id})),summary:{states:{FAILED:1,TIMED_OUT:1,SUCCEEDED:1,PENDING:1},completed_episodes:3,successes:0,goal_failures:3,episode_errors:0,execution_failures:2,unreported_tasks:0,success_rate:0}};
+      data={outcomes,id:'a',title:path.includes('/b/')?'批次 B':'批次 A',max_concurrent:2,total:4,finished:3,total_episodes:8,cases:cases.map((c,i)=>({...c,run_id:i===0?run:c.run_id})),summary:{states:{FAILED:1,TIMED_OUT:1,SUCCEEDED:1,PENDING:1},completed_episodes:3,successes:0,goal_failures:3,episode_errors:0,execution_failures:2,unreported_tasks:0,success_rate:0}};
     }
     if(path.endsWith('/retry-failed')){requests.push(route.request().postDataJSON());if(lose){lose=false;await route.abort();return;}data={retried:0,skipped:2,items:[{job_id:'j0',outcome:'skipped',message:'尝试已变化，请刷新后重新选择',attempt:2},{job_id:'j1',outcome:'skipped',message:'旧执行尚未确认清理',attempt:1}]};}
     if(path==='jobs/j0')data={attempts:[{id:'old',attempt:1,status:'FAILED'},{id:'new',attempt:2,status:'FAILED'}]};
@@ -27,7 +28,8 @@ async function setup(page:Page){
   return {requests,setRun:()=>{run='r-new';},lose:()=>{lose=true;},offline:(v:boolean)=>{offline=v;},delay:()=>{delay=true;}};
 }
 test('direct navigation, refresh, draft preservation, filtering and offline recovery',async({page})=>{
-  const ctl=await setup(page);await page.reload();await expect(page.getByText('目标成功率 0.0%',{exact:false})).toBeVisible();
+  const ctl=await setup(page);await page.reload();await expect(page.getByRole('region',{name:'程序执行统计'})).toContainText('正常结束 3 次');
+  await expect(page.getByRole('region',{name:'平台协议回合结果统计'})).toContainText('结果校验异常 3');
   await page.getByRole('button',{name:'返回批次列表'}).click();await page.getByRole('button',{name:'业务评测向导',exact:true}).click();await page.getByLabel('批次名称',{exact:true}).fill('保留草稿');await page.getByRole('button',{name:'评测运行与结果',exact:true}).click();
   await page.getByRole('button',{name:'查看批次',exact:true}).click();
   await page.getByLabel('任务状态',{exact:true}).selectOption('PENDING');await expect(page.locator('td p').filter({hasText:'GPU 已占用'})).toBeVisible();
@@ -90,7 +92,7 @@ test('episode expansion separates protocol results, process exits and unreported
  await expect(episodes).toContainText('平台协议业务结果');
  await expect(episodes).toContainText('执行进程退出码：0');
  await expect(episodes).toContainText('业务失败');
- await expect(episodes).toContainText('执行异常');
+ await expect(episodes).toContainText('回合异常（未分类）');
  await expect(episodes).toContainText('缺少协议回合结果');
  await expect(episodes.getByRole('row').nth(3)).toContainText('未上报');
  await expect(episodes).not.toContainText('业务成功 1');
@@ -101,4 +103,22 @@ test('episode expansion separates protocol results, process exits and unreported
  reporting=false;await expect(episodes).toContainText('整次执行');await expect(episodes.getByRole('table').getByRole('row')).toHaveCount(2);
  await page.getByRole('button',{name:'收起回合',exact:true}).click();
  await expect(episodes).toHaveCount(0);
+});
+
+
+test('zero exits and invalid protocol are separate at batch task and episode levels',async({page})=>{
+ await setup(page);
+ const summary=page.getByRole('region',{name:'程序执行统计'});
+ await expect(summary).toContainText('正常结束 3 次');await expect(summary).toContainText('异常退出 0 次');
+ await expect(page.getByRole('region',{name:'平台协议回合结果统计'})).toContainText('有效结果 0/3 回合');
+ await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
+ await expect(summary).toContainText('正常结束 3 次');
+ await page.route('**/jobs/j0/attempts/*/episodes?*',route=>route.fulfill({json:{outcomes,planned:3,run_status:'FAILED',exit_code:2,result_source:'protocol',episode_reporting:true,progress:{completed:0,successes:0,errors:3},items:[1,2,3].map(i=>({episode_id:i,seed:6+i,execution_state:'normal',protocol_state:'invalid',started:{episode_id:i},result:{status:'ERROR',exit_code:0,error:'缺少 final 结果'}}))}}));
+ await page.getByRole('button',{name:'查看回合',exact:true}).click();
+ const table=page.getByRole('table',{name:'逐回合状态'});
+ for(let i=1;i<=3;i++){
+  await expect(table.getByRole('row').nth(i)).toContainText('正常结束');
+  await expect(table.getByRole('row').nth(i)).toContainText('结果校验异常');
+  await expect(table.getByRole('row').nth(i).getByRole('cell').nth(4)).toHaveText('0');
+ }
 });

@@ -10,6 +10,7 @@ from .image_runtime import TOKEN
 from .process_command import for_template
 from .sdk import EpisodeResult, EvaluationClient, run
 from .task_input import build
+from .episode_contract import EpisodeResultError
 
 
 def episode_input(task, episode, context, environment):
@@ -58,6 +59,7 @@ class HostEpisodeClient(EvaluationClient):
         env.update(additions)
         command=for_template(task['template'],command,self.cwd,env)
         final=[]
+        final_count=0
         started=time.monotonic()
         with subprocess.Popen(command,cwd=self.cwd,env=env,stdout=subprocess.PIPE,
                               text=True,errors='replace') as process:
@@ -65,7 +67,8 @@ class HostEpisodeClient(EvaluationClient):
                 try:record=json.loads(line)
                 except ValueError:record=None
                 if isinstance(record,dict) and 'final' in record:
-                    final.append(record['final'])
+                    final_count+=1
+                    if final_count==1:final.append(record['final'])
                 elif not line.startswith('MINI_EVAL_EVENT '):
                     print(line,end='',flush=True)
             code=process.wait()
@@ -74,15 +77,16 @@ class HostEpisodeClient(EvaluationClient):
             raise RuntimeError(f'business episode {episode.id} exited with code {code}')
         if self.ordinary:
             return EpisodeResult(True,{'process_runtime':time.monotonic()-started})
-        if len(final)!=1 or not isinstance(final[0],dict):
-            raise ValueError('direct protocol episode must emit exactly one final result')
+        if not final_count:raise EpisodeResultError('missing_final')
+        if final_count!=1:raise EpisodeResultError('multiple_final')
+        if not isinstance(final[0],dict):raise EpisodeResultError('invalid_final')
         result=final[0]
         if (type(result.get('episode_count')) is not int or result['episode_count']!=1
                 or type(result.get('success_rate')) not in (int,float)
                 or not math.isfinite(result['success_rate']) or result['success_rate'] not in (0,1)
                 or type(result.get('runtime')) not in (int,float)
                 or not math.isfinite(result['runtime']) or result['runtime']<0):
-            raise ValueError('direct protocol episode final result is invalid')
+            raise EpisodeResultError('invalid_final')
         return EpisodeResult(bool(result['success_rate']),{'process_runtime':time.monotonic()-started})
 
 

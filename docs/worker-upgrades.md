@@ -82,3 +82,6 @@ Worker 0.21.2 修复宿主机显式 per_episode 的回合数、种子、输入�
 Worker 0.21.4移除宿主机/Docker业务固定256进程线程限制，支持节点可选 `execution_pids_limit`。需要升级全部相关每卡Worker，新执行生效；无数据库迁移、协议仍为17、不需要重建业务镜像。配置和运行时默认值边界见[宿主机执行](host-execution.md)。
 
 0.21.3的null/省略表示继承运行时默认；0.21.4改为显式TasksMax=infinity、Docker --pids-limit=-1。已有正整数继续生效；CPU/内存和短时探测不变。
+
+
+Worker/Runner 0.21.5 增加回合结果受控诊断：程序退出 0 与协议结果异常分别展示，平台 API/前端、报告同步两套结果统计。需升级实际执行节点 Worker/Runner；若业务镜像自带 Runner，需按现有镜像流程重建并更新引用。SDK 下载包同步更新。无数据库迁移，协议仍为 17；旧错误文本和缺失的业务退出码不会被自动还原。详见 [宿主机执行](host-execution.md)。

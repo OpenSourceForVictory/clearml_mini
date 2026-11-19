@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from .core import Job, Run, EpisodeRecord
 from .scheduling import ACTIVE, TERMINAL
 from .monitoring import owned
+from .result_views import load_records, summarize_attempt, aggregate
 
 
 def digest(value):
@@ -51,6 +52,7 @@ def report(s, batch, at):
         func.sum(case((and_(completed, success), 1), else_=0)),
         func.sum(case((EpisodeRecord.result['status'].as_string() == 'ERROR', 1), else_=0)))
         .where(EpisodeRecord.run_id.in_([run.id for _, run in rows])).group_by(EpisodeRecord.run_id))}
+    result_rows = load_records(s,[run.id for _,run in rows])
     cases = []
     for job, run in rows:
         spec = job.client_spec
@@ -66,7 +68,7 @@ def report(s, batch, at):
                       image=template['image'], environment_digest=digest({
                           'runtime': (template.get('runtime') or {}).get('environment', {}),
                           'overrides': spec.get('environment', {})}))
-        cases.append(dict(job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,task_type=template.get('task_type','evaluation'),
+        cases.append(dict(outcomes=summarize_attempt(job,run,result_rows[run.id]),job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,task_type=template.get('task_type','evaluation'),
                           status=job.status, **definition, definition_digest=digest(definition), config=config,
                           episode_reporting=reporting, completed_episodes=done, successes=successes,
                           goal_failures=0 if command else done-successes, episode_errors=errors,
@@ -79,14 +81,14 @@ def report(s, batch, at):
                    completed_episodes=done, successes=successes,
                    goal_failures=evaluated_done-successes, episode_errors=sum(c['episode_errors'] for c in cases),
                    reporting_tasks=sum(c['episode_reporting'] for c in cases),
-                   unreported_tasks=sum(not c['episode_reporting'] for c in cases),
+                   unreported_tasks=sum(not c['episode_reporting'] and c['task_type']!='command' for c in cases),
                    partial=any(c['partial'] for c in cases), success_rate=successes/evaluated_done if evaluated_done else None)
     states = [c['status'] for c in cases]
     status = ('SUCCEEDED' if states and all(x == 'SUCCEEDED' for x in states) else
               'RUNNING' if any(x in ACTIVE for x in states) else
               'PENDING' if any(x not in TERMINAL for x in states) else
               'FAILED' if any(x in ('FAILED', 'TIMED_OUT') for x in states) else 'CANCELLED')
-    return dict(schema_version=1, generated_at=at, batch=dict(id=batch.id, title=batch.title,
+    return dict(outcomes=aggregate(c['outcomes'] for c in cases),schema_version=1, generated_at=at, batch=dict(id=batch.id, title=batch.title,
                 suite_id=batch.suite_id, status=status, scheduling_paused=batch.scheduling_paused, model_version_verified=False), summary=summary, cases=cases)
 
 
@@ -112,12 +114,17 @@ def compare(left, right):
                 reasons.append('definition_mismatch')
             if not a['episode_reporting'] or not b['episode_reporting']:
                 reasons.append('unreported')
+            if a.get('task_type')=='command' or b.get('task_type')=='command':
+                reasons.append('protocol_not_applicable')
+            elif a['success_rate'] is None or b['success_rate'] is None:
+                reasons.append('missing_valid_results')
             if a['partial'] or b['partial']:
                 reasons.append('incomplete')
         rows.append(dict(case_id=identity, left=a, right=b, reasons=reasons,
                          definition_differences=definitions, config_differences=configs,
                          delta_success_rate=b['success_rate']-a['success_rate'] if not reasons else None))
-    eligible = bool(rows) and all(not row['reasons'] for row in rows)
+    eligible = (bool(rows) and all(not row['reasons'] for row in rows)
+                and left['summary']['success_rate'] is not None and right['summary']['success_rate'] is not None)
     return dict(left=left, right=right, cases=rows, comparable=eligible,
                 delta_success_rate=right['summary']['success_rate']-left['summary']['success_rate'] if eligible else None)
 
@@ -125,7 +132,10 @@ def compare(left, right):
 CSV_COLUMNS = ['schema_version', 'generated_at', 'batch_id', 'batch_title', 'case_id', 'job_id', 'run_id',
                'attempt', 'task_name', 'seed', 'episodes', 'status', 'episode_reporting', 'partial',
                'completed_episodes', 'successes', 'goal_failures', 'episode_errors', 'success_rate',
-               'parameters_digest', 'definition_digest', 'endpoint', 'endpoint_mode', 'endpoint_candidates']
+               'parameters_digest', 'definition_digest', 'endpoint', 'endpoint_mode', 'endpoint_candidates',
+               'program_normal', 'program_abnormal', 'program_running', 'program_unknown', 'program_not_started',
+               'protocol_success', 'protocol_failure', 'protocol_invalid', 'protocol_errors', 'protocol_unreported',
+               'protocol_not_applicable_tasks', 'protocol_valid', 'protocol_planned', 'protocol_success_rate', 'process_scope', 'wrapper_exit_code']
 
 
 def csv_text(value):
@@ -143,6 +153,10 @@ def export_csv(value):
         row = dict(item, schema_version=value['schema_version'], generated_at=value['generated_at'],
                    batch_id=value['batch']['id'], batch_title=value['batch']['title'])
         row.update(item.get('config', {}))
+        outcomes=item.get('outcomes',{})
+        row.update({'program_'+k:v for k,v in outcomes.get('execution',{}).items()})
+        row.update({'protocol_'+k:v for k,v in outcomes.get('protocol',{}).items()})
+        row.update({k:outcomes.get(k) for k in ('process_scope','wrapper_exit_code')})
         row['endpoint_candidates'] = json.dumps(row.get('endpoint_candidates', []), ensure_ascii=False)
         writer.writerow({k: csv_text(row.get(k)) for k in CSV_COLUMNS})
     return ('\ufeff' + stream.getvalue()).encode('utf-8')

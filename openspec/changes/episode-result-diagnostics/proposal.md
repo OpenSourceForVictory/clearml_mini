@@ -22,4 +22,4 @@
 
 ## Impact
 
-runner/host_episode.py、runner/sdk.py、客户端启动错误包装、frontend/src/cs.tsx、batch-detail.tsx、batch-history.tsx 及后端批次汇总接口；检查事件透传与存储，无数据库结构迁移计划。同步宿主机运行文档、界面指南及项目 Skill 参考索引。需更新实际执行节点的 Worker/Runner 和平台界面；发布不属于本次设计授权。
+runner/host_episode.py、runner/command_sdk.py、runner/sdk.py、客户端启动错误包装、frontend/src/cs.tsx、batch-detail.tsx、batch-history.tsx 及 backend/app/result_views.py、后端批次汇总与报告接口；检查事件透传与存储，无数据库结构迁移计划。同步宿主机运行文档、界面指南及项目 Skill 参考索引。需更新实际执行节点的 Worker/Runner 和平台界面；发布不属于本次设计授权。

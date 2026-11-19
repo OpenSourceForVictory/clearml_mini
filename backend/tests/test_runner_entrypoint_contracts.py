@@ -8,6 +8,7 @@ import sys
 import pytest
 from runner import command_sdk, cs_entry, service_entry
 from runner.image_runtime import validate
+from runner.episode_contract import EpisodeExecutionError, result_error_code
 
 
 @pytest.fixture
@@ -56,7 +57,7 @@ def test_client_rejects_invalid_startup_without_running_business(execution,monke
     if fault!='missing-input':inp.write_text(json.dumps(config))
     monkeypatch.setattr('subprocess.call',lambda *a,**k:pytest.fail('invalid business must not start'))
     with pytest.raises(SystemExit) as error:cs_entry.main()
-    assert error.value.code==2 and 'CS client startup failed' in capsys.readouterr().err
+    assert error.value.code==2 and 'CS client execution or result processing failed' in capsys.readouterr().err
 
 
 @pytest.mark.parametrize('behavior',['success','false','missing','nonbool','unknown','large','symlink','exit'])
@@ -74,9 +75,13 @@ def test_sdk_actual_business_result_and_error_events(execution,behavior):
         command_sdk.main();report=json.loads((output/'report.json').read_text())
         assert report['metrics']['success_rate']==(1 if behavior=='success' else 0)
     else:
-        with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+        with pytest.raises(subprocess.CalledProcessError if behavior=='exit' else EpisodeExecutionError):command_sdk.main()
         assert not (output/'report.json').exists()
     events=[json.loads(line) for line in (work/'episodes.jsonl').read_text().splitlines()]
     assert events[0]['status']=='STARTED'
     assert events[-1]['status']==('COMPLETED' if behavior in ('success','false') else 'ERROR')
     assert events[0]['seed']==7
+
+    if behavior not in ('success','false','exit'):
+        assert events[-1]['exit_code']==0
+        assert result_error_code(events[-1]['error'])==('missing_result_file' if behavior=='missing' else 'invalid_result_file')

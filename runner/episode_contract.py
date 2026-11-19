@@ -44,3 +44,31 @@ def validate_event(event):
     if set(event) != required or len(json.dumps(event, allow_nan=False).encode()) > 16384:
         raise ValueError('invalid episode payload')
     return event
+
+
+RESULT_ERRORS = {
+    'missing_final': '未收到协议结果；请向 stdout 单独输出一行 final JSON，不要添加日志前缀。',
+    'multiple_final': '收到多条 final 结果；每个业务回合只能输出一条。',
+    'invalid_final': 'final 结果格式无效；需要 episode_count=1、success_rate 为 0 或 1、runtime 为非负有限数。',
+    'missing_result_file': '缺少 SDK 命令结果文件；请写入 MINI_EVAL_RESULT 指定路径。',
+    'invalid_result_file': 'SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。',
+    'invalid_episode_result': '回合结果字段无效；请检查 success、metrics 和 artifacts 的协议格式。',
+}
+
+
+class EpisodeResultError(ValueError):
+    """Only fixed, non-payload diagnostics may enter durable episode events."""
+    def __init__(self, code):
+        self.code = code
+        super().__init__('episode_result_'+code+': '+RESULT_ERRORS[code])
+
+
+class EpisodeExecutionError(RuntimeError):
+    """An already-reported episode failure, safe for a concise entrypoint error."""
+
+
+def result_error_code(error):
+    for code in RESULT_ERRORS:
+        if error == str(EpisodeResultError(code)):
+            return code
+    return None

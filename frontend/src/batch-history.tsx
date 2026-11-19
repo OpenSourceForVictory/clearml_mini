@@ -1,9 +1,10 @@
+import {ExecutionOutcome,ProtocolOutcome,type Outcomes} from './result-outcomes';
 import React,{useState,useRef,useEffect} from 'react';
 import {api} from './api';
 import './batch-history.css';
 
-export type Batch = {id:string;title:string;status:string;scheduling_paused?:boolean;created_at?:string;max_concurrent?:number;total:number;finished:number;succeeded:number;total_episodes:number;cases:{episode_reporting?:boolean;progress?:{completed:number}}[]};
-const labels:Record<string,string>={PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',CANCELLED:'已取消'};
+export type Batch = {outcomes?:Outcomes;id:string;title:string;status:string;scheduling_paused?:boolean;created_at?:string;max_concurrent?:number;total:number;finished:number;succeeded:number;total_episodes:number;cases:{episode_reporting?:boolean;progress?:{completed:number}}[]};
+const labels:Record<string,string>={PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'已结束',FAILED:'已结束（异常）',CANCELLED:'已取消'};
 const terminal=new Set(['SUCCEEDED','FAILED','CANCELLED']);
 const tone=(status:string)=>status==='SUCCEEDED'?'success':status==='FAILED'?'failure':status==='RUNNING'?'running':'neutral';
 
@@ -19,8 +20,7 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
   <div className="history-toolbar"><label>搜索当前页<input type="search" placeholder="批次名称或 ID" value={query} onChange={e=>setQuery(e.target.value)}/></label><label>当前页状态<select value={status} onChange={e=>setStatus(e.target.value)}><option value="">全部状态</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><span className="muted">显示 {visible.length} / {batches.length} 个批次</span></div>
   <div className="history-compare"><span>已选 <strong>{compareIds.length}/2</strong>，可跨页比较</span><div><button disabled={compareIds.length!==2} onClick={()=>{location.hash='/cs/compare/'+compareIds.join('/');}}>比较所选批次</button><button disabled={!compareIds.length} onClick={()=>onCompareChange([])}>清空比较选择</button></div></div>
   {notice&&<p role="status">{notice}</p>}
-  {loading&&!batches.length?<p className="history-empty" role="status">正在加载评测批次…</p>:!batches.length?<p className="history-empty">{error?'暂时无法加载批次，请等待重试。':page===1?'尚无评测批次。请从业务评测向导发起评测。':'本页暂无评测批次，请返回上一页。'}</p>:!visible.length?<div className="history-empty"><p>当前页没有匹配的批次。</p><button onClick={()=>{setQuery('');setStatus('');}}>清除筛选</button></div>:<div className="history-table-scroll" role="region" aria-label="批次列表，可横向滚动" tabIndex={0}><table className="history-table"><thead><tr><th scope="col">比较</th><th scope="col">批次名称</th><th scope="col">提交时间</th><th scope="col">状态</th><th scope="col">并发</th><th scope="col">任务进度</th><th scope="col">回合进度</th><th scope="col">操作</th></tr></thead><tbody>{visible.map(b=>{
-   const reported=b.cases.filter(c=>c.episode_reporting),completed=reported.reduce((sum,c)=>sum+(c.progress?.completed||0),0);
+  {loading&&!batches.length?<p className="history-empty" role="status">正在加载评测批次…</p>:!batches.length?<p className="history-empty">{error?'暂时无法加载批次，请等待重试。':page===1?'尚无评测批次。请从业务评测向导发起评测。':'本页暂无评测批次，请返回上一页。'}</p>:!visible.length?<div className="history-empty"><p>当前页没有匹配的批次。</p><button onClick={()=>{setQuery('');setStatus('');}}>清除筛选</button></div>:<div className="history-table-scroll" role="region" aria-label="批次列表，可横向滚动" tabIndex={0}><table className="history-table"><thead><tr><th scope="col">比较</th><th scope="col">批次名称</th><th scope="col">提交时间</th><th scope="col">状态</th><th scope="col">并发</th><th scope="col">任务进度</th><th scope="col">程序执行</th><th scope="col">回合结果（平台协议）</th><th scope="col">操作</th></tr></thead><tbody>{visible.map(b=>{
    const percent=b.total?Math.min(100,Math.max(0,b.finished/b.total*100)):0;
    return <tr key={b.id} aria-label={'批次 '+b.title}>
     <td><input type="checkbox" aria-label={'比较选择 '+b.title} checked={compareIds.includes(b.id)} disabled={compareIds.length>=2&&!compareIds.includes(b.id)} onChange={e=>onCompareChange(e.target.checked?[...compareIds,b.id]:compareIds.filter(id=>id!==b.id))}/></td>
@@ -28,8 +28,8 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
     <td className="history-date">{b.created_at?new Date(b.created_at).toLocaleString('zh-CN'):'—'}</td>
     <td><span className={'history-badge '+tone(b.status)}>{labels[b.status]||b.status}</span>{b.scheduling_paused&&<small className="history-paused">调度已暂停</small>}</td>
     <td>{b.max_concurrent??'—'}</td>
-    <td className="history-progress"><span>已结束 {b.finished}/{b.total}</span><progress aria-label={b.title+' 任务完成进度'} value={percent} max={100}/><small>成功 {b.succeeded} · 未结束 {Math.max(0,b.total-b.finished)}</small></td>
-    <td title={reported.length?'仅统计当前尝试已上报的完成回合':'未启用逐回合上报或无回合任务'}>{reported.length?<>已上报 {completed} / {b.total_episodes}</>:<>计划 {b.total_episodes} 回合<small className="history-paused">无逐回合报告</small></>}</td>
+    <td className="history-progress"><span>已结束 {b.finished}/{b.total}</span><progress aria-label={b.title+' 任务完成进度'} value={percent} max={100}/><small>任务正常完成 {b.succeeded} · 未结束 {Math.max(0,b.total-b.finished)}</small></td>
+    <td><ExecutionOutcome value={b.outcomes}/></td><td><ProtocolOutcome value={b.outcomes}/></td>
     <td><div className="history-actions"><button onClick={()=>onOpen(b.id)}>查看批次</button><button className="history-delete" disabled={!terminal.has(b.status)} title={!terminal.has(b.status)?'请先进入批次取消任务，等待停止并清理后删除':'删除批次及其任务，保留审计数据'} onClick={()=>{setDeleting(b);setDeleteError('');setNotice('');}}>删除批次</button></div></td>
    </tr>;
   })}</tbody></table></div>}

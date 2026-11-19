@@ -8,6 +8,8 @@ import sys
 import time
 import traceback
 
+from .episode_contract import EpisodeResultError, EpisodeExecutionError, validate_event
+
 EVENT_PREFIX = 'MINI_EVAL_EVENT '
 
 
@@ -106,23 +108,30 @@ def run(client, config, output_dir=None):
             try:
                 result = client.run_episode(config, episode, context)
                 if not isinstance(result, EpisodeResult):
-                    raise TypeError('run_episode must return EpisodeResult')
-                emit({**base, 'status': 'COMPLETED', 'success': result.success,
+                    raise EpisodeResultError('invalid_episode_result')
+                event = {**base, 'status': 'COMPLETED', 'success': result.success,
                       'metrics': result.metrics, 'artifacts': result.artifacts,
                       'runtime': time.monotonic()-begin,
-                      **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
+                      **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})}
+                try:validate_event(event)
+                except (ValueError, TypeError, OverflowError):raise EpisodeResultError('invalid_episode_result') from None
+                emit(event)
                 successes += int(result.success)
-            except Exception:
+            except Exception as exc:
                 # User exception details go to stderr; progress does not expose remote payloads.
-                emit({**base, 'status': 'ERROR', 'error': 'simulation episode raised an exception',
+                emit({**base, 'status': 'ERROR', 'error': str(exc) if isinstance(exc, EpisodeResultError) else 'simulation episode raised an exception',
                       **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
-                if not continue_errors:raise
+                if isinstance(exc, EpisodeResultError):
+                    print(str(exc), file=sys.stderr, flush=True)
+                    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+                else:
+                    if not continue_errors:raise
+                    traceback.print_exc(file=sys.stderr)
                 errors += 1
-                traceback.print_exc(file=sys.stderr)
     finally:
         client.teardown()
     if errors:
-        raise RuntimeError(f'{errors} of {config["episodes"]} business episodes had execution errors; remaining episodes were attempted')
+        raise EpisodeExecutionError(f'{errors} of {config["episodes"]} business episodes had execution or result errors; remaining episodes were attempted')
     metrics = {'success_rate': successes/config['episodes'], 'episode_count': config['episodes'],
                'runtime': time.monotonic()-started}
     print(json.dumps({'final': metrics}), flush=True)
@@ -142,4 +151,7 @@ def main():
 if __name__ == '__main__':
     # Use the canonical module's classes when invoked with python -m.
     from runner.sdk import main as sdk_main
-    sdk_main()
+    try:sdk_main()
+    except EpisodeExecutionError as exc:
+        print(str(exc), file=sys.stderr, flush=True)
+        raise SystemExit(2)

@@ -1,3 +1,4 @@
+import {ResultOutcomes,ExecutionOutcome,ProtocolOutcome,type Outcomes} from './result-outcomes';
 import {ExecutionLogs} from './execution-logs';
 import {ExecutionPlacement,type Placement} from './execution-placement';
 import './batch-detail.css';
@@ -9,10 +10,10 @@ import {api} from './api';
 import {usePoll} from './poll';
 import {ArtifactList,EpisodeList} from './cs';
 
-export const statusLabels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'成功',FAILED:'失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
+export const statusLabels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'已结束',FAILED:'已结束（异常）',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
 type Reason={code:string;message:string};
-type Case={placement?:Placement|null;task_type?:string;job_id:string;case_id:string;task_name:string;status:string;attempt:number;run_id:string;episodes:number;seed:number;episode_reporting:boolean;progress:{completed:number;successes:number};node_name:string|null;gpu_index:number|null;reason_codes:string[];waiting:null|{reasons:Reason[];nodes:{node_name:string;gpu_index:number;reasons:Reason[]}[]};config:{pool_name:string;endpoint:string|null;endpoint_mode?:string|null;endpoint_candidates?:{url:string;mode:string}[];client_name:string;client_version:string;gpu_mode:string;requested_vram_gb:number};error:string|null};
-type Monitor={suite_id?:string|null;orchestrated?:boolean;scheduling_paused:boolean;control_revision:number;checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{cancel_requested_tasks:number;cleanup_pending_tasks:number;states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
+type Case={outcomes?:Outcomes;placement?:Placement|null;task_type?:string;job_id:string;case_id:string;task_name:string;status:string;attempt:number;run_id:string;episodes:number;seed:number;episode_reporting:boolean;progress:{completed:number;successes:number};node_name:string|null;gpu_index:number|null;reason_codes:string[];waiting:null|{reasons:Reason[];nodes:{node_name:string;gpu_index:number;reasons:Reason[]}[]};config:{pool_name:string;endpoint:string|null;endpoint_mode?:string|null;endpoint_candidates?:{url:string;mode:string}[];client_name:string;client_version:string;gpu_mode:string;requested_vram_gb:number};error:string|null};
+type Monitor={outcomes?:Outcomes;suite_id?:string|null;orchestrated?:boolean;scheduling_paused:boolean;control_revision:number;checked_at:string;id:string;title:string;max_concurrent:number;total:number;finished:number;total_episodes:number;cases:Case[];summary:{cancel_requested_tasks:number;cleanup_pending_tasks:number;states:Record<string,number>;completed_episodes:number;successes:number;goal_failures:number;episode_errors:number;execution_failures:number;unreported_tasks:number;success_rate:number|null}};
 type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:string;message?:string;attempt:number}[]};
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
@@ -49,7 +50,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <div className="batch-detail-metrics" aria-label="批次运行概览">
         <div><span>任务已结束</span><strong>{b.finished}<small> / {b.total}</small></strong><progress aria-label="任务完成进度" value={b.finished} max={Math.max(1,b.total)}/></div>
         <div><span>已完成回合</span><strong>{b.summary.completed_episodes}<small> / {b.total_episodes}</small></strong></div>
-        <div><span>执行失败 / 超时</span><strong>{b.summary.execution_failures}</strong></div>
+        <div><span>任务异常结束 / 超时</span><strong>{b.summary.execution_failures}</strong></div>
         <div><span>待清理任务</span><strong>{b.summary.cleanup_pending_tasks||0}</strong></div>
       </div>
       <section className="batch-detail-controls" aria-label="批次运行控制">
@@ -71,9 +72,8 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <section hidden={tab!=='tasks'} aria-label="批次任务页">
       {b.orchestrated&&tab==='tasks'&&<ServiceStartupSummary id={id} onDetails={()=>{setTab('services');setShowServices(true);}}/>}
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>
-      <p>已完成回合 {b.summary.completed_episodes}/{b.total_episodes} · 目标成功 {b.summary.successes} · 目标失败 {b.summary.goal_failures} · 回合异常 {b.summary.episode_errors} · 执行失败/超时 {b.summary.execution_failures}</p>
-      <p>目标成功率 {b.summary.success_rate===null?'暂无数据':(b.summary.success_rate*100).toFixed(1)+'%'} · 未上报任务 {b.summary.unreported_tasks}</p>
-      <p className="hint">汇总仅统计每项最新尝试，成功率按已完成回合加权。目标失败不等于执行失败；历史尝试可在任务排查中查看。</p>
+      <ResultOutcomes value={b.outcomes}/>
+      <p className="hint">两组结果只统计各任务最新尝试。程序按退出码统计次数；协议结果按回合统计。成功率仅基于有效结果，请同时查看异常和未上报数量。历史尝试在任务详情查看。</p>
       <div className="submit-grid"><label>查找任务<input value={query} onChange={e=>setQuery(e.target.value)}/></label>
         <label>任务状态<select aria-label="任务状态" value={status} onChange={e=>setStatus(e.target.value)}><option value="">全部状态</option>{Object.entries(statusLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
         <label>等待原因<select aria-label="等待原因" value={reason} onChange={e=>setReason(e.target.value)}><option value="">全部原因</option>{Array.from(reasons).map(([k,v])=><option key={k} value={k}>{v}</option>)}{reason&&!reasons.has(reason)&&<option value={reason}>{reason}（已消除）</option>}</select></label></div>
@@ -82,13 +82,13 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
       <button disabled={busy||!Object.keys(selected).length} onClick={()=>setSelected({})}>清空选择</button>
       {retryError&&<p role="alert" className="error">{retryError}</p>}
       {result&&<div role="status"><p>已补跑 {result.retried} 项，跳过 {result.skipped} 项。</p>{result.items.map(r=><p key={r.job_id}>{b.cases.find(c=>c.job_id===r.job_id)?.case_id}: {r.outcome==='retried'?`已创建尝试 ${r.attempt}`:r.message}</p>)}</div>}
-      <div className="batch-detail-table"><table><thead><tr><th>补跑</th><th>任务</th><th>状态</th><th>客户端分配位置</th><th>回合</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><React.Fragment key={c.job_id}><tr>
+      <div className="batch-detail-table"><table><thead><tr><th>补跑</th><th>任务</th><th>状态</th><th>客户端分配位置</th><th>程序执行</th><th>回合结果（平台协议）</th><th>等待诊断 / 配置</th><th>排查</th></tr></thead><tbody>{cases.map(c=><React.Fragment key={c.job_id}><tr>
         <td><input type="checkbox" aria-label={'选择补跑 '+c.case_id} checked={!!selected[c.job_id]} disabled={busy||(!eligible(c)&&!selected[c.job_id])} onChange={e=>setSelected(old=>{const next={...old};if(e.target.checked)next[c.job_id]=c.run_id;else delete next[c.job_id];return next;})}/></td>
         <td>{c.case_id}<small>{c.task_name} · 种子 {c.seed}</small></td><td>{statusLabels[c.status]}<small>尝试 {c.attempt}</small></td><td><ExecutionPlacement value={c.placement}/></td>
-        <td>{c.task_type==='command'?(c.episode_reporting?`普通命令已完成 ${c.progress.completed}/${c.episodes} 回合`:'普通命令，按退出码完成'):c.episode_reporting?`${c.progress.completed}/${c.episodes}，目标成功 ${c.progress.successes}`:'客户端未上报回合'}</td>
+        <td><ExecutionOutcome value={c.outcomes}/></td><td><ProtocolOutcome value={c.outcomes}/></td>
         <td>{c.waiting&&<><p>{c.waiting.reasons.map(r=>r.message).join('；')||'等待可用节点'}</p><details><summary>节点诊断</summary>{c.waiting.nodes.map(n=><p key={n.node_name+':'+n.gpu_index}>{n.node_name} / 设备 {n.gpu_index}: {n.reasons.map(r=>r.message).join('；')||'符合要求'}</p>)}</details></>}
           <details><summary>执行配置</summary><p>{c.config.pool_name} · {c.config.client_name}/{c.config.client_version}</p><p>实际推理地址：{c.config.endpoint||'未分配'} · {c.config.endpoint_mode==='exclusive'?'独占':c.config.endpoint_mode==='shared'?'共享':''}</p><ul>{c.config.endpoint_candidates?.map(e=><li key={e.url}>候选：{e.url} · {e.mode==='exclusive'?'独占':'共享'}</li>)}</ul><p>{c.config.gpu_mode} · 显存 {c.config.requested_vram_gb} GiB</p></details>{c.error&&<p>{c.error}</p>}</td>
-        <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{episodeRows[c.job_id]?'收起回合':'查看回合'}</button><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={7}><section aria-label={c.case_id+' 回合状态'}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
+        <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{episodeRows[c.job_id]?'收起回合':'查看回合'}</button><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={8}><section aria-label={c.case_id+' 回合状态'}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
       {!cases.length&&<p>没有符合筛选条件的任务。</p>}
       {job&&<AttemptInspector key={job} jobId={job} onClose={()=>setJob('')}/>}
       </section>

@@ -56,7 +56,7 @@ def monitor(s, batch):
     for row in s.scalars(select(EpisodeRecord).where(EpisodeRecord.run_id.in_([j.runs[-1].id for j in jobs]))):
         records[row.run_id].append(row)
     progresses = {j.runs[-1].id: summarize(records[j.runs[-1].id]) for j in jobs}
-    result = batch_view(s, batch, jobs, progresses)
+    result = batch_view(s, batch, jobs, progresses, records)
     context = DiagnosticContext(s)
     owner = s.get(User, batch.owner_id)
     pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.id.in_({j.pool_id for j in jobs})))}

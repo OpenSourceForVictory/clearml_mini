@@ -21,3 +21,8 @@ def test_command_sdk_reports_only_real_business_results(tmp_path,behavior):
     else:
         assert result.returncode!=0 and events[-1]['status']=='ERROR'
         assert not (output/'report.json').exists()
+        if behavior in ('missing','invalid'):
+            from runner.episode_contract import result_error_code
+            assert result_error_code(events[-1]['error'])==('missing_result_file' if behavior=='missing' else 'invalid_result_file')
+            assert events[-1]['exit_code']==0
+            assert 'Traceback' not in result.stderr

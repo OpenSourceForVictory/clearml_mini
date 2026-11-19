@@ -1,0 +1,143 @@
+ssss.................................................................... [ 23%]
+..............ssssssssssssssssssssssss.................................. [ 47%]
+........................................................................ [ 70%]
+............................FFFFF....................................... [ 94%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_sdk_actual_business_result_and_error_events[missing] ___________
+backend/tests/test_runner_entrypoint_contracts.py:77: in test_sdk_actual_business_result_and_error_events
+    with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+runner/command_sdk.py:83: in main
+    metrics=run(CommandClient(),config)
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_missing_result_file: 缺少 SDK 命令结果文件；请写入 MINI_EVAL_RESULT 指定路径。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_missing_result_file: \u7f3a\u5c11 SDK \u547d\u4ee4\u7ed3\u679c\u6587\u4ef6\uff1b\u8bf7\u5199\u5165 MINI_EVAL_RESULT \u6307\u5b9a\u8def\u5f84\u3002","exit_code":0}
+----------------------------- Captured stderr call -----------------------------
+episode_result_missing_result_file: 缺少 SDK 命令结果文件；请写入 MINI_EVAL_RESULT 指定路径。
+__________ test_sdk_actual_business_result_and_error_events[nonbool] ___________
+backend/tests/test_runner_entrypoint_contracts.py:77: in test_sdk_actual_business_result_and_error_events
+    with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+runner/command_sdk.py:83: in main
+    metrics=run(CommandClient(),config)
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_result_file: SDK \u547d\u4ee4\u7ed3\u679c\u6587\u4ef6\u65e0\u6548\uff1b\u9700\u8981\u4e0d\u8d85\u8fc7 16 KiB \u7684\u666e\u901a JSON \u6587\u4ef6\u53ca\u5e03\u5c14 success \u5b57\u6bb5\u3002","exit_code":0}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+__________ test_sdk_actual_business_result_and_error_events[unknown] ___________
+backend/tests/test_runner_entrypoint_contracts.py:77: in test_sdk_actual_business_result_and_error_events
+    with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+runner/command_sdk.py:83: in main
+    metrics=run(CommandClient(),config)
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_result_file: SDK \u547d\u4ee4\u7ed3\u679c\u6587\u4ef6\u65e0\u6548\uff1b\u9700\u8981\u4e0d\u8d85\u8fc7 16 KiB \u7684\u666e\u901a JSON \u6587\u4ef6\u53ca\u5e03\u5c14 success \u5b57\u6bb5\u3002","exit_code":0}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+___________ test_sdk_actual_business_result_and_error_events[large] ____________
+backend/tests/test_runner_entrypoint_contracts.py:77: in test_sdk_actual_business_result_and_error_events
+    with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+runner/command_sdk.py:83: in main
+    metrics=run(CommandClient(),config)
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_result_file: SDK \u547d\u4ee4\u7ed3\u679c\u6587\u4ef6\u65e0\u6548\uff1b\u9700\u8981\u4e0d\u8d85\u8fc7 16 KiB \u7684\u666e\u901a JSON \u6587\u4ef6\u53ca\u5e03\u5c14 success \u5b57\u6bb5\u3002","exit_code":0}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+__________ test_sdk_actual_business_result_and_error_events[symlink] ___________
+backend/tests/test_runner_entrypoint_contracts.py:77: in test_sdk_actual_business_result_and_error_events
+    with pytest.raises((ValueError,subprocess.CalledProcessError)):command_sdk.main()
+runner/command_sdk.py:83: in main
+    metrics=run(CommandClient(),config)
+runner/sdk.py:126: in run
+    if not continue_errors:raise EpisodeExecutionError(str(exc)) from None
+E   runner.episode_contract.EpisodeExecutionError: episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+----------------------------- Captured stdout call -----------------------------
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"STARTED"}
+MINI_EVAL_EVENT {"episode_id":1,"seed":7,"status":"ERROR","error":"episode_result_invalid_result_file: SDK \u547d\u4ee4\u7ed3\u679c\u6587\u4ef6\u65e0\u6548\uff1b\u9700\u8981\u4e0d\u8d85\u8fc7 16 KiB \u7684\u666e\u901a JSON \u6587\u4ef6\u53ca\u5e03\u5c14 success \u5b57\u6bb5\u3002","exit_code":0}
+----------------------------- Captured stderr call -----------------------------
+episode_result_invalid_result_file: SDK 命令结果文件无效；需要不超过 16 KiB 的普通 JSON 文件及布尔 success 字段。
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics-final/tests.xml -
+=========================== short test summary info ============================
+FAILED backend/tests/test_runner_entrypoint_contracts.py::test_sdk_actual_business_result_and_error_events[missing]
+FAILED backend/tests/test_runner_entrypoint_contracts.py::test_sdk_actual_business_result_and_error_events[nonbool]
+FAILED backend/tests/test_runner_entrypoint_contracts.py::test_sdk_actual_business_result_and_error_events[unknown]
+FAILED backend/tests/test_runner_entrypoint_contracts.py::test_sdk_actual_business_result_and_error_events[large]
+FAILED backend/tests/test_runner_entrypoint_contracts.py::test_sdk_actual_business_result_and_error_events[symlink]
+5 failed, 273 passed, 28 skipped, 1549 deselected, 1 warning in 174.53s (0:02:54)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics-final/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics-final/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/episode-result-diagnostics-final/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 153 | 43.03% | 21.70% |
+| backend/app | 43 | 62.68% | 29.89% |
+| worker | 23 | 36.60% | 19.63% |
+| node_agent | 8 | 19.44% | 2.86% |
+| runner | 25 | 68.34% | 50.50% |
+| onboarding | 9 | 17.88% | 2.44% |
+| scripts | 45 | 13.59% | 1.91% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 61.34% | 35.42% |
+| 节点纳管与升级 | 18 | 21.96% | 2.34% |
+| 业务执行与结果 | 30 | 59.82% | 41.83% |
+| 节点监控 | 8 | 19.44% | 2.86% |
+| 运行模板注册管理 | 5 | 73.14% | 45.28% |
+| 评测结果与批次管理 | 4 | 74.92% | 50.00% |
+| 任务集合与编排 | 4 | 62.92% | 32.01% |
+
+## 门槛检查
+
+backend/app: line 62.68% < 80.00%
+backend/app: branch 29.89% < 70.00%
+worker: line 36.60% < 80.00%
+worker: branch 19.63% < 70.00%
+node_agent: line 19.44% < 80.00%
+node_agent: branch 2.86% < 70.00%
+runner: line 68.34% < 80.00%
+runner: branch 50.50% < 70.00%
+onboarding: line 17.88% < 80.00%
+onboarding: branch 2.44% < 70.00%
+scripts: line 13.59% < 80.00%
+scripts: branch 1.91% < 70.00%
+调度与资源: line 61.34% < 90.00%
+调度与资源: branch 35.42% < 80.00%
+节点纳管与升级: line 21.96% < 90.00%
+节点纳管与升级: branch 2.34% < 80.00%
+业务执行与结果: line 59.82% < 90.00%
+业务执行与结果: branch 41.83% < 80.00%
+节点监控: line 19.44% < 80.00%
+节点监控: branch 2.86% < 70.00%
+运行模板注册管理: line 73.14% < 80.00%
+运行模板注册管理: branch 45.28% < 70.00%
+评测结果与批次管理: line 74.92% < 80.00%
+评测结果与批次管理: branch 50.00% < 70.00%
+任务集合与编排: line 62.92% < 80.00%
+任务集合与编排: branch 32.01% < 70.00%
+

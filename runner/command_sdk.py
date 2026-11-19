@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from .episode_contract import EpisodeResultError, EpisodeExecutionError
 from .sdk import EpisodeResult, EvaluationClient, run
 from .image_runtime import TOKEN
 from .template_contract import command as validate_command
@@ -65,11 +66,15 @@ class CommandClient(EvaluationClient):
         process = subprocess.run(argv,env=env,cwd=cwd,check=False)
         self.process_exit_code = process.returncode
         process.check_returncode()
+        if not result_path.exists() and not result_path.is_symlink():
+            raise EpisodeResultError('missing_result_file')
         if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size>16384:
-            raise ValueError('business command must write a regular result JSON (max 16 KiB)')
-        with result_path.open() as f: result=json.load(f)
+            raise EpisodeResultError('invalid_result_file')
+        try:
+            with result_path.open() as f: result=json.load(f)
+        except (OSError, ValueError):raise EpisodeResultError('invalid_result_file') from None
         if not isinstance(result,dict) or type(result.get('success')) is not bool or set(result)-{'success','metrics','artifacts'}:
-            raise ValueError('invalid business result; success must be boolean')
+            raise EpisodeResultError('invalid_result_file')
         return EpisodeResult(result['success'],result.get('metrics',{}),result.get('artifacts',[]))
 
 
@@ -80,4 +85,8 @@ def main():
     (output/'report.json').write_text(json.dumps({'task_name':config['task_name'],'metrics':metrics}))
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except EpisodeExecutionError as exc:
+        print(str(exc),file=sys.stderr,flush=True)
+        raise SystemExit(2)

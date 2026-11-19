@@ -1,3 +1,4 @@
+import {ResultOutcomes,executionLabels,protocolLabels} from './result-outcomes';
 import {FunctionPages} from './navigation';
 import {SuiteManager} from './suites';
 import {BatchComparison} from './batch-reports';
@@ -83,17 +84,15 @@ export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
   const terminal=data&&['SUCCEEDED','FAILED','TIMED_OUT','CANCELLED'].includes(data.run_status);
   const command=data?.result_source==='exit_code',single=command&&!data?.episode_reporting;
   function state(r:any){
-    if(single)return ({SUCCEEDED:'执行成功',FAILED:'执行失败',TIMED_OUT:'执行超时',CANCELLED:'已取消',RUNNING:'运行中',STARTING:'正在启动',PENDING:'等待执行',RESERVED:'已分配',CANCEL_REQUESTED:'取消中'} as Record<string,string>)[data.run_status]||'未上报';
-    if(r.result)return r.result.status==='COMPLETED'?'已完成':command?'执行失败 / 异常':'执行异常';
-    if(r.started)return terminal?'执行已结束，未上报回合结果':'已开始，等待结果';
-    return terminal?'未上报开始或结果':'尚未上报开始';
+    return executionLabels[r.execution_state] || (r.result?.exit_code===0?'正常结束':r.result?.exit_code!=null?'异常退出':r.started&&!terminal&&!r.result?'运行中':'退出码未上报');
   }
   return <><h3>回合状态与结果</h3>{error&&<p role="alert">回合状态读取失败：{error}</p>}{!data&&!error&&<p>正在读取回合状态…</p>}{data&&<>
-    <p>判定来源：{command?'普通命令退出码（0 为执行成功）':'平台协议业务结果（success）'}。{single?'此命令只启动一次，显示整次执行结果。':`已完成 ${data.progress.completed}/${data.planned}，${command?'执行成功':'业务成功'} ${data.progress.successes}，执行异常 ${data.progress.errors}。`}</p>
-    <p>执行进程退出码：{data.exit_code ?? '未上报'}（整次执行，不等同于每回合业务子进程退出码）</p>
-    {data.run_error&&<p className="error">执行异常：{data.run_error}</p>}
+    <p>判定来源：{command?'普通命令退出码（0 为执行成功）':'平台协议业务结果（success）'}。{single?'此命令只启动一次，显示整次执行结果。':`已上报完成 ${data.progress.completed}/${data.planned}，异常回合 ${data.progress.errors}。`}</p>
+    <ResultOutcomes value={data.outcomes}/>
+    <p>平台执行进程退出码：{data.exit_code ?? '未上报'}（整次执行，不等同于每回合业务子进程退出码）</p>
+    {data.run_error&&<p className="error">任务诊断：{data.run_error}</p>}
     {terminal&&!command&&data.items.some((r:any)=>!r.result)&&<p>缺少协议回合结果；退出码 0 不能代替协议成功上报。</p>}
-    <div className="table-scroll"><table aria-label="逐回合状态"><thead><tr><th>回合</th><th>种子</th><th>执行状态</th><th>{command?'执行结果':'业务结果'}</th><th>回合进程退出码</th><th>指标 / 异常</th></tr></thead><tbody>{(single?data.items.slice(0,1):data.items).map((r:any)=><tr key={r.episode_id}><td>{single?'整次执行':r.episode_id}</td><td>{single?'—':r.seed}</td><td>{state(r)}</td><td>{single?(data.run_status==='SUCCEEDED'?'执行成功':['FAILED','TIMED_OUT'].includes(data.run_status)?'执行失败':'—'):r.result?.status==='COMPLETED'?(r.result.success?(command?'执行成功':'业务成功'):(command?'执行失败':'业务失败')):r.result?.status==='ERROR'?(command?'执行失败 / 异常':'执行异常'):'—'}</td><td>{r.result?.exit_code ?? (single ? data.exit_code ?? '未上报' : '未上报')}</td><td>{JSON.stringify(r.result?.metrics||r.result?.error||(single?data.run_error:null)||{})}</td></tr>)}</tbody></table></div>
+    <div className="table-scroll"><table aria-label="逐回合状态"><thead><tr><th>回合</th><th>种子</th><th>程序执行状态</th><th>回合结果（平台协议）</th><th>业务进程退出码</th><th>指标 / 异常</th></tr></thead><tbody>{(single?data.items.slice(0,1):data.items).map((r:any)=><tr key={r.episode_id}><td>{single?'整次执行':r.episode_id}</td><td>{single?'—':r.seed}</td><td>{single?(data.outcomes?.execution.normal?'正常结束':data.outcomes?.execution.abnormal?'异常退出':'参见程序执行统计'):state(r)}</td><td>{command?'不适用':protocolLabels[r.protocol_state]||(r.result?.status==='COMPLETED'?(r.result.success?'业务成功':'业务失败'):r.result?.status==='ERROR'?'回合异常（未分类）':'结果未上报')}</td><td>{r.execution_state==='not_applicable'?'不适用':r.result?.exit_code??'未上报'}</td><td>{JSON.stringify(r.result?.metrics||r.result?.error||(single?data.run_error:null)||{})}</td></tr>)}</tbody></table></div>
     <button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页回合</button><span>第 {page} 页</span><button disabled={single||page*100>=data.planned} onClick={()=>setPage(p=>p+1)}>下一页回合</button>
   </>}</>;
 }

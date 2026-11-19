@@ -15,7 +15,7 @@ async function setup(page:Page){
 test('scoped filters, reported progress, responsive long titles and active deletion disabled',async({page})=>{
  await setup(page);
  const done=page.getByRole('row',{name:'批次 完成批次',exact:true});
- await expect(done).toContainText('已上报 12 / 30');
+ await expect(done).toContainText('协议结果统计未上报');
  await expect(page.getByRole('row',{name:/^批次 /}).nth(1).getByRole('button',{name:'删除批次'})).toBeDisabled();
  await page.getByLabel('当前页状态').selectOption('RUNNING');await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(1);
  await page.getByLabel('搜索当前页').fill('不存在');await expect(page.getByText('当前页没有匹配的批次。')).toBeVisible();

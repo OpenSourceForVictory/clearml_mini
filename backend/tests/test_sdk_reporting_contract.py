@@ -7,6 +7,7 @@ import pytest
 from backend.tests.test_execution import env, node
 from backend.tests.test_cs_protocol import prepare
 from backend.app.core import Job, Run, now
+from runner.episode_contract import EpisodeExecutionError, result_error_code
 from runner.sdk import EvaluationClient, EpisodeResult, EVENT_PREFIX, run
 
 
@@ -82,12 +83,13 @@ def test_invalid_sdk_result_never_emits_final_success(tmp_path, capsys, monkeypa
         def run_episode(self, *args): return result
         def teardown(self): self.closed = True
     client = Client()
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises(EpisodeExecutionError, match='episode_result_invalid_episode_result'):
         run(client, {'episodes':2,'seed':7}, tmp_path/'output')
     output = capsys.readouterr().out
     assert '"final"' not in output and client.closed
     events = [json.loads(line) for line in (tmp_path/'episodes.jsonl').read_text().splitlines()]
     assert [event['status'] for event in events] == ['STARTED','ERROR']
+    assert result_error_code(events[-1]['error'])=='invalid_episode_result'
     assert [json.loads(line[len(EVENT_PREFIX):]) for line in output.splitlines() if line.startswith(EVENT_PREFIX)] == events
 
 
