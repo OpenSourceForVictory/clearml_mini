@@ -1,0 +1,221 @@
+[
+  {
+    "instance_id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+    "name": "NPU same-template two-service logs / same",
+    "job_id": "8e8bbedc-58a2-4ede-879f-188ba37b240b",
+    "run_id": "4ccaee19-0e1c-472b-9c4d-cc4a18fee85e",
+    "execution_id": "8967a70d-bea1-46a4-8892-e92c3a4c3691",
+    "placement": {
+      "id": "3e2b2ba5-e6cb-4374-85ea-f927ebdf90bc",
+      "node_name": "npu-logs-29-8315d4c9",
+      "accelerator_type": "npu",
+      "gpu_index": 7,
+      "gpu_uuid": "ascend:0000:42:00.0:0",
+      "gpu_model": "Ascend 910B3"
+    },
+    "port": 24101,
+    "state": "HEALTHY",
+    "probe": {
+      "startup_remaining_seconds": null,
+      "successes": 3,
+      "failures": 0,
+      "phase": "response",
+      "duration_ms": 2,
+      "error_code": null,
+      "ever_ready": true,
+      "kind": "http",
+      "mode": "handshake",
+      "success_threshold": 2,
+      "failure_threshold": 3,
+      "stale_after": 10
+    },
+    "catalog": {
+      "id": "8b8bad55-5417-423d-a008-dfcaa7533de2",
+      "run_id": "4ccaee19-0e1c-472b-9c4d-cc4a18fee85e",
+      "execution_id": "8967a70d-bea1-46a4-8892-e92c3a4c3691",
+      "scope": "service",
+      "episode_id": 0,
+      "generation": "06d53d98-3959-4c15-8a40-cb43e758556c",
+      "status": "open",
+      "first_sequence": 0,
+      "next_sequence": 5,
+      "truncated": false,
+      "dropped_bytes": 0,
+      "updated_at": "2026-11-19T12:10:29.572154+00:00",
+      "policy_revision": 0,
+      "path": "/var/tmp/mini-eval-npu-log-8315d4c9/card7/work/runs/8967a70d-bea1-46a4-8892-e92c3a4c3691/logs/service",
+      "source": "node_catalog"
+    },
+    "records": [
+      {
+        "gap": false,
+        "text": "NPU_ALLOC_FREE_OK card=0 execution=8967a70d-bea1-46a4-8892-e92c3a4c3691\n",
+        "time": "2026-11-19T12:10:19.342602+00:00",
+        "stream": "stdout",
+        "sequence": 0
+      },
+      {
+        "gap": false,
+        "text": "NPU_STDERR card=0 日志独立\n",
+        "time": "2026-11-19T12:10:19.343123+00:00",
+        "stream": "stderr",
+        "sequence": 1
+      },
+      {
+        "gap": false,
+        "text": "SERVICE_LISTENING card=0\n",
+        "time": "2026-11-19T12:10:27.342725+00:00",
+        "stream": "stdout",
+        "sequence": 2
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:27.998932+00:00",
+        "stream": "stdout",
+        "sequence": 3
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:29.057111+00:00",
+        "stream": "stdout",
+        "sequence": 4
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:30.138600+00:00",
+        "stream": "stdout",
+        "sequence": 5
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:31.198946+00:00",
+        "stream": "stdout",
+        "sequence": 6
+      }
+    ]
+  },
+  {
+    "instance_id": "92bd9522-7650-4b38-a442-873669776c4f",
+    "name": "NPU same-template two-service logs / same",
+    "job_id": "ca236f1d-d77b-496a-ac69-afde2fa72c16",
+    "run_id": "8a929498-01b1-4ba4-9ca8-37db3b8cdabf",
+    "execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd",
+    "placement": {
+      "id": "39e2817c-9e02-475a-b856-263482ebb40a",
+      "node_name": "npu-logs-29-8315d4c9",
+      "accelerator_type": "npu",
+      "gpu_index": 6,
+      "gpu_uuid": "ascend:0000:82:00.0:0",
+      "gpu_model": "Ascend 910B3"
+    },
+    "port": 24100,
+    "state": "HEALTHY",
+    "probe": {
+      "startup_remaining_seconds": null,
+      "successes": 2,
+      "failures": 0,
+      "phase": "response",
+      "duration_ms": 2,
+      "error_code": null,
+      "ever_ready": true,
+      "kind": "http",
+      "mode": "handshake",
+      "success_threshold": 2,
+      "failure_threshold": 3,
+      "stale_after": 10
+    },
+    "catalog": {
+      "id": "8e643e58-7d8b-47e3-9ed8-80d16770e115",
+      "run_id": "8a929498-01b1-4ba4-9ca8-37db3b8cdabf",
+      "execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd",
+      "scope": "service",
+      "episode_id": 0,
+      "generation": "bafcbc69-cff7-4090-8a56-dbdbda2a90e0",
+      "status": "open",
+      "first_sequence": 0,
+      "next_sequence": 6,
+      "truncated": false,
+      "dropped_bytes": 0,
+      "updated_at": "2026-11-19T12:10:31.646700+00:00",
+      "policy_revision": 0,
+      "path": "/var/tmp/mini-eval-npu-log-8315d4c9/card6/work/runs/7312e286-b58b-44de-aeb0-280ef847c3fd/logs/service",
+      "source": "node_catalog"
+    },
+    "records": [
+      {
+        "gap": false,
+        "text": "NPU_ALLOC_FREE_OK card=0 execution=7312e286-b58b-44de-aeb0-280ef847c3fd\n",
+        "time": "2026-11-19T12:10:19.935624+00:00",
+        "stream": "stdout",
+        "sequence": 0
+      },
+      {
+        "gap": false,
+        "text": "NPU_STDERR card=0 日志独立\n",
+        "time": "2026-11-19T12:10:19.936206+00:00",
+        "stream": "stderr",
+        "sequence": 1
+      },
+      {
+        "gap": false,
+        "text": "SERVICE_LISTENING card=0\n",
+        "time": "2026-11-19T12:10:27.935855+00:00",
+        "stream": "stdout",
+        "sequence": 2
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:28.710476+00:00",
+        "stream": "stdout",
+        "sequence": 3
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:29.770405+00:00",
+        "stream": "stdout",
+        "sequence": 4
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:30.842762+00:00",
+        "stream": "stdout",
+        "sequence": 5
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/\n",
+        "time": "2026-11-19T12:10:31.723037+00:00",
+        "stream": "stdout",
+        "sequence": 6
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:31.908253+00:00",
+        "stream": "stdout",
+        "sequence": 7
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/infer\n",
+        "time": "2026-11-19T12:10:32.134543+00:00",
+        "stream": "stdout",
+        "sequence": 8
+      },
+      {
+        "gap": false,
+        "text": "HTTP_REQUEST card=0 path=/healthz\n",
+        "time": "2026-11-19T12:10:32.957029+00:00",
+        "stream": "stdout",
+        "sequence": 9
+      }
+    ]
+  }
+]

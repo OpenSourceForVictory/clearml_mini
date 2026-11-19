@@ -69,3 +69,11 @@ Runner 在真实业务子进程边界采集 stdout/stderr，仍保留原诊断�
 格式变更不新增数据库迁移，不改变退出码、评测结果或原有日志目录。节点需更新 Worker/Runner 0.21.7 才具备该恢复逻辑；前端不需要新字段。真实进程中途退出测试覆盖提交前、提交后和删除后，不能等同于断电、网络文件系统故障或任意磁盘损坏恢复。完整验证及负载边界见 [功能组补测](validation/execution-group-logs-20261119/README.md)。
 
 2026-11-19 [独立日志真机实验](validation/process-logs-live-20261119/README.md)覆盖隔离平台上的 GPU 宿主机/Docker、逐回合与公共日志、浏览器筛选下载及 Worker 重启读取；29 节点另验证双 NPU 同名子进程采集。它不代表生产平台已升级，也不替代平台调度双 NPU 服务验收。
+
+## 0.21.8：普通业务账号的日志目录遍历
+
+NPU 宿主机完整链路实测发现：父级工作目录只允许业务账号穿过、不允许列出其他执行时，旧采集器用只读句柄逐级打开目录会报 PermissionError，出现 `process log unavailable; business execution continues`；业务仍可正常运行，但页面可能仅有执行诊断，没有服务实例/回合独立日志。
+
+0.21.8 使用 Linux O_PATH 逐级取得父目录句柄，只在最终日志根打开读句柄；仍逐级禁止符号链接、校验目录和文件身份。无需放开其他执行目录的读取权限。修复适用于 service/business/episode；日志格式、设备分配、业务退出码及协议不变，无新增数据库迁移。需更新节点组件中的 Runner，新启动执行生效；已丢失的旧独立日志不能补回，可查看原有诊断摘要。
+
+修复前异常、回归测试和普通账号 NPU 双服务完整平台验收见 [NPU 日志验证](validation/npu-process-logs-platform-20261119/README.md)。

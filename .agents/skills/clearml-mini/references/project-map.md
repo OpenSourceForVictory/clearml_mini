@@ -201,3 +201,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 结果摘要简化：result-outcomes.tsx 的 ExecutionOutcome/ProtocolOutcome 用已知退出码、有效协议结果作为各自分母，并显示覆盖进度。ResultOutcomes 通过原生 details 保留完整计数，列表进入批次/任务查看明细；零分母不伪造 0%，协议异常与未接入区分。不改 result_views.py、数据库或节点。说明见 docs/batch-monitoring.md，回归 batch-history/batch-monitoring。
 
 结果详情入口补齐：ExecutionOutcome/ProtocolOutcome 统一包含摘要及原生 details，供列表、任务行及顶部卡片复用；不再仅 ResultOutcomes 卡片有入口。测试覆盖行内独立展开、收起、轮询保留及窄屏。
+
+0.21.8 普通业务账号日志：process_log_store.locked 对父目录使用 O_PATH，仅最终日志根使用读句柄，兼容宿主机工作目录只授予穿过权限；禁止符号链接不变。test_process_log_traversal 验证 service/business/episode、父目录不可列出、缺少穿过权限、最终目录不可读和链接/非目录拒绝。出现 process log unavailable 而业务仍运行时，核对 Runner 是否包含此修复，不能通过开放所有执行目录代替修复；更新与边界见 docs/execution-logs.md。

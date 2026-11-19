@@ -1,0 +1,828 @@
+[
+  {
+    "time": 1795090213.5661805,
+    "services": [],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "PENDING",
+        "endpoint": null,
+        "waiting_service": false,
+        "service_execution_id": null
+      }
+    ]
+  },
+  {
+    "time": 1795090214.5858855,
+    "services": [],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "PENDING",
+        "endpoint": null,
+        "waiting_service": false,
+        "service_execution_id": null
+      }
+    ]
+  },
+  {
+    "time": 1795090215.599473,
+    "services": [
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "RESERVED",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "RESERVED",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090216.6077304,
+    "services": [
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090217.616845,
+    "services": [
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090218.628529,
+    "services": [
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": null,
+          "failures": null,
+          "phase": null,
+          "duration_ms": null,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 90,
+          "successes": 0,
+          "failures": 1,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090219.6414132,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 89,
+          "successes": 0,
+          "failures": 2,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 89,
+          "successes": 0,
+          "failures": 1,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090220.650423,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 88,
+          "successes": 0,
+          "failures": 3,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 88,
+          "successes": 0,
+          "failures": 2,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090221.6587105,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 87,
+          "successes": 0,
+          "failures": 3,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 87,
+          "successes": 0,
+          "failures": 3,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090222.6678195,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 86,
+          "successes": 0,
+          "failures": 4,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 86,
+          "successes": 0,
+          "failures": 4,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090223.6818826,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 85,
+          "successes": 0,
+          "failures": 5,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 85,
+          "successes": 0,
+          "failures": 5,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090224.6910462,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 84,
+          "successes": 0,
+          "failures": 6,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 84,
+          "successes": 0,
+          "failures": 6,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090225.7018716,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 83,
+          "successes": 0,
+          "failures": 7,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 83,
+          "successes": 0,
+          "failures": 7,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090226.71473,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 82,
+          "successes": 0,
+          "failures": 8,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 82,
+          "successes": 0,
+          "failures": 8,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090227.7247682,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 81,
+          "successes": 0,
+          "failures": 9,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 81,
+          "successes": 0,
+          "failures": 9,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090228.7355454,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 80,
+          "successes": 1,
+          "failures": 0,
+          "phase": "response",
+          "duration_ms": 3,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 80,
+          "successes": 0,
+          "failures": 9,
+          "phase": "response",
+          "duration_ms": 1,
+          "error_code": "connection_failed",
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090229.7434683,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "HEALTHY",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": 2,
+          "failures": 0,
+          "phase": "response",
+          "duration_ms": 3,
+          "error_code": null,
+          "ever_ready": true,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "STARTING",
+        "probe": {
+          "startup_remaining_seconds": 79,
+          "successes": 1,
+          "failures": 0,
+          "phase": "response",
+          "duration_ms": 3,
+          "error_code": null,
+          "ever_ready": null,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  },
+  {
+    "time": 1795090230.7587287,
+    "services": [
+      {
+        "id": "a40b9618-5a22-4dc4-af76-6ff1dcafae8a",
+        "state": "HEALTHY",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": 3,
+          "failures": 0,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": null,
+          "ever_ready": true,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      },
+      {
+        "id": "92bd9522-7650-4b38-a442-873669776c4f",
+        "state": "HEALTHY",
+        "probe": {
+          "startup_remaining_seconds": null,
+          "successes": 2,
+          "failures": 0,
+          "phase": "response",
+          "duration_ms": 2,
+          "error_code": null,
+          "ever_ready": true,
+          "kind": "http",
+          "mode": "handshake",
+          "success_threshold": 2,
+          "failure_threshold": 3,
+          "stale_after": 10
+        }
+      }
+    ],
+    "cases": [
+      {
+        "job_id": "a032cb46-45c4-4d39-a366-896d20df6d45",
+        "status": "RESERVED",
+        "endpoint": "http://192.168.8.151:24100",
+        "waiting_service": true,
+        "service_execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd"
+      }
+    ]
+  }
+]

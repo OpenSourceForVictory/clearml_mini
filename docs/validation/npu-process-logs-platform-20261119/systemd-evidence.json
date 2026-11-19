@@ -1,0 +1,12 @@
+[
+  {
+    "execution_id": "8967a70d-bea1-46a4-8892-e92c3a4c3691",
+    "physical_card": 7,
+    "properties": "DevicePolicy=closed\nDeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci7 rw\nTasksMax=infinity\nUser=HwHiAiUser\nGroup=1001\nDescription=Mini Eval execution 8967a70d-bea1-46a4-8892-e92c3a4c3691\nActiveState=active\nSubState=running\n"
+  },
+  {
+    "execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd",
+    "physical_card": 6,
+    "properties": "DevicePolicy=closed\nDeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci6 rw\nTasksMax=infinity\nUser=HwHiAiUser\nGroup=1001\nDescription=Mini Eval execution 7312e286-b58b-44de-aeb0-280ef847c3fd\nActiveState=active\nSubState=running\n"
+  }
+]

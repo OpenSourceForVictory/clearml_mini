@@ -78,8 +78,9 @@ def atomic(fd, value, name="manifest.json"):
 
 @contextmanager
 def locked(root, exclusive=True, wait=False):
-    # Validate every ancestor; never follow business-controlled links.
-    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    # Ancestors need search permission, not permission to list sibling executions.
+    # O_PATH still pins each directory; O_DIRECTORY | O_NOFOLLOW rejects links.
+    fd = os.open("/", os.O_PATH | os.O_DIRECTORY)
     lock = None
     try:
         path = Path(root)
@@ -87,10 +88,13 @@ def locked(root, exclusive=True, wait=False):
             raise ValueError("invalid log root")
         for part in path.parts[1:]:
             child = os.open(
-                part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                part, os.O_PATH | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
             )
             os.close(fd)
             fd = child
+        readable = os.open(".", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+        os.close(fd)
+        fd = readable
         lock = os.open(
             ".lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=fd
         )

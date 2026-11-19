@@ -1,0 +1,3 @@
+SUBMITTED d9c29d42-9989-44b1-8d8a-4f9dd6a103b8
+PASS two same-name NPU services HEALTHY on distinct cards/ports
+PASS readiness delay observed; client completed through assigned NPU service endpoint

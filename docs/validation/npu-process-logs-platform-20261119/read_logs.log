@@ -1,0 +1,1 @@
+PASS NPU 6/7 same-name services: distinct execution IDs/paths/ports; stdout/stderr read via API mailbox; no cross-instance output

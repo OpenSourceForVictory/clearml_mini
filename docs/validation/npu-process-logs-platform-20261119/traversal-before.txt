@@ -1,0 +1,181 @@
+FFF....                                                                  [100%]
+=================================== FAILURES ===================================
+____________ test_capture_through_search_only_ancestors[service-0] _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on0')
+scope = 'service', episode = 0
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="requires real non-root DAC enforcement")
+    @pytest.mark.parametrize("scope,episode", [("service", 0), ("business", 0), ("episode", 2)])
+    def test_capture_through_search_only_ancestors(tmp_path, scope, episode):
+        workspace = tmp_path / "workspace"
+        runs = workspace / "runs"
+        root = runs / str(uuid.uuid4()) / "logs"
+        execution, generation = root.parent.name, str(uuid.uuid4())
+        initialize(root, execution, generation)
+        workspace.chmod(0o100)
+        runs.chmod(0o100)
+        try:
+            # Sibling execution names remain hidden to the business identity.
+            with pytest.raises(PermissionError):
+                list(runs.iterdir())
+            code = run(
+                [sys.executable, "-c", "import sys;print('out');print('err',file=sys.stderr)"],
+                config={"_process_logs": dict(root=str(root), execution_id=execution, generation=generation)},
+                scope=scope,
+                episode=episode,
+            )
+            assert code == 0
+>           with locked(root, False) as fd:
+
+backend/tests/test_process_log_traversal.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on0/workspace/runs/be3394fd-a307-4ad6-be59-de7609fdf58d/logs')
+exclusive = False, wait = False
+
+    @contextmanager
+    def locked(root, exclusive=True, wait=False):
+        # Validate every ancestor; never follow business-controlled links.
+        fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+        lock = None
+        try:
+            path = Path(root)
+            if not path.is_absolute() or ".." in path.parts:
+                raise ValueError("invalid log root")
+            for part in path.parts[1:]:
+>               child = os.open(
+                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                )
+E               PermissionError: [Errno 13] Permission denied: 'workspace'
+
+runner/process_log_store.py:89: PermissionError
+----------------------------- Captured stdout call -----------------------------
+out
+----------------------------- Captured stderr call -----------------------------
+process log unavailable; business execution continues
+err
+____________ test_capture_through_search_only_ancestors[business-0] ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on1')
+scope = 'business', episode = 0
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="requires real non-root DAC enforcement")
+    @pytest.mark.parametrize("scope,episode", [("service", 0), ("business", 0), ("episode", 2)])
+    def test_capture_through_search_only_ancestors(tmp_path, scope, episode):
+        workspace = tmp_path / "workspace"
+        runs = workspace / "runs"
+        root = runs / str(uuid.uuid4()) / "logs"
+        execution, generation = root.parent.name, str(uuid.uuid4())
+        initialize(root, execution, generation)
+        workspace.chmod(0o100)
+        runs.chmod(0o100)
+        try:
+            # Sibling execution names remain hidden to the business identity.
+            with pytest.raises(PermissionError):
+                list(runs.iterdir())
+            code = run(
+                [sys.executable, "-c", "import sys;print('out');print('err',file=sys.stderr)"],
+                config={"_process_logs": dict(root=str(root), execution_id=execution, generation=generation)},
+                scope=scope,
+                episode=episode,
+            )
+            assert code == 0
+>           with locked(root, False) as fd:
+
+backend/tests/test_process_log_traversal.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on1/workspace/runs/d1c411c7-e030-4dd1-930d-b02d895144a0/logs')
+exclusive = False, wait = False
+
+    @contextmanager
+    def locked(root, exclusive=True, wait=False):
+        # Validate every ancestor; never follow business-controlled links.
+        fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+        lock = None
+        try:
+            path = Path(root)
+            if not path.is_absolute() or ".." in path.parts:
+                raise ValueError("invalid log root")
+            for part in path.parts[1:]:
+>               child = os.open(
+                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                )
+E               PermissionError: [Errno 13] Permission denied: 'workspace'
+
+runner/process_log_store.py:89: PermissionError
+----------------------------- Captured stdout call -----------------------------
+out
+----------------------------- Captured stderr call -----------------------------
+process log unavailable; business execution continues
+err
+____________ test_capture_through_search_only_ancestors[episode-2] _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on2')
+scope = 'episode', episode = 2
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="requires real non-root DAC enforcement")
+    @pytest.mark.parametrize("scope,episode", [("service", 0), ("business", 0), ("episode", 2)])
+    def test_capture_through_search_only_ancestors(tmp_path, scope, episode):
+        workspace = tmp_path / "workspace"
+        runs = workspace / "runs"
+        root = runs / str(uuid.uuid4()) / "logs"
+        execution, generation = root.parent.name, str(uuid.uuid4())
+        initialize(root, execution, generation)
+        workspace.chmod(0o100)
+        runs.chmod(0o100)
+        try:
+            # Sibling execution names remain hidden to the business identity.
+            with pytest.raises(PermissionError):
+                list(runs.iterdir())
+            code = run(
+                [sys.executable, "-c", "import sys;print('out');print('err',file=sys.stderr)"],
+                config={"_process_logs": dict(root=str(root), execution_id=execution, generation=generation)},
+                scope=scope,
+                episode=episode,
+            )
+            assert code == 0
+>           with locked(root, False) as fd:
+
+backend/tests/test_process_log_traversal.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-dgh/pytest-652/test_capture_through_search_on2/workspace/runs/c0bbcfdf-9632-490b-818f-2cb561e9c8e8/logs')
+exclusive = False, wait = False
+
+    @contextmanager
+    def locked(root, exclusive=True, wait=False):
+        # Validate every ancestor; never follow business-controlled links.
+        fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+        lock = None
+        try:
+            path = Path(root)
+            if not path.is_absolute() or ".." in path.parts:
+                raise ValueError("invalid log root")
+            for part in path.parts[1:]:
+>               child = os.open(
+                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                )
+E               PermissionError: [Errno 13] Permission denied: 'workspace'
+
+runner/process_log_store.py:89: PermissionError
+----------------------------- Captured stdout call -----------------------------
+out
+----------------------------- Captured stderr call -----------------------------
+process log unavailable; business execution continues
+err
+=========================== short test summary info ============================
+FAILED backend/tests/test_process_log_traversal.py::test_capture_through_search_only_ancestors[service-0]
+FAILED backend/tests/test_process_log_traversal.py::test_capture_through_search_only_ancestors[business-0]
+FAILED backend/tests/test_process_log_traversal.py::test_capture_through_search_only_ancestors[episode-2]
+3 failed, 4 passed in 0.19s

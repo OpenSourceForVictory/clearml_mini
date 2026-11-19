@@ -1,0 +1,3 @@
+PASS real service page/read/filter/download a40b9618-5a22-4dc4-af76-6ff1dcafae8a
+PASS real service page/read/filter/download 92bd9522-7650-4b38-a442-873669776c4f
+PASS same-node NPU 6/7 display, independent drawers, live API; no mocks

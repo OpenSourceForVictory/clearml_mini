@@ -1,0 +1,16 @@
+[
+  {
+    "execution_id": "8967a70d-bea1-46a4-8892-e92c3a4c3691",
+    "physical_card": 7,
+    "catalog_status": "incomplete",
+    "records": 71,
+    "historical_read": "passed"
+  },
+  {
+    "execution_id": "7312e286-b58b-44de-aeb0-280ef847c3fd",
+    "physical_card": 6,
+    "catalog_status": "incomplete",
+    "records": 72,
+    "historical_read": "passed"
+  }
+]
