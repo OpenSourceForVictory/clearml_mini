@@ -1,0 +1,28 @@
+[
+  {
+    "name": "host-rounds",
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "job_id": "1b8c047d-a5cc-4135-9032-e3c549f4fca4",
+    "run_id": "4dfe1493-b4c7-49e4-a7bc-01ecc114b523",
+    "status": "SUCCEEDED",
+    "paths": [
+      "episodes/1/output",
+      "episodes/2/output",
+      "episodes/3/output"
+    ],
+    "cleanup_confirmed": true,
+    "url": "http://192.168.8.151:18000/#/cs/batches/e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256"
+  },
+  {
+    "name": "docker-command",
+    "batch_id": "1f91e7fa-0274-4b7c-a11d-2344d9583bdd",
+    "job_id": "37af8b42-0675-45ac-a6d4-066b322779ee",
+    "run_id": "8299b3e8-4c92-43e2-a73b-1550a2603f9f",
+    "status": "SUCCEEDED",
+    "paths": [
+      "output"
+    ],
+    "cleanup_confirmed": true,
+    "url": "http://192.168.8.151:18000/#/cs/batches/1f91e7fa-0274-4b7c-a11d-2344d9583bdd"
+  }
+]

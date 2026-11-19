@@ -38,3 +38,5 @@
 - [x] 6.4 补正常/失败/边界与实际宿主/容器测试、覆盖率报告、指南/Skill并提交。
 
 独立根切片验证：docs/validation/independent-artifact-root-20261119/README.md。关联测试294通过/11跳过、浏览器27通过；全仓覆盖率门槛及部分既有执行模块覆盖率未达标。尚未部署或创建界面可见验收批次，5.2保持待完成。
+
+可见批次阶段验收：docs/validation/artifact-root-release-20261119/README.md。API已迁移到a730d12，本机Worker0.21.10；宿主逐回合3回合与Docker普通命令两个真实批次保留，JSON/视频浏览器预览与下载通过。未覆盖H完整GPU/NPU/服务端矩阵，5.2继续未完成。安装由管理API发起，浏览器只补验升级页面与发布选择，未重复触发安装。

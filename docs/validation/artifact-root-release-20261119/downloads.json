@@ -1,0 +1,50 @@
+[
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/1/output/result.json",
+    "bytes": 333,
+    "sha256": "07ec6358654478eb8ef855e9b827e66251711af957a4d185ead0f2054fa84550"
+  },
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/1/output/sample.webm",
+    "bytes": 1899,
+    "sha256": "fef1abec6a0ac63d1757589078e61c2335e95e84f9b85eaad0a0ff7a33986269"
+  },
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/2/output/result.json",
+    "bytes": 333,
+    "sha256": "2ce98a5b0c3f4b78ed12982f4735fa01113a21c24028304a40c533d0f8c1dc45"
+  },
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/2/output/sample.webm",
+    "bytes": 1899,
+    "sha256": "fef1abec6a0ac63d1757589078e61c2335e95e84f9b85eaad0a0ff7a33986269"
+  },
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/3/output/result.json",
+    "bytes": 333,
+    "sha256": "5dd18c14faf8c9993ac74b5467bf1fa0644a2374d939cd946331c4a29bdeb58e"
+  },
+  {
+    "batch_id": "e7b7db7d-d4ab-4ed3-a8c7-0dc04709b256",
+    "path": "episodes/3/output/sample.webm",
+    "bytes": 1899,
+    "sha256": "fef1abec6a0ac63d1757589078e61c2335e95e84f9b85eaad0a0ff7a33986269"
+  },
+  {
+    "batch_id": "1f91e7fa-0274-4b7c-a11d-2344d9583bdd",
+    "path": "output/result.json",
+    "bytes": 168,
+    "sha256": "3f871d5c2de6397ceb7fec1f78418ff55c88b26219feb562457930a2abdc62c2"
+  },
+  {
+    "batch_id": "1f91e7fa-0274-4b7c-a11d-2344d9583bdd",
+    "path": "output/sample.webm",
+    "bytes": 1899,
+    "sha256": "fef1abec6a0ac63d1757589078e61c2335e95e84f9b85eaad0a0ff7a33986269"
+  }
+]

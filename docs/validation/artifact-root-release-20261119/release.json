@@ -1,0 +1,43 @@
+{
+  "source": "befac4b",
+  "image": "mini-eval-api:artifact-root-02110-20261119",
+  "database": "a730d12",
+  "worker_release": "bbc71acd4dc45c1a237bb3790ebf18981b07946fabeb2d4a5c615a04a2e7f00a",
+  "upgraded_node": "local4090-151",
+  "worker_version": "0.21.10",
+  "other_nodes_upgraded": false,
+  "upgrade_trigger": "management API, not browser install button",
+  "upgrade_ui": "version/history/publish/select/button enabled; no second installation",
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "name": "local4090-151",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "enabled": true,
+      "held_executions": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "enabled": true,
+      "held_executions": 0
+    }
+  ]
+}
