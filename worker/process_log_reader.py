@@ -197,6 +197,8 @@ def read_page(
         ):
             raise ValueError("segment replaced or truncated")
         while scanned < PAGE_BYTES and time.monotonic() < deadline:
+            if not reverse and until is not None and seq >= until:
+                break
             if (reverse and offset == 0) or (not reverse and offset >= seg.size):
                 break
             if reverse:
@@ -282,7 +284,10 @@ def read_page(
         previous_cursor=prev,
         has_more=(low_offset > 0 or selected > 0)
         if reverse
-        else (high_offset < seg.size or selected + 1 < len(segments)),
+        else (
+            (until is None or high_seq < until)
+            and (high_offset < seg.size or selected + 1 < len(segments))
+        ),
         first_available=first,
         next_sequence=last,
         gap=gap,

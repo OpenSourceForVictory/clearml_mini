@@ -1,0 +1,6 @@
+container_exit 0
+container stdout
+
+container stderr
+
+non-root container service capture: passed; no accelerator computation

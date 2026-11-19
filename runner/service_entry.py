@@ -32,5 +32,8 @@ def main():
     print(json.dumps({'stage':'starting-service','port':config['port']}),flush=True)
     from .process_command import for_template
     command=for_template(config['template'],command,cwd,env)
+    if config.get('_process_logs'):
+        from .process_log_run import run as captured_run
+        raise SystemExit(captured_run(command,config=config,scope='service',env=env,cwd=cwd))
     raise SystemExit(subprocess.call(command,env=env,cwd=cwd))
 if __name__=='__main__':main()

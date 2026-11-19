@@ -1,0 +1,2 @@
+.process-log-drawer{position:fixed;inset:0 0 0 auto;margin:0;height:100dvh;max-height:100dvh;width:min(860px,100vw);max-width:100vw;padding:20px;border:1px solid #dfe7e1;overflow:auto;box-sizing:border-box}
+.process-log-drawer::backdrop{background:#14251d55}.process-log-drawer header{display:flex;justify-content:space-between;align-items:center;gap:12px}.process-log-drawer pre{height:50vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.process-log-drawer code{overflow-wrap:anywhere}.process-log-launchers{white-space:normal}

@@ -1,0 +1,2 @@
+NPU allocation and cleanup passed
+real host NPU service-scope capture passed; no model evaluation; temporary files cleaned

@@ -101,6 +101,9 @@ class HostBackend:
         self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
+        if task.get('process_logs_v1'):
+            from .process_logs import prepare as prepare_logs
+            config['_process_logs']=prepare_logs(w,task,directory/'logs')
         values={k:str(config.get(k,'')) for k in ('task_name','episodes','seed','endpoint')}
         if config.get('workload') == 'service':
             config.update(port=config['service']['port'], bind_host=config['service']['address'],health_port=config['service'].get('health_port',config['service']['port']))

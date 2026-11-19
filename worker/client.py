@@ -124,6 +124,7 @@ class Worker:
         self.threads = {}
         self.retention = None
         self.control = None
+        self.process_logs = None
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,8 +223,13 @@ class Worker:
             args.extend(['--publish', f"{service['address']}:{service['port']}:{service['container_port']}"])
             if service.get('readiness',{}).get('port','business')!='business':
                 args.extend(['--publish',f"{service['address']}:{service['health_port']}:{service['readiness']['port']}"])
+        process_log_config=None
         if cs:
             directory = execution_dirs(self.workspace, task['execution_id'])
+            if task.get('process_logs_v1') and runtime:
+                from .process_logs import prepare as prepare_logs
+                process_log_config=prepare_logs(self,task,directory/'logs',container=True)
+                if process_log_config:args.extend(['--mount','type=bind,source='+str(directory/'logs')+',target='+process_log_config['root']])
             for source, target, readonly in [
                 (Path(self.config['assets_root']), '/opt/mini-eval/assets', True),
                 (Path(self.config['cache_root']), '/opt/mini-eval/cache', True),
@@ -288,6 +294,7 @@ class Worker:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
                       'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
+            if process_log_config:config['_process_logs']=process_log_config
             if is_service(task):
                 service=task['client_spec']['service']
                 config.update(port=service['container_port'], bind_host='0.0.0.0')
@@ -398,7 +405,7 @@ class Worker:
     def execute(self, task):
         # Existing execution journals keep their negotiated protocol across upgrades.
         if self.state is not None:
-            task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1)}
+            task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False)}
         sender = collector = None
         log_gap = False
         log_drain_started = None
@@ -759,6 +766,8 @@ class Worker:
         thread.start()
 
     def shutdown(self):
+        if self.process_logs:
+            self.process_logs.close()
         if self.control:
             self.control.stopping = True
         if self.retention:
@@ -796,6 +805,8 @@ class Worker:
         self.recover_journals()
         self.retention = Retention(self, docker)
         self.retention.start()
+        from .process_logs import LogService
+        self.process_logs=LogService(self);self.process_logs.start()
         had_task = bool(self.children)
         while True:
             try:
@@ -811,6 +822,7 @@ class Worker:
                         self.threads.pop(execution, None)
                         child.path.unlink(missing_ok=True)
                 if once and had_task and not self.children:
+                    self.process_logs.close()
                     return
                 self.control.adopt()
                 body = {'slot_id': self.slot_id, **self.control.report(),

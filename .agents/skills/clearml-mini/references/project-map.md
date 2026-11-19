@@ -178,7 +178,7 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 
 0.21.5 上线验收：docs/validation/episode-result-release-20261119/README.md；6 节点 13 槽位升级，真实本机宿主机逐回合与 Docker 普通命令、真实页面验证两套结果。本功能无新增迁移，但部署从 x407a89 补迁移至此前日志版本 y518b90；先备份和隔离恢复验证。非 GPU/NPU 模型验收。
 
-分作用域日志开发：runner/process_log_contract.py 定义身份/预算/游标；backend/app/execution_locations.py 按 Run 和 execution_id 查询历史目录，不使用当前节点配置推断。任务/批次共用 frontend/src/execution-location.tsx。新 Catalog/Read/Subscriber 模型及 z629c01 为后续按需日志读取基础，未完成 Worker 接入前不能宣称已支持回合文件。操作边界见 docs/execution-logs.md、database-migration.md；OpenSpec process-scoped-execution-logs 管理全链路实施。
+分作用域日志开发：runner/process_log_contract.py 定义身份/预算/游标；backend/app/execution_locations.py 按 Run 和 execution_id 查询历史目录，不使用当前节点配置推断。任务/批次共用 frontend/src/execution-location.tsx。新 Catalog/Read/Subscriber 模型及 z629c01 为后续按需日志读取基础，Worker 0.21.6 已接通新执行的按需读取；未升级节点没有该能力。操作边界见 docs/execution-logs.md、database-migration.md；OpenSpec process-scoped-execution-logs 管理全链路实施。
 
 整任务普通命令展示：`backend/app/result_views.py` 的 detail_mode 由任务类型及进程模式决定，`episodes.py` 不补造此类计划回合，`frontend/src/cs.tsx` 展示整次执行；批次入口复用同一模式。该模式使用任务退出码统计执行（不冒充独立业务子进程退出证据），保留生命周期诊断。协议单进程及逐回合路径不变；操作说明见 docs/batch-monitoring.md。
 
@@ -186,4 +186,4 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 
 结果布局：frontend/src/batch-history.css 为程序执行/协议结果保留独立列并允许换行；result-outcomes.css 使用专用双列汇总卡片，窄屏堆叠，不复用 submit-grid。batch-history/batch-monitoring 浏览器测试检查文本边界，避免只验证文案却遗漏覆盖相邻列的问题。此修正只需前端发布，无数据库迁移或节点升级。
 
-独立日志基础模块：runner/process_log_capture.py 为增量 JSONL 编码与异步有界写入队列；worker/process_log_reader.py 为可信目录句柄和分片索引上的安全分页。test_process_log_primitives 覆盖真实本地子进程退出、故障 sink、UTF-8、游标隔离、轮转缺口与文件替换。尚未接入 Worker 读取线程或生产 Runner，配额通道待决；不能将模块测试称为真实节点日志功能验收。边界与内部页预算见 docs/execution-logs.md。
+独立日志基础模块：runner/process_log_capture.py 为增量 JSONL 编码与异步有界写入队列；worker/process_log_reader.py 为可信目录句柄和分片索引上的安全分页。test_process_log_primitives 覆盖真实本地子进程退出、故障 sink、UTF-8、游标隔离、轮转缺口与文件替换。现由 runner/process_log_store.py、process_log_run.py 和 worker/process_logs.py 接通采集、文件与读取邮箱，frontend/src/process-logs.tsx 展示。整机配额默认不限制，跨账号配额通道不启用；已通过小程序测试不等于生产部署或模型验收。边界与内部页预算见 docs/execution-logs.md。

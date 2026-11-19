@@ -1,0 +1,3 @@
+backend.tests.integration.test_image_runtime_race::test_concurrent_node_configuration_has_one_winner: dedicated PostgreSQL required
+backend.tests.integration.test_image_runtime_race::test_concurrent_runtime_save_and_claim: dedicated PostgreSQL required
+backend.tests.test_migration_driver_scripts::test_real_migration_driver_creates_isolated_database[check_image_runtime_migration.py]: requires dedicated disposable PostgreSQL server

@@ -1,0 +1,3 @@
+CUDA allocation and cleanup passed
+CUDA allocation and cleanup passed
+two real host CUDA processes captured separately; no model evaluation

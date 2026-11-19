@@ -63,7 +63,11 @@ class CommandClient(EvaluationClient):
         env.update(MINI_EVAL_EPISODE_ID=str(episode.id),MINI_EVAL_EPISODE_SEED=str(episode.seed),MINI_EVAL_RESULT=str(result_path))
         from .process_command import for_template
         argv=for_template(task['template'],argv,cwd,env)
-        process = subprocess.run(argv,env=env,cwd=cwd,check=False)
+        if task.get('_process_logs'):
+            from .process_log_run import run as captured_run
+            process=subprocess.CompletedProcess(argv,captured_run(argv,config=task,scope='episode',episode=episode.id,cwd=cwd,env=env))
+        else:
+            process = subprocess.run(argv,env=env,cwd=cwd,check=False)
         self.process_exit_code = process.returncode
         process.check_returncode()
         if not result_path.exists() and not result_path.is_symlink():

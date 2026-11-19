@@ -45,8 +45,13 @@ class Query(BaseModel):
     cursor:str|None=Field(default=None,max_length=512)
     direction:Literal['forward','backward','tail']='tail'
     stream:Literal['all','stdout','stderr','system']='all'
-    limit_bytes:int=Field(default=PAGE_BYTES,ge=1024,le=PAGE_BYTES,strict=True)
+    limit_bytes:int=Field(default=PAGE_BYTES,ge=16384,le=PAGE_BYTES,strict=True)
     until:int|None=Field(default=None,ge=0,le=2**63-1,strict=True)
+
+
+class Claim(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    slot_id:str|None=Field(default=None,min_length=1,max_length=64)
 
 
 class Reply(BaseModel):
@@ -91,7 +96,8 @@ def install(app,db,current,worker_auth):
             if body.next_sequence<row.next_sequence or body.first_sequence<row.first_sequence:raise HTTPException(409,'stale log range')
         else:
             if run.status not in ['STARTING','RUNNING','CANCEL_REQUESTED'] or not run.lease_expires_at or utc(run.lease_expires_at)<=now():
-                raise HTTPException(409,'new log requires live execution')
+                anchor=s.scalar(select(Catalog).where(Catalog.execution_id==execution_id,Catalog.scope=='task',Catalog.generation==body.generation,Catalog.root_path==body.root_path))
+                if not anchor or anchor.status in ['missing','cleaned'] or body.status=='open':raise HTTPException(409,'new log requires live execution')
             row=Catalog(run_id=run.id,execution_id=execution_id,worker_id=worker.id,slot_id=slot.id,**body.model_dump())
             s.add(row)
         for k,v in body.model_dump().items():setattr(row,k,v)
@@ -144,11 +150,13 @@ def install(app,db,current,worker_auth):
         return {'status':item.status,'generation':item.generation,'page':item.response,'source':'platform_cache' if item.response is not None else None}
 
     @app.post('/api/v1/worker/log-reads/claim')
-    def claim(worker=Depends(worker_auth),s=Depends(db)):
+    def claim(body:Claim|None=None,worker=Depends(worker_auth),s=Depends(db)):
+        slot_id=body.slot_id if body else None
+        if slot_id and not s.scalar(select(Slot.id).where(Slot.id==slot_id,Slot.worker_id==worker.id)):raise HTTPException(404,'slot not found')
         s.scalar(select(Worker.id).where(Worker.id==worker.id).with_for_update())
         purge(s)
         active=s.scalar(select(func.count()).select_from(Read).where(Read.worker_id==worker.id,Read.status=='claimed'))
-        rows=s.scalars(select(Read).where(Read.worker_id==worker.id,Read.status=='queued').order_by(Read.expires_at).limit(max(0,2-active)).with_for_update(skip_locked=True)).all()
+        rows=s.scalars(select(Read).where(Read.worker_id==worker.id,Read.status=='queued',*( [Read.log_id.in_(select(Catalog.id).where(Catalog.slot_id==slot_id))] if slot_id else [])).order_by(Read.expires_at).limit(max(0,2-active)).with_for_update(skip_locked=True)).all()
         out=[]
         for row in rows:
             catalog=s.get(Catalog,row.log_id);secret=secrets.token_urlsafe(24)

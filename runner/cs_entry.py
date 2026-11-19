@@ -92,7 +92,11 @@ def main():
         launch_env=(dict(os.environ) if config['template'].get('execution_mode')=='host'
                     and config['template'].get('integration_mode')=='sdk-command' else env)
         launch_env.update(MINI_EVAL_INPUT=input_path,MINI_EVAL_OUTPUT_DIR=output_dir)
-        code = subprocess.call(command, env=launch_env, cwd=cwd)
+        if config.get('_process_logs') and config['template'].get('integration_mode')!='sdk-command':
+            from .process_log_run import run as captured_run
+            code=captured_run(command,config=config,scope='business',env=launch_env,cwd=cwd)
+        else:
+            code = subprocess.call(command, env=launch_env, cwd=cwd)
         raise SystemExit(code)
     except (OSError, ValueError, KeyError, RuntimeError) as exc:
         # Never print response payloads or authentication data from the remote service.

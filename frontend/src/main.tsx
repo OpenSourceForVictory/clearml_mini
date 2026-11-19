@@ -1,3 +1,4 @@
+import {ProcessLogs} from './process-logs';
 import {ExecutionLocation} from './execution-location';
 import {clearLogin, rememberLogin, watchSession} from "./login-session";
 import {GuideProvider,GuideButton,PageHelp} from './user-guide';
@@ -560,7 +561,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
                 ))}
               </select>
             </Field>
-            {run&&<ExecutionLocation jobId={id} runId={run.id}/>}
+            {run&&<><ExecutionLocation jobId={id} runId={run.id}/><ProcessLogs jobId={id} runId={run.id}/></>}
             {job.client_spec && <p>本次尝试推理服务：{run?.endpoint||'未分配'} {run?.endpoint_mode==='exclusive'?'独占':run?.endpoint_mode==='shared'?'共享':''}</p>}
             {run?.metrics && (
               <div className="stats metrics">

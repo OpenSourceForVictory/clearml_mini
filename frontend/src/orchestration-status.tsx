@@ -1,3 +1,4 @@
+import {ServiceProcessLogs} from './process-logs';
 import {ExecutionLogs} from './execution-logs';
 import {ExecutionPlacement,type Placement} from './execution-placement';
 import {ServiceProbeStatus} from './service-probe-status';
@@ -46,7 +47,7 @@ function ServiceInstanceRow({batchId,service:s,busy,onAction}:{batchId:string;se
  <td>{s.state==='PENDING'&&!s.placement?<span>等待调度</span>:<ExecutionPlacement value={s.placement}/>}</td><td>{s.endpoint||'等待地址分配'}</td>
  <td><strong>{serviceState(s.state)}</strong><p>{s.state==='PENDING'?'等待资源调度':s.state==='RESERVED'?'资源已预约，等待 Worker 接单':s.placement?'已分配节点和设备':'暂无分配记录'}</p>{s.cleanup_pending&&<small>执行资源尚未释放</small>}{s.error&&<p className="error">{s.error}</p>}<ServiceProbeStatus service={s}/></td>
  <td><button onClick={()=>setOpen(true)}>查看 {s.name} 日志</button><button disabled={busy} onClick={()=>onAction(s,'stop')}>停止 {s.name}</button><button disabled={busy||s.cleanup_pending} onClick={()=>onAction(s,'start')}>恢复 {s.name}</button></td></tr>
- {open&&<tr><td colSpan={5}><section aria-label={'实例 '+s.id+' 日志'}><h4>{s.name} · 实例 {s.id} 日志</h4><button onClick={()=>setOpen(false)}>关闭服务日志</button><ExecutionLogs key={s.current_job_id||s.id} path={`orchestrations/${batchId}/services/${s.id}/logs${s.current_job_id?'?job_id='+s.current_job_id:''}`}/></section></td></tr>}</>;
+ {open&&<tr><td colSpan={5}><section aria-label={'实例 '+s.id+' 日志'}><h4>{s.name} · 实例 {s.id} 日志</h4>{s.current_job_id&&<ServiceProcessLogs jobId={s.current_job_id}/>}<button onClick={()=>setOpen(false)}>关闭服务日志</button><ExecutionLogs key={s.current_job_id||s.id} path={`orchestrations/${batchId}/services/${s.id}/logs${s.current_job_id?'?job_id='+s.current_job_id:''}`}/></section></td></tr>}</>;
 }
 
 export function OrchestrationStatus({id}:{id:string}){

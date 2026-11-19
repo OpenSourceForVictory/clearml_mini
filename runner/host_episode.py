@@ -61,9 +61,9 @@ class HostEpisodeClient(EvaluationClient):
         final=[]
         final_count=0
         started=time.monotonic()
-        with subprocess.Popen(command,cwd=self.cwd,env=env,stdout=subprocess.PIPE,
-                              text=True,errors='replace') as process:
-            for line in process.stdout:
+        if task.get('_process_logs'):
+            def line_received(line):
+                nonlocal final_count
                 try:record=json.loads(line)
                 except ValueError:record=None
                 if isinstance(record,dict) and 'final' in record:
@@ -71,7 +71,20 @@ class HostEpisodeClient(EvaluationClient):
                     if final_count==1:final.append(record['final'])
                 elif not line.startswith('MINI_EVAL_EVENT '):
                     print(line,end='',flush=True)
-            code=process.wait()
+            from .process_log_run import run as captured_run
+            code=captured_run(command,config=task,scope='episode',episode=episode.id,cwd=self.cwd,env=env,on_line=line_received)
+        else:
+            with subprocess.Popen(command,cwd=self.cwd,env=env,stdout=subprocess.PIPE,
+                                  text=True,errors='replace') as process:
+                for line in process.stdout:
+                    try:record=json.loads(line)
+                    except ValueError:record=None
+                    if isinstance(record,dict) and 'final' in record:
+                        final_count+=1
+                        if final_count==1:final.append(record['final'])
+                    elif not line.startswith('MINI_EVAL_EVENT '):
+                        print(line,end='',flush=True)
+                code=process.wait()
         self.process_exit_code = code
         if code:
             raise RuntimeError(f'business episode {episode.id} exited with code {code}')

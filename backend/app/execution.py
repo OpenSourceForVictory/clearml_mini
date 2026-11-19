@@ -440,6 +440,7 @@ def install(app, db, current):
         if ('bounded_logs_v2' in (slot.software or {}).get('capabilities', [])
                 and (template.get('execution_mode') == 'host' or template.get('runtime'))):
             task['log_protocol'] = 2
+            if 'process_logs_v1' in (slot.software or {}).get('capabilities',[]):task['process_logs_v1']=True
         s.commit()
         return {'task': task, 'cleanup': []}
 

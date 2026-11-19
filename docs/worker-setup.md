@@ -120,3 +120,7 @@ SSH 纳管界面提示执行器未配置或不可用时，检查 [SSH 纳管执�
 ## 可选业务 PID 上限
 
 Worker 0.21.4起，宿主机和Docker业务默认显式取消执行实例PID上限（TasksMax=infinity、--pids-limit=-1），不再强制256。每卡Worker JSON顶层 `execution_pids_limit` 可设null或正整数，空闲重启后新任务生效；不是环境变量，旧Worker不会读取它。配置、线程计数及验证命令见[业务进程与线程上限](host-execution.md#业务进程与线程上限worker-0214)。
+
+## 独立日志预算
+
+Worker 0.21.6 默认不限制整机日志总量；仍保留每分片 4 MiB、每 scope 16 MiB、每执行 256 MiB 的预算，避免单次输出无界增长。配置文件可使用 `process_log_policy` 对象设置 `segment_bytes`、`scope_bytes`、`execution_bytes`，均为整数，要求 65536 ≤ 分片 ≤ scope ≤ 执行 ≤ 1 TiB。配置在新执行初始化时快照，修改后重启 Worker，不改变活动执行预算。当前没有预算 revision 的界面同步通道，不接受有限 node_bytes 配额。布局和保留边界见 [执行日志](execution-logs.md)。

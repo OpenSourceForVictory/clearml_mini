@@ -1,0 +1,7 @@
+失败证据（保留首次失败，后续已修正测试夹具）：
+1. 首次关联回归：1 failed, 139 passed。新 HostBackend 测试使用未经批准的 sys.executable，改为夹具批准的 Python 后单项通过。
+2. 首次浏览器测试：输出来源 select 没有明确 aria-label，定位超时；增加可访问标签后 13 passed。
+3. 首次协议组合：SDK 夹具缺 PYTHONPATH，后续夹具同时写结果文件与额外 final，导致最终消息重复。修正夹具后原 15 项通过，没有改变生产协议过滤。
+4. 新增跨模式首轮：17 failed, 13 passed。容器默认工作目录优先导入镜像自带旧 Runner，错误为 CS client startup failed: [Errno 2] No such file or directory: '/tmp/mini-eval-job.json'。将测试容器工作目录设置为注入路径 /adapter，明确验证当前代码而非旧镜像。
+5. 同轮两个宿主机整任务 SDK 测试错误期待 continue 生效。实现只对宿主机 per_episode 启用该策略；修正断言为失败停止，未扩大功能。最终 30 passed。
+6. 本次覆盖率统一统计门槛未通过，完整比例及失败门槛保留在 coverage-summary.md 和 python-tests-and-thresholds.txt，未降低门槛或排除业务代码。

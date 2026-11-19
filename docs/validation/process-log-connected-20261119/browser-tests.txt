@@ -1,0 +1,20 @@
+
+Running 13 tests using 1 worker
+
+(node:631398) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-monitoring.spec.ts:31:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.8s)
+  ✓   2 tests/batch-monitoring.spec.ts:42:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓   3 tests/batch-monitoring.spec.ts:48:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓   4 tests/batch-monitoring.spec.ts:56:1 › detail tabs preserve filtering and retry selection and contain narrow tables (350ms)
+  ✓   5 tests/batch-monitoring.spec.ts:74:1 › client placement is a separate column with GPU zero and unassigned states (179ms)
+  ✓   6 tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds (6.6s)
+  ✓   7 tests/batch-monitoring.spec.ts:110:1 › zero exits and invalid protocol are separate at batch task and episode levels (255ms)
+  ✓   8 tests/batch-monitoring.spec.ts:128:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓   9 tests/batch-monitoring.spec.ts:145:1 › result summaries use two separate cards and stack on narrow screens (200ms)
+  ✓  10 tests/orchestration-status.spec.ts:2:1 › owned batch shows task service generation, logs and revisioned stop (380ms)
+  ✓  11 tests/orchestration-status.spec.ts:31:1 › default task page shows server scheduling blockers and then startup status (6.6s)
+  ✓  12 tests/orchestration-status.spec.ts:65:1 › explicit replica target shows partial scheduling and both distinct instances (2.7s)
+  ✓  13 tests/process-logs.spec.ts:2:1 › scoped log drawer filters pages, shows gaps, downloads and stops on close (3.7s)
+
+  13 passed (41.3s)

@@ -85,3 +85,7 @@ Worker 0.21.4移除宿主机/Docker业务固定256进程线程限制，支持节
 
 
 Worker/Runner 0.21.5 增加回合结果受控诊断：程序退出 0 与协议结果异常分别展示，平台 API/前端、报告同步两套结果统计。需升级实际执行节点 Worker/Runner；若业务镜像自带 Runner，需按现有镜像流程重建并更新引用。SDK 下载包同步更新。无数据库迁移，协议仍为 17；旧错误文本和缺失的业务退出码不会被自动还原。详见 [宿主机执行](host-execution.md)。
+
+## 0.21.6 独立日志接线
+
+协议仍为 17，新增 `process_logs_v1` 能力。先更新 API/前端并确认数据库已有 `z629c01`，再通过原节点升级流程更新选定 Worker；Runner 的 process_log_capture、process_log_store、process_log_run、process_log_contract 模块须与包一同更新，不仅替换 client.py。新任务才协商该能力，旧执行保持原行为。容器使用独立执行日志挂载和支持注入的 Runner，旧镜像不强制启用。此文档不是节点已升级的证明。详见 [执行日志](execution-logs.md)。

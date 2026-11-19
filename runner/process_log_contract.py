@@ -10,7 +10,7 @@ SCOPES = ('task', 'business', 'episode', 'service')
 PAGE_BYTES = 65536
 RECORD_BYTES = 8192
 DEFAULT_POLICY = dict(segment_bytes=4*1024**2, scope_bytes=16*1024**2,
-                      execution_bytes=256*1024**2, node_bytes=5*1024**3)
+                      execution_bytes=256*1024**2, node_bytes=None)
 
 
 def identity(execution_id, scope, episode_id=0):
@@ -29,9 +29,10 @@ def relative_directory(scope, episode_id=0):
 def validate_policy(value):
     if not isinstance(value, dict) or set(value) != set(DEFAULT_POLICY):
         raise ValueError('invalid log budget fields')
-    limits = [value[k] for k in DEFAULT_POLICY]
-    if any(type(x) is not int for x in limits) or not (65536 <= limits[0] <= limits[1] <= limits[2] <= limits[3] <= 1024**5):
+    limits = [value[k] for k in DEFAULT_POLICY if k != 'node_bytes']
+    if any(type(x) is not int for x in limits) or not (65536 <= limits[0] <= limits[1] <= limits[2] <= 1024**4):
         raise ValueError('invalid log budget order or size')
+    if value['node_bytes'] is not None:raise ValueError('node log quota is not enabled in this release')
     return dict(value)
 
 

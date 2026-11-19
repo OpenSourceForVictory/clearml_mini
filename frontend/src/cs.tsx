@@ -1,3 +1,4 @@
+import {ProcessLogs} from './process-logs';
 import type {RerunDraft,WizardLaunch} from './batch-rerun';
 import {ResultOutcomes,executionLabels,protocolLabels} from './result-outcomes';
 import {FunctionPages} from './navigation';
@@ -95,7 +96,7 @@ export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
   function state(r:any){
     return executionLabels[r.execution_state] || (r.result?.exit_code===0?'正常结束':r.result?.exit_code!=null?'异常退出':r.started&&!terminal&&!r.result?'运行中':'退出码未上报');
   }
-  if(data&&single)return <section aria-label="整次执行状态"><h3>整次执行状态</h3>
+  if(data&&single)return <section aria-label="整次执行状态"><h3>整次执行状态</h3><ProcessLogs jobId={jobId} runId={runId}/>
     {error&&<p role="alert">执行状态读取失败：{error}</p>}
     <p>普通命令只启动一次，配置回合数 {data.planned}；平台不解析程序内部回合，不显示逐回合状态。</p>
     <p>任务生命周期：{statusLabels[data.run_status]||data.run_status} · 平台执行进程退出码：{data.exit_code??'未上报'}</p>
@@ -104,7 +105,7 @@ export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
     {data.run_error&&<p className="error">任务诊断：{data.run_error}</p>}
     <p>输出见本次执行公共日志；退出正常不代表内部回合评测成功。</p>
   </section>;
-  return <><h3>回合状态与结果</h3>{error&&<p role="alert">回合状态读取失败：{error}</p>}{!data&&!error&&<p>正在读取回合状态…</p>}{data&&<>
+  return <><h3>回合状态与结果</h3><ProcessLogs jobId={jobId} runId={runId}/>{error&&<p role="alert">回合状态读取失败：{error}</p>}{!data&&!error&&<p>正在读取回合状态…</p>}{data&&<>
     <p>判定来源：{command?'普通命令退出码（0 为执行成功）':'平台协议业务结果（success）'}。{single?'此命令只启动一次，显示整次执行结果。':`已上报完成 ${data.progress.completed}/${data.planned}，异常回合 ${data.progress.errors}。`}</p>
     <ResultOutcomes value={data.outcomes}/>
     <p>平台执行进程退出码：{data.exit_code ?? '未上报'}（整次执行，不等同于每回合业务子进程退出码）</p>
