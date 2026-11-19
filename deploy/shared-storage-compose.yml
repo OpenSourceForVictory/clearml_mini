@@ -1,0 +1,12 @@
+# Optional overlay: keep this -f argument on subsequent API recreations.
+services:
+  api:
+    environment:
+      MINI_EVAL_SHARED_STORAGE: ${MINI_EVAL_SHARED_STORAGE:?set explicit shared storage mappings}
+    volumes:
+      - type: bind
+        source: ${SHARED_ARTIFACT_HOST_ROOT:?set existing host shared mount}
+        target: /mnt/mini-eval-artifacts
+        read_only: true
+        bind:
+          create_host_path: false

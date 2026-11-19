@@ -173,6 +173,8 @@ def install(app, db, current):
     install_retention(app, db, admin, current, worker_auth)
     from .process_logs import install as install_process_logs
     install_process_logs(app, db, current, worker_auth)
+    from .shared_artifacts import install as install_shared_artifacts
+    install_shared_artifacts(app, db, current, worker_auth)
 
     @app.get("/api/v1/worker/self")
     def worker_self(worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -441,6 +443,10 @@ def install(app, db, current):
                 and (template.get('execution_mode') == 'host' or template.get('runtime'))):
             task['log_protocol'] = 2
             if 'process_logs_v1' in (slot.software or {}).get('capabilities',[]):task['process_logs_v1']=True
+        if job.benchmark == 'cs-client':
+            from .shared_storage import mappings
+            if any(worker.node_name in m['node_names'] for m in mappings()):
+                task['artifact_transport'] = 'shared'
         s.commit()
         return {'task': task, 'cleanup': []}
 

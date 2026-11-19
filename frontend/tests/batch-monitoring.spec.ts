@@ -21,6 +21,7 @@ async function setup(page:Page,detailMode?:'execution'|'episodes'){
     if(path.endsWith('/logs'))data={chunks:[{content:new URL(route.request().url()).searchParams.get('run_id')+' log'}],next_after:1};
     if(path.endsWith('/execution-location'))data={execution_id:null,node_name:null,directories:[]};
     if(path.endsWith('/episodes'))data={planned:2,progress:{completed:1,successes:0,errors:0},items:[]};
+    if(path.endsWith('/shared-artifacts'))data={enabled:false,items:[]};
     if(path.endsWith('/artifacts'))data=[{id:'file',name:path.includes('/old/')?'old.json':'new.json',size_bytes:2}];
     await route.fulfill({json:data});
   });
@@ -303,4 +304,39 @@ test('artifact switching cancels pending preview and does not show stale text',a
  await failed;release();
  await expect(drawer.locator('pre')).toHaveText('CURRENT');
  await expect(drawer).not.toContainText('STALE');
+});
+
+test('shared artifacts browse directories and preview through API without upload',async({page})=>{
+ await setup(page);
+ await page.route('**/shared-artifacts?*',route=>{
+  const path=new URL(route.request().url()).searchParams.get('path');
+  return route.fulfill({json:{enabled:true,storage_id:'efs',output_root:'/efs/runs/execution/output',node_name:'offline-node',path,version:'dir-v1',next:null,items:path?[{name:'result.json',path:'episode/result.json',kind:'file',size_bytes:20,version:'v1',episode_ids:[2]}]:[{name:'episode',path:'episode',kind:'directory',size_bytes:0,version:'d',episode_ids:[]}]}});
+ });
+ await page.route('**/shared-artifacts/media-access',route=>{
+  expect(route.request().postDataJSON()).toEqual({path:'episode/result.json',version:'v1'});
+  return route.fulfill({json:{url:'/shared-result.json',media_type:'application/octet-stream'}});
+ });
+ await page.route('**/shared-result.json',route=>route.fulfill({body:'{"shared":true}'}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const panel=page.getByRole('region',{name:'共享存储产物'});
+ await expect(panel).toContainText('offline-node');
+ await panel.getByRole('button',{name:'打开目录'}).click();
+ await expect(panel.getByRole('table',{name:'共享产物文件'})).toContainText('回合 2');
+ await panel.getByRole('button',{name:'查看 / 下载'}).click();
+ await expect(panel.getByRole('region',{name:'产物预览'})).toContainText('shared:');
+ await panel.getByRole('button',{name:'输出根目录'}).click();
+ await expect(panel.getByRole('region',{name:'产物预览'})).toHaveCount(0);
+ await expect(panel.getByRole('button',{name:'打开目录'})).toBeVisible();
+});
+
+test('shared storage failure is explicit and never silently switches to legacy',async({page})=>{
+ await setup(page);
+ await page.route('**/shared-artifacts?*',route=>route.fulfill({status:503,json:{detail:'共享存储未挂载'}}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await expect(drawer.getByRole('alert')).toContainText('共享存储未挂载');
+ await expect(drawer.getByLabel('产物来源')).toHaveValue('shared');
+ await expect(drawer.getByText('当前目录页及筛选下没有文件。')).toHaveCount(0);
+ await drawer.getByLabel('产物来源').selectOption('legacy');
+ await expect(drawer.getByRole('table',{name:'运行产物文件'})).toBeVisible();
 });

@@ -178,7 +178,17 @@ class Worker:
             self.state = None
             self.save()
 
+    def register_shared_artifacts(self, task):
+        if task.get('artifact_transport') != 'shared':
+            return
+        try:
+            self.api.post(f"worker/executions/{task['execution_id']}/shared-artifacts",
+                          {'output_root': str(self.workspace/'runs'/task['execution_id']/'output')})
+        except Exception:
+            logging.getLogger(__name__).warning('shared artifact directory registration deferred', exc_info=False)
+
     def create(self, task):
+        self.register_shared_artifacts(task)
         pids=execution_pids_limit(self.config)
         if task.get('accelerator_type','gpu')=='gpu' and task.get('gpu_mode')=='shared' and isinstance(self.config.get('gpu_runtime'),dict) and self.config['gpu_runtime'].get('allow_shared') is not True:
             raise RuntimeError('GPU shared execution is not approved')
@@ -308,6 +318,9 @@ class Worker:
 
     def upload_artifacts(self, task, deadline=None):
         execution = task['execution_id']
+        if task.get('artifact_transport') == 'shared':
+            self.register_shared_artifacts(task)
+            return
         artifacts = HostBackend(self).artifacts(execution) if self.host_mode() else read_artifacts(self.name(execution))
         for name, data in artifacts:
             requested = time.monotonic()

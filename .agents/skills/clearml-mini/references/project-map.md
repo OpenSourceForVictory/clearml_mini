@@ -211,3 +211,5 @@ SDK 回合目录接口：runner/sdk.py 保留 Context.output_dir 与旧 artifact
 通用产物预览：frontend/src/artifact-text-preview.tsx 使用 Range 和有界 stream 读取（即使服务端忽略 Range 也最多保留 256 KiB），切换时 AbortController 取消；JSON 懒展开/深度与子项限制、CSV 行列限制、无效 JSON 原文与截断提示。WebP 通过 artifact_media.py 白名单内联；HTML/SVG 保持下载。界面测试 batch-monitoring.spec.ts；阶段不变更 Worker 上传行为，不等同节点浏览已上线。
 
 节点产物只读基础：worker/artifact_access.py 登记批准根/账号/版本，并以业务身份启动隔离子进程；worker/artifact_reader.py 执行目录分页和 1 MiB 范围读取，fd/no-follow、普通文件与版本校验。尚未接主循环/API/UI，不代表已停止上传；容器任意 UID 映射也尚待接线。内部契约与边界见 docs/node-artifact-reading.md；test_artifact_reader.py 包含真实普通账号权限及显式选择的 Docker 删除后读取测试。
+
+API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，shared_artifacts.py 做执行目录登记、任务鉴权和媒体授权，shared_file_io.py 隔离有界文件I/O并在读取前释放DB连接。复用 worker/artifact_reader.py，不启用 Worker 转发或 artifact_access 身份切换。新 SharedArtifactRoot 迁移 a730d12；Worker 0.21.9 收到 artifact_transport=shared 时仅登记路径、不上传正文，旧 Worker 不保证停止上传。shared-artifact-browser.tsx 提供共享/历史双入口。操作见 docs/shared-storage-artifacts.md；旧上传基础的历史说明不代表当前默认数据源。测试 test_shared_artifacts.py、test_shared_artifact_migration.py、batch-monitoring.spec.ts。

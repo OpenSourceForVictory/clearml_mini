@@ -411,6 +411,14 @@ class ClientBuild(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class SharedArtifactRoot(Base):
+    __tablename__ = 'shared_artifact_roots'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id', ondelete='CASCADE'), primary_key=True)
+    execution_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class ExecutionData(Base):
     __tablename__ = 'execution_data'
     __table_args__ = (UniqueConstraint('slot_id', 'root_id', 'entry_name'),)

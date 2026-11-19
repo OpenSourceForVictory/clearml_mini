@@ -1,0 +1,8 @@
+{
+  "sha256": "e489d4703f9c6f85d903131faabc2c44664610700881687882850c9413f6e71f",
+  "bytes": 1379,
+  "permission_status": 403,
+  "wrong_storage_status": 503,
+  "api_uid": 65534,
+  "readonly_write_errno": 30
+}

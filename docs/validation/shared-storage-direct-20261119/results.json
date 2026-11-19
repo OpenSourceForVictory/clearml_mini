@@ -1,0 +1,75 @@
+{
+  "python": {
+    "passed": 216,
+    "skipped": [
+      {
+        "name": "test_real_docker_output_survives_container_removal",
+        "reason": "opt-in real local Docker artifact test"
+      }
+    ],
+    "failed": 0,
+    "deselected": 2022,
+    "mode": "targeted regression, full repository coverage denominator"
+  },
+  "browser": {
+    "passed": 21,
+    "failed": 0
+  },
+  "additional_offline_test": {
+    "passed": 1
+  },
+  "new_api_modules": {
+    "backend/app/shared_artifacts.py": {
+      "covered_lines": 164,
+      "num_statements": 176,
+      "percent_covered": 90.70796460176992,
+      "percent_covered_display": "90.71",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.18181818181819,
+      "percent_statements_covered_display": "93.18",
+      "num_branches": 50,
+      "num_partial_branches": 9,
+      "covered_branches": 41,
+      "missing_branches": 9,
+      "percent_branches_covered": 82.0,
+      "percent_branches_covered_display": "82.00"
+    },
+    "backend/app/shared_file_io.py": {
+      "covered_lines": 79,
+      "num_statements": 83,
+      "percent_covered": 96.03960396039604,
+      "percent_covered_display": "96.04",
+      "missing_lines": 4,
+      "excluded_lines": 0,
+      "percent_statements_covered": 95.18072289156626,
+      "percent_statements_covered_display": "95.18",
+      "num_branches": 18,
+      "num_partial_branches": 0,
+      "covered_branches": 18,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "backend/app/shared_storage.py": {
+      "covered_lines": 46,
+      "num_statements": 49,
+      "percent_covered": 91.54929577464789,
+      "percent_covered_display": "91.55",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.87755102040816,
+      "percent_statements_covered_display": "93.88",
+      "num_branches": 22,
+      "num_partial_branches": 3,
+      "covered_branches": 19,
+      "missing_branches": 3,
+      "percent_branches_covered": 86.36363636363636,
+      "percent_branches_covered_display": "86.36"
+    }
+  },
+  "coverage_gate": "failed; see coverage-summary.md",
+  "frontend_build": "tsc and Vite passed; chunk size warning retained",
+  "postgres": "disposable PostgreSQL16.8 migration/concurrency/deletion passed",
+  "openspec": "strict validation passed"
+}
