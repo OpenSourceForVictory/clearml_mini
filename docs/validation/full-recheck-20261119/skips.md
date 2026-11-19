@@ -1,0 +1,26 @@
+# 默认全量跳过项（133）
+
+- 24：opt-in real Docker matrix
+- 22：dedicated PostgreSQL required
+- 22：requires Docker and delegated systemd
+- 12：requires local Docker image and real systemd opt-in
+- 8：real process/container execution opt-in
+- 8：real host/docker sample opt-in
+- 5：TEST_DATABASE_URL is not configured
+- 5：requires root, systemd and provisioned mini-eval test account
+- 4：requires disposable PostgreSQL server
+- 4：requires systemd user manager
+- 3：requires dedicated disposable PostgreSQL server
+- 2：separate disposable migration database required
+- 2：requires local Docker image
+- 2：real systemd opt-in
+- 1：disposable privileged mount namespace required
+- 1：requires isolated mini-eval-onboarding-test Compose project
+- 1：dedicated migration database required
+- 1：dedicated disposable orchestration migration database required
+- 1：dedicated PostgreSQL is required
+- 1：dedicated disposable resource migration database required
+- 1：explicit disposable mount-namespace test required
+- 1：set HOST_EXECUTION_TEST=1 for real systemd user units
+- 1：requires built mini-eval-template-examples:v1 image
+- 1：set STORAGE_PROBE_TEST_IMAGE for real Docker probe

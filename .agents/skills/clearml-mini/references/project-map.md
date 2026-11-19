@@ -162,3 +162,5 @@ Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，�
 覆盖补充：test_migration_driver_scripts.py 需要 MIGRATION_DRIVER_TEST_URL 指向专用一次性 PostgreSQL；用例自行建立/删除数据库，scripts/check_*_migration.py 包含破坏性降级，不得使用平台数据库。2026-11-19 全量加三项迁移补测同实现合并已过覆盖门槛，不能抹去首轮失败/跳过或宣称第二轮全量通过；证据见 docs/validation/host-recovery-full-20261119/README.md。
 
 数据库迁移操作入口：docs/database-migration.md，适用于其他实际部署机器。核对原 --env-file/-p/全部 -f 配置，api/migrate/bootstrap 使用同目标镜像；迁移前排空与备份，显式 run --rm --no-deps migrate 后启动并验收。restart 不迁移，Compose 不自动升级节点，不能用 stamp 或删卷绕过失败。日志优化 y518b90 有迁移，Worker0.21.1 恢复修复无新增迁移；head 以目标镜像为准。
+
+2026-11-19 修正后完整复测：docs/validation/full-recheck-20261119/README.md；Python 1629 通过/133 跳过、前端 138 通过/10 跳过、无失败。本轮真实迁移补测 3 通过，合并本轮覆盖数据过门槛；默认 scripts.test_coverage 因 scripts 未启用迁移而覆盖不足仍返回 1，不能混淆测试成功与默认命令退出码。未更新 29 或验收真实 NPU 模型。
