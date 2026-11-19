@@ -603,3 +603,28 @@ dd {
 .administration .panel.machine-configuration, .administration .panel.suite-config, .administration .panel.management-detail { overflow: visible; }
 .detail-heading h2 { min-width: 0; max-width: 100%; font-size: 20px; }
 .detail-heading button { flex-shrink: 0; }
+
+/* Evaluation wizard: labels, modules and navigation share one readable hierarchy. */
+.run-wizard .wizard-form {border:0;padding:0;margin:0}
+.run-wizard .wizard-module {border:1px solid #d5dfd7;border-radius:10px;background:#fff;padding:18px;margin:16px 0;min-width:0;scroll-margin:24px}
+.run-wizard .wizard-module h3 {margin:0 0 16px;font-size:17px}
+.run-wizard .submit-grid {grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.run-wizard input[type=checkbox] {width:auto;min-width:0;flex:none;margin:0 8px 0 0;vertical-align:middle}
+.run-wizard label:has(>input[type=checkbox]) {display:flex;align-items:center;gap:6px;margin:12px 0}
+.run-wizard .wizard-steps li {padding:0;border:0}
+.run-wizard .wizard-steps button {padding:10px 14px}
+.run-wizard .wizard-steps [aria-current=step] button {opacity:1;background:#e6f2ed;color:#174d3a;border-color:#409578;font-weight:700}
+.run-wizard .wizard-context {padding:12px;background:#eef4ef;border-radius:8px;overflow-wrap:anywhere}
+.run-wizard .wizard-actions {position:sticky;bottom:0;background:#fff;border-top:1px solid #d5dfd7;padding:14px 0;margin-top:24px;z-index:2}
+.run-wizard input,.run-wizard textarea,.run-wizard select {scroll-margin:100px 0}
+.run-wizard textarea {width:100%;min-width:0;font:inherit;padding:10px;border:1px solid #d5dfd7;border-radius:7px}
+.run-wizard .wizard-service-card {min-width:0;border:1px solid #d5dfd7;border-radius:8px;padding:16px;margin:14px 0}
+.run-wizard details {margin:12px 0}
+.run-wizard summary {cursor:pointer;font-weight:600;padding:8px 0}
+.run-wizard .wizard-env-row {display:flex;align-items:end;gap:12px;margin:10px 0}
+.run-wizard .wizard-env-row .field {flex:1;min-width:0}
+.run-wizard pre,.run-wizard code {white-space:pre-wrap;overflow-wrap:anywhere}
+.run-wizard .wizard-values {min-width:0;width:100%}
+.run-wizard .wizard-values th,.run-wizard .wizard-values td {overflow-wrap:anywhere}
+.run-wizard .table-scroll {max-height:60vh;overflow:auto}
+@media(max-width:700px){.run-wizard .submit-grid{grid-template-columns:1fr}.run-wizard .wizard-module{padding:12px}.run-wizard .wizard-env-row{display:block}.run-wizard .run-summary{display:block}.run-wizard .run-summary dt{margin-top:10px;font-weight:600}.run-wizard .run-summary dd{margin:4px 0}.run-wizard .wizard-actions{flex-wrap:wrap}}

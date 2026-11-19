@@ -219,3 +219,5 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 产物根继承：storage.desired 对卡级缺省/null artifact_root 合并整机值，不修改保存的原始覆盖；其他目录仍整份覆盖。旧配置更新API后需保存整机存储触发新修订，无迁移或Worker改动。回归 test_storage.py 的多卡下发与回执校验。
 
 产物Runner入口边界补测：test_runner_entrypoint_contracts覆盖SDK包装环境、宿主逐回合真实子进程、参数冲突拒绝、资产/挂载展开与连接检查。真实CUDA原生SDK按context.artifact_path登记回合文件并在结果页筛选验证，见docs/validation/artifact-runner-gpu-20261119；不把声明引用的归属测试当作自动manifest已完成或NPU模型验收。
+
+向导分组与配置确认：`run-wizard.tsx`保留原草稿、预检序列和幂等提交；`wizard-fields.tsx`提供模块、运行摘要、环境变量双视图、JSON草稿和有效值表。`managed-services.tsx`直接显示服务资源池，跟随客户端池仅为展示，不修改提交优先级。预检最终参数/资源复用后端字段，不在前端重复解析规则。操作见docs/suite-management.md及界面wizard指南；新交互回归wizard-clarity.spec.ts，与run-wizard/orchestration-wizard/batch-rerun共同验证。此改动无需数据库迁移或Worker/Runner升级。

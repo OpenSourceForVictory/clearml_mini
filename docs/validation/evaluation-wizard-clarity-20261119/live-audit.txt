@@ -1,0 +1,2 @@
+PASS real API draft: saved suite, client, managed two-instance service, independent pool, confirmation; no submission
+PASS real historical batch draft import

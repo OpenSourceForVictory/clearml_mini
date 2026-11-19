@@ -26,6 +26,7 @@ test('list import preserves overrides, edit, fresh preflight and idempotent new 
  const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  const w=page.getByRole('region',{name:'集合运行向导'});await expect(w.getByRole('region',{name:'历史批次来源'})).toContainText('历史批次');
  await expect(w.getByLabel('选择已保存集合')).toHaveValue('');await expect(w.getByLabel('第 2 项回合数')).toHaveValue('7');
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
  await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":9}');await w.getByLabel('第 1 项任务名').click();
  await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('不限制每项总执行时长')).toBeChecked();
  await expect(w.getByLabel('请求超时秒')).toHaveValue('19');await expect(w.getByLabel('启动变量覆盖 JSON')).toContainText('old');
