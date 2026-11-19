@@ -1,0 +1,7 @@
+READY real GPU Worker
+PASS host-whole_task-command scopes 1 SUCCEEDED
+PASS host-per_episode-command scopes 3 FAILED
+PASS host-per_episode-direct scopes 3 SUCCEEDED
+PASS docker-whole_task-command scopes 1 SUCCEEDED
+PASS docker-whole_task-sdk-command scopes 3 SUCCEEDED
+ALL_CASES_PASSED

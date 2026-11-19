@@ -1,0 +1,5 @@
+ACL_ALLOC_FREE_OK card=7
+NPU-STDERR-7
+ACL_ALLOC_FREE_OK card=6
+NPU-STDERR-6
+NPU_EVIDENCE [{"card": 6, "execution_id": "6c14d313-b112-4fcb-af0d-c3458f19bc78", "scope": "service", "status": "closed", "exit_code": 0, "files": 1}, {"card": 7, "execution_id": "09a49863-66fb-487a-b1c6-ec04733ead13", "scope": "service", "status": "closed", "exit_code": 0, "files": 1}]

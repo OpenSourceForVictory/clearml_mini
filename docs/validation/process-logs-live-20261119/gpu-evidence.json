@@ -1,0 +1,135 @@
+[
+  {
+    "case": "host-whole_task-command",
+    "job_id": "fcb32069-35f4-4add-81bc-5842753d69a8",
+    "run_id": "e2ab31f1-9ec4-41d8-b806-1d28033cf179",
+    "execution_id": "c2d51ac7-49f5-4c6a-9b38-c54f36182bac",
+    "status": "SUCCEEDED",
+    "pages": [
+      {
+        "scope": "business",
+        "episode_id": 0,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/c2d51ac7-49f5-4c6a-9b38-c54f36182bac/logs/business",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-0\nLOG-ERR-0\nCUDA_ALLOC_FREE_OK\nUTF8-日志-0\n"
+      }
+    ]
+  },
+  {
+    "case": "host-per_episode-command",
+    "job_id": "21e5413e-967b-4267-b684-10b559dcb075",
+    "run_id": "88c3339a-74b8-49f0-a154-66d615327bcd",
+    "execution_id": "fc912cd0-c4b3-442a-a96d-1612349f3e94",
+    "status": "FAILED",
+    "pages": [
+      {
+        "scope": "episode",
+        "episode_id": 1,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/fc912cd0-c4b3-442a-a96d-1612349f3e94/logs/episodes/000001",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-1\nLOG-ERR-1\nCUDA_ALLOC_FREE_OK\nUTF8-日志-1\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 2,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/fc912cd0-c4b3-442a-a96d-1612349f3e94/logs/episodes/000002",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-2\nLOG-ERR-2\nCUDA_ALLOC_FREE_OK\nUTF8-日志-2\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 3,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/fc912cd0-c4b3-442a-a96d-1612349f3e94/logs/episodes/000003",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-3\nLOG-ERR-3\nCUDA_ALLOC_FREE_OK\nUTF8-日志-3\n"
+      }
+    ]
+  },
+  {
+    "case": "host-per_episode-direct",
+    "job_id": "b97f28f8-0356-4e89-b88a-a20eca7d8edd",
+    "run_id": "9eac9c81-8320-45fa-a942-161fea3da790",
+    "execution_id": "7ea6dde8-dc0e-418b-8f74-ed80d3110bb7",
+    "status": "SUCCEEDED",
+    "pages": [
+      {
+        "scope": "episode",
+        "episode_id": 1,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/7ea6dde8-dc0e-418b-8f74-ed80d3110bb7/logs/episodes/000001",
+        "records": 4,
+        "status": "closed",
+        "text": "LOG-OUT-1\nLOG-ERR-1\nCUDA_ALLOC_FREE_OK\nUTF8-日志-1\n{\"final\": {\"episode_count\": 1, \"success_rate\": 1, \"runtime\": 0.1}}\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 2,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/7ea6dde8-dc0e-418b-8f74-ed80d3110bb7/logs/episodes/000002",
+        "records": 4,
+        "status": "closed",
+        "text": "LOG-OUT-2\nLOG-ERR-2\nCUDA_ALLOC_FREE_OK\nUTF8-日志-2\n{\"final\": {\"episode_count\": 1, \"success_rate\": 1, \"runtime\": 0.1}}\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 3,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/7ea6dde8-dc0e-418b-8f74-ed80d3110bb7/logs/episodes/000003",
+        "records": 4,
+        "status": "closed",
+        "text": "LOG-OUT-3\nLOG-ERR-3\nCUDA_ALLOC_FREE_OK\nUTF8-日志-3\n{\"final\": {\"episode_count\": 1, \"success_rate\": 1, \"runtime\": 0.1}}\n"
+      }
+    ]
+  },
+  {
+    "case": "docker-whole_task-command",
+    "job_id": "cd7534f2-df25-4934-b266-e727ab8a9318",
+    "run_id": "d856482f-525d-49d3-bfd0-cbee7c9eb0c6",
+    "execution_id": "32826c0a-5bd7-44f1-8190-7be9ef7e954c",
+    "status": "SUCCEEDED",
+    "pages": [
+      {
+        "scope": "business",
+        "episode_id": 0,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/32826c0a-5bd7-44f1-8190-7be9ef7e954c/logs/business",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-0\nLOG-ERR-0\nCUDA_ALLOC_FREE_OK\nUTF8-日志-0\n"
+      }
+    ]
+  },
+  {
+    "case": "docker-whole_task-sdk-command",
+    "job_id": "9be80b21-0566-4180-af1a-ab16f2b932f4",
+    "run_id": "175c217e-365c-4c8a-b403-7e7da6d50f56",
+    "execution_id": "43d52774-a80b-4b65-972f-1590c2cbdf17",
+    "status": "SUCCEEDED",
+    "pages": [
+      {
+        "scope": "episode",
+        "episode_id": 1,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/43d52774-a80b-4b65-972f-1590c2cbdf17/logs/episodes/000001",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-1\nLOG-ERR-1\nCUDA_ALLOC_FREE_OK\nUTF8-日志-1\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 2,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/43d52774-a80b-4b65-972f-1590c2cbdf17/logs/episodes/000002",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-2\nLOG-ERR-2\nCUDA_ALLOC_FREE_OK\nUTF8-日志-2\n"
+      },
+      {
+        "scope": "episode",
+        "episode_id": 3,
+        "path": "/home/dgh/Code/clearml_mini/.runtime/process-logs-live-20261119/work/runs/43d52774-a80b-4b65-972f-1590c2cbdf17/logs/episodes/000003",
+        "records": 3,
+        "status": "closed",
+        "text": "LOG-OUT-3\nLOG-ERR-3\nCUDA_ALLOC_FREE_OK\nUTF8-日志-3\n"
+      }
+    ]
+  }
+]

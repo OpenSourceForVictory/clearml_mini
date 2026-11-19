@@ -1,0 +1,1 @@
+PASS real browser: episode isolation, stderr filter, JSONL download, drawer close; no mocked API
