@@ -562,6 +562,23 @@ class Worker:
                         check_startup()
                         if self.host_mode(): HostBackend(self).start(task)
                         else: docker('start', self.name(execution), timeout=10)
+                session = None
+                if is_service(task) and task['client_spec']['service'].get('readiness'):
+                    while True:
+                        check_startup()
+                        limit = task['client_spec']['service']['readiness']['startup_timeout']
+                        if time.time() - self.state['service_started_at'] > limit:
+                            raise RuntimeError('service startup health deadline exceeded')
+                        try:
+                            session = self.api.post(f'worker/executions/{execution}/service-probe-session')
+                            check_startup()
+                            break
+                        except (urllib.error.URLError, TimeoutError):
+                            pass
+                        except APIError as exc:
+                            if exc.status != 503:
+                                raise
+                        self.stop_event.wait(.5)
             finally:
                 startup_done.set()
                 startup_thread.join(timeout=15)
@@ -570,7 +587,7 @@ class Worker:
                 raise RuntimeError('startup heartbeat did not finish')
             if is_service(task) and task['client_spec']['service'].get('readiness'):
                 from .readiness import ProbeRunner
-                session=self.api.post(f'worker/executions/{execution}/service-probe-session')
+                assert session is not None
                 epoch=session['epoch']
                 if session.get('ever_ready'):
                     self.state['service_was_ready']=True;self.save()

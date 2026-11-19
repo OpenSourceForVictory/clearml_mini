@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "held_after": 0,
+  "services": [
+    {
+      "id": "6995084d-1a8a-4aab-b2a4-23b39220426a",
+      "job_id": "bab63ac6-fbfc-4083-8be9-abb7cbeb17d3",
+      "slot_id": "847e8acc-2bc1-415d-afeb-f37ac7792b7e",
+      "port": 19500,
+      "physical_card": 2,
+      "systemd": "DeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci2 rw\nUser=HwHiAiUser\nId=mini-eval-exec-78b924fd-160c-4b53-9348-60cabbdf3b9b.service\nActiveState=active\n",
+      "computation": {
+        "visible": "0",
+        "uid": 1001,
+        "pid": 1611120,
+        "value": 1240
+      },
+      "state_after": "STOPPED",
+      "cleanup_confirmed": true
+    },
+    {
+      "id": "e41dc9be-9d3a-454a-9707-6a2c94d82f4b",
+      "job_id": "07620804-3b6b-4607-a5d9-a3ba70ce7d5b",
+      "slot_id": "b5b18d07-6ed9-4bc5-8eaf-ff8d48beeff4",
+      "port": 19501,
+      "physical_card": 3,
+      "systemd": "DeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci3 rw\nUser=HwHiAiUser\nId=mini-eval-exec-e94a5c5c-df39-424e-a0c3-3adaef69ebc2.service\nActiveState=active\n",
+      "computation": {
+        "visible": "0",
+        "uid": 1001,
+        "pid": 1611115,
+        "value": 1240
+      },
+      "state_after": "STOPPED",
+      "cleanup_confirmed": true
+    }
+  ]
+}

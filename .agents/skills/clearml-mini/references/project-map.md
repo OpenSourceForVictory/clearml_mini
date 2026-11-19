@@ -223,3 +223,5 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 向导分组与配置确认：`run-wizard.tsx`保留原草稿、预检序列和幂等提交；`wizard-fields.tsx`提供模块、运行摘要、环境变量双视图、JSON草稿和有效值表。`managed-services.tsx`直接显示服务资源池，跟随客户端池仅为展示，不修改提交优先级。预检最终参数/资源复用后端字段，不在前端重复解析规则。操作见docs/suite-management.md及界面wizard指南；新交互回归wizard-clarity.spec.ts，与run-wizard/orchestration-wizard/batch-rerun共同验证。此改动无需数据库迁移或Worker/Runner升级。
 
 服务实例旧入口日志兼容：`services.logs`与任务日志按RunLogState选择v2分片或旧RunLog，不能仅查询RunLog；v2状态为空也不可回退拼接旧内容。查询限定当前服务关联的job及执行尝试，保留管理员权限和跨实例404。真机触发条件及回归见docs/inference-services.md、backend/tests/test_service_log_compatibility.py。修复仅API，无迁移或Worker升级。
+
+服务探测会话申请也属于启动阶段：worker/client.py 在启动租约续期线程存活时重试 503/传输故障，受启动时限、取消和租约约束。test_worker_service_execution.py 覆盖 host/Docker 重试、拒绝、停止和超时；不能把 unit missing 一律归因于同名实例。

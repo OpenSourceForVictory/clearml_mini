@@ -19,3 +19,13 @@ API 镜像：`mini-eval-api:service-log-compatibility-20261120`。无数据库�
 ## 自动验证与边界
 
 统一工具 `python -m scripts.test_coverage`，用 PYTEST_ADDOPTS 选择 service_log_compatibility / test_services / execution_logs_v2：26 passed，2270 deselected。services.py 行覆盖率 86.29%、分支 56.94%，未达到关键功能 90%/80%；定向运行的全局门槛也未达到，不宣称覆盖率合格。证据保存在本地 `.runtime/service-log-compatibility-coverage-20261120/`，不提交私有原始数据。前端构建通过；浏览器实测未计入 Python 覆盖率。
+
+## 探测会话修复后第三轮
+
+Worker 会话申请移入启动续租保护，在启动期限内重试 503/网络故障。29 节点仅应用这处代码补丁（备份原文件），重启 NPU 2/3 Worker；其余 Worker 未重启，不宣称整节点已完整升级。最终 API 镜像 `mini-eval-api:probe-session-retry-20261120` 含对应 Worker 源码和更新指南。
+
+模板版本 3 两个实例均完成真实张量计算并 HEALTHY，运行用户 HwHiAiUser，DeviceAllow 分别仅包含加速卡 /dev/davinci2、/dev/davinci3（另有必要公共管理设备）。日志包含各自 PID、503 预热、200 就绪，UI 历史日志隔离验证通过。之后 STOPPED、cleanup_confirmed=true、held=0；systemd 单元 inactive，19500/19501 无监听。见 final-result.json。测试记录保留在管理页。
+
+真机成功没有注入 API 503；临时故障重试由 host/Docker 自动测试验证。专项 67 passed（初次测试 3 个失败为新增时限检查与旧断言/非临时状态码预期不一致，调整断言后通过）；统一覆盖率另记录，不能将这些次数相加当覆盖率。
+
+最终统一定向统计：96 passed、22 skipped、2190 deselected；services.py 行 98.48% / 分支 72.22%，worker/client.py 行 54.52% / 分支 39.94%，关键功能门槛仍未达标。跳过原因：requires Docker and delegated systemd。原始统一报告 `.runtime/probe-retry-coverage-20261120/`。发布后首次浏览器请求遇到容器尚未监听的 ERR_SOCKET_NOT_CONNECTED，待 API healthy 后重跑通过；不隐去首次失败。

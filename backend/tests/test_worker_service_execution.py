@@ -24,7 +24,8 @@ def test_probe_session_recovery_and_shutdown(execution,monkeypatch,mode):
     assert completion['status']=='FAILED'  # A service exiting 0 is not an evaluation result.
     if mode=='deadline':assert 'startup health deadline' in completion['error']
     if mode=='probe-error':assert completion['error']=='probe crashed'
-    assert events[-1][0]=='probe-close' and worker.state is None
+    assert worker.state is None
+    if mode!='deadline':assert events[-1][0]=='probe-close'
 
 
 @pytest.mark.parametrize('mode',['ready','health-outage','deadline','previously-ready'])
@@ -118,3 +119,37 @@ def test_lease_watchdog_stops_process_while_api_call_is_blocked(execution,monkey
     assert not any(path=='create' for path,body in events)
     result=next(body for path,body in events if path.endswith('/complete'))
     assert result['status']=='FAILED' and 'lease expired before start' in result['error']
+
+
+@pytest.mark.parametrize('fault',['busy','timeout','network','rejected','deadline','stopped'])
+@pytest.mark.parametrize('host',[False,True])
+def test_probe_session_transient_failure_keeps_same_process(execution,monkeypatch,fault,host):
+    import urllib.error
+    worker,task,events=execution
+    task.update(benchmark='inference-service',client_spec={'template':{'execution_mode':'host' if host else 'docker'},'service':{'readiness':{'startup_timeout':60}}})
+    monkeypatch.setattr(worker,'host_mode',lambda:host)
+    monkeypatch.setattr(readiness,'ProbeRunner',lambda *a:SimpleNamespace(error=None,accepted_ready=True,close=lambda:events.append(('probe-close',None))))
+    original=worker.api.post
+    calls=[]
+    def post(path,body=None):
+        if path.endswith('/service-probe-session'):
+            calls.append(path)
+            if len(calls)==1:
+                if fault=='deadline':worker.state['service_started_at']-=61
+                if fault=='stopped':worker.stop_event.set()
+                if fault=='timeout':raise TimeoutError('temporary')
+                if fault=='network':raise urllib.error.URLError('temporary')
+                raise client.APIError(400 if fault=='rejected' else 503,'temporary')
+            assert not any(p in ('stop','remove','create') for p,b in events)
+            return {'epoch':'new','ever_ready':False}
+        return original(path,body)
+    worker.api.post=post
+    worker.execute(task)
+    completion=next(body for path,body in events if path.endswith('/complete'))
+    assert not any(p=='create' for p,b in events)
+    assert len(calls)==(2 if fault in ('busy','timeout','network') else 1)
+    if fault=='deadline':assert 'startup health deadline' in completion['error']
+    elif fault=='stopped':assert 'worker stopped' in completion['error']
+    elif fault=='rejected':assert '400' in completion['error']
+    else:assert completion['error']=='runner exited with code 0'
+    assert worker.state is None
