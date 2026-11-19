@@ -1,0 +1,2 @@
+nonzero-exit batch ba9b3272-4b38-45d4-8aca-bee76454b8c3
+nonzero-exit PASS {"execution": {"normal": 0, "abnormal": 3, "running": 0, "unknown": 0, "not_started": 0}, "protocol": {"planned": 3, "success": 0, "failure": 0, "invalid": 0, "errors": 3, "unreported": 0, "not_applicable_tasks": 0, "valid": 0, "success_rate": null}}

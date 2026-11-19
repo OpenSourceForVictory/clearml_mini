@@ -1,0 +1,130 @@
+[
+  {
+    "name": "missing-final",
+    "batch_id": "4a1231cf-111a-4fc1-a7f3-19cd4c09ade2",
+    "job_id": "26eae3de-6015-4cde-9ec6-35631809ad31",
+    "status": "FAILED",
+    "outcomes": {
+      "execution": {
+        "normal": 3,
+        "abnormal": 0,
+        "running": 0,
+        "unknown": 0,
+        "not_started": 0
+      },
+      "protocol": {
+        "planned": 3,
+        "success": 0,
+        "failure": 0,
+        "invalid": 3,
+        "errors": 0,
+        "unreported": 0,
+        "not_applicable_tasks": 0,
+        "valid": 0,
+        "success_rate": null
+      }
+    },
+    "cleanup_confirmed": true,
+    "placement": {
+      "node_name": "local4090-151",
+      "accelerator_type": "gpu",
+      "gpu_index": 0
+    }
+  },
+  {
+    "name": "valid-final",
+    "batch_id": "e669959d-e1de-4916-b26c-be682fab4aa5",
+    "job_id": "5eadf7f4-1b3d-4898-854d-9914c28f744b",
+    "status": "SUCCEEDED",
+    "outcomes": {
+      "execution": {
+        "normal": 3,
+        "abnormal": 0,
+        "running": 0,
+        "unknown": 0,
+        "not_started": 0
+      },
+      "protocol": {
+        "planned": 3,
+        "success": 2,
+        "failure": 1,
+        "invalid": 0,
+        "errors": 0,
+        "unreported": 0,
+        "not_applicable_tasks": 0,
+        "valid": 3,
+        "success_rate": 0.6666666666666666
+      }
+    },
+    "cleanup_confirmed": true,
+    "placement": {
+      "node_name": "local4090-151",
+      "accelerator_type": "gpu",
+      "gpu_index": 0
+    }
+  },
+  {
+    "name": "docker-command",
+    "batch_id": "a03500d6-ff60-48b8-a1a3-694b89fac856",
+    "job_id": "76f1766d-9ec5-4776-8dcb-1dd0007d2173",
+    "status": "SUCCEEDED",
+    "outcomes": {
+      "execution": {
+        "normal": 1,
+        "abnormal": 0,
+        "running": 0,
+        "unknown": 0,
+        "not_started": 0
+      },
+      "protocol": {
+        "planned": 0,
+        "success": 0,
+        "failure": 0,
+        "invalid": 0,
+        "errors": 0,
+        "unreported": 0,
+        "not_applicable_tasks": 1,
+        "valid": 0,
+        "success_rate": null
+      }
+    },
+    "cleanup_confirmed": true,
+    "placement": {
+      "node_name": "local4090-151",
+      "accelerator_type": "gpu",
+      "gpu_index": 0
+    }
+  },
+  {
+    "name": "nonzero-exit",
+    "batch_id": "ba9b3272-4b38-45d4-8aca-bee76454b8c3",
+    "job_id": "8abb7b0b-60ff-42e3-80ee-b111659011be",
+    "status": "FAILED",
+    "outcomes": {
+      "execution": {
+        "normal": 0,
+        "abnormal": 3,
+        "running": 0,
+        "unknown": 0,
+        "not_started": 0
+      },
+      "protocol": {
+        "planned": 3,
+        "success": 0,
+        "failure": 0,
+        "invalid": 0,
+        "errors": 3,
+        "unreported": 0,
+        "not_applicable_tasks": 0,
+        "valid": 0,
+        "success_rate": null
+      }
+    },
+    "cleanup_confirmed": true,
+    "placement": {
+      "node_name": "local4090-151",
+      "accelerator_type": "gpu",
+      "gpu_index": 0
+    }
+  }
+]

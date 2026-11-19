@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/episode-result-release-20261119/smoke.py", line 13, in <module>
+    preflight=api('batches/preflight',body,'POST');save(name+'-preflight.json',preflight)
+  File "/home/dgh/Code/clearml_mini/.runtime/episode-result-release-20261119/control.py", line 16, in api
+    raise RuntimeError(f'API {path} rejected HTTP {e.code}; private evidence saved') from None
+RuntimeError: API batches/preflight rejected HTTP 400; private evidence saved

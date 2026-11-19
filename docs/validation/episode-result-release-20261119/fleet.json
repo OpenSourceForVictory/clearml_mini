@@ -1,0 +1,121 @@
+[
+  {
+    "name": "ascend910b3-29",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      },
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  },
+  {
+    "name": "local4090-151",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  },
+  {
+    "name": "rtx3080-182",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  },
+  {
+    "name": "rtx4090-157",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  },
+  {
+    "name": "rtx4090-183",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  },
+  {
+    "name": "rtx8000-177",
+    "enabled": true,
+    "held": 0,
+    "state": "SUCCEEDED",
+    "updater_online": true,
+    "slots": [
+      {
+        "online": true,
+        "version": "0.21.5",
+        "build_digest": "186b9252e4377b2f6048e531d80c1954af4930a5335304e053bf83b71827c6c5"
+      }
+    ]
+  }
+]

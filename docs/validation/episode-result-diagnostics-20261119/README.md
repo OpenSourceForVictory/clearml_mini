@@ -2,7 +2,7 @@
 
 ## 结果
 
-Worker/Runner 源码版本 0.21.5、协议仍为 17。无数据库迁移，本轮未部署 API 或升级节点。
+Worker/Runner 源码版本 0.21.5、协议仍为 17。本功能无新增数据库迁移；开发回归阶段未部署。后续已完成本机平台及 6 节点上线，实际迁移差异和真机验证见[发布记录](../episode-result-release-20261119/README.md)。
 
 - 最终 Python 关联回归：**279 passed / 28 skipped / 0 failed / 1549 deselected**，171.23 秒。pytest 返回 0，见 [原始日志](python.log)。
 - 前端全套：**139 passed / 10 skipped / 0 failed**，2.5 分钟，见 [日志](frontend.log)。之后移除报告比较页的旧重复成功率摘要，相关 4 项再次通过，见 [报告页复测](report-ui.log)。

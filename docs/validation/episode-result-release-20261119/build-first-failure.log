@@ -1,0 +1,55 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 331B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/mini-eval-api:unlimited-pids-0214-20261119
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 214B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 1.80MB 0.0s done
+#4 DONE 0.1s
+
+#5 [1/8] FROM docker.io/library/mini-eval-api:unlimited-pids-0214-20261119@sha256:f32cb41770dee858bc235e6e0bfa9e9659065033c9b0f3d2a62173d474e7cdbb
+#5 resolve docker.io/library/mini-eval-api:unlimited-pids-0214-20261119@sha256:f32cb41770dee858bc235e6e0bfa9e9659065033c9b0f3d2a62173d474e7cdbb 0.1s done
+#5 DONE 0.1s
+
+#6 [2/8] COPY backend /workspace/backend
+#6 CACHED
+
+#7 [3/8] COPY worker /workspace/worker
+#7 CACHED
+
+#8 [4/8] COPY runner /workspace/runner
+#8 CACHED
+
+#9 [5/8] COPY node_agent /workspace/node_agent
+#9 CACHED
+
+#10 [6/8] COPY scripts /workspace/scripts
+#10 CACHED
+
+#11 [7/8] COPY onboarding /workspace/onboarding
+#11 CACHED
+
+#12 [8/8] COPY frontend/dist /workspace/frontend/dist
+#12 ERROR: failed to calculate checksum of ref l8rv3ijq7jxtp5j79ssh6onel::54tou6jdex6ok2old778n62tu: "/frontend/dist": not found
+------
+ > [8/8] COPY frontend/dist /workspace/frontend/dist:
+------
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - CopyIgnoredFile: Attempting to Copy file "frontend/dist" that is excluded by .dockerignore (line 8)
+Dockerfile:8
+--------------------
+   6 |     COPY scripts /workspace/scripts
+   7 |     COPY onboarding /workspace/onboarding
+   8 | >>> COPY frontend/dist /workspace/frontend/dist
+   9 |     
+--------------------
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref l8rv3ijq7jxtp5j79ssh6onel::54tou6jdex6ok2old778n62tu: "/frontend/dist": not found

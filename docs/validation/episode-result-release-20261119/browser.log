@@ -1,0 +1,4 @@
+PASS live UI missing-final
+PASS live UI valid-final
+PASS live UI docker-command
+PASS live UI nonzero-exit

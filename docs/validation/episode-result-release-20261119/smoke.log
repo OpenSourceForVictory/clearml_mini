@@ -1,0 +1,6 @@
+missing-final batch 4a1231cf-111a-4fc1-a7f3-19cd4c09ade2
+missing-final PASS {"execution": {"normal": 3, "abnormal": 0, "running": 0, "unknown": 0, "not_started": 0}, "protocol": {"planned": 3, "success": 0, "failure": 0, "invalid": 3, "errors": 0, "unreported": 0, "not_applicable_tasks": 0, "valid": 0, "success_rate": null}}
+valid-final batch e669959d-e1de-4916-b26c-be682fab4aa5
+valid-final PASS {"execution": {"normal": 3, "abnormal": 0, "running": 0, "unknown": 0, "not_started": 0}, "protocol": {"planned": 3, "success": 2, "failure": 1, "invalid": 0, "errors": 0, "unreported": 0, "not_applicable_tasks": 0, "valid": 3, "success_rate": 0.6666666666666666}}
+docker-command batch a03500d6-ff60-48b8-a1a3-694b89fac856
+docker-command PASS {"execution": {"normal": 1, "abnormal": 0, "running": 0, "unknown": 0, "not_started": 0}, "protocol": {"planned": 0, "success": 0, "failure": 0, "invalid": 0, "errors": 0, "unreported": 0, "not_applicable_tasks": 1, "valid": 0, "success_rate": null}}
