@@ -99,8 +99,12 @@ class HostBackend:
         directory=execution_dirs(w.workspace,task['execution_id'])
         if self.root.is_symlink():raise RuntimeError('host control directory must not be a symlink')
         self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
+        from .artifact_layout import prepare as prepare_artifacts, output, runner_config
+        artifact_root=prepare_artifacts(w.config,task,account)
+        artifact_output=output(w.config,task,directory)
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
+        config.update(runner_config(artifact_root))
         if task.get('process_logs_v1'):
             from .process_logs import prepare as prepare_logs
             config['_process_logs']=prepare_logs(w,task,directory/'logs')
@@ -108,7 +112,7 @@ class HostBackend:
         if config.get('workload') == 'service':
             config.update(port=config['service']['port'], bind_host=config['service']['address'],health_port=config['service'].get('health_port',config['service']['port']))
             values.update(port=str(config['port']), bind_host=config['bind_host'],health_port=str(config['health_port']))
-        values.update(input_path=str(inp),work_dir=str(directory/'work'),output_dir=str(directory/'output'))
+        values.update(input_path=str(inp),work_dir=str(directory/'work'),output_dir=str(artifact_output))
         assets=w.runtime_snapshot['config']['assets']
         for name in host['assets']:
             if name not in assets:raise RuntimeError('unconfigured logical asset: '+name)

@@ -4,6 +4,7 @@ import hashlib
 import os
 import time
 from pathlib import PurePosixPath
+from typing import Literal
 from urllib.parse import quote
 
 import jwt
@@ -12,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
-from .core import SharedArtifactRoot, ExecutionData, EpisodeRecord, Run, Slot, Worker, User
+from .core import SharedArtifactRoot, ExecutionData, EpisodeRecord, Run, Job, Slot, Worker, User
 from .execution_locations import visible_run, reported_path
 from .artifact_media import byte_range, media_type
 from . import shared_storage, shared_file_io
@@ -35,6 +36,7 @@ class BoundedStream(StreamingResponse):
 class Registration(BaseModel):
     model_config = ConfigDict(extra='forbid')
     output_root: str = Field(max_length=4096)
+    layout: Literal["legacy","batch-v1"] = "legacy"
 
 
 class FileQuery(BaseModel):
@@ -51,16 +53,27 @@ def safe_path(path):
     return path
 
 
-def save_root(s, run, node_name, output):
+def save_root(s, run, node_name, output, layout="legacy"):
     mapping, relative = shared_storage.match(node_name, output)
     snapshot = dict(storage_id=mapping['id'], marker=mapping['marker'], relative=relative,
                     node_name=node_name, output_root=output)
+    if layout != "legacy":
+        snapshot["layout"]=layout
+        snapshot["artifact_root"]=str(PurePosixPath(output).parents[2])
     # Serialize only a first registration for this attempt, never the scheduler.
     if not s.scalar(select(Run.id).where(Run.id == run.id).with_for_update()):
         raise HTTPException(404, 'execution not found')
     row = s.get(SharedArtifactRoot, run.id)
     if row:
-        if row.execution_id != run.execution_id or row.snapshot != snapshot:
+        if row.snapshot.get('state') == 'planned':
+            planned=row.snapshot
+            if (row.execution_id != run.execution_id or planned['output_root']!=output
+                    or planned['node_name']!=node_name or planned['layout']!=layout):
+                raise HTTPException(409, '执行输出目录与调度计划不一致')
+            snapshot['artifact_root']=planned['artifact_root']
+            row.snapshot=snapshot;s.commit()
+            return snapshot
+        if row.execution_id != run.execution_id or any(row.snapshot.get(k)!=v for k,v in snapshot.items()):
             raise HTTPException(409, '执行输出目录已登记，不能重新绑定')
         return row.snapshot
     s.add(SharedArtifactRoot(run_id=run.id, execution_id=run.execution_id, snapshot=snapshot))
@@ -73,6 +86,8 @@ def snapshot(s, run):
     if row:
         if row.execution_id != run.execution_id:
             raise HTTPException(409, '执行目录身份不匹配')
+        if row.snapshot.get('state')=='planned':
+            return save_root(s,run,row.snapshot['node_name'],row.snapshot['output_root'],row.snapshot['layout'])
         return row.snapshot
     records = s.scalars(select(ExecutionData).where(ExecutionData.run_id == run.id,
         ExecutionData.slot_id == run.slot_id, ExecutionData.execution_id == run.execution_id)).all()
@@ -92,11 +107,33 @@ def snapshot(s, run):
     return save_root(s, run, worker.node_name, path)
 
 
+def plan(s,run,worker,slot,job,fresh):
+    """Freeze layout at first claim; retries of a claim never use new node intent."""
+    row=s.get(SharedArtifactRoot,run.id)
+    if row is None and fresh and job.benchmark in ('cs-client','inference-service'):
+        from .storage import desired
+        config=desired(worker,slot)['config'] or (slot.storage_report or {}).get('effective') or {}
+        root=config.get('artifact_root')
+        if root:
+            if 'artifact_roots_v1' not in (slot.software or {}).get('capabilities',[]):
+                raise HTTPException(409,'independent artifact directories require Worker upgrade')
+            path=str(PurePosixPath(root)/(job.batch_id or 'standalone')/job.id/run.execution_id)
+            row=SharedArtifactRoot(run_id=run.id,execution_id=run.execution_id,snapshot=dict(
+                state='planned',layout='batch-v1',artifact_root=root,output_root=path,node_name=worker.node_name))
+            s.add(row);s.flush()
+    if row and row.snapshot.get('layout')=='batch-v1':
+        return {'artifact_layout':'batch-v1','artifact_root':row.snapshot['artifact_root'],'artifact_transport':'shared'}
+    return {}
+
+
 def bindings(s, run_id):
+    root=s.get(SharedArtifactRoot,run_id)
+    independent=bool(root and root.snapshot.get('layout')=='batch-v1')
     linked = {}
     for episode in s.scalars(select(EpisodeRecord).where(EpisodeRecord.run_id == run_id)):
         for path in (episode.result or {}).get('artifacts', []):
             if isinstance(path, str):
+                if independent and not path.startswith(('output/','episodes/')):path='output/'+path
                 linked.setdefault(path, []).append(episode.episode_id)
     return linked
 
@@ -110,9 +147,12 @@ def install(app, db, current, worker_auth):
         slot = s.get(Slot, run.slot_id) if run else None
         if not slot or slot.worker_id != worker.id:
             raise HTTPException(404, 'execution not found')
-        if not body.output_root.endswith('/runs/' + execution_id + '/output'):
+        job=s.get(Job,run.job_id)
+        suffix=('/'+(job.batch_id or 'standalone')+'/'+job.id+'/'+execution_id
+                if body.layout=='batch-v1' else '/runs/'+execution_id+'/output')
+        if not body.output_root.endswith(suffix):
             raise HTTPException(400, '输出目录必须属于本次执行')
-        save_root(s, run, worker.node_name, body.output_root)
+        save_root(s, run, worker.node_name, body.output_root, body.layout)
         return {'registered': True, 'transport': 'shared'}
 
     @app.get(root)

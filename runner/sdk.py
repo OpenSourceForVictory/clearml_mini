@@ -60,7 +60,8 @@ class Context:
         if not value.is_absolute():
             value = self.output_dir / value
         try:
-            name = value.resolve().relative_to(self.output_dir.resolve()).as_posix()
+            root = Path(self.config.get('_artifact_root', self.output_dir))
+            name = value.resolve().relative_to(root.resolve()).as_posix()
         except ValueError:
             raise ValueError("artifact must be inside the task output directory") from None
         if not artifact_name(name):
@@ -132,7 +133,8 @@ def run(client, config, output_dir=None):
             begin = time.monotonic()
             try:
                 nested = config.get("_parent_episode_id") is not None
-                episode_directory = context.output_dir if nested else context.output_dir / ("episode-" + str(i))
+                episode_directory = (context.output_dir if nested else Path(config["_artifact_root"])/"episodes"/str(i)/"output"
+                                     if config.get("_artifact_layout")=="batch-v1" else context.output_dir / ("episode-" + str(i)))
                 episode_context = replace(context, _episode_output_dir=episode_directory)
                 result = client.run_episode(config, episode, episode_context)
                 if not isinstance(result, EpisodeResult):

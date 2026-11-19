@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 
-type Config = { workspace_root: string; assets_root: string; cache_root: string; min_free_disk_gb: number };
+type Config = { workspace_root: string; assets_root: string; cache_root: string; artifact_root?: string | null; min_free_disk_gb: number };
 type Storage = { revision: number; config: Config | null; all_applied: boolean; slots: {
   slot_id: string; gpu_index: number; accelerator_type?: string; config?: Config | null; status: string; applied_revision: number; reported_at: string | null;
   report: { effective?: Config; error?: string; capacity?: Record<string, number> };
@@ -44,6 +44,7 @@ function SlotStorageEditor({slot,id,name,revision,onSaved,disabled}:{slot:Slot;i
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
     <form onSubmit={e=>{e.preventDefault();void save(draft);}}>
       {(['workspace_root','assets_root','cache_root'] as const).map((key,i)=><label key={key}>{['工作基目录','资产目录','缓存目录'][i]}<input aria-label={`${label} ${['工作基目录','资产目录','缓存目录'][i]}`} value={draft[key]} required pattern="/.*" onChange={e=>{dirty.current=true;setDraft({...draft,[key]:e.target.value});}}/></label>)}
+      <label>产物根目录（选填）<input aria-label={`${label} 产物根目录`} value={draft.artifact_root||''} placeholder="留空沿用旧工作区输出目录" pattern="/.*" onChange={e=>{dirty.current=true;setDraft({...draft,artifact_root:e.target.value||null});}}/></label>
       <label>工作盘最低可用空间 GiB<input aria-label={`${label} 最低可用空间 GiB`} type="number" min={0} max={2097151} step="any" value={draft.min_free_disk_gb} onChange={e=>{dirty.current=true;setDraft({...draft,min_free_disk_gb:Number(e.target.value)});}} required/></label>
       <p>建议按机器和设备区分：{suggested}</p><button type="button" disabled={disabled||busy||!draft.workspace_root} onClick={()=>{dirty.current=true;setDraft({...draft,workspace_root:suggested});}}>采用建议工作目录</button>{' '}
       <button disabled={disabled||busy}>保存{label}目录</button>{' '}
@@ -96,6 +97,8 @@ export function StorageSettings({id, name}: {id: string; name: string}) {
         {(['workspace_root', 'assets_root', 'cache_root'] as const).map((key, i) => <label key={key}>{['工作基目录', '资产目录', '缓存目录'][i]}
           <input aria-label={`${name} ${['工作基目录', '资产目录', '缓存目录'][i]}`} value={draft[key]} required pattern="/.*" onChange={e => {dirty.current = true;setMachineDirty(true); setDraft({...draft, [key]: e.target.value});}} />
         </label>)}
+        <label>产物根目录（选填）<input aria-label={`${name} 产物根目录`} value={draft.artifact_root||''} placeholder="/共享目录/artifacts" pattern="/.*" onChange={e=>{dirty.current=true;setMachineDirty(true);setDraft({...draft,artifact_root:e.target.value||null});}}/></label>
+        <p>配置后按批次/任务/执行生成公共产物与回合目录；不改变业务工作目录。需升级 Worker，保存后等待各卡确认。产物根必须与工作、资产、缓存目录分开，工作目录清理不删除这里的文件。</p>
         <label>工作盘最低可用空间 GiB<input aria-label={`${name} 最低可用空间 GiB`} type="number" min={0} max={2097151} step="any" value={draft.min_free_disk_gb} onChange={e => {dirty.current = true;setMachineDirty(true); setDraft({...draft, min_free_disk_gb: Number(e.target.value)});}} required /></label>
         <button disabled={busy}>保存存储配置 / 重试校验</button>{' '}
         <button type="button" disabled={busy} onClick={() => void save(true)}>恢复本机配置</button>{' '}
@@ -107,7 +110,7 @@ export function StorageSettings({id, name}: {id: string; name: string}) {
         <p>最后报告：{slot.reported_at || '尚未上报'}</p>
         {slot.report.error && <p role="alert">{slot.report.error}</p>}
         {slot.report.effective && <>
-          <p>实际工作目录：{slot.report.effective.workspace_root}</p><p>实际资产目录：{slot.report.effective.assets_root}</p><p>实际缓存目录：{slot.report.effective.cache_root}</p>
+          <p>实际产物根目录：{slot.report.effective.artifact_root || '沿用工作区输出目录'}</p><p>实际工作目录：{slot.report.effective.workspace_root}</p><p>实际资产目录：{slot.report.effective.assets_root}</p><p>实际缓存目录：{slot.report.effective.cache_root}</p>
           <p>工作盘门槛：{slot.report.effective.min_free_disk_gb} GiB；可用：{Object.entries(slot.report.capacity || {}).map(([k,v]) => `${({workspace:'工作',assets:'资产',cache:'缓存'} as Record<string,string>)[k]} ${(v / 1024).toFixed(1)} GiB`).join(' / ')}</p>
           {(slot.report.capacity?.workspace ?? Infinity) < slot.report.effective.min_free_disk_gb * 1024 && <p role="alert">工作盘空间不足，新任务等待；空间恢复后自动继续。</p>}
         </>}

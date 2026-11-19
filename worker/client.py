@@ -111,6 +111,7 @@ class Worker:
         self.runtime_snapshot = (self.state or {}).get("runtime") or runtime_snapshot or (self.runtime.snapshot() if self.runtime else {"revision": 0, "config": {"images": self.config.get("client_images", []), "assets": self.config.get("asset_mappings", {})}})
         self.config["client_images"] = self.runtime_snapshot["config"]["images"]
         self.storage_snapshot = snapshot
+        self.config.pop('artifact_root',None)
         self.config.update(snapshot['config'])
         self.workspace = Path(self.config['workspace_root'])
         if self.state and 'storage' not in self.state:
@@ -182,8 +183,11 @@ class Worker:
         if task.get('artifact_transport') != 'shared':
             return
         try:
-            self.api.post(f"worker/executions/{task['execution_id']}/shared-artifacts",
-                          {'output_root': str(self.workspace/'runs'/task['execution_id']/'output')})
+            from .artifact_layout import location
+            root=location(getattr(self,"config",{}),task)
+            body={'output_root':str(root or self.workspace/'runs'/task['execution_id']/'output')}
+            if root:body['layout']='batch-v1'
+            self.api.post(f"worker/executions/{task['execution_id']}/shared-artifacts",body)
         except Exception:
             logging.getLogger(__name__).warning('shared artifact directory registration deferred', exc_info=False)
 
@@ -236,6 +240,17 @@ class Worker:
         process_log_config=None
         if cs:
             directory = execution_dirs(self.workspace, task['execution_id'])
+            from .artifact_layout import prepare as prepare_artifacts, output, runner_config
+            artifact_root=prepare_artifacts(self.config,task,container=True)
+            artifact_output=output(self.config,task,directory)
+            self.register_shared_artifacts(task)
+            if artifact_root:
+                if runtime:
+                    from runner.image_runtime import overlaps
+                    targets=[runtime['work_dir'],runtime['output_dir'],*runtime['assets'].values(),*[m['target'] for m in runtime.get('mounts',{}).values()]]
+                    if any(overlaps(target,'/tmp/mini-eval-artifacts') for target in targets):
+                        raise RuntimeError('container directory overlaps independent artifact mount')
+                args.extend(['--mount',f'type=bind,source={artifact_root},target=/tmp/mini-eval-artifacts'])
             if task.get('process_logs_v1') and runtime:
                 from .process_logs import prepare as prepare_logs
                 process_log_config=prepare_logs(self,task,directory/'logs',container=True)
@@ -244,13 +259,13 @@ class Worker:
                 (Path(self.config['assets_root']), '/opt/mini-eval/assets', True),
                 (Path(self.config['cache_root']), '/opt/mini-eval/cache', True),
                 (directory/'work', '/tmp/mini-eval-work', False),
-                (directory/'output', '/tmp/mini-eval-output', False)]:
+                (artifact_output, '/tmp/mini-eval-output', False)]:
                 args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
             args.extend(['--env', 'MINI_EVAL_WORK_DIR=/tmp/mini-eval-work',
                          '--env', 'MINI_EVAL_ASSETS_DIR=/opt/mini-eval/assets',
                          '--env', 'MINI_EVAL_CACHE_DIR=/opt/mini-eval/cache'])
         if runtime:
-            aliases = [(directory/'work', runtime['work_dir'], False), (directory/'output', runtime['output_dir'], False)]
+            aliases = [(directory/'work', runtime['work_dir'], False), (artifact_output, runtime['output_dir'], False)]
             for name, target in runtime['assets'].items():
                 host = self.runtime_snapshot['config']['assets'].get(name)
                 if host is None:
@@ -258,7 +273,7 @@ class Worker:
                 validate_storage({**self.config, 'assets_root': host, 'cache_root': host}, self.config.get('_supervisor_state', self.path), self.config.get('_config_path'))
                 aliases.append((host, target, True))
             from .mounts import resolve as resolve_mounts
-            aliases += resolve_mounts(runtime.get('mounts',{}), self.runtime_snapshot['config'], self.config, self.config.get('_supervisor_state',self.path), directory)
+            aliases += resolve_mounts(runtime.get('mounts',{}), self.runtime_snapshot['config'], self.config, self.config.get('_supervisor_state',self.path), directory, output_root=artifact_output)
             for source, target, readonly in aliases:
                 if target not in (WORK, OUTPUT):
                     args.extend(['--mount', f'type=bind,source={source},target={target}'+(',readonly' if readonly else '')])
@@ -285,7 +300,8 @@ class Worker:
         if runtime:
             command[0] = runtime['interpreter']
         if task.get('log_protocol') == 2:
-            command = [command[0], '-m', 'runner.log_capture', '/tmp/mini-eval-output/.mini-eval-protocol', *command]
+            journal='/tmp/mini-eval-work/.mini-eval-protocol' if task.get('artifact_layout') else '/tmp/mini-eval-output/.mini-eval-protocol'
+            command = [command[0], '-m', 'runner.log_capture', journal, *command]
         if task['timeout_seconds'] == 0:
             # No total deadline; Worker lease watchdog and cancellation still own cleanup.
             # Bypass even an old image's supervisor, which interprets zero as immediate expiry.
@@ -304,6 +320,7 @@ class Worker:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
                       'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
+            config.update(runner_config('/tmp/mini-eval-artifacts' if artifact_root else None))
             if process_log_config:config['_process_logs']=process_log_config
             if is_service(task):
                 service=task['client_spec']['service']
@@ -561,7 +578,7 @@ class Worker:
             if task.get('log_protocol') == 2:
                 from .log_stream import Sender, DockerCollector
                 directory = execution_dirs(self.workspace, execution)
-                protocol_root = HostBackend(self).root if self.host_mode() else directory/'output'/'.mini-eval-protocol'
+                protocol_root = HostBackend(self).root if self.host_mode() else directory/('work' if task.get('artifact_layout') else 'output')/'.mini-eval-protocol'
                 log_root = protocol_root/'logs' if self.host_mode() else directory/'diagnostic-logs'
                 if not self.host_mode():collector = DockerCollector(self.name(execution), log_root)
                 sender = Sender(Client(self.config), execution, log_root, Path(str(self.path)+'.logs'),

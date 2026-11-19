@@ -1,6 +1,5 @@
 """Exercise actual runner functions, keeping business subprocesses real for SDK results."""
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -85,3 +84,39 @@ def test_sdk_actual_business_result_and_error_events(execution,behavior):
     if behavior not in ('success','false','exit'):
         assert events[-1]['exit_code']==0
         assert result_error_code(events[-1]['error'])==('missing_result_file' if behavior=='missing' else 'invalid_result_file')
+
+
+@pytest.mark.parametrize('mode',['host','docker'])
+def test_client_output_alias_matches_published_input_and_mapping(execution,monkeypatch,mode):
+    inp,config,_,_=execution
+    actual=inp.parent/'business-output';actual.mkdir()
+    config['template']['platform_bindings']=[{'source':'platform.paths.output','target':'argv','name':'--output-dir'}]
+    if mode=='docker':config['template']['runtime']['output_dir']=str(actual)
+    else:
+        config['template'].update(execution_mode='host',runtime=None)
+        config['_resolved_environment']={'MINI_EVAL_OUTPUT_DIR':str(actual)}
+    inp.write_text(json.dumps(config));seen=[]
+    monkeypatch.setattr('subprocess.call',lambda argv,**kw:seen.append((argv,kw)) or 0)
+    with pytest.raises(SystemExit) as error:cs_entry.main()
+    assert error.value.code==0
+    argv,kwargs=seen[0]
+    assert argv[-2:]==['--output-dir',str(actual)]
+    assert kwargs['env']['MINI_EVAL_OUTPUT_DIR']==str(actual)
+    published=json.loads(Path(kwargs['env']['MINI_EVAL_INPUT']).read_text())
+    assert published['platform']['paths']['output']==str(actual)
+
+
+@pytest.mark.parametrize('behavior',['invalid-json','directory','invalid-artifacts'])
+def test_sdk_independent_root_rejects_invalid_result(execution,behavior):
+    inp,config,work,output=execution
+    body={'invalid-json':"p.write_text('{')",'directory':'p.mkdir()',
+          'invalid-artifacts':"p.write_text('{\"success\":true,\"artifacts\":[\"../escape\"]}')"}[behavior]
+    script=inp.parent/'invalid-business.py'
+    script.write_text('import os\nfrom pathlib import Path\np=Path(os.environ["MINI_EVAL_RESULT"])\n'+body+'\n')
+    config.update(_artifact_layout='batch-v1',_artifact_root=str(output),episodes=1)
+    config['template']={'command':[sys.executable,str(script)],'integration_mode':'sdk-command'}
+    inp.write_text(json.dumps(config))
+    with pytest.raises(EpisodeExecutionError):command_sdk.main()
+    events=[json.loads(line) for line in (work/'episodes.jsonl').read_text().splitlines()]
+    assert events[-1]['status']=='ERROR' and events[-1]['exit_code']==0
+    assert result_error_code(events[-1]['error'])=='invalid_result_file'

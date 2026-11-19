@@ -69,3 +69,38 @@ DC=(docker compose --env-file .env -p mini-eval -f deploy/compose.yml \
 - 403：文件权限不足或不安全路径；409：版本变化/映射冲突/目录未登记；410：文件或目录已清理；429：读取繁忙；503：共享挂载缺失、标识不符或无权读取根标识；504：共享存储超时。
 
 只读 overlay 防止 API 写共享盘；根标识用于识别错挂载，不是认证秘密，也不是文件备份。API 能看到的范围取决于管理员映射及任务归属授权。不要把密钥输出到产物目录。
+
+## 节点独立产物根（Worker 0.21.10）
+
+进入 **管理设置 → 机器 → 查看配置 → 工作目录与资产 → 存储配置**，填写“产物根目录”，例如 /efs/project/artifacts。整机默认作用于没有单独存储配置的卡；已有每卡覆盖需在对应卡配置中填写。产物根不能与资产根、缓存根或工作根相互包含。留空兼容旧工作区输出。
+
+保存后等待各卡应用版本一致；缺少 artifact_roots_v1 能力的旧 Worker 显示“需升级 Worker”，不能调度新布局。运行中的任务在清理前保持原存储快照。产物根无需加机器名或卡号，平台按稳定 ID 隔离：
+
+```text
+产物根/批次ID/任务ID/执行ID/
+  output/                  公共产物
+  episodes/1/output/       回合1
+  episodes/2/output/       回合2
+```
+
+没有批次的独立任务/服务使用 standalone 替代批次ID。重复执行使用新的执行ID，不覆盖旧结果。工作区继续保存输入、临时文件、状态和日志；业务 cwd 不改变。首次领取时把目录计划保存到现有 SharedArtifactRoot，配置修改后领取重放不会重新定位；无需新增迁移，仍要求已完成 a730d12。
+
+宿主机按批准业务账号创建目录，权限不足会阻止本次启动并显示原因，不自动提权或递归修改已有共享目录权限。容器执行持久绑定该执行产物根及公共 output，按镜像账号写文件；支持自定义容器内 output_dir 和 output 通用挂载别名。平台为容器输出叶目录提供写权限，不改共享根所有者；API 读权限仍需要现有 NFS 组/ACL配置。独立目录不会随工作区 runs 的清理删除，批次删除仅删元数据；本轮没有独立产物自动清理/容量配额，存储管理员负责保留与容量管理。
+
+### 模板如何传产物目录
+
+创建客户端或服务端模板，在 **动态参数映射 → 选择要传递的参数 → 产物目录** 添加映射，传递到“命令行参数”，程序接收名称填 --output-dir。基础命令仅填程序本身，不重复手写同一个参数。平台字段为 platform.paths.output，不需要新增类型化业务字段。
+
+也可映射到自定义环境变量 OUTPUT_DIR，或不配置映射直接读 MINI_EVAL_OUTPUT_DIR / 输入 JSON platform.paths.output；模板 argv 支持 ${output_dir} 占位符。示例：
+
+```json
+{"command":["python3","evaluate.py"],"platform_bindings":[{"source":"platform.paths.output","target":"argv","name":"--output-dir","encoding":"literal"}]}
+```
+
+- 普通命令/直接协议整任务启动：传公共 output，业务自己组织内部回合目录。
+- 宿主机每回合启动：命令行、占位符、环境变量和输入 JSON 一致指向 episodes/N/output。
+- 原生 SDK：context.output_dir 保留公共目录；context.episode_output_dir 返回当前回合目录；context.artifact_path 生成相对此执行产物根的引用。不修改进程全局环境。
+- SDK命令适配器：每次业务子进程获得对应回合目录；逐回合模式保留原有 episodes=1/递增seed规则，旧整任务配置的参数计数语义不因目录调整改变。结果 artifacts 仍相对本次子进程输出目录，适配器转换成执行根引用。
+- 容器：传给程序的是容器路径，而非节点物理路径。
+
+业务硬编码写 cwd 的文件不会自动搬到产物目录。未启用独立根时旧布局和旧引用不变。启用需要新版 Worker 和 Runner/SDK；平台注入适配器的模板随 Worker 更新，依赖镜像内旧 Runner/SDK 的旧式镜像需重建/更新 SDK。API 只读映射仍须覆盖新产物根，错误映射不会回退上传文件。

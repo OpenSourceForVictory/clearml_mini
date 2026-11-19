@@ -76,13 +76,15 @@ def contains(parent, child):
 
 def storage_paths(config):
     root = Path(config['workspace_root'])
-    return {'workspace_root': str(root), 'assets_root': str(config.get('assets_root') or root/'assets'),
+    return {**({'artifact_root':config['artifact_root']} if config.get('artifact_root') else {}), 'workspace_root': str(root), 'assets_root': str(config.get('assets_root') or root/'assets'),
             'cache_root': str(config.get('cache_root') or root/'cache'),
             'min_free_disk_gb': config.get('min_free_disk_gb', 2)}
 
 
 def validate_storage(config, state_path, config_path=None, create=False):
     values = storage_paths(config)
+    from .artifact_layout import validate_root
+    validate_root(values)
     root, assets, cache = [checked_path(values[k]) for k in ('workspace_root', 'assets_root', 'cache_root')]
     # Sharing a home directory also shares credentials even if they do not exist yet.
     protected = [Path(state_path).absolute(), Path(str(state_path)+'.runs').absolute(), root/'runs',

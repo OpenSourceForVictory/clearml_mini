@@ -36,3 +36,6 @@ Non-Goals: 自定义目录自动收集、文件修改/删除、自动转码、�
 
 ## 当前 API 直读实施切片（2026-11-19）
 新增 SharedArtifactRoot / a730d12，只保存不可重绑的执行输出目录映射；不保存逐文件索引。配置及只读 overlay 见 docs/shared-storage-artifacts.md。新 Worker 0.21.9 按任务标记停止正文上传；旧 Worker 保留兼容。当前侧栏以共享/历史上传选择器区分来源，自定义目录页与 SDK manifest 仍未完成。读取及媒体流各限每 API 进程8个、每用户2个，10秒 I/O 超时；媒体授权最长5分钟，流跨过有效期需重新授权。已先释放 DB 连接再启动文件 I/O。
+
+## 已批准调整：独立节点产物根（2026-11-19）
+节点存储配置增加 artifact_root。未配置保持旧 runs/<execution>/output；配置后新执行生成 <artifact_root>/<batch_id或standalone>/<job_id>/<execution_id>/output，逐回合输出为同一执行根下 episodes/<n>/output。业务 cwd 不变。宿主机以批准业务账号创建目录，容器绑定整个执行产物根并传容器内输出路径；SDK 单进程保持公共 output_dir、episode_output_dir 指向独立回合，嵌套不重复分层。平台以实际执行目录登记浏览根，历史绝不根据新配置重算。工作区清理不得删独立产物。旧 Worker 不具备能力时阻止新配置生效。节点路径仍须与 API 共享根映射对应。未实现自定义目录浏览/转发不纳入本切片。

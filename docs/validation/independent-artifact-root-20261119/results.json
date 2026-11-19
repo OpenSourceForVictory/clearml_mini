@@ -1,0 +1,93 @@
+{
+  "python": {
+    "passed": 294,
+    "skipped": 11,
+    "deselected": 1969,
+    "warning_count": 1,
+    "pytest_exit_code": 0,
+    "coverage_gate_passed": false
+  },
+  "frontend": {
+    "passed": 27,
+    "coverage_measured": false
+  },
+  "build": {
+    "typescript": "passed",
+    "vite": "passed; chunk size warning retained"
+  },
+  "module_coverage": {
+    "worker/artifact_layout.py": {
+      "line_percent": 100.0,
+      "branch_percent": 100.0
+    },
+    "backend/app/shared_artifacts.py": {
+      "line_percent": 93.81,
+      "branch_percent": 84.85
+    },
+    "backend/app/storage.py": {
+      "line_percent": 95.83,
+      "branch_percent": 86.0
+    },
+    "runner/sdk.py": {
+      "line_percent": 95.04,
+      "branch_percent": 91.67
+    },
+    "runner/command_sdk.py": {
+      "line_percent": 86.81,
+      "branch_percent": 76.67
+    },
+    "runner/cs_entry.py": {
+      "line_percent": 70.33,
+      "branch_percent": 52.94
+    }
+  },
+  "skips": [
+    {
+      "test": "test_concurrent_node_configuration_has_one_winner",
+      "reason": "dedicated PostgreSQL required"
+    },
+    {
+      "test": "test_concurrent_runtime_save_and_claim",
+      "reason": "dedicated PostgreSQL required"
+    },
+    {
+      "test": "test_same_filesystem_directory_and_file_bind_mount_boundaries",
+      "reason": "explicit disposable mount-namespace test required"
+    },
+    {
+      "test": "test_concurrent_storage_save_and_claim",
+      "reason": "dedicated PostgreSQL required"
+    },
+    {
+      "test": "test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-a]",
+      "reason": "requires local Docker image"
+    },
+    {
+      "test": "test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-b]",
+      "reason": "requires local Docker image"
+    },
+    {
+      "test": "test_real_host_stop_and_recovery",
+      "reason": "set HOST_EXECUTION_TEST=1 for real systemd user units"
+    },
+    {
+      "test": "test_real_host_timeout_and_limits",
+      "reason": "real systemd opt-in"
+    },
+    {
+      "test": "test_worker_watchdog_stops_host_when_lease_lost",
+      "reason": "real systemd opt-in"
+    },
+    {
+      "test": "test_real_migration_driver_creates_isolated_database[check_image_runtime_migration.py]",
+      "reason": "requires dedicated disposable PostgreSQL server"
+    },
+    {
+      "test": "test_real_probe",
+      "reason": "set STORAGE_PROBE_TEST_IMAGE for real Docker probe"
+    }
+  ],
+  "production_deployed": false,
+  "production_batch_created": false,
+  "gpu_npu_model_validation": false
+}

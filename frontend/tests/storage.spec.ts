@@ -92,3 +92,17 @@ test('ordinary users do not get machine storage controls',async({page})=>{
   await expect(page.getByRole('button',{name:'管理设置',exact:true})).toHaveCount(0);
   await expect(page.getByText('host 存储配置')).toHaveCount(0);
 });
+
+test('node artifact root is optional, saved independently and can be cleared',async({page})=>{
+ const state=await setup(page);
+ await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByRole('tab',{name:'工作目录与资产',exact:true}).click();
+ await page.getByText('host 存储配置',{exact:true}).click();
+ await page.getByLabel('host 产物根目录',{exact:true}).fill('/shared/artifacts');
+ await page.getByRole('button',{name:'保存存储配置 / 重试校验',exact:true}).click();
+ await expect.poll(()=>state.submitted()?.config?.artifact_root).toBe('/shared/artifacts');
+ expect(state.submitted().config.workspace_root).toBe('/srv/work');
+ await expect(page.getByText('版本 2 已保存，等待 Worker 校验确认。',{exact:true})).toBeVisible();
+ await page.getByLabel('host 产物根目录',{exact:true}).fill('');
+ await page.getByRole('button',{name:'保存存储配置 / 重试校验',exact:true}).click();
+ await expect.poll(()=>state.submitted()?.config?.artifact_root).toBe(null);
+});

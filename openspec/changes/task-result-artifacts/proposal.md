@@ -18,3 +18,6 @@
 
 ## Impact
 Runner SDK/回合包装器、Worker 目录元数据登记、API 共享目录映射/只读文件服务/产物模型/接口/鉴权、模板契约/快照、结果侧栏与模板编辑器、共享存储只读挂载、数据库迁移和升级指南。覆盖宿主机/容器、四种运行接入方式、失败与恢复、实际视频播放。需要 API 先升级并迁移，再升级 Worker/Runner；旧 Worker 的上传行为需升级后切换，不能仅更新界面就宣称已停止上传。
+
+## 已批准调整：独立节点产物根（2026-11-19）
+节点存储配置增加 artifact_root。未配置保持旧 runs/<execution>/output；配置后新执行生成 <artifact_root>/<batch_id或standalone>/<job_id>/<execution_id>/output，逐回合输出为同一执行根下 episodes/<n>/output。业务 cwd 不变。宿主机以批准业务账号创建目录，容器绑定整个执行产物根并传容器内输出路径；SDK 单进程保持公共 output_dir、episode_output_dir 指向独立回合，嵌套不重复分层。平台以实际执行目录登记浏览根，历史绝不根据新配置重算。工作区清理不得删独立产物。旧 Worker 不具备能力时阻止新配置生效。节点路径仍须与 API 共享根映射对应。未实现自定义目录浏览/转发不纳入本切片。

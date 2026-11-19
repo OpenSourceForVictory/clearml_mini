@@ -15,11 +15,11 @@ def check_directory(entry,config,state_path):
     return str(path)
 
 
-def resolve(declarations,snapshot,config,state_path,directory):
+def resolve(declarations,snapshot,config,state_path,directory,output_root=None):
     result=[]
     for name,item in mounts(declarations).items():
         source=item['source'];readonly=item['read_only']
-        if source in ('work','output'):host=str(directory/source)
+        if source in ('work','output'):host=str(output_root if source=='output' and output_root is not None else directory/source)
         elif source=='cache':
             host=config['cache_root']
             check_directory({'path':host},config,state_path)

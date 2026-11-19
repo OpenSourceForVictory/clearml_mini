@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import time
 from .episode_contract import EpisodeResultError, EpisodeExecutionError
 from .sdk import EpisodeResult, EvaluationClient, run
 from .image_runtime import TOKEN
@@ -24,6 +23,13 @@ class CommandClient(EvaluationClient):
         cwd=task.get('_resolved_cwd') or (runtime or {}).get('working_directory') or context.work_dir
         per_episode=(task['template'].get('execution_mode')=='host'
                      and (task['template'].get('host_runtime') or {}).get('episode_launch')=='per_episode')
+        independent=task.get('_artifact_layout')=='batch-v1'
+        if independent and not per_episode:
+            from .task_input import build
+            path=context.work_dir/('episode-input-'+str(episode.id)+'.json')
+            env.update(MINI_EVAL_OUTPUT_DIR=str(context.episode_output_dir),MINI_EVAL_INPUT=str(path))
+            task=build(task,env)
+            path.write_text(json.dumps(task,ensure_ascii=False,allow_nan=False))
         result_path = context.work_dir / ('episode-result-'+str(episode.id)+'.json')
         if per_episode:
             from .host_episode import episode_input
@@ -32,9 +38,9 @@ class CommandClient(EvaluationClient):
         result_path.unlink(missing_ok=True)
         values = {k:str(task[k]) for k in ('task_name','episodes','seed','endpoint')}
         values.update(episode_id=str(episode.id),episode_seed=str(episode.seed),result_path=str(result_path),
-                      input_path=env['MINI_EVAL_INPUT'] if per_episode else os.environ['MINI_EVAL_INPUT'],
+                      input_path=env['MINI_EVAL_INPUT'] if per_episode or independent else os.environ['MINI_EVAL_INPUT'],
                       work_dir=env['MINI_EVAL_WORK_DIR'] if per_episode else str(context.work_dir),
-                      output_dir=env['MINI_EVAL_OUTPUT_DIR'] if per_episode else str(context.output_dir))
+                      output_dir=env['MINI_EVAL_OUTPUT_DIR'] if per_episode or independent else str(context.output_dir))
         # Runtime resolver sets per-node asset paths; no shell evaluation is used.
         values.update(task.get('_resolved_assets', {}))
         if runtime:
@@ -79,7 +85,13 @@ class CommandClient(EvaluationClient):
         except (OSError, ValueError):raise EpisodeResultError('invalid_result_file') from None
         if not isinstance(result,dict) or type(result.get('success')) is not bool or set(result)-{'success','metrics','artifacts'}:
             raise EpisodeResultError('invalid_result_file')
-        return EpisodeResult(result['success'],result.get('metrics',{}),result.get('artifacts',[]))
+        artifacts=result.get('artifacts',[])
+        if independent:
+            from .cs_contract import artifact_name
+            if not isinstance(artifacts,list) or any(not isinstance(p,str) or not artifact_name(p) for p in artifacts):
+                raise EpisodeResultError('invalid_result_file')
+            artifacts=[context.artifact_path(Path(env['MINI_EVAL_OUTPUT_DIR'])/p) for p in artifacts]
+        return EpisodeResult(result['success'],result.get('metrics',{}),artifacts)
 
 
 def main():

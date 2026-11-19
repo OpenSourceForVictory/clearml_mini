@@ -69,3 +69,7 @@ SDK 校验结果并生成原有 STARTED/COMPLETED/ERROR 回合事件，最终生
 草稿仅在当前组件存续时保留，刷新、关闭页面或离开整个管理模块不保证保留；返回列表不代表保存成功。API 保存失败仍显示错误并保留表单。配置内容较多时使用原有功能页签；发布与权限规则不变。
 
 提交时的 CPU/内存硬上限可独立取消，但仍按模板最低要求预约，且受对应字段覆盖权限控制。详见 [可选执行限制](optional-execution-limits.md)。
+
+## 产物目录参数
+
+客户端/服务端模板均可在动态参数映射选择“产物目录”，绑定 argv --output-dir 或自定义环境变量；底层来源为 platform.paths.output。不要再定义同名业务参数或在基础命令重复写 --output-dir。也可使用 ${output_dir}、MINI_EVAL_OUTPUT_DIR 或输入 JSON。独立节点产物根不会改变业务 cwd；宿主机每回合启动时传当前回合目录，整个任务启动时传公共目录，容器传容器内路径。配置与升级见[共享产物指南](shared-storage-artifacts.md)。

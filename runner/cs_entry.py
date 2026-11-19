@@ -59,6 +59,7 @@ def main():
             env.update(config.get('_resolved_environment', {}))
             cwd = config.get('_resolved_cwd', env.get('MINI_EVAL_WORK_DIR'))
         from .task_input import build, bind_platform
+        output_dir=env["MINI_EVAL_OUTPUT_DIR"]
         config=build(config,env)
         # Publish the normalized input before the user's program starts. Keep
         # legacy fields so existing SDK clients continue reading the same file.

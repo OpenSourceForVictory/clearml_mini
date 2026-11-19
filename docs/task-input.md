@@ -110,3 +110,9 @@ def run_episode(self, task, episode, context):
 ```
 
 `artifact_path` 只将目录内文件路径转换为任务根相对引用，不上传文件、不创建文件，也不代表文件已存在。外部路径及指向外部的符号链接会被拒绝。该接口本身不增加 Worker 产物额度；视频存储、回合归属采集和结果侧栏仍由 `task-result-artifacts` 变更后续实施，不能将目录接口测试视为完整产物验收。
+
+### 独立产物根下的目录参数
+
+启用节点 artifact_root 后，公共 output_dir 位于产物根/批次或standalone/任务/执行/output，SDK episode_output_dir 位于同一执行根的 episodes/N/output。context.artifact_path 返回该执行产物根内的引用（例如 episodes/2/output/report.json）；未启用时仍相对旧 output_dir。手写普通公共文件引用仍兼容相对公共 output；新代码优先用 artifact_path，避免手拼路径。
+
+模板动态映射选择“产物目录”（platform.paths.output），可追加 --output-dir 或传到自定义环境变量；MINI_EVAL_OUTPUT_DIR 和输入 JSON 同步使用同一目录。宿主机逐回合启动下每回合值不同，单进程直接协议/普通命令只获得公共目录；容器使用容器路径。详见[独立根与模板配置](shared-storage-artifacts.md)。

@@ -375,6 +375,7 @@ def install(app, db, current):
             Run.execution_id.not_in(known)).order_by(Run.reserved_at, Run.id).limit(1))
         if not run or not online(slot) or slot.quarantined:
             return {'task': None, 'cleanup': []}
+        fresh_artifact_plan=run.status=='RESERVED'
         if run.status == 'RESERVED':
             s.refresh(worker)
             if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING or not node_agents.admission(worker):
@@ -414,7 +415,7 @@ def install(app, db, current):
             live(run)
         job = s.get(Job, run.job_id)
         pool = s.get(Pool, job.pool_id)
-        task = {'runtime_revision': (slot.runtime_report or {}).get('applied_revision', 0), 'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id,
+        task = {'runtime_revision': (slot.runtime_report or {}).get('applied_revision', 0), 'storage_revision': slot.storage_applied_revision, 'run_id': run.id, 'execution_id': run.execution_id, 'job_id': job.id, 'batch_id': job.batch_id,
                 'benchmark': job.benchmark, 'model_ref': job.model_ref, 'episodes': job.episodes,
                 'status': run.status, 'image': os.getenv('RUNNER_IMAGE', 'mini-eval-runner:dev'),
                 'accelerator_type':slot.accelerator_type,'device_index':slot.gpu_index,
@@ -443,6 +444,8 @@ def install(app, db, current):
                 and (template.get('execution_mode') == 'host' or template.get('runtime'))):
             task['log_protocol'] = 2
             if 'process_logs_v1' in (slot.software or {}).get('capabilities',[]):task['process_logs_v1']=True
+        from .shared_artifacts import plan as artifact_plan
+        task.update(artifact_plan(s,run,worker,slot,job,fresh_artifact_plan))
         if job.benchmark == 'cs-client':
             from .shared_storage import mappings
             if any(worker.node_name in m['node_names'] for m in mappings()):

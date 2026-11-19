@@ -14,11 +14,13 @@ class StorageConfig(BaseModel):
     workspace_root: str = Field(min_length=2, max_length=4096)
     assets_root: str = Field(min_length=2, max_length=4096)
     cache_root: str = Field(min_length=2, max_length=4096)
+    artifact_root: str | None = Field(default=None, min_length=2, max_length=4096)
     min_free_disk_gb: float = Field(default=2, ge=0, le=2097151)
 
-    @field_validator('workspace_root', 'assets_root', 'cache_root')
+    @field_validator('workspace_root', 'assets_root', 'cache_root', 'artifact_root')
     @classmethod
     def path(cls, value):
+        if value is None:return None
         p = PurePosixPath(value)
         if not p.is_absolute() or str(p) == '/' or '..' in p.parts or ',' in value or any(ord(c) < 32 or ord(c) == 127 for c in value):
             raise ValueError('expected an absolute directory without control characters, commas or ..')
@@ -73,6 +75,9 @@ def held(s, slot):
 def ready(worker, slot, at):
     if not worker.storage_revision and slot.protocol_version < 4:
         return True
+    config = desired(worker, slot)['config'] or (slot.storage_report or {}).get('effective') or {}
+    if config.get('artifact_root') and 'artifact_roots_v1' not in (slot.software or {}).get('capabilities', []):
+        return False
     report = slot.storage_report or {}
     return (slot.protocol_version >= 4 and slot.storage_applied_revision == worker.storage_revision
             and report.get('revision') == worker.storage_revision and report.get('status') == 'applied'
@@ -94,7 +99,7 @@ def acknowledge(s, worker, slot, report):
         if config:
             expected = dict(config)
             expected['workspace_root'] += '/slots/' + slot.id
-            if report.effective.model_dump() != expected:
+            if report.effective.model_dump(exclude_none=True) != {k:v for k,v in expected.items() if v is not None}:
                 raise HTTPException(409, 'effective storage differs from desired configuration')
         slot.storage_applied_revision = report.applied_revision
     slot.storage_report = report.model_dump()
@@ -107,6 +112,8 @@ def view(s, worker):
         report = slot.storage_report or {}
         if not online(slot):
             status = 'offline'
+        elif (desired(worker,slot)['config'] or {}).get('artifact_root') and 'artifact_roots_v1' not in (slot.software or {}).get('capabilities',[]):
+            status = 'upgrade_required'
         elif slot.protocol_version < 4:
             status = 'upgrade_required' if worker.storage_revision else 'local'
         elif not recent(slot.storage_reported_at, now(), ENVIRONMENT_REPORT_SECONDS):
@@ -148,7 +155,7 @@ def install(app, db, admin):
         if body.expected_revision != w.storage_revision:
             raise HTTPException(409, 'storage configuration changed; reload before saving')
         w.storage_revision += 1
-        w.storage_config=body.config.model_dump() if body.config else None
+        w.storage_config=body.config.model_dump(exclude_none=True) if body.config else None
         ids = select(Slot.id).where(Slot.worker_id == w.id)
         release_reserved(s, ids)
         s.commit()
@@ -166,7 +173,7 @@ def install(app, db, admin):
             raise HTTPException(409, 'storage configuration changed; reload before saving')
         overrides=dict((w.connection or {}).get(OVERRIDES, {}))
         if body.config:
-            overrides[slot_id]=body.config.model_dump()
+            overrides[slot_id]=body.config.model_dump(exclude_none=True)
         else:
             overrides.pop(slot_id,None)
         connection=dict(w.connection or {})

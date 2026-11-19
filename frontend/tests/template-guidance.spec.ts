@@ -156,3 +156,16 @@ for(const launch of ['per_episode','whole_task'])test(`host episode error policy
  await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
  expect(writes[0].body.host_runtime).toMatchObject({episode_launch:launch,episode_error_policy:launch==='per_episode'?'continue':'stop'});
 });
+
+test('artifact output is a platform parameter and saves as output-dir mapping',async({page})=>{
+ const writes=await setup(page);
+ await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await page.getByLabel('模板名称',{exact:true}).fill('artifact-output');await page.getByLabel('版本',{exact:true}).fill('1');await page.getByLabel('Docker 镜像').fill('demo:1');
+ await page.getByLabel('选择要传递的参数').selectOption({label:'产物目录'});
+ await page.getByRole('button',{name:'添加参数映射',exact:true}).click();
+ await expect(page.getByLabel('程序接收的参数名',{exact:true})).toHaveValue('--output-dir');
+ await expect(page.getByText(/业务需要输出参数时/)).toBeVisible();
+ await page.getByRole('button',{name:'注册此版本',exact:true}).click();
+ await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.platform_bindings).toEqual([{source:'platform.paths.output',target:'argv',name:'--output-dir',encoding:'literal'}]);
+});
