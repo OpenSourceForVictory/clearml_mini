@@ -1,0 +1,607 @@
+........................FFFFFFFF....FFFFFFFF                             [100%]
+=================================== FAILURES ===================================
+__ test_store_rejects_corruption_without_overwriting_other_files[generation] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_0')
+damage = 'generation'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_0')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___ test_store_rejects_corruption_without_overwriting_other_files[execution] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_1')
+damage = 'execution'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_1')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___ test_store_rejects_corruption_without_overwriting_other_files[truncated] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_2')
+damage = 'truncated'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_2')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___ test_store_rejects_corruption_without_overwriting_other_files[replaced] ____
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_3')
+damage = 'replaced'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_3')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___ test_store_rejects_corruption_without_overwriting_other_files[hardlink] ____
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_4')
+damage = 'hardlink'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_4')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+____ test_store_rejects_corruption_without_overwriting_other_files[replay] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_5')
+damage = 'replay'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_5')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+____ test_store_rejects_corruption_without_overwriting_other_files[closed] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_6')
+damage = 'closed'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_6')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___ test_store_rejects_corruption_without_overwriting_other_files[oversized] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_7')
+damage = 'oversized'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "generation",
+            "execution",
+            "truncated",
+            "replaced",
+            "hardlink",
+            "replay",
+            "closed",
+            "oversized",
+        ],
+    )
+    def test_store_rejects_corruption_without_overwriting_other_files(tmp_path, damage):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:150:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_corruption_7')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+_________ test_store_reinitialization_is_idempotent_but_identity_bound _________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_reinitialization_is0')
+
+    def test_store_reinitialization_is_idempotent_but_identity_bound(tmp_path):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:194:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_reinitialization_is0')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+______________ test_store_rejects_unsafe_metadata_paths[relative] ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta0')
+damage = 'relative'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta0')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+_____________ test_store_rejects_unsafe_metadata_paths[traversal] ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta1')
+damage = 'traversal'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta1')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___________ test_store_rejects_unsafe_metadata_paths[lock-hardlink] ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta2')
+damage = 'lock-hardlink'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta2')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+_____________ test_store_rejects_unsafe_metadata_paths[scope-link] _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta3')
+damage = 'scope-link'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta3')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+___________ test_store_rejects_unsafe_metadata_paths[index-hardlink] ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta4')
+damage = 'index-hardlink'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta4')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+____________ test_store_rejects_unsafe_metadata_paths[index-large] _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta5')
+damage = 'index-large'
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "relative",
+            "traversal",
+            "lock-hardlink",
+            "scope-link",
+            "index-hardlink",
+            "index-large",
+        ],
+    )
+    def test_store_rejects_unsafe_metadata_paths(tmp_path, damage):
+>       cfg, store, _ = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:218:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_store_rejects_unsafe_meta5')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+______ test_short_disk_write_reports_error_and_recovers_uncommitted_tail _______
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_short_disk_write_reports_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb33094acf0>
+
+    def test_short_disk_write_reports_error_and_recovers_uncommitted_tail(
+        tmp_path, monkeypatch
+    ):
+>       cfg, store, encoder = log_store(tmp_path)
+
+backend/tests/test_execution_group_gaps.py:251:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-633/test_short_disk_write_reports_0')
+
+    def log_store(tmp_path):
+        cfg = dict(
+            root=str(tmp_path / "logs"),
+            execution_id=str(uuid.uuid4()),
+            generation=str(uuid.uuid4()),
+        )
+        initialize(cfg["root"], cfg["execution_id"], cfg["generation"])
+        store = Store(cfg, "business")
+        encoder = RecordEncoder()
+>       store.write(encoder.feed("stdout", b"first\n", final=True)[0])
+E       TypeError: 'generator' object is not subscriptable
+
+backend/tests/test_execution_group_gaps.py:132: TypeError
+=========================== short test summary info ============================
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[generation]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[execution]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[truncated]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[replaced]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[hardlink]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[replay]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[closed]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_corruption_without_overwriting_other_files[oversized]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_reinitialization_is_idempotent_but_identity_bound
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[relative]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[traversal]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[lock-hardlink]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[scope-link]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[index-hardlink]
+FAILED backend/tests/test_execution_group_gaps.py::test_store_rejects_unsafe_metadata_paths[index-large]
+FAILED backend/tests/test_execution_group_gaps.py::test_short_disk_write_reports_error_and_recovers_uncommitted_tail
+16 failed, 28 passed in 8.60s

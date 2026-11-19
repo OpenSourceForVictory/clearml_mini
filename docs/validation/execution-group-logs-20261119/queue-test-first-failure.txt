@@ -1,0 +1,31 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+___________ test_sustained_output_slow_consumer_stays_memory_bounded ___________
+
+    def test_sustained_output_slow_consumer_stays_memory_bounded():
+        entered, release = threading.Event(), threading.Event()
+
+        def slow(record):
+            entered.set()
+            assert release.wait(10)
+
+        writer = BoundedWriter(slow)
+        row = encoded(
+            dict(sequence=0, time="test", stream="stderr", text="x" * 6000, gap=False)
+        )
+        started = time.monotonic()
+        try:
+            writer.offer(row)
+            assert entered.wait(2)
+            for _ in range(4096):
+                writer.offer(row)
+>           assert writer.bytes + writer.inflight <= writer.capacity
+E           assert (1043868 + 6069) <= 1048576
+E            +  where 1043868 = <runner.process_log_capture.BoundedWriter object at 0x7ce43c3efa10>.bytes
+E            +  and   6069 = <runner.process_log_capture.BoundedWriter object at 0x7ce43c3efa10>.inflight
+E            +  and   1048576 = <runner.process_log_capture.BoundedWriter object at 0x7ce43c3efa10>.capacity
+
+backend/tests/test_process_log_concurrency.py:121: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_process_log_concurrency.py::test_sustained_output_slow_consumer_stays_memory_bounded
+1 failed, 1 passed in 4.77s

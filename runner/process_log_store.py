@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import stat
 from uuid import UUID
@@ -45,16 +46,19 @@ def read_json(fd, name, limit=MAX_INDEX):
         os.close(handle)
 
 
-def atomic(fd, value):
+def atomic(fd, value, name="manifest.json"):
+    if name not in ("manifest.json", "prune.json"):
+        raise ValueError("invalid metadata name")
+    temporary = name.removesuffix(".json") + ".tmp"
     data = json.dumps(value, separators=(",", ":"), allow_nan=False).encode()
     if len(data) > MAX_INDEX:
         raise ValueError("log index exhausted")
     try:
-        os.unlink("manifest.tmp", dir_fd=fd)
+        os.unlink(temporary, dir_fd=fd)
     except FileNotFoundError:
         pass
     handle = os.open(
-        "manifest.tmp",
+        temporary,
         os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
         0o644,
         dir_fd=fd,
@@ -68,7 +72,7 @@ def atomic(fd, value):
             os.fsync(handle)
     finally:
         os.close(handle)
-    os.replace("manifest.tmp", "manifest.json", src_dir_fd=fd, dst_dir_fd=fd)
+    os.replace(temporary, name, src_dir_fd=fd, dst_dir_fd=fd)
     os.fsync(fd)
 
 
@@ -154,6 +158,54 @@ def scope_fd(rootfd, scope, episode, create=False):
         raise
 
 
+def recover_pruning(fd, index):
+    """Finish committed pruning, or retain victims if the index did not commit.
+
+    Caller owns the execution lock. A durable intent is written before replacing
+    the index; old files are removed only after the new index is committed.
+    """
+    try:
+        pending = read_json(fd, "prune.json")
+    except FileNotFoundError:
+        return
+    if (
+        pending.get("execution_id") != index["execution_id"]
+        or pending.get("generation") != index["generation"]
+    ):
+        raise ValueError("prune identity changed")
+    victims = pending.get("victims")
+    if not isinstance(victims, list) or len(victims) > 10003:
+        raise ValueError("invalid prune intent")
+    for victim in victims:
+        key = identity(index["execution_id"], victim["scope"], victim["episode_id"])
+        name = victim["name"]
+        if not isinstance(name, str) or not re.fullmatch(r"log-[0-9]{6,}\.jsonl", name):
+            raise ValueError("invalid prune segment")
+        entry = index["scopes"].get(key)
+        if entry is None:
+            raise ValueError("prune scope missing")
+        if any(segment["name"] == name for segment in entry["segments"]):
+            continue  # The old index still owns this file: commit failed.
+        directory = scope_fd(fd, victim["scope"], victim["episode_id"])
+        try:
+            try:
+                st = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            except FileNotFoundError:
+                continue  # A previous cleanup removed it before interruption.
+            if (
+                not stat.S_ISREG(st.st_mode)
+                or st.st_nlink != 1
+                or (st.st_dev, st.st_ino) != (victim["dev"], victim["ino"])
+            ):
+                raise ValueError("prune segment replaced")
+            os.unlink(name, dir_fd=directory)
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    os.unlink("prune.json", dir_fd=fd)
+    os.fsync(fd)
+
+
 class Store:
     def __init__(self, config, scope, episode=0):
         self.root = config["root"]
@@ -191,6 +243,7 @@ class Store:
         ):
             raise ValueError("log identity changed")
         policy(value["policy"])
+        recover_pruning(fd, value)
         return value
 
     def save(self, fd, index):
@@ -265,13 +318,17 @@ class Store:
                 os.close(directory)
             entry["next_sequence"] = row["sequence"] + 1
 
+            victims = []
+
             def remove(owner):
                 victim = owner["segments"].pop(0)
-                directory = scope_fd(fd, owner["scope"], owner["episode_id"])
-                try:
-                    os.unlink(victim["name"], dir_fd=directory)
-                finally:
-                    os.close(directory)
+                victims.append(
+                    {
+                        **victim,
+                        "scope": owner["scope"],
+                        "episode_id": owner["episode_id"],
+                    }
+                )
                 owner["truncated"] = True
                 owner["first_sequence"] = (
                     owner["segments"][0]["first"]
@@ -295,7 +352,19 @@ class Store:
                 remove(owner)
             if segments:
                 entry["first_sequence"] = segments[0]["first"]
+            if victims:
+                atomic(
+                    fd,
+                    dict(
+                        execution_id=self.execution,
+                        generation=self.generation,
+                        victims=victims,
+                    ),
+                    "prune.json",
+                )
             self.save(fd, index)
+            if victims:
+                recover_pruning(fd, index)
 
     def close(self, state):
         with locked(self.root) as fd:

@@ -8,7 +8,13 @@ from pathlib import Path
 import threading
 import uuid
 
-from runner.process_log_store import initialize, locked, read_json, scope_fd
+from runner.process_log_store import (
+    initialize,
+    locked,
+    read_json,
+    scope_fd,
+    recover_pruning,
+)
 from runner.process_log_contract import identity
 from .process_log_reader import Segment, read_page
 from .storage import atomic_json
@@ -109,7 +115,7 @@ class LogService:
             self.thread.join(timeout=2)
 
     def read_index(self, item):
-        with locked(item["root"], exclusive=False) as fd:
+        with locked(item["root"]) as fd:
             st = os.fstat(fd)
             if [st.st_dev, st.st_ino] != item["root_identity"]:
                 raise ValueError("log root replaced")
@@ -121,6 +127,7 @@ class LogService:
                 raise ValueError("log generation changed")
             if not isinstance(index["scopes"], dict) or len(index["scopes"]) > 10003:
                 raise ValueError("invalid log index")
+            recover_pruning(fd, index)
             return index
 
     def sync(self, path, item):

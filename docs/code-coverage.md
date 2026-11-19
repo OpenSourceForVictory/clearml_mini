@@ -92,3 +92,7 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 ## 独立日志故障回归
 
 `backend/tests/test_process_log_failures.py` 补充子进程采集和 Worker 日志接线的失败/恢复用例。真实业务子进程由测试进程内的采集器管理，因此采集器本身可被标准 coverage 统计；业务子进程内部的 Python 仍没有自动合并，不能因启动了子进程就宣称 SDK 内部已统计。注入磁盘/API 故障用于验证降级和重试，锁冲突、子进程退出/回收使用实际系统调用。结果见 [专项验证](validation/process-log-failures-20261119/README.md)。
+
+业务执行与结果功能组补测使用现有 FUNCTIONS 中的全部文件（包括 runner/*.py）作为分母，补充宿主机回合控制、日志存储失败、真实写进程中断、并发 scope、清理锁和 PostgreSQL 请求容量验证；范围和证据见 [功能组验证](validation/execution-group-logs-20261119/README.md)。隔离负载测试不替代生产容量评估；万回合用例验证的是已有历史索引，不是启动一万次业务程序。
+
+最终关联回归：870 通过、40 跳过；业务执行与结果完整 38 文件分母为行 91.21%、分支 83.13%，达到 90%/80%。全仓其他目录未达标及真实节点矩阵跳过均保留，不宣称全项目达标；证据见 docs/validation/execution-group-logs-20261119（从仓库根目录定位）。

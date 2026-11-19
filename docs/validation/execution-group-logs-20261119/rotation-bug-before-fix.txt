@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____ test_rotation_index_commit_failure_keeps_previous_segments_readable ______
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-635/test_rotation_index_commit_fai0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2c6bd6c8a0>
+
+    def test_rotation_index_commit_failure_keeps_previous_segments_readable(tmp_path,monkeypatch):
+        cfg=dict(root=str(tmp_path/'logs'),execution_id=str(uuid.uuid4()),generation=str(uuid.uuid4()))
+        initialize(cfg['root'],cfg['execution_id'],cfg['generation'],dict(segment_bytes=65536,scope_bytes=65536,execution_bytes=262144))
+        store=Store(cfg,'business')
+        def record(i):return (json.dumps(dict(sequence=i,time='now',stream='stdout',text='x'*7400,gap=False))+'\n').encode()
+        for i in range(8):store.write(record(i))
+        with locked(cfg['root']) as fd:before=read_json(fd,'manifest.json')
+        def disk_failure(*args):raise OSError('index commit failed')
+        with monkeypatch.context() as m:
+            m.setattr(store,'save',disk_failure)
+            with pytest.raises(OSError):store.write(record(8))
+        # The old committed index must not point at already deleted segments.
+        for segment in before['scopes'][store.key]['segments']:
+>           assert (Path(cfg['root'])/'business'/segment['name']).exists()
+E           AssertionError: assert False
+E            +  where False = exists()
+E            +    where exists = ((PosixPath('/tmp/pytest-of-dgh/pytest-635/test_rotation_index_commit_fai0/logs') / 'business') / 'log-000001.jsonl').exists
+E            +      where PosixPath('/tmp/pytest-of-dgh/pytest-635/test_rotation_index_commit_fai0/logs') = Path('/tmp/pytest-of-dgh/pytest-635/test_rotation_index_commit_fai0/logs')
+
+backend/tests/test_execution_group_gaps.py:284: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_execution_group_gaps.py::test_rotation_index_commit_failure_keeps_previous_segments_readable
+1 failed, 44 deselected in 0.31s

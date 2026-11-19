@@ -2,7 +2,7 @@
 
 The caller owns the historical-root registry and execution cleanup lock. Segment
 identities below must come from that registry/index, not a business-supplied
-manifest. This standalone reader is not yet connected to the Worker loop.
+manifest. The historical Worker log service supplies that registered identity and lock.
 """
 
 import base64

@@ -1,7 +1,7 @@
 """Bounded diagnostic capture primitives; no protocol parsing or quota ownership.
 
-The caller must obtain quota and supply a non-business sink. This module is not
-wired into production execution until the quota channel is agreed.
+The caller supplies a per-execution bounded sink. Production capture uses
+process_log_run/process_log_store; no node-wide quota channel is enabled.
 """
 
 import codecs

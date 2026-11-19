@@ -1,0 +1,10 @@
+offline-node 128 reads: max_seconds=0.0185 total_seconds=1.3929
+.offline-node 128 reads: max_seconds=0.0987 total_seconds=10.9430
+.
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 5 deselected, 1 warning in 20.02s

@@ -191,3 +191,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 原生 SDK 接入回归：test_process_log_pipeline.py::test_native_sdk_process_logs 使用真正的 EvaluationClient，覆盖 host whole_task/per_episode 和 Docker 整任务、正常/业务失败/异常/非法结果/退出，核对参数、环境、seed 回绕、事件去重和日志归属。SDK 随 runner 组件包更新，旧式业务镜像不自动更新；更新指南和前端发布边界见 docs/worker-upgrades.md。
 
 日志故障专项：backend/tests/test_process_log_failures.py 覆盖 process_log_run 与 worker/process_logs 的降级、身份拒绝、清理锁冲突、持久登记恢复和 API 故障。比例按 scripts.test_coverage 保留全项目分母；单文件达标不代表业务执行功能分组达标，详见 docs/code-coverage.md。
+
+业务执行功能组补测：test_execution_group_gaps 覆盖真实 host_episode 控制与存储边界；test_process_log_concurrency 验证 4 进程写入、清理互斥、真实进程退出恢复与大索引；test_process_log_load 验证旧能力协商、离线积压和独立 PostgreSQL 两连接池。0.21.7 的 process_log_store.recover_pruning 使用持久 prune.json，在提交索引后才删除旧分片；Worker 历史同步负责恢复。验证边界见 docs/validation/execution-group-logs-20261119/README.md。
