@@ -1,0 +1,72 @@
+Running 12 tests using 1 worker
+
+(node:995197) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (453ms)
+  ✓   2 tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (239ms)
+  ✓   3 tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (215ms)
+  ✓   4 tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (294ms)
+  ✓   5 tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (286ms)
+  ✓   6 tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (312ms)
+  ✓   7 tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (205ms)
+  ✓   8 tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (313ms)
+  ✘   9 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (299ms)
+(node:995559) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  10 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (345ms)
+(node:995746) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 tests/batch-run-configuration.spec.ts:88:1 › server business-only mappings are visible and missing platform values are not invented (281ms)
+  ✓  12 tests/batch-run-configuration.spec.ts:95:1 › legacy missing mappings differ from explicitly empty mappings (234ms)
+
+
+  1) tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "runtime-templates/server",
+    + ]
+
+      84 |  await panel.getByLabel('查看任务配置').selectOption('b');
+      85 |  await expect(table).toContainText('task-b');await expect(table).toContainText('pick_cube');await expect(table).not.toContainText('demo_clean');
+    > 86 |  expect(ctl.requests.filter(p=>/templates\//.test(p))).toEqual([]);
+         |                                                        ^
+      87 | });
+      88 | test('server business-only mappings are visible and missing platform values are not invented',async({page})=>{
+      89 |  await setup(page);
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-run-configuration.spec.ts:86:56
+
+    Error Context: test-results/batch-run-configuration-dy-0c418-ields-and-task-name-in-host/error-context.md
+
+  2) tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "runtime-templates/server",
+    + ]
+
+      84 |  await panel.getByLabel('查看任务配置').selectOption('b');
+      85 |  await expect(table).toContainText('task-b');await expect(table).toContainText('pick_cube');await expect(table).not.toContainText('demo_clean');
+    > 86 |  expect(ctl.requests.filter(p=>/templates\//.test(p))).toEqual([]);
+         |                                                        ^
+      87 | });
+      88 | test('server business-only mappings are visible and missing platform values are not invented',async({page})=>{
+      89 |  await setup(page);
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-run-configuration.spec.ts:86:56
+
+    Error Context: test-results/batch-run-configuration-dy-d4094-lds-and-task-name-in-docker/error-context.md
+
+  2 failed
+    tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host
+    tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker
+  10 passed (4.3s)

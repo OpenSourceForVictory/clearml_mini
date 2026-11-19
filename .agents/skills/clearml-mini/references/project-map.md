@@ -193,3 +193,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 日志故障专项：backend/tests/test_process_log_failures.py 覆盖 process_log_run 与 worker/process_logs 的降级、身份拒绝、清理锁冲突、持久登记恢复和 API 故障。比例按 scripts.test_coverage 保留全项目分母；单文件达标不代表业务执行功能分组达标，详见 docs/code-coverage.md。
 
 业务执行功能组补测：test_execution_group_gaps 覆盖真实 host_episode 控制与存储边界；test_process_log_concurrency 验证 4 进程写入、清理互斥、真实进程退出恢复与大索引；test_process_log_load 验证旧能力协商、离线积压和独立 PostgreSQL 两连接池。0.21.7 的 process_log_store.recover_pruning 使用持久 prune.json，在提交索引后才删除旧分片；Worker 历史同步负责恢复。验证边界见 docs/validation/execution-group-logs-20261119/README.md。
+
+运行配置动态映射：batch-parameters.tsx 的 Mappings 合并 platform_bindings 与 parameter_schema.fields 的 binding（默认 input），值来自当前任务/服务定义快照。不得仅展示 platform_bindings 或将基础命令称为实际执行 argv。浏览器回归覆盖宿主机/容器客户端、服务端、业务绑定独立存在、任务切换及缺失旧快照；操作见 docs/batch-monitoring.md。仅前端变更，无 Worker/数据库升级。

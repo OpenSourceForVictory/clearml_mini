@@ -15,7 +15,20 @@ function Parameters({values,origins}:{values?:Snapshot;origins?:Snapshot}){
  const entries=Object.entries(values);
  return entries.length?<div className="run-config-table"><table aria-label="业务参数最终值与来源"><thead><tr><th>参数</th><th>本任务最终值</th><th>来源</th></tr></thead><tbody>{entries.map(([key,value])=><tr key={key}><th scope="row">{key}</th><td><code>{text(value)}</code></td><td>{label(origins?.[key],sources)}</td></tr>)}</tbody></table></div>:<p>未配置业务参数。</p>;
 }
-function Runtime({template,environment}:{template?:Snapshot;environment?:Snapshot}){
+function Mappings({template,parameters,task}:{template:Snapshot;parameters?:Snapshot;task?:Snapshot}){
+ const rows=[
+  ...(template.platform_bindings??[]).map((b:Snapshot)=>({...b,value:b.source?.startsWith('task.')?task?.[b.source.slice(5)]:undefined,business:false})),
+  ...Object.entries(template.parameter_schema?.fields??{}).map(([name,field])=>({...((field as Snapshot).binding??{target:'input'}),source:'business.'+name,value:parameters?.[name],business:true})),
+ ];
+ if(!rows.length)return <p>{template.platform_bindings==null&&template.parameter_schema==null?'动态参数映射未记录。':'未配置动态参数映射。'}</p>;
+ return <><h5>动态参数映射</h5><p>启动时按下表追加命令行参数或设置环境变量；输入 JSON 字段不追加到命令。下方值来自本次快照，基础命令不代表节点最终执行命令。</p>
+ <div className="run-config-table"><table aria-label="动态参数映射"><thead><tr><th>来源</th><th>传递方式</th><th>程序接收名称</th><th>编码</th><th>快照值</th></tr></thead><tbody>{rows.map((b,i)=><tr key={i}>
+ <th scope="row"><code>{b.source}</code></th><td>{label(b.target,{argv:'命令行参数',env:'环境变量',input:'输入 JSON'})}</td><td><code>{b.target==='input'?'—':text(b.name)}</code></td>
+ <td>{b.target==='input'?'JSON':label(b.encoding??'literal',{literal:'单个值',json:'JSON 编码',flag:'为 true 时添加开关',repeat:'逐项重复'})}</td>
+ <td><code>{b.value===undefined?(b.business?'未提供值（可选参数不追加）':b.source?.startsWith('task.')?'未记录':'启动时解析，未记录实际值'):text(b.value)}</code></td>
+ </tr>)}</tbody></table></div></>;
+}
+function Runtime({template,environment,parameters,task}:{template?:Snapshot;environment?:Snapshot;parameters?:Snapshot;task?:Snapshot}){
  if(!template)return <p>模板快照未记录。</p>;
  const host=template.execution_mode==='host',runtime=host?template.host_runtime:template.runtime;
  return <><Fields items={[
@@ -31,7 +44,7 @@ function Runtime({template,environment}:{template?:Snapshot;environment?:Snapsho
  ]}/><h5>启动命令（模板快照，参数映射前）</h5><pre>{template.command==null?missing:JSON.stringify(template.command,null,2)}</pre>
  <JsonDetails title="模板环境变量（展开查看）" value={runtime?.environment??template.environment}/>
  <JsonDetails title="本次启动变量覆盖（展开查看）" value={environment}/>
- <JsonDetails title="动态参数映射" value={template.platform_bindings}/>
+ <Mappings template={template} parameters={parameters} task={task}/>
  <JsonDetails title="工作目录、资产与挂载配置" value={runtime?{work_dir:runtime.work_dir,output_dir:runtime.output_dir,assets:runtime.assets,mounts:runtime.mounts}:undefined}/></>;
 }
 function Resources({value,pool}:{value?:Snapshot;pool?:unknown}){
@@ -67,7 +80,7 @@ function Services({batchId,orchestrated,spec,onServices}:{batchId:string;orchest
   ['客户端访问方式',label(d.mode,{shared:'共享访问（不等于设备共享）',exclusive:'独占访问'})],
   ['固定设备槽位',d.slot_id===null?'自动分配':d.slot_id],
   ['服务协议',d.template?.protocol],['模板业务端口',d.template?.container_port??d.template?.port],
- ]}/><Runtime template={d.template} environment={d.environment}/>
+ ]}/><Runtime template={d.template} environment={d.environment} parameters={d.parameters}/>
  <h5>服务业务参数</h5><Parameters values={d.parameters} origins={d.parameter_sources}/>
  <h5>服务资源预约与限制</h5><Resources value={d.resources} pool={d.pool_id}/>
  <h5>就绪检查配置</h5>{d.template?.readiness?<><Fields items={[
@@ -103,7 +116,7 @@ export function BatchParameters({batchId,suiteId,cases,maxConcurrent,orchestrate
  {error&&<p role="alert">任务配置读取失败：{error} <button onClick={retry}>重试任务配置</button></p>}
  {data&&!spec&&<p>此历史任务未保存客户端运行快照。</p>}
  {spec&&<><section className="run-config-section" ref={el=>{sections.current[1]=el}} tabIndex={-1} aria-labelledby={prefix+'-1'}><h4 id={prefix+'-1'}>2. 客户端</h4>
- <Runtime template={template} environment={spec.environment}/>
+ <Runtime template={template} environment={spec.environment} parameters={spec.parameters} task={{...spec,episodes:data?.episodes}}/>
  <Fields items={[
  ['回合启动方式',template?.execution_mode==='host'&&host?label(host.episode_launch??'whole_task',{whole_task:'整任务启动（SDK 可在内部逐回合执行）',per_episode:'每回合启动'}):'按模板入口执行'],
  ['回合失败策略',template?.execution_mode==='host'&&host?.episode_launch==='per_episode'?label(host.episode_error_policy??'stop',{stop:'出错立即停止',continue:'记录错误继续；最终仍标记失败'}):'由接入协议与业务程序决定'],

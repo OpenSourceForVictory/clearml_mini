@@ -1,0 +1,19 @@
+Running 13 tests using 1 worker
+
+(node:998383) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (513ms)
+  ✓   2 tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (227ms)
+  ✓   3 tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (217ms)
+  ✓   4 tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (281ms)
+  ✓   5 tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (282ms)
+  ✓   6 tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (305ms)
+  ✓   7 tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (217ms)
+  ✓   8 tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (296ms)
+  ✓   9 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (281ms)
+  ✓  10 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (290ms)
+  ✓  11 tests/batch-run-configuration.spec.ts:88:1 › server business-only mappings are visible and missing platform values are not invented (235ms)
+  ✓  12 tests/batch-run-configuration.spec.ts:95:1 › legacy missing mappings differ from explicitly empty mappings (230ms)
+  ✓  13 tests/batch-run-configuration.spec.ts:102:1 › business mappings display without platform bindings, including implicit input and JSON (226ms)
+
+  13 passed (4.0s)

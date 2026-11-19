@@ -63,3 +63,50 @@ test('navigation to another batch resets the selected configuration',async({page
  await setup(page,'none');const panel=await open(page);await panel.getByLabel('查看任务配置').selectOption('b');await expect(panel).toContainText('pick_cube');
  await page.goto('/#/cs/batches/another');await page.getByRole('button',{name:'运行配置',exact:true}).click();await expect(page.getByLabel('查看任务配置')).toHaveValue('a');await expect(page.getByRole('region',{name:'本次运行配置',exact:true})).toContainText('demo_clean');
 });
+
+for(const executionMode of ['host','docker'])test(`dynamic mappings include business fields and task name in ${executionMode}`,async({page})=>{
+ const ctl=await setup(page);ctl.requests.length=0;
+ await page.route('**/api/v1/jobs/*',async route=>{
+  const key=new URL(route.request().url()).pathname.split('/').at(-1);
+  await route.fulfill({json:{id:key,episodes:3,client_spec:{task_name:'task-'+key,service_mode:'managed',parameters:{'task-config':key==='a'?'demo_clean':'pick_cube',enabled:false,count:0,labels:['a','b']},template:{...template,execution_mode:executionMode,platform_bindings:[{source:'task.task_name',target:'argv',name:'--taskname'}],parameter_schema:{version:1,fields:{'task-config':{type:'string',binding:{target:'argv',name:'--task-config'}},enabled:{type:'boolean',binding:{target:'argv',name:'--enabled',encoding:'flag'}},count:{type:'integer',binding:{target:'env',name:'COUNT'}},labels:{type:'array',binding:{target:'argv',name:'--label',encoding:'repeat'}},optional:{type:'string',binding:{target:'argv',name:'--optional'}},input:{type:'string',binding:{target:'input'}}}}}}}});
+ });
+ const panel=await open(page),client=panel.getByRole('region',{name:'2. 客户端'}),table=client.getByRole('table',{name:'动态参数映射'});
+ await expect(table).toBeVisible();
+ await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('--taskname');
+ await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('task-a');
+ await expect(table.getByRole('row').filter({hasText:'business.task-config'})).toContainText('demo_clean');
+ await expect(table.getByRole('row').filter({hasText:'business.count'})).toContainText('COUNT');
+ await expect(table.getByRole('row').filter({hasText:'business.count'})).toContainText('0');
+ await expect(table.getByRole('row').filter({hasText:'business.enabled'})).toContainText('false');
+ await expect(table.getByRole('row').filter({hasText:'business.labels'})).toContainText('逐项重复');
+ await expect(table.getByRole('row').filter({hasText:'business.optional'})).toContainText('未提供值');
+ await expect(table.getByRole('row').filter({hasText:'business.input'})).toContainText('输入 JSON');
+ await panel.getByLabel('查看任务配置').selectOption('b');
+ await expect(table).toContainText('task-b');await expect(table).toContainText('pick_cube');await expect(table).not.toContainText('demo_clean');
+ expect(ctl.requests.filter(p=>/templates\//.test(p))).toEqual([]);
+});
+test('server business-only mappings are visible and missing platform values are not invented',async({page})=>{
+ await setup(page);
+ await page.route('**/api/v1/orchestrations/b',route=>route.fulfill({json:{orchestration:{definitions:[{key:'model',parameters:{model:'saved-model'},template:{...template,parameter_schema:{version:1,fields:{model:{type:'string',binding:{target:'env',name:'MODEL'}}}},platform_bindings:[{source:'platform.listen.port',target:'argv',name:'--port'}]}}]}}}));
+ const panel=await open(page),table=panel.getByRole('article',{name:'服务配置 model'}).getByRole('table',{name:'动态参数映射'});
+ await expect(table).toBeVisible();await expect(table.getByRole('row').filter({hasText:'business.model'})).toContainText('saved-model');
+ await expect(table.getByRole('row').filter({hasText:'platform.listen.port'})).toContainText('启动时解析');
+});
+test('legacy missing mappings differ from explicitly empty mappings',async({page})=>{
+ const ctl=await setup(page,'none');ctl.legacy=true;const panel=await open(page);
+ await expect(panel).toContainText('动态参数映射未记录');
+ await page.route('**/api/v1/jobs/b',route=>route.fulfill({json:{client_spec:{template:{...template,platform_bindings:[],parameter_schema:{version:1,fields:{}}},parameters:{},service_mode:'none'}}}));
+ await panel.getByLabel('查看任务配置').selectOption('b');await expect(panel).toContainText('未配置动态参数映射');
+});
+
+test('business mappings display without platform bindings, including implicit input and JSON',async({page})=>{
+ await setup(page,'none');
+ await page.route('**/api/v1/jobs/a',route=>route.fulfill({json:{client_spec:{template:{...template,parameter_schema:{version:1,fields:{config:{type:'object',binding:{target:'argv',name:'--config',encoding:'json'}},plain:{type:'string'}}}},parameters:{config:{mode:'eef'},plain:'kept'},service_mode:'none'}}}));
+ const panel=await open(page),table=panel.getByRole('table',{name:'动态参数映射'});
+ await expect(table.getByRole('row').filter({hasText:'business.config'})).toContainText('--config');
+ await expect(table.getByRole('row').filter({hasText:'business.config'})).toContainText('JSON 编码');
+ await expect(table.getByRole('row').filter({hasText:'business.config'})).toContainText('{"mode":"eef"}');
+ await expect(table.getByRole('row').filter({hasText:'business.plain'})).toContainText('输入 JSON');
+ await expect(table.getByRole('row').filter({hasText:'business.plain'})).toContainText('kept');
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+});

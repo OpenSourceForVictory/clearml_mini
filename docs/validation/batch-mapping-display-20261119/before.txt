@@ -1,0 +1,34 @@
+Running 1 test using 1 worker
+
+(node:993182) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (5.3s)
+
+
+  1) tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '本次运行配置', exact: true }).getByRole('region', { name: '2. 客户端' }).getByRole('table', { name: '动态参数映射' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '本次运行配置', exact: true }).getByRole('region', { name: '2. 客户端' }).getByRole('table', { name: '动态参数映射' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '本次运行配置', exact: true }).getByRole('region', { name: '2. 客户端' }).getByRole('table', { name: '动态参数映射' })
+
+
+      72 |  });
+      73 |  const panel=await open(page),client=panel.getByRole('region',{name:'2. 客户端'}),table=client.getByRole('table',{name:'动态参数映射'});
+    > 74 |  await expect(table).toBeVisible();
+         |                      ^
+      75 |  await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('--taskname');
+      76 |  await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('task-a');
+      77 |  await expect(table.getByRole('row').filter({hasText:'business.task-config'})).toContainText('demo_clean');
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-run-configuration.spec.ts:74:22
+
+    Error Context: test-results/batch-run-configuration-dy-0c418-ields-and-task-name-in-host/error-context.md
+
+  1 failed
+    tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host
