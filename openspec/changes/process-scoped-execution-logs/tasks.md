@@ -55,3 +55,5 @@
 2026-11-19 真机续验：隔离真实 API/PostgreSQL/Worker 完成 GPU 宿主机整任务/逐回合、Docker 普通命令/SDK 命令适配共 5 个任务、11 个业务日志 scope，真实浏览器过滤及下载、Worker 重启后历史日志读取；29 两张 NPU 卡同时运行同名小程序验证 service 日志隔离。NPU 双服务并非平台调度全链路，压力/发布边界不变，不勾选整个 6.4。证据见 [真机实验](../../../docs/validation/process-logs-live-20261119/README.md)。
 
 2026-11-19 NPU 完整链路续验：发现并修复普通业务账号仅能穿过父目录时的日志采集失败（0.21.8），补充真实非 root 权限回归。隔离平台同节点 NPU 6/7、同名双实例、HTTP 就绪与客户端请求、页面各实例日志查看/筛选/下载、停止清理和 Worker 重启历史读取已完成。结合上一轮 GPU 宿主机/容器、逐回合/整任务证据完成 6.4；其他复合任务保持原状态，不代表整体发布/压力验收完成。见 [NPU 平台实验](../../../docs/validation/npu-process-logs-platform-20261119/README.md)。
+
+2026-11-20 生产平台NPU双实例续验发现服务旧日志入口仅查询RunLog，v2上传正常却显示为空。补充test_service_log_compatibility回归，修复为按RunLogState选择格式；保持旧入口契约，不因此完成5.1完整抽屉或压力验收项。

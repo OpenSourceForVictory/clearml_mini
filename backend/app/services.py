@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,field_validator
 from sqlalchemy import select,or_
-from .core import ServiceInstance,ServerTemplate,Worker,Slot,Pool,Job,Run,RunLog,now,uid
+from .core import ServiceInstance,ServerTemplate,Worker,Slot,Pool,Job,Run,RunLog,RunLogState,RunLogChunk,now,uid
 from .scheduling import lock,ACTIVE,TERMINAL,utc,online
 from .templates import server_view
 from .administration import audit
@@ -192,7 +192,9 @@ def install(app,db,admin,worker_auth):
         chosen=job_id or item.current_job_id
         if chosen not in [j.id for j in jobs]:raise HTTPException(404,'service execution not found')
         run=s.scalar(select(Run).where(Run.job_id==chosen).order_by(Run.attempt.desc()))
-        chunks=list(s.scalars(select(RunLog).where(RunLog.run_id==run.id).order_by(RunLog.sequence))) if run else []
+        # Match the job log reader: a v2 state is authoritative, even if its window is empty.
+        model=RunLogChunk if run and s.get(RunLogState,run.id) is not None else RunLog
+        chunks=list(s.scalars(select(model).where(model.run_id==run.id).order_by(model.sequence))) if run else []
         return {'job_id':chosen,'history':[{'job_id':j.id,'status':j.status,'created_at':j.created_at} for j in jobs],'content':''.join(x.content for x in chunks)}
 
     @app.post('/api/v1/worker/executions/{execution}/service-probe-session')
