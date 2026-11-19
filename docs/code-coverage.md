@@ -88,3 +88,7 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 程序执行与协议结果分离的定向回归：279 通过、28 跳过，新共享统计模块 100% 行 / 100% 分支；完整项目分母覆盖率 43.05% / 21.72%，门槛未通过，不作为全项目覆盖验收。`backend/app/result_views.py` 纳入业务执行与结果关键功能组，未降低阈值。失败、跳过及前端验证见 [记录](validation/episode-result-diagnostics-20261119/README.md)。
 
 进程日志基础模块 `backend/app/process_logs.py`、`backend/app/execution_locations.py` 纳入“业务执行与结果”关键功能统计；Runner 契约沿用 `runner` 全目录统计，不排除尚未覆盖的分支。
+
+## 独立日志故障回归
+
+`backend/tests/test_process_log_failures.py` 补充子进程采集和 Worker 日志接线的失败/恢复用例。真实业务子进程由测试进程内的采集器管理，因此采集器本身可被标准 coverage 统计；业务子进程内部的 Python 仍没有自动合并，不能因启动了子进程就宣称 SDK 内部已统计。注入磁盘/API 故障用于验证降级和重试，锁冲突、子进程退出/回收使用实际系统调用。结果见 [专项验证](validation/process-log-failures-20261119/README.md)。

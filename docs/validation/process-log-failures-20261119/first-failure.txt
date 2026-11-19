@@ -1,0 +1,27 @@
+.....F.............................                                      [100%]
+=================================== FAILURES ===================================
+____________ test_capture_callback_long_lines_tail_and_text_stream _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-629/test_capture_callback_long_lin0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7176a87028b0>
+
+    def test_capture_callback_long_lines_tail_and_text_stream(tmp_path, monkeypatch):
+        _, _, settings, _, _, _ = fixture(tmp_path)
+        output, error = io.StringIO(), io.StringIO()
+        monkeypatch.setattr(sys, "stdout", output)
+        monkeypatch.setattr(sys, "stderr", error)
+        lines = []
+        code = "import os;os.write(1,b'x'*70000+b'\\nsmall\\nunterminated');os.write(2,b'error-tail')"
+        assert code_run(settings, code, on_line=lines.append) == 0
+        assert lines == ["small\n", "unterminated"]
+        assert "oversized stdout line" in output.getvalue()
+>       assert error.getvalue() == "error-tail"
+E       AssertionError: assert 'error-tailpr... incomplete\n' == 'error-tail'
+E
+E         - error-tail
+E         + error-tailprocess log close incomplete
+
+backend/tests/test_process_log_failures.py:124: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_process_log_failures.py::test_capture_callback_long_lines_tail_and_text_stream
+1 failed, 34 passed in 5.23s

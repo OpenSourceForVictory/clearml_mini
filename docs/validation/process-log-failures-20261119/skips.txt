@@ -1,0 +1,1 @@
+backend.tests.test_process_log_migration::test_process_log_migration_and_batch_deletion: requires disposable PostgreSQL server

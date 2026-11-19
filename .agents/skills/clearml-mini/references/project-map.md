@@ -189,3 +189,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 独立日志基础模块：runner/process_log_capture.py 为增量 JSONL 编码与异步有界写入队列；worker/process_log_reader.py 为可信目录句柄和分片索引上的安全分页。test_process_log_primitives 覆盖真实本地子进程退出、故障 sink、UTF-8、游标隔离、轮转缺口与文件替换。现由 runner/process_log_store.py、process_log_run.py 和 worker/process_logs.py 接通采集、文件与读取邮箱，frontend/src/process-logs.tsx 展示。整机配额默认不限制，跨账号配额通道不启用；已通过小程序测试不等于生产部署或模型验收。边界与内部页预算见 docs/execution-logs.md。
 
 原生 SDK 接入回归：test_process_log_pipeline.py::test_native_sdk_process_logs 使用真正的 EvaluationClient，覆盖 host whole_task/per_episode 和 Docker 整任务、正常/业务失败/异常/非法结果/退出，核对参数、环境、seed 回绕、事件去重和日志归属。SDK 随 runner 组件包更新，旧式业务镜像不自动更新；更新指南和前端发布边界见 docs/worker-upgrades.md。
+
+日志故障专项：backend/tests/test_process_log_failures.py 覆盖 process_log_run 与 worker/process_logs 的降级、身份拒绝、清理锁冲突、持久登记恢复和 API 故障。比例按 scripts.test_coverage 保留全项目分母；单文件达标不代表业务执行功能分组达标，详见 docs/code-coverage.md。
