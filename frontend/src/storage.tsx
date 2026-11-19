@@ -15,7 +15,7 @@ function initialSlotConfig(slot:Slot):Config {
   const effective=slot.report.effective;
   if(!effective)return empty;
   const suffix='/slots/'+slot.slot_id;
-  return {...effective,workspace_root:effective.workspace_root.endsWith(suffix)?effective.workspace_root.slice(0,-suffix.length):effective.workspace_root};
+  return {...effective,artifact_root:null,workspace_root:effective.workspace_root.endsWith(suffix)?effective.workspace_root.slice(0,-suffix.length):effective.workspace_root};
 }
 
 function SlotStorageEditor({slot,id,name,revision,onSaved,disabled}:{slot:Slot;id:string;name:string;revision:number;onSaved:(value:Storage)=>void;disabled:boolean}){
@@ -44,7 +44,8 @@ function SlotStorageEditor({slot,id,name,revision,onSaved,disabled}:{slot:Slot;i
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
     <form onSubmit={e=>{e.preventDefault();void save(draft);}}>
       {(['workspace_root','assets_root','cache_root'] as const).map((key,i)=><label key={key}>{['工作基目录','资产目录','缓存目录'][i]}<input aria-label={`${label} ${['工作基目录','资产目录','缓存目录'][i]}`} value={draft[key]} required pattern="/.*" onChange={e=>{dirty.current=true;setDraft({...draft,[key]:e.target.value});}}/></label>)}
-      <label>产物根目录（选填）<input aria-label={`${label} 产物根目录`} value={draft.artifact_root||''} placeholder="留空沿用旧工作区输出目录" pattern="/.*" onChange={e=>{dirty.current=true;setDraft({...draft,artifact_root:e.target.value||null});}}/></label>
+      <label>产物根目录（选填）<input aria-label={`${label} 产物根目录`} value={draft.artifact_root||''} placeholder="留空继承整机产物目录" pattern="/.*" onChange={e=>{dirty.current=true;setDraft({...draft,artifact_root:e.target.value||null});}}/></label>
+      <p>此卡产物目录留空时继承整机设置；整机也未设置时沿用旧工作区输出目录。工作、资产和缓存目录仍使用此卡配置。</p>
       <label>工作盘最低可用空间 GiB<input aria-label={`${label} 最低可用空间 GiB`} type="number" min={0} max={2097151} step="any" value={draft.min_free_disk_gb} onChange={e=>{dirty.current=true;setDraft({...draft,min_free_disk_gb:Number(e.target.value)});}} required/></label>
       <p>建议按机器和设备区分：{suggested}</p><button type="button" disabled={disabled||busy||!draft.workspace_root} onClick={()=>{dirty.current=true;setDraft({...draft,workspace_root:suggested});}}>采用建议工作目录</button>{' '}
       <button disabled={disabled||busy}>保存{label}目录</button>{' '}
@@ -98,7 +99,7 @@ export function StorageSettings({id, name}: {id: string; name: string}) {
           <input aria-label={`${name} ${['工作基目录', '资产目录', '缓存目录'][i]}`} value={draft[key]} required pattern="/.*" onChange={e => {dirty.current = true;setMachineDirty(true); setDraft({...draft, [key]: e.target.value});}} />
         </label>)}
         <label>产物根目录（选填）<input aria-label={`${name} 产物根目录`} value={draft.artifact_root||''} placeholder="/共享目录/artifacts" pattern="/.*" onChange={e=>{dirty.current=true;setMachineDirty(true);setDraft({...draft,artifact_root:e.target.value||null});}}/></label>
-        <p>配置后按批次/任务/执行生成公共产物与回合目录；不改变业务工作目录。需升级 Worker，保存后等待各卡确认。产物根必须与工作、资产、缓存目录分开，工作目录清理不删除这里的文件。</p>
+        <p>配置后按批次/任务/执行生成公共产物与回合目录；不改变业务工作目录。需升级 Worker，保存后等待各卡确认。已有卡级配置启用产物继承后，请重新保存整机配置以同步；旧回执不一致时会等待确认。产物根必须与工作、资产、缓存目录分开，工作目录清理不删除这里的文件。</p>
         <label>工作盘最低可用空间 GiB<input aria-label={`${name} 最低可用空间 GiB`} type="number" min={0} max={2097151} step="any" value={draft.min_free_disk_gb} onChange={e => {dirty.current = true;setMachineDirty(true); setDraft({...draft, min_free_disk_gb: Number(e.target.value)});}} required /></label>
         <button disabled={busy}>保存存储配置 / 重试校验</button>{' '}
         <button type="button" disabled={busy} onClick={() => void save(true)}>恢复本机配置</button>{' '}

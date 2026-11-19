@@ -63,8 +63,11 @@ def slot_config(worker, slot):
 
 def desired(worker, slot=None):
     config = slot_config(worker, slot) if slot else None
+    base = base_config(worker)
+    if config is not None and not config.get('artifact_root') and (base or {}).get('artifact_root'):
+        config = {**config, 'artifact_root': base['artifact_root']}
     return {'revision': worker.storage_revision,
-            'config': config if config is not None else base_config(worker)}
+            'config': config if config is not None else base}
 
 
 def held(s, slot):
@@ -79,6 +82,8 @@ def ready(worker, slot, at):
     if config.get('artifact_root') and 'artifact_roots_v1' not in (slot.software or {}).get('capabilities', []):
         return False
     report = slot.storage_report or {}
+    if config.get('artifact_root') != (report.get('effective') or {}).get('artifact_root'):
+        return False
     return (slot.protocol_version >= 4 and slot.storage_applied_revision == worker.storage_revision
             and report.get('revision') == worker.storage_revision and report.get('status') == 'applied'
             and recent(slot.storage_reported_at, at, ENVIRONMENT_REPORT_SECONDS))
@@ -119,6 +124,9 @@ def view(s, worker):
         elif not recent(slot.storage_reported_at, now(), ENVIRONMENT_REPORT_SECONDS):
             status = 'offline'
         elif report.get('revision') != worker.storage_revision:
+            status = 'pending'
+        elif (desired(worker,slot)['config'] is not None and report.get('status') == 'applied'
+              and desired(worker,slot)['config'].get('artifact_root') != (report.get('effective') or {}).get('artifact_root')):
             status = 'pending'
         else:
             status = report.get('status', 'pending')

@@ -129,3 +129,75 @@ def test_independent_device_storage_preserves_machine_defaults_and_revisions(env
     assert reply['storage']['config']==CONFIG
     with main.SessionLocal() as s:
         assert s.scalar(select(Node)).storage_config==CONFIG
+
+
+@pytest.mark.parametrize('card_root',[None,'/srv/card-artifacts'])
+def test_card_artifact_inheritance_ack_and_machine_changes(env,card_root):
+    from backend.app.storage import desired, OVERRIDES
+    main,c,auth=env
+    token,slots,path=setup(env,count=2,protocol=17)
+    machine={**CONFIG,'artifact_root':'/srv/machine-artifacts'}
+    assert save(env,path,config=machine).status_code==200
+    card={**CONFIG,'workspace_root':'/srv/card-work','artifact_root':card_root}
+    assert save(env,path+'/slots/'+slots[0],1,card).status_code==200
+    with main.SessionLocal() as s:
+        w=s.scalar(select(Node));slot=s.get(Slot,slots[0])
+        original=dict(w.connection[OVERRIDES][slot.id])
+        expected={**card,'artifact_root':card_root or machine['artifact_root']}
+        assert desired(w,slot)['config']==expected
+        assert w.connection[OVERRIDES][slot.id]==original
+        for sid in slots:s.get(Slot,sid).software={'capabilities':['artifact_roots_v1']}
+        s.commit()
+    # Acknowledgement must use the merged directory, not the saved raw override.
+    if card_root is None:
+        assert report(env,token,slots[0],rev=2,config=card).status_code==409
+    response=report(env,token,slots[0],rev=2,config=expected)
+    assert response.status_code==200
+    assert response.json()['storage']['config']==expected
+    assert report(env,token,slots[1],rev=2,config=machine).status_code==200
+    for revision,root in [(2,'/srv/new-artifacts'),(3,None)]:
+        next_machine={**CONFIG,**({'artifact_root':root} if root else {})}
+        assert save(env,path,revision,next_machine).status_code==200
+        effective={**card}
+        if card_root is None:
+            effective.pop('artifact_root')
+            if root:effective['artifact_root']=root
+        reply=report(env,token,slots[0],rev=revision+1,config=effective)
+        assert reply.status_code==200
+        assert reply.json()['storage']['config']==effective
+        view=c.get(path,headers=auth['admin']).json()
+        raw=next(x for x in view['slots'] if x['slot_id']==slots[0])['config']
+        assert raw.get('artifact_root')==card_root
+
+
+def test_card_artifact_inheritance_does_not_modify_saved_null():
+    from types import SimpleNamespace
+    from backend.app.storage import desired,OVERRIDES
+    card={**CONFIG,'artifact_root':None}
+    w=SimpleNamespace(storage_config={**CONFIG,'artifact_root':'/srv/results'},storage_revision=9,
+                      connection={OVERRIDES:{'a':card}})
+    assert desired(w,SimpleNamespace(id='a'))['config']['artifact_root']=='/srv/results'
+    assert card['artifact_root'] is None
+    w.storage_config=None
+    assert desired(w,SimpleNamespace(id='a'))['config']==card
+
+
+def test_old_applied_card_without_inherited_root_waits_for_resave(env):
+    from backend.app.storage import ready,OVERRIDES
+    main,c,auth=env
+    token,slots,path=setup(env,protocol=17)
+    assert save(env,path).status_code==200
+    assert report(env,token,slots[0]).status_code==200
+    # Simulate a persisted pre-upgrade card override at the same revision.
+    with main.SessionLocal() as s:
+        w=s.scalar(select(Node));slot=s.get(Slot,slots[0])
+        w.storage_config={**CONFIG,'artifact_root':'/srv/shared-results'}
+        w.connection={**(w.connection or {}),OVERRIDES:{slot.id:dict(CONFIG)}}
+        slot.software={'capabilities':['artifact_roots_v1']};s.commit()
+        assert not ready(w,slot,now())
+    view=c.get(path,headers=auth['admin']).json()
+    assert view['slots'][0]['status']=='pending' and not view['all_applied']
+    assert save(env,path,1,{**CONFIG,'artifact_root':'/srv/shared-results'}).status_code==200
+    assert report(env,token,slots[0],rev=2,config={**CONFIG,'artifact_root':'/srv/shared-results'}).status_code==200
+    with main.SessionLocal() as s:
+        assert ready(s.scalar(select(Node)),s.get(Slot,slots[0]),now())

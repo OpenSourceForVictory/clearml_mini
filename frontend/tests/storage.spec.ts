@@ -106,3 +106,17 @@ test('node artifact root is optional, saved independently and can be cleared',as
  await page.getByRole('button',{name:'保存存储配置 / 重试校验',exact:true}).click();
  await expect.poll(()=>state.submitted()?.config?.artifact_root).toBe(null);
 });
+
+test('editing a card workspace does not freeze its inherited artifact root',async({page})=>{
+ const state=await setup(page);
+ const base={workspace_root:'/srv/work',assets_root:'/srv/assets',cache_root:'/srv/cache',min_free_disk_gb:2};
+ state.change({config:{...base,artifact_root:'/shared/artifacts'},slots:[{slot_id:'s1',gpu_index:0,config:null,status:'applied',applied_revision:1,report:{effective:{...base,workspace_root:'/srv/work/slots/s1',artifact_root:'/shared/artifacts'}}}]});
+ await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await page.getByRole('tab',{name:'工作目录与资产',exact:true}).click();
+ await page.getByText('host 存储配置',{exact:true}).click();await page.getByText('修改GPU 0目录',{exact:true}).click();
+ await expect(page.getByLabel('GPU 0 产物根目录',{exact:true})).toHaveValue('');
+ await expect(page.getByLabel('GPU 0 产物根目录',{exact:true})).toHaveAttribute('placeholder','留空继承整机产物目录');
+ await page.getByLabel('GPU 0 工作基目录',{exact:true}).fill('/srv/card-work');
+ await page.getByRole('button',{name:'保存GPU 0目录',exact:true}).click();
+ await expect.poll(()=>state.submitted()?.config?.workspace_root).toBe('/srv/card-work');
+ expect(state.submitted().config.artifact_root).toBeNull();
+});

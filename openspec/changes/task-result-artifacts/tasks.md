@@ -40,3 +40,8 @@
 独立根切片验证：docs/validation/independent-artifact-root-20261119/README.md。关联测试294通过/11跳过、浏览器27通过；全仓覆盖率门槛及部分既有执行模块覆盖率未达标。尚未部署或创建界面可见验收批次，5.2保持待完成。
 
 可见批次阶段验收：docs/validation/artifact-root-release-20261119/README.md。API已迁移到a730d12，本机Worker0.21.10；宿主逐回合3回合与Docker普通命令两个真实批次保留，JSON/视频浏览器预览与下载通过。未覆盖H完整GPU/NPU/服务端矩阵，5.2继续未完成。安装由管理API发起，浏览器只补验升级页面与发布选择，未重复触发安装。
+
+## 7. 卡级产物根继承
+- [x] 7.1 实现产物根缺省/null继承整机、显式覆盖、界面说明；验证下发/确认、变更/清空、旧配置与文档同步。
+
+继承切片证据：docs/validation/artifact-root-inheritance-20261119/README.md；本轮未部署，不能把前次上线记录当作继承功能已上线。

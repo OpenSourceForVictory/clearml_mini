@@ -83,3 +83,14 @@ SDK SHALL 保持已有 output_dir 与 artifacts 相对路径语义，新增每�
 #### Scenario: 兼容与清理
 - **WHEN** 未配置产物根、重试任务或清理工作目录
 - **THEN** 未配置沿用旧布局，重试使用独立执行ID，工作目录清理不删除外部产物；历史按登记路径读取
+
+### Requirement: Card artifact root inherits machine default
+The platform SHALL resolve an omitted or null card artifact_root from the machine configuration while preserving explicit card roots and other card directory overrides.
+
+#### Scenario: Card has custom workspace but no artifact root
+- **WHEN** a card overrides its workspace and the machine configures an artifact root
+- **THEN** desired storage SHALL contain the card workspace and machine artifact root without mutating the saved card configuration
+
+#### Scenario: Machine default changes or is cleared
+- **WHEN** a new storage revision changes or removes the machine artifact root
+- **THEN** inheriting cards SHALL receive the updated effective root, explicitly overridden cards SHALL retain their root, and active executions SHALL retain their frozen storage

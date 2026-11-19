@@ -1,0 +1,23 @@
+{
+  "python_passed": 71,
+  "skipped": [
+    {
+      "test": "test_concurrent_storage_save_and_claim",
+      "reason": "dedicated PostgreSQL required"
+    },
+    {
+      "test": "test_real_docker_sdk_outputs_survive_deletion",
+      "reason": "opt-in real independent artifact Docker test"
+    },
+    {
+      "test": "test_real_probe",
+      "reason": "set STORAGE_PROBE_TEST_IMAGE for real Docker probe"
+    }
+  ],
+  "deselected": 2204,
+  "frontend_passed": 5,
+  "storage_line_percent": 96.69,
+  "storage_branch_percent": 91.07,
+  "full_coverage_gate_passed": false,
+  "deployed": false
+}
