@@ -209,3 +209,5 @@ SDK 回合目录接口：runner/sdk.py 保留 Context.output_dir 与旧 artifact
 产物侧栏基础：frontend/src/artifact-browser.tsx 从任务/回合打开，backend/app/clients.py 按 EpisodeRecord 声明返回 episode_ids，artifact_media.py 提供文件限定短期 cookie 与 GET/HEAD/Range 访问。旧 RunArtifact.data 继续读；新方案为不上传文件、只登记节点索引并按需读取；节点目录通道尚未实施。测试 test_artifact_media.py、batch-monitoring.spec.ts；说明 docs/batch-monitoring.md。此阶段无迁移，不代表完整 task-result-artifacts 完成或真机验收。
 
 通用产物预览：frontend/src/artifact-text-preview.tsx 使用 Range 和有界 stream 读取（即使服务端忽略 Range 也最多保留 256 KiB），切换时 AbortController 取消；JSON 懒展开/深度与子项限制、CSV 行列限制、无效 JSON 原文与截断提示。WebP 通过 artifact_media.py 白名单内联；HTML/SVG 保持下载。界面测试 batch-monitoring.spec.ts；阶段不变更 Worker 上传行为，不等同节点浏览已上线。
+
+节点产物只读基础：worker/artifact_access.py 登记批准根/账号/版本，并以业务身份启动隔离子进程；worker/artifact_reader.py 执行目录分页和 1 MiB 范围读取，fd/no-follow、普通文件与版本校验。尚未接主循环/API/UI，不代表已停止上传；容器任意 UID 映射也尚待接线。内部契约与边界见 docs/node-artifact-reading.md；test_artifact_reader.py 包含真实普通账号权限及显式选择的 Docker 删除后读取测试。
