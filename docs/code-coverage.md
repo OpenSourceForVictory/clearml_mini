@@ -100,3 +100,7 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 节点产物读取基础：`worker/artifact_reader.py`、`worker/artifact_access.py` 和已有 `backend/app/artifact_media.py` 纳入“业务执行与结果”关键功能统计；不排除尚未接线的代码。定向测试与全仓分母未达标证据见 [节点读取记录](validation/node-artifact-reader-20261119/README.md)。真实子进程未插桩不计入模块覆盖率。
 
 2026-11-20 覆盖率补齐与日志配置收尾：统一全量 Python 2218 通过/101 跳过/0 失败，整体 91.73% 行、82.58% 分支，六目录与关键功能全部通过；浏览器 197 通过/10 跳过。新增 backend/app/log_policy.py 与 worker/log_policy.py 纳入业务执行结果分组，无分母豁免。保留基线失败、SDK 下载包遗漏、前端旧用例和热更新失败；详见[完整验证记录](validation/coverage-followup-20261120/README.md)。
+
+## 功能正确性与覆盖率的边界
+
+覆盖率只说明代码被执行到，不证明业务断言完整。全部历史变更、关键行为测试入口、真机证据及未发布/未验收边界统一见 [功能验收台账](validation/history-acceptance-20261120/README.md)。检查单必须区分测试资产存在、本版本实际执行通过、真机通过和部署通过；不能以单项替代其余结论。

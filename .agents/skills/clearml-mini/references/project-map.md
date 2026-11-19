@@ -231,3 +231,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 日志预算：backend/app/log_policy.py 管理整机期望版本与每卡回执；worker/log_policy.py 在历史日志线程持久化。首次领取冻结 ExecutionLogPolicy（b841e23），心跳不可覆盖回执；整机配额仍不限制。前端入口为机器数据保留，详见 docs/execution-logs.md。
 
 集合全选由 suites.tsx 的原始任务索引选择，不受搜索过滤影响；当前显示选择仍替换原选择，批量操作包含隐藏选中项。已发布/归档通过 fieldset 保持只读。回归见 suite-selection.spec.ts，操作见 docs/suite-management.md；仅前端变更，无迁移或 Worker 更新。
+
+历史功能验收索引：docs/validation/history-acceptance-20261120/README.md 关联核心行为、测试入口、真机版本及待验边界；changes.md 包含全部历史变更与未勾选条款。继续实施时按当前任务刷新台账，不能用历史通过报告或复合任务的部分实现代替当前完整验收；已撤销启动快照、已替代 ClearML 运行时和暂缓 Worker 文件转发必须保留用户决策。
