@@ -24,3 +24,5 @@ Non-Goals：不恢复进程、不续跑旧执行、不克隆旧服务实例、�
 
 ## Migration Plan
 预计无需数据库迁移或 Worker/Runner 升级。部署 API 后部署前端；回滚前端可隐藏新入口，不影响现有批次。实现阶段先跑相关后端、Playwright、类型检查与构建，按项目 coverage 工具口径记录覆盖率与未覆盖边界；不将界面模拟测试描述为真实模型评测。
+
+部署验收应检查运行容器实际注册 rerun-draft（位于静态资源 catch-all 之前），不能以仓库存在源码或只更新静态页面作为接口上线依据。通用 Not Found 提示检查 API/代理，batch not found 则提示批次不存在或不可访问。

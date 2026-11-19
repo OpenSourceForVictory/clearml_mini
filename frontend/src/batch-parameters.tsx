@@ -1,5 +1,6 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {api} from './api';
+import {BatchCommandPreview} from './batch-command-preview';
 
 type Snapshot=Record<string,any>;
 type Case={job_id:string;case_id:string;task_name:string;episodes?:number;seed?:number};
@@ -17,11 +18,11 @@ function Parameters({values,origins}:{values?:Snapshot;origins?:Snapshot}){
 }
 function Mappings({template,parameters,task}:{template:Snapshot;parameters?:Snapshot;task?:Snapshot}){
  const rows=[
-  ...(template.platform_bindings??[]).map((b:Snapshot)=>({...b,value:b.source?.startsWith('task.')?task?.[b.source.slice(5)]:undefined,business:false})),
+  ...(template.platform_bindings??[]).map((b:Snapshot)=>({...b,value:b.source==='platform.job_id'?task?.job_id:b.source?.startsWith('task.')?task?.[b.source.slice(5)]:undefined,business:false})),
   ...Object.entries(template.parameter_schema?.fields??{}).map(([name,field])=>({...((field as Snapshot).binding??{target:'input'}),source:'business.'+name,value:parameters?.[name],business:true})),
  ];
  if(!rows.length)return <p>{template.platform_bindings==null&&template.parameter_schema==null?'动态参数映射未记录。':'未配置动态参数映射。'}</p>;
- return <><h5>动态参数映射</h5><p>启动时按下表追加命令行参数或设置环境变量；输入 JSON 字段不追加到命令。下方值来自本次快照，基础命令不代表节点最终执行命令。</p>
+ return <><h5>动态参数映射</h5><p>启动时按下表追加命令行参数或设置环境变量；输入 JSON 字段不追加到命令。下方值来自本次配置；上方命令已合并命令行参数映射。</p>
  <div className="run-config-table"><table aria-label="动态参数映射"><thead><tr><th>来源</th><th>传递方式</th><th>程序接收名称</th><th>编码</th><th>快照值</th></tr></thead><tbody>{rows.map((b,i)=><tr key={i}>
  <th scope="row"><code>{b.source}</code></th><td>{label(b.target,{argv:'命令行参数',env:'环境变量',input:'输入 JSON'})}</td><td><code>{b.target==='input'?'—':text(b.name)}</code></td>
  <td>{b.target==='input'?'JSON':label(b.encoding??'literal',{literal:'单个值',json:'JSON 编码',flag:'为 true 时添加开关',repeat:'逐项重复'})}</td>
@@ -41,7 +42,8 @@ function Runtime({template,environment,parameters,task}:{template?:Snapshot;envi
    ['环境来源',runtime?label(runtime.environment_source??'explicit',{login:'业务账号登录 Shell',explicit:'平台显式环境'}):missing],
    ['业务账号 / Python 绝对路径','未记录节点运行快照，不从当前节点配置推断'],
   ] as [string,unknown][]:[]),
- ]}/><h5>启动命令（模板快照，参数映射前）</h5><pre>{template.command==null?missing:JSON.stringify(template.command,null,2)}</pre>
+ ]}/><JsonDetails title="模板基础命令（参数映射前）" value={template.command}/>
+ <BatchCommandPreview key={task?.job_id||'service'} template={template} parameters={parameters} task={{...task,environment}}/>
  <JsonDetails title="模板环境变量（展开查看）" value={runtime?.environment??template.environment}/>
  <JsonDetails title="本次启动变量覆盖（展开查看）" value={environment}/>
  <Mappings template={template} parameters={parameters} task={task}/>
@@ -116,7 +118,7 @@ export function BatchParameters({batchId,suiteId,cases,maxConcurrent,orchestrate
  {error&&<p role="alert">任务配置读取失败：{error} <button onClick={retry}>重试任务配置</button></p>}
  {data&&!spec&&<p>此历史任务未保存客户端运行快照。</p>}
  {spec&&<><section className="run-config-section" ref={el=>{sections.current[1]=el}} tabIndex={-1} aria-labelledby={prefix+'-1'}><h4 id={prefix+'-1'}>2. 客户端</h4>
- <Runtime template={template} environment={spec.environment} parameters={spec.parameters} task={{...spec,episodes:data?.episodes}}/>
+ <Runtime template={template} environment={spec.environment} parameters={spec.parameters} task={{...spec,job_id:data?.id,episodes:data?.episodes}}/>
  <Fields items={[
  ['回合启动方式',template?.execution_mode==='host'&&host?label(host.episode_launch??'whole_task',{whole_task:'整任务启动（SDK 可在内部逐回合执行）',per_episode:'每回合启动'}):'按模板入口执行'],
  ['回合失败策略',template?.execution_mode==='host'&&host?.episode_launch==='per_episode'?label(host.episode_error_policy??'stop',{stop:'出错立即停止',continue:'记录错误继续；最终仍标记失败'}):'由接入协议与业务程序决定'],

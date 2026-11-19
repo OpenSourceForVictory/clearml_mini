@@ -1,3 +1,5 @@
+> 2026-11-19 用户撤销此扩展：仅需按评测向导展示既有配置及映射后的命令。此方案不再实施；未完成代码已撤回，没有快照表迁移或 Worker 上报部署。后续工作归入 batch-run-configuration。以下保留原讨论，不作为待实施要求。
+
 ## Context
 见 proposal.md。已核对：worker/host_backend.py 的 launch.json 保存平台 Python/Runner 命令；业务参数在 runner/cs_entry.py、service_entry.py、host_episode.py、command_sdk.py 才完成 bind_values/bind_platform 与 for_template。process_log_run.run 负责新日志模式的 Popen，但旧日志分支直接 subprocess.call/Popen，因此不能只在日志采集中记录。task_input.build 构建 task/business 命名空间；host_episode.episode_input 将 episodes 改成 1，seed 改为当前回合 seed。API jobs detail 有 id、episodes、client_spec 和 attempts；当前前端展示的是静态快照，不能证明节点实际 argv。
 

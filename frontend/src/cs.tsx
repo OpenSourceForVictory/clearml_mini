@@ -27,7 +27,7 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
   async function importBatch(id:string){
     const seq=++rerunSequence.current;setLaunch(null);setImportState({id,loading:true,error:''});
     try{const draft=await api<RerunDraft>('batches/'+id+'/rerun-draft');if(seq!==rerunSequence.current)return;if(draft.schema_version!==1)throw Error('不支持的历史配置版本');setLaunch({rerun:draft});setImportState(null);location.hash='/cs';}
-    catch(e){if(seq===rerunSequence.current)setImportState({id,loading:false,error:String(e)});}
+    catch(e){if(seq===rerunSequence.current)setImportState({id,loading:false,error:String(e)==='Error: Not Found'?'历史批次导入接口不可用，请管理员更新 API 并核对反向代理路由；仅更新前端不足以启用此功能。':String(e)==='Error: batch not found'?'原批次不存在、已删除或当前账号无权访问。':String(e)});}
   }
   const [resultsTab,setResultsTab]=useState('history');
   const deletedIds=useRef(new Set<string>());

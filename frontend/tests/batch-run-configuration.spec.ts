@@ -31,7 +31,7 @@ test('snapshots, service definitions, task parameters and unlimited reservations
  const server=panel.getByRole('article',{name:'服务配置 model'});await expect(server).toContainText('saved-model');await expect(server).toContainText('/ready');
  const limits=panel.getByRole('region',{name:'4. 资源与执行限制'});await expect(limits).toContainText('2 核');await expect(limits).toContainText('8 GiB');await expect(limits.getByText('不限制',{exact:true})).toHaveCount(3);
  await expect(panel).toContainText('未记录节点运行快照');
- await panel.getByText('本次启动变量覆盖（展开查看）',{exact:true}).first().click();await expect(panel.getByText(/"LOG_LEVEL": "debug"/).first()).toBeVisible();
+ await panel.getByText('本次启动变量覆盖（展开查看）',{exact:true}).first().click();await expect(panel.locator('details[open]').filter({has:page.getByText('本次启动变量覆盖（展开查看）',{exact:true})}).first().getByText(/"LOG_LEVEL": "debug"/)).toBeVisible();
  await panel.getByLabel('查看任务配置').selectOption('b');await expect(panel).toContainText('pick_cube');await expect(panel).toContainText('任务单独配置');await expect(panel).not.toContainText('demo_clean');
  expect(ctl.requests.filter(p=>/templates\//.test(p))).toEqual([]);
  await panel.getByRole('button',{name:'查看实际服务实例、节点、加速卡与日志'}).click();await expect(page.getByRole('region',{name:'批次服务页'})).toBeVisible();
@@ -72,6 +72,8 @@ for(const executionMode of ['host','docker'])test(`dynamic mappings include busi
  });
  const panel=await open(page),client=panel.getByRole('region',{name:'2. 客户端'}),table=client.getByRole('table',{name:'动态参数映射'});
  await expect(table).toBeVisible();
+ const command=client.getByLabel('参数映射后的启动命令');
+ expect(JSON.parse((await command.textContent())!)).toEqual(['python3','business.py','--task-config','demo_clean','--label','a','--label','b','--taskname','task-a']);
  await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('--taskname');
  await expect(table.getByRole('row').filter({hasText:'task.task_name'})).toContainText('task-a');
  await expect(table.getByRole('row').filter({hasText:'business.task-config'})).toContainText('demo_clean');
@@ -109,4 +111,15 @@ test('business mappings display without platform bindings, including implicit in
  await expect(table.getByRole('row').filter({hasText:'business.plain'})).toContainText('输入 JSON');
  await expect(table.getByRole('row').filter({hasText:'business.plain'})).toContainText('kept');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+});
+
+for(const mode of ['host','docker'])test(`expanded command episode and all binding encodings ${mode}`,async({page})=>{
+ await setup(page,'none');
+ await page.route('**/api/v1/jobs/a',route=>route.fulfill({json:{id:'a',episodes:3,client_spec:{task_name:'task-a',seed:2147483647,service_mode:'none',environment:{LEVEL:'debug'},parameters:{on:true,off:false,zero:0,obj:{text:'a b',enabled:false},arr:['x y','z'],plain:'input-only',env:'mapped'},template:{...template,execution_mode:mode,command:['python','business.py','--literal','${task_name}','${seed}'],parameter_schema:{version:1,fields:{on:{binding:{target:'argv',name:'--on',encoding:'flag'}},off:{binding:{target:'argv',name:'--off',encoding:'flag'}},zero:{binding:{target:'argv',name:'--zero'}},obj:{binding:{target:'argv',name:'--config',encoding:'json'}},arr:{binding:{target:'argv',name:'--item',encoding:'repeat'}},plain:{binding:{target:'input'}},env:{binding:{target:'env',name:'VALUE'}}}},platform_bindings:[{source:'task.episodes',target:'argv',name:'--episodes'},{source:'task.seed',target:'argv',name:'--seed'},{source:'platform.job_id',target:'argv',name:'--job'},{source:'platform.service.endpoint',target:'argv',name:'--endpoint'}]}}}}));
+ const panel=await open(page),client=panel.getByRole('region',{name:'2. 客户端'}),preview=client.getByLabel('参数映射后的启动命令');
+ const prefix=['python','business.py','--literal','task-a','2147483647','--on','--zero','0','--config','{"text":"a b","enabled":false}','--item','x y','--item','z'];
+ expect(JSON.parse((await preview.textContent())!)).toEqual([...prefix,'--episodes',mode==='host'?'1':'3','--seed','2147483647','--job','a','--endpoint','⟨启动时解析：platform.service.endpoint⟩']);
+ if(mode==='host'){await client.getByLabel('预览回合').fill('2');const args=JSON.parse((await preview.textContent())!);expect(args[4]).toBe('0');expect(args[args.indexOf('--seed')+1]).toBe('0');}
+ else await expect(client.getByLabel('预览回合')).toHaveCount(0);
+ await client.getByText('合并后的显式环境变量（含参数映射）').click();await expect(client).toContainText('"VALUE": "mapped"');await expect(client).toContainText('"LEVEL": "debug"');
 });

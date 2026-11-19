@@ -1,0 +1,1 @@
+registered_route= ['/api/v1/batches/{identity}/rerun-draft'] read_only_history_checks= {200: 10}

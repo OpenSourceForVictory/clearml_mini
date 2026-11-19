@@ -23,4 +23,4 @@ Non-Goals：不重新提交、不编辑历史、不变更调度，不加载节�
 预计仅更新前端；若补充只读响应，先更新兼容 API 再前端。无需 Worker 升级或数据库迁移。回滚前端即可恢复旧参数页。专项 UI 与类型构建检查后，用现有已结束真机批次做浏览器只读验收，不再启动设备业务。
 
 ## 动态映射遗漏修正
-历史配置的映射展示同时读取 platform_bindings 与 parameter_schema.fields 中的 binding。使用表格直接显示来源、argv/env/input 目标、接收名、编码及快照值；客户端 task.task_name 从本任务 client_spec 读取，业务值从已解析 parameters 读取，服务定义未保存的实例分配值不推断。基础命令仍明确标为参数映射前，不将前端预览冒充 Worker 实际 argv。保留无记录与显式空映射区别，不查询当前模板。仅前端修正，无数据库迁移或 Worker 升级。
+历史配置的映射展示同时读取 platform_bindings 与 parameter_schema.fields 中的 binding。使用表格直接显示来源、argv/env/input 目标、接收名、编码及快照值；客户端 task.task_name 从本任务 client_spec 读取，业务值从已解析 parameters 读取，服务定义未保存的实例分配值不推断。保留基础命令，并新增参数映射后预览：依 Runner 顺序展开已知占位符、业务字段绑定、平台绑定；env/input 不追加至 argv，缺失分配信息显式占位。预览回合可切换，宿主机逐回合 task.episodes=1 和 seed 递增；不新增采集上报、数据库表或节点实际进程证据。保留无记录与显式空映射区别，不查询当前模板。仅前端修正，无数据库迁移或 Worker 升级。

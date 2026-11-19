@@ -1,0 +1,26 @@
+
+Running 19 tests using 1 worker
+
+(node:1471710) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/batch-rerun.spec.ts:25:1 › list import preserves overrides, edit, fresh preflight and idempotent new submission (624ms)
+  ✓   2 frontend/tests/batch-rerun.spec.ts:43:1 › detail entry, failed import retry and explicit issue acknowledgement (673ms)
+  ✓   3 frontend/tests/batch-rerun.spec.ts:56:1 › reimport starts clean, stale response ignored and fatal issue never preflights (970ms)
+  ✓   4 frontend/tests/batch-rerun.spec.ts:74:1 › missing API route differs from missing batch and retry clears error (297ms)
+  ✓   5 frontend/tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (373ms)
+  ✓   6 frontend/tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (229ms)
+  ✓   7 frontend/tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (225ms)
+  ✓   8 frontend/tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (304ms)
+  ✓   9 frontend/tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (298ms)
+  ✓  10 frontend/tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (300ms)
+  ✓  11 frontend/tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (203ms)
+  ✓  12 frontend/tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (295ms)
+  ✓  13 frontend/tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (265ms)
+  ✓  14 frontend/tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (277ms)
+  ✓  15 frontend/tests/batch-run-configuration.spec.ts:90:1 › server business-only mappings are visible and missing platform values are not invented (242ms)
+  ✓  16 frontend/tests/batch-run-configuration.spec.ts:97:1 › legacy missing mappings differ from explicitly empty mappings (231ms)
+  ✓  17 frontend/tests/batch-run-configuration.spec.ts:104:1 › business mappings display without platform bindings, including implicit input and JSON (230ms)
+  ✓  18 frontend/tests/batch-run-configuration.spec.ts:116:37 › expanded command episode and all binding encodings host (267ms)
+  ✓  19 frontend/tests/batch-run-configuration.spec.ts:116:37 › expanded command episode and all binding encodings docker (259ms)
+
+  19 passed (7.0s)

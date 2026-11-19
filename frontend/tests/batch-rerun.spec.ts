@@ -42,7 +42,8 @@ test('list import preserves overrides, edit, fresh preflight and idempotent new 
 
 test('detail entry, failed import retry and explicit issue acknowledgement',async({page})=>{
  const c=await setup(page);await page.getByRole('button',{name:'查看批次',exact:true}).click();
- c.setFail(true);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('导入失败');
+ await expect(page.getByRole('region',{name:'批次详情',exact:true})).toBeVisible();
+ c.setFail(true);await page.getByRole('region',{name:'批次详情',exact:true}).getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('导入失败');
  c.setFail(false);c.draft.issues=[{path:'services.0.instance_count',code:'instance_count_required',message:'请填写明确的实例数',fatal:false}];c.draft.submission.services[0].instance_count=null;
  await page.getByRole('button',{name:'重试导入',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'});
  await expect(w).toContainText('请填写明确的实例数');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();
@@ -68,4 +69,15 @@ test('reimport starts clean, stale response ignored and fatal issue never prefli
  await expect(w).toContainText('无法恢复，禁止提交');
  await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');for(let i=0;i<2;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();
  await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('alert')).toContainText('不能提交');expect(c.requests).toHaveLength(0);
+});
+
+test('missing API route differs from missing batch and retry clears error',async({page})=>{
+ await setup(page);
+ await page.route('**/api/v1/batches/*/rerun-draft',route=>route.fulfill({status:404,json:{detail:'Not Found'}}));
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('请管理员更新 API');
+ await page.route('**/api/v1/batches/*/rerun-draft',route=>route.fulfill({status:404,json:{detail:'batch not found'}}));
+ await page.getByRole('button',{name:'重试导入'}).click();
+ await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('原批次不存在、已删除或当前账号无权访问');
+ await expect(page.getByRole('region',{name:'历史批次导入'})).not.toContainText('请管理员更新 API');
 });

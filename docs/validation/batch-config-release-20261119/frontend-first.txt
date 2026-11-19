@@ -1,0 +1,58 @@
+
+Running 19 tests using 1 worker
+
+(node:1458810) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/batch-rerun.spec.ts:25:1 › list import preserves overrides, edit, fresh preflight and idempotent new submission (707ms)
+  ✓   2 frontend/tests/batch-rerun.spec.ts:43:1 › detail entry, failed import retry and explicit issue acknowledgement (24.8s)
+  ✓   3 frontend/tests/batch-rerun.spec.ts:55:1 › reimport starts clean, stale response ignored and fatal issue never preflights (974ms)
+  ✓   4 frontend/tests/batch-rerun.spec.ts:73:1 › missing API route differs from missing batch and retry clears error (300ms)
+  ✘   5 frontend/tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations (5.3s)
+(node:1461145) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 frontend/tests/batch-run-configuration.spec.ts:39:1 › external candidates, legacy missing values and narrow layout (263ms)
+  ✓   7 frontend/tests/batch-run-configuration.spec.ts:44:1 › no-service mode does not request definitions (215ms)
+  ✓   8 frontend/tests/batch-run-configuration.spec.ts:47:1 › late response cannot replace selection; failure retries (284ms)
+  ✓   9 frontend/tests/batch-run-configuration.spec.ts:52:1 › service failure retries independently (285ms)
+  ✓  10 frontend/tests/batch-run-configuration.spec.ts:55:1 › empty batch does not request a job (286ms)
+  ✓  11 frontend/tests/batch-run-configuration.spec.ts:58:1 › missing historical snapshot has an explicit message (225ms)
+  ✓  12 frontend/tests/batch-run-configuration.spec.ts:62:1 › navigation to another batch resets the selected configuration (292ms)
+  ✓  13 frontend/tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in host (280ms)
+  ✓  14 frontend/tests/batch-run-configuration.spec.ts:67:46 › dynamic mappings include business fields and task name in docker (269ms)
+  ✓  15 frontend/tests/batch-run-configuration.spec.ts:90:1 › server business-only mappings are visible and missing platform values are not invented (248ms)
+  ✓  16 frontend/tests/batch-run-configuration.spec.ts:97:1 › legacy missing mappings differ from explicitly empty mappings (227ms)
+  ✓  17 frontend/tests/batch-run-configuration.spec.ts:104:1 › business mappings display without platform bindings, including implicit input and JSON (217ms)
+  ✓  18 frontend/tests/batch-run-configuration.spec.ts:116:37 › expanded command episode and all binding encodings host (251ms)
+  ✓  19 frontend/tests/batch-run-configuration.spec.ts:116:37 › expanded command episode and all binding encodings docker (246ms)
+
+
+  1) frontend/tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByRole('region', { name: '本次运行配置', exact: true }).getByText(/"LOG_LEVEL": "debug"/).first()
+    Expected: visible
+    Received: hidden
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '本次运行配置', exact: true }).getByText(/"LOG_LEVEL": "debug"/).first() with timeout 5000ms
+      - waiting for getByRole('region', { name: '本次运行配置', exact: true }).getByText(/"LOG_LEVEL": "debug"/).first()
+        14 × locator resolved to <pre>{↵  "LOG_LEVEL": "debug"↵}</pre>
+           - unexpected value "hidden"
+
+
+      32 |  const limits=panel.getByRole('region',{name:'4. 资源与执行限制'});await expect(limits).toContainText('2 核');await expect(limits).toContainText('8 GiB');await expect(limits.getByText('不限制',{exact:true})).toHaveCount(3);
+      33 |  await expect(panel).toContainText('未记录节点运行快照');
+    > 34 |  await panel.getByText('本次启动变量覆盖（展开查看）',{exact:true}).first().click();await expect(panel.getByText(/"LOG_LEVEL": "debug"/).first()).toBeVisible();
+         |                                                                                                                                     ^
+      35 |  await panel.getByLabel('查看任务配置').selectOption('b');await expect(panel).toContainText('pick_cube');await expect(panel).toContainText('任务单独配置');await expect(panel).not.toContainText('demo_clean');
+      36 |  expect(ctl.requests.filter(p=>/templates\//.test(p))).toEqual([]);
+      37 |  await panel.getByRole('button',{name:'查看实际服务实例、节点、加速卡与日志'}).click();await expect(page.getByRole('region',{name:'批次服务页'})).toBeVisible();
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-run-configuration.spec.ts:34:133
+
+    Error Context: frontend/test-results/batch-run-configuration-sn-ca21b--and-unlimited-reservations/error-context.md
+
+  1 failed
+    frontend/tests/batch-run-configuration.spec.ts:27:1 › snapshots, service definitions, task parameters and unlimited reservations 
+  18 passed (36.4s)

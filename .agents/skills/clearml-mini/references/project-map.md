@@ -195,3 +195,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 业务执行功能组补测：test_execution_group_gaps 覆盖真实 host_episode 控制与存储边界；test_process_log_concurrency 验证 4 进程写入、清理互斥、真实进程退出恢复与大索引；test_process_log_load 验证旧能力协商、离线积压和独立 PostgreSQL 两连接池。0.21.7 的 process_log_store.recover_pruning 使用持久 prune.json，在提交索引后才删除旧分片；Worker 历史同步负责恢复。验证边界见 docs/validation/execution-group-logs-20261119/README.md。
 
 运行配置动态映射：batch-parameters.tsx 的 Mappings 合并 platform_bindings 与 parameter_schema.fields 的 binding（默认 input），值来自当前任务/服务定义快照。不得仅展示 platform_bindings 或将基础命令称为实际执行 argv。浏览器回归覆盖宿主机/容器客户端、服务端、业务绑定独立存在、任务切换及缺失旧快照；操作见 docs/batch-monitoring.md。仅前端变更，无 Worker/数据库升级。
+
+运行配置命令展开：frontend/src/batch-command-preview.tsx 按 Runner 的占位符、业务 binding、platform_bindings 顺序预览 argv，env/input 单独处理；宿主机 per_episode 改写回合和 seed，SDK-command 非 per_episode 保留任务字段。使用已有任务/模板快照，无新表、上报或 Worker 修改。execution-launch-snapshots 扩展已由用户撤销。历史批次导入必须部署 batch_rerun API，不能只发布静态前端；通用 Not Found 与 batch not found 区分提示。
