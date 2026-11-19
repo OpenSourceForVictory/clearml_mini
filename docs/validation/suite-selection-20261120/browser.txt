@@ -1,0 +1,13 @@
+
+Running 6 tests using 1 worker
+
+(node:741579) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/suite-layout.spec.ts:2:1 › compact suite rows, collapsible configuration and unsaved draft survive navigation (607ms)
+  ✓  2 tests/suite-layout.spec.ts:24:1 › published collection edits allowed clients independently and prevents empty selection (556ms)
+  ✓  3 tests/suite-layout.spec.ts:58:1 › wizard offers only collection allowed clients and permits choosing the second (258ms)
+  ✓  4 tests/suite-selection.spec.ts:16:1 › 50 task selection ignores search and bulk edits include hidden rows (845ms)
+  ✓  5 tests/suite-selection.spec.ts:48:2 › selection readonly published archived=false (275ms)
+  ✓  6 tests/suite-selection.spec.ts:48:2 › selection readonly draft archived=true (281ms)
+
+  6 passed (3.2s)

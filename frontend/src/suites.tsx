@@ -169,7 +169,8 @@ export function SuiteManager({templates,onRun,onSaved,onJob}:{templates:Template
         </fieldset>
         <Field label="搜索清单任务"><input value={taskQuery} onChange={e=>setTaskQuery(e.target.value)}/></Field>
         <fieldset disabled={locked||busy}>
-          <div className="row"><button type="button" onClick={()=>setSelected(new Set(visible.map(x=>x.i)))}>选中当前显示任务</button><button type="button" onClick={()=>setSelected(new Set())}>清空任务选择</button>
+          <p role="status">已选中 {selected.size} / {doc.cases.length} 项，其中 {selected.size-visible.filter(x=>selected.has(x.i)).length} 项被搜索隐藏。批量操作包含隐藏选中项。</p>
+          <div className="row"><button type="button" disabled={!doc.cases.length} onClick={()=>setSelected(new Set(doc.cases.map((_,i)=>i)))}>选择全部任务</button><button type="button" onClick={()=>setSelected(new Set(visible.map(x=>x.i)))}>选中当前显示任务</button><button type="button" onClick={()=>setSelected(new Set())}>清空任务选择</button>
             <button type="button" disabled={!selected.size} onClick={()=>{setCases(doc.cases.filter((_,i)=>selected.has(i)));setSelected(new Set());}}>仅保留选中任务</button>
             <button type="button" disabled={!selected.size} onClick={()=>{setCases(doc.cases.filter((_,i)=>!selected.has(i)));setSelected(new Set());}}>移除选中任务</button></div>
           <div className="submit-grid">

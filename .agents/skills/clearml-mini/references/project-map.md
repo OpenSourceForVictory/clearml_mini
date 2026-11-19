@@ -229,3 +229,5 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库外独立日志运行；新增 Runner 运行时依赖需同步 scripts/build_integration_bundle.py 清单并重新生成 frontend/public/integration/mini-eval-sdk.zip，普通 self_test 通过不能替代可选日志路径验证。
 
 日志预算：backend/app/log_policy.py 管理整机期望版本与每卡回执；worker/log_policy.py 在历史日志线程持久化。首次领取冻结 ExecutionLogPolicy（b841e23），心跳不可覆盖回执；整机配额仍不限制。前端入口为机器数据保留，详见 docs/execution-logs.md。
+
+集合全选由 suites.tsx 的原始任务索引选择，不受搜索过滤影响；当前显示选择仍替换原选择，批量操作包含隐藏选中项。已发布/归档通过 fieldset 保持只读。回归见 suite-selection.spec.ts，操作见 docs/suite-management.md；仅前端变更，无迁移或 Worker 更新。
