@@ -1,0 +1,14 @@
+{
+  "delay_seconds": 20,
+  "requests": 128,
+  "cached_bytes": 32024,
+  "database_bytes": 9863695,
+  "admission_p50_seconds": 0.07921492599416524,
+  "admission_p95_seconds": 0.09208614600356668,
+  "control_p95_seconds": 0.021611120901070535,
+  "control_checks": 38,
+  "elapsed_seconds": 20.02245634503197,
+  "cpu_seconds": 0.36115884900000017,
+  "peak_rss_kib": 167792,
+  "connections_after": 0
+}

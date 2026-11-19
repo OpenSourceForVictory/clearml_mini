@@ -34,6 +34,7 @@ test('member registers an image, keeps drafts across tabs and submits allowed va
   await page.getByLabel('批次名称',{exact:true}).fill('run');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('客户端模板',{exact:true}).selectOption('image-1');
+  await page.getByText('启动变量覆盖 JSON（高级编辑）',{exact:true}).click();
   await page.getByLabel('启动变量覆盖 JSON',{exact:true}).fill('{"LOG_LEVEL":"debug"}');
   await page.getByRole('button',{name:'下一步',exact:true}).click();
   await page.getByLabel('推理服务地址',{exact:true}).fill('http://inference:9000');

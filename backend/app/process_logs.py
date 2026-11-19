@@ -106,7 +106,8 @@ def install(app,db,current,worker_auth):
     @app.get('/api/v1/jobs/{job_id}/attempts/{run_id}/log-catalog')
     def listing(job_id:str,run_id:str,user=Depends(current),s=Depends(db)):
         run=visible_run(s,job_id,run_id,user)
-        return {'execution_id':run.execution_id,'items':[catalog_view(r) for r in s.scalars(select(Catalog).where(Catalog.run_id==run.id).order_by(Catalog.scope,Catalog.episode_id))]}
+        from .placement import view as placement_view
+        return {'execution_id':run.execution_id,'placement':placement_view(s.get(Slot,run.slot_id) if run.slot_id else None),'items':[catalog_view(r) for r in s.scalars(select(Catalog).where(Catalog.run_id==run.id).order_by(Catalog.scope,Catalog.episode_id))]}
 
     @app.post('/api/v1/jobs/{job_id}/attempts/{run_id}/log-reads',status_code=202)
     def request(job_id:str,run_id:str,body:Query,user=Depends(current),s=Depends(db)):

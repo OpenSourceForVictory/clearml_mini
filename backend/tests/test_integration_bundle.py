@@ -21,3 +21,25 @@ def test_download_matches_sources_and_runs_without_repository(tmp_path):
                             capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'PASS:' in result.stdout
+
+
+def test_download_contains_negotiated_process_log_runtime(tmp_path):
+    extracted=tmp_path/'isolated'
+    with ZipFile(build(tmp_path/'sdk.zip')) as archive:
+        archive.extractall(extracted)
+    code='''import json,sys,uuid
+from pathlib import Path
+from runner.process_log_store import initialize,locked,read_json
+from runner.process_log_run import run
+root=Path('logs').resolve();execution=str(uuid.uuid4());generation=str(uuid.uuid4())
+initialize(root,execution,generation)
+config={'_process_logs':{'root':str(root),'execution_id':execution,'generation':generation}}
+assert run([sys.executable,'-c',"print('isolated SDK log')"],config=config,scope='business')==0
+with locked(root,False) as fd: index=read_json(fd,'manifest.json')
+entry=next(iter(index['scopes'].values()))
+assert entry['status']=='closed' and entry['next_sequence']>0
+assert any('isolated SDK log' in p.read_text() for p in root.rglob('*.jsonl'))
+'''
+    env=dict(os.environ);env.pop('PYTHONPATH',None)
+    result=subprocess.run([sys.executable,'-c',code],cwd=extracted,env=env,capture_output=True,text=True,timeout=15)
+    assert result.returncode==0,result.stdout+result.stderr

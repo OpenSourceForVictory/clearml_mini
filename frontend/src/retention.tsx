@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {api} from './api';
+import {LogPolicySettings} from './log-policy';
 import {usePoll} from './poll';
 
 type Policy = {revision:number; enabled:boolean; days:number};
@@ -14,7 +15,7 @@ const labels:Record<string,string>={preview:'待确认',queued:'已提交，等�
 export function ExecutionDataSettings({id,name}:{id:string;name:string}) {
   const [open,setOpen]=useState(false);
   return <details className="panel" onToggle={e=>setOpen(e.currentTarget.open)}><summary>{name} 执行数据</summary>
-    {open&&<DataPanel key={id} id={id}/>}</details>;
+    {open&&<><LogPolicySettings key={`logs-${id}`} id={id}/><DataPanel key={id} id={id}/></>}</details>;
 }
 
 function DataPanel({id}:{id:string}) {

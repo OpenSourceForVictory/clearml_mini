@@ -55,3 +55,32 @@ test('readiness diagnostics are read-only and collapse on a narrow screen',async
  await detail.getByRole('button',{name:'收起检查配置'}).click();await expect(snapshot).toHaveCount(0);
  await detail.locator('summary').click();await expect(detail.getByRole('status')).not.toBeVisible();
 });
+
+test('same-name service logs select the execution history without mixing scoped drawers',async({page})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ const queries:string[]=[];
+ await page.route('**/api/v1/**',async route=>{
+  const u=new URL(route.request().url()),p=u.pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={username:'admin',role:'admin'};
+  if(p==='admin/nodes')data=[{id:'n',node_name:'server',roles:['server'],enabled:true,status:'online'}];
+  if(p==='admin/services')data=['a','b'].map(id=>({id,name:'same name',worker_id:'n',state:'STOPPED',online:true,revision:1,desired_running:false,cleanup_pending:false,endpoint:'http://node/'+id,template:{name:'demo',version:'1'}}));
+  if(/^admin\/services\/./.test(p)&&p.endsWith('/logs')){
+   const id=p.split('/')[2],job=u.searchParams.get('job_id')||id+'-current';
+   data={job_id:job,content:job+' summary',history:[{job_id:id+'-old',status:'FAILED',created_at:'previous'}]};
+  }
+  if(p.startsWith('jobs/')&&!p.includes('/attempts/'))data={attempts:[{id:'run-'+p.split('/')[1],attempt:1}]};
+  if(p.endsWith('/log-catalog')){const job=p.split('/')[1];data={items:[{id:job,execution_id:job,scope:'service',episode_id:0,generation:'g',status:'closed',path:'/runs/'+job,next_sequence:1,updated_at:'today'}]};}
+  if(p.endsWith('/log-reads')){queries.push(p.split('/')[1]);data={read_id:p.split('/')[1]};}
+  if(p.startsWith('log-reads/'))data={status:'ready',generation:'g',page:{records:[{time:'now',stream:'stdout',text:p.split('/')[1]+' scoped'}],has_more:false,closed:true}};
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();
+ const rows=page.getByRole('row').filter({hasText:'same name'});
+ await rows.nth(0).getByRole('button',{name:'日志',exact:true}).click();
+ await page.getByRole('button',{name:'服务实例日志',exact:true}).click();
+ let drawer=page.getByRole('dialog',{name:'服务实例日志'});await expect(drawer).toContainText('a-current scoped');await drawer.getByRole('button',{name:'关闭独立日志'}).click();
+ await page.getByLabel('执行历史').selectOption('a-old');await page.getByRole('button',{name:'服务实例日志',exact:true}).click();
+ drawer=page.getByRole('dialog',{name:'服务实例日志'});await expect(drawer).toContainText('a-old scoped');await expect(drawer).not.toContainText('a-current scoped');await drawer.getByRole('button',{name:'关闭独立日志'}).click();
+ await rows.nth(1).getByRole('button',{name:'日志',exact:true}).click();await page.getByRole('button',{name:'服务实例日志',exact:true}).click();
+ drawer=page.getByRole('dialog',{name:'服务实例日志'});await expect(drawer).toContainText('b-current scoped');expect(queries).toEqual(['a-current','a-old','b-current']);
+});

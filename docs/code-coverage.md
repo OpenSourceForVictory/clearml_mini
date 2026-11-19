@@ -98,3 +98,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 最终关联回归：870 通过、40 跳过；业务执行与结果完整 38 文件分母为行 91.21%、分支 83.13%，达到 90%/80%。全仓其他目录未达标及真实节点矩阵跳过均保留，不宣称全项目达标；证据见 docs/validation/execution-group-logs-20261119（从仓库根目录定位）。
 
 节点产物读取基础：`worker/artifact_reader.py`、`worker/artifact_access.py` 和已有 `backend/app/artifact_media.py` 纳入“业务执行与结果”关键功能统计；不排除尚未接线的代码。定向测试与全仓分母未达标证据见 [节点读取记录](validation/node-artifact-reader-20261119/README.md)。真实子进程未插桩不计入模块覆盖率。
+
+2026-11-20 覆盖率补齐与日志配置收尾：统一全量 Python 2218 通过/101 跳过/0 失败，整体 91.73% 行、82.58% 分支，六目录与关键功能全部通过；浏览器 197 通过/10 跳过。新增 backend/app/log_policy.py 与 worker/log_policy.py 纳入业务执行结果分组，无分母豁免。保留基线失败、SDK 下载包遗漏、前端旧用例和热更新失败；详见[完整验证记录](validation/coverage-followup-20261120/README.md)。

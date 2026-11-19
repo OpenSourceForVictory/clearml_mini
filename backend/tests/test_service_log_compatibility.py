@@ -49,3 +49,27 @@ def test_service_v2_reads_entire_retained_window_after_cleanup(env):
     assert data['content'].startswith('02')
     assert len(data['content'].encode()) == 256000
     assert '17' in data['content']
+
+
+def test_service_log_history_keeps_prior_execution_after_restart(env):
+    _, client, auth = env
+    token, slot, body = setup(env)
+    instance = client.post('/api/v1/admin/services', headers=auth['admin'], json=body).json()
+    path = '/api/v1/admin/services/' + instance['id']
+    first = claim(env, token, slot)
+    assert client.post('/api/v1/worker/executions/'+first['execution_id']+'/logs-v2', headers=token,
+                       json={'sequence':0,'content':'first attempt\n'}).status_code == 200
+    assert client.post('/api/v1/worker/executions/'+first['execution_id']+'/complete', headers=token,
+                       json={'status':'FAILED','error':'first finished'}).status_code == 200
+    restart = client.post(path+'/control', headers=auth['admin'], json={'action':'start','expected_revision':0})
+    assert restart.status_code == 200, restart.text
+    second = claim(env, token, slot)
+    assert second['execution_id'] != first['execution_id']
+    assert client.post('/api/v1/worker/executions/'+second['execution_id']+'/logs-v2', headers=token,
+                       json={'sequence':0,'content':'second attempt\n'}).status_code == 200
+    current = client.get(path+'/logs', headers=auth['admin']).json()
+    previous = client.get(path+'/logs', headers=auth['admin'], params={'job_id':instance['current_job_id']}).json()
+    assert current['content'] == 'second attempt\n'
+    assert previous['content'] == 'first attempt\n'
+    assert len(current['history']) == 2
+    assert client.get('/api/v1/admin/services/missing/logs', headers=auth['admin']).status_code == 404

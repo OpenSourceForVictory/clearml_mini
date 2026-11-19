@@ -591,3 +591,9 @@ class LogReadSubscriber(Base):
     request_id: Mapped[str] = mapped_column(ForeignKey('execution_log_reads.id'),primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'),primary_key=True)
     access_id: Mapped[str] = mapped_column(String(36),unique=True,default=uid)
+
+
+class ExecutionLogPolicy(Base):
+    __tablename__ = 'execution_log_policies'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id', ondelete='CASCADE'), primary_key=True)
+    snapshot: Mapped[dict] = mapped_column(JSON_TYPE)

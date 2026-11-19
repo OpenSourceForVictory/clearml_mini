@@ -11,8 +11,8 @@ from backend.app.scheduling import online, telemetry_fresh
 
 def test_environment_reports_allow_ordinary_heartbeat_jitter_but_expire():
     at=now()
-    worker=N(storage_revision=1,runtime_revision=1,host_revision=1,host_environments={'demo':{}})
-    slot=N(protocol_version=14,storage_applied_revision=1,
+    worker=N(connection={},storage_config=None,storage_revision=1,runtime_revision=1,host_revision=1,host_environments={'demo':{}})
+    slot=N(id="slot",protocol_version=14,storage_applied_revision=1,
            storage_report={'revision':1,'status':'applied'},
            runtime_report={'revision':1,'applied_revision':1},
            host_report={'revision':1,'applied_revision':1,'environments':{'demo':{'ready':True}}})

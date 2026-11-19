@@ -54,3 +54,19 @@ def test_reported_staging_path():
     execution=str(uuid.uuid4())
     assert reported_path('/old/runs',execution,execution,'staging')==f'/old/runs/.cleanup/{execution}'
     assert reported_path('/old/runs',execution,execution,'unexpected') is None
+
+
+def test_location_ignores_foreign_slot_and_execution_inventory(env):
+    main,c,auth=env;token,slots=node(env,count=2);job=submit(env);task=claim(env,token,slots[0])
+    route=f'/api/v1/jobs/{job}/attempts/{task["run_id"]}/execution-location'
+    with main.SessionLocal() as s:
+        worker_id=s.get(Slot,slots[0]).worker_id
+        for root,execution,slot_id in [('/correct/runs',task['execution_id'],slots[0]),('/foreign/runs',str(uuid.uuid4()),slots[0]),('/other-card/runs',task['execution_id'],slots[1])]:
+            s.add(ExecutionData(worker_id=worker_id,slot_id=slot_id,run_id=task['run_id'],
+                execution_id=execution,root_id=root,root_path=root,entry_name=execution,
+                generation=str(uuid.uuid4()),scan_status='complete'))
+        s.commit()
+    response=c.get(route,headers=auth['alice'])
+    assert response.status_code==200
+    assert [d['path'] for d in response.json()['directories']]==['/correct/runs/'+task['execution_id']]
+    assert c.get(route.replace(task['run_id'],str(uuid.uuid4())),headers=auth['alice']).status_code==404

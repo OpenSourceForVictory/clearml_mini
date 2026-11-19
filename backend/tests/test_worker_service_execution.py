@@ -153,3 +153,38 @@ def test_probe_session_transient_failure_keeps_same_process(execution,monkeypatc
     elif fault=='rejected':assert '400' in completion['error']
     else:assert completion['error']=='runner exited with code 0'
     assert worker.state is None
+
+
+@pytest.mark.parametrize('outcome',['cancel','expired','recovered'])
+def test_probe_session_wait_keeps_startup_lease_guard(execution,monkeypatch,outcome):
+    import threading
+    worker,task,events=execution
+    task.update(benchmark='inference-service',client_spec={'template':{},'service':{'readiness':{'startup_timeout':60}}})
+    renewed=threading.Event();calls=[];heartbeats=[]
+    original=worker.api.post
+    monkeypatch.setattr(readiness,'ProbeRunner',lambda *a:SimpleNamespace(error=None,accepted_ready=True,close=lambda:events.append(('probe-close',None))))
+    def post(path,body=None):
+        if path=='worker/heartbeat' and body.get('started') is False:
+            heartbeats.append(body)
+            reply=original(path,body)
+            if len(heartbeats)>1:
+                reply['cancel']=outcome=='cancel'
+                if outcome=='expired':reply['lease_seconds']=1
+                renewed.set()
+            return reply
+        if path.endswith('/service-probe-session'):
+            calls.append(path)
+            if len(calls)==1:
+                assert renewed.wait(5), 'probe session blocked startup renewal'
+                raise client.APIError(503,'control busy')
+            assert not any(p in ('stop','create','remove') for p,b in events)
+            return {'epoch':'recovered','ever_ready':False}
+        return original(path,body)
+    worker.api.post=post
+    worker.execute(task)
+    completion=next(body for path,body in events if path.endswith('/complete'))
+    assert renewed.is_set() and not any(p=='create' for p,b in events)
+    if outcome=='cancel':assert completion['status']=='CANCELLED'
+    elif outcome=='expired':assert 'lease expired' in completion['error']
+    else:assert len(calls)==2 and completion['error']=='runner exited with code 0'
+    assert worker.state is None

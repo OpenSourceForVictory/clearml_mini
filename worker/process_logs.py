@@ -6,6 +6,7 @@ import logging
 import os
 from pathlib import Path
 import threading
+import time
 import uuid
 
 from runner.process_log_store import (
@@ -50,11 +51,14 @@ def prepare_checked(worker, task, root, container=False):
         item = json.loads(path.read_text())
     else:
         generation = str(uuid.uuid4())
+        snapshot=task.get('process_log_policy') or {}
+        limits=snapshot.get('policy',worker.config.get('process_log_policy'))
+        if limits:limits={k:v for k,v in limits.items() if k!='node_bytes'}
         initialize(
             root,
             task["execution_id"],
             generation,
-            worker.config.get("process_log_policy"),
+            limits,
         )
         from runner.process_log_store import Store
         from runner.process_log_capture import RecordEncoder
@@ -80,13 +84,14 @@ def prepare_checked(worker, task, root, container=False):
             root_identity=[st.st_dev, st.st_ino],
             slot_id=worker.slot_id,
             catalogs={},
+            policy_revision=snapshot.get("revision",worker.config.get("process_log_policy_revision",0)),
         )
         atomic_json(path, item)
     # Register an execution-level identity while the lease is live. Later closed
     # scope discovery may then register without resurrecting the execution.
     worker.api.post(
         f"worker/executions/{task['execution_id']}/log-catalog",
-        dict(scope="task", generation=item["generation"], root_path=item["root"]),
+        dict(scope="task", generation=item["generation"], root_path=item["root"],policy_revision=item.get("policy_revision",0)),
     )
     return dict(
         execution_id=item["execution_id"],
@@ -102,6 +107,8 @@ class LogService:
         self.worker = worker
         self.stopping = threading.Event()
         self.directory = registry(worker)
+        from .log_policy import LogPolicy
+        self.policy = LogPolicy(worker)
 
     def start(self):
         self.thread = threading.Thread(
@@ -174,7 +181,7 @@ class LogService:
                         "truncated",
                     )
                 }
-                body.update(generation=item["generation"], root_path=item["root"])
+                body.update(generation=item["generation"], root_path=item["root"],policy_revision=item.get("policy_revision",0))
                 if item["catalogs"].get(key) == body:
                     continue
                 self.worker.api.post(
@@ -191,7 +198,7 @@ class LogService:
             # A trusted registered directory disappeared (including staging).
             for body in [
                 dict(
-                    scope="task", generation=item["generation"], root_path=item["root"]
+                    scope="task", generation=item["generation"], root_path=item["root"],policy_revision=item.get("policy_revision",0)
                 ),
                 *item["catalogs"].values(),
             ]:
@@ -310,7 +317,14 @@ class LogService:
         return bool(requests)
 
     def loop(self):
+        next_policy=0.0
         while not self.stopping.is_set():
+            if time.monotonic()>=next_policy:
+                try:
+                    self.policy.sync()
+                except Exception:
+                    LOG.warning("log policy synchronization deferred",exc_info=False)
+                next_policy=time.monotonic()+30
             try:
                 self.cycle()
             except Exception:

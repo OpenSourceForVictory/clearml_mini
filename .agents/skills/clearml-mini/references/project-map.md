@@ -225,3 +225,7 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 服务实例旧入口日志兼容：`services.logs`与任务日志按RunLogState选择v2分片或旧RunLog，不能仅查询RunLog；v2状态为空也不可回退拼接旧内容。查询限定当前服务关联的job及执行尝试，保留管理员权限和跨实例404。真机触发条件及回归见docs/inference-services.md、backend/tests/test_service_log_compatibility.py。修复仅API，无迁移或Worker升级。
 
 服务探测会话申请也属于启动阶段：worker/client.py 在启动租约续期线程存活时重试 503/传输故障，受启动时限、取消和租约约束。test_worker_service_execution.py 覆盖 host/Docker 重试、拒绝、停止和超时；不能把 unit missing 一律归因于同名实例。
+
+SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库外独立日志运行；新增 Runner 运行时依赖需同步 scripts/build_integration_bundle.py 清单并重新生成 frontend/public/integration/mini-eval-sdk.zip，普通 self_test 通过不能替代可选日志路径验证。
+
+日志预算：backend/app/log_policy.py 管理整机期望版本与每卡回执；worker/log_policy.py 在历史日志线程持久化。首次领取冻结 ExecutionLogPolicy（b841e23），心跳不可覆盖回执；整机配额仍不限制。前端入口为机器数据保留，详见 docs/execution-logs.md。

@@ -23,6 +23,10 @@ def test_log_read_terminal_auth_and_idempotent_response(env):
     assert c.post(route,headers=token,json={**registration,'episode_id':2}).status_code==409
     assert c.post(route,headers=token,json={**registration,'root_path':'/other'}).status_code==409
     assert c.get(base+'/log-catalog',headers=auth['bob']).status_code==404
+    listing=c.get(base+'/log-catalog',headers=auth['alice']).json()
+    assert listing['placement']['node_name']=='node'
+    assert listing['placement']['gpu_index']==0
+    assert listing['items'][0]['execution_id']==task['execution_id']
     response=c.post(base+'/log-reads',headers=auth['alice'],json={'log_id':catalog['id']});assert response.status_code==202,response.text
     access=response.json()['read_id']
     admin=c.post(base+'/log-reads',headers=auth['admin'],json={'log_id':catalog['id']}).json()['read_id']

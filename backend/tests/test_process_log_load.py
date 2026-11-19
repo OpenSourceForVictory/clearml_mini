@@ -13,7 +13,7 @@ from backend.app.core import User, Slot, LogReadRequest, now
 
 
 def test_offline_node_burst_has_global_bound_and_releases_connections(
-    env, monkeypatch, parallel=False
+    env, monkeypatch, parallel=False, slow=False
 ):
     from backend.app import process_logs
 
@@ -83,6 +83,44 @@ def test_offline_node_burst_has_global_bound_and_releases_connections(
         c.post("/api/v1/jobs/" + job + "/cancel", headers=auth["alice"]).status_code
         == 202
     )
+    if slow:
+        import json,resource,threading
+        claimed=c.post('/api/v1/worker/log-reads/claim',headers=token).json()['requests']
+        assert len(claimed)==2
+        errors=[];finished=threading.Event();begin=time.monotonic();cpu=time.process_time()
+        def respond():
+            try:
+                time.sleep(20)
+                for item in claimed:
+                    response=c.post('/api/v1/worker/log-reads/'+item['id']+'/reply',headers=token,
+                        json={'claim':item['claim'],'generation':item['generation'],'status':'ready','page':{'text':'x'*16000}})
+                    assert response.status_code==200,response.text
+            except BaseException as exc:errors.append(exc)
+            finally:finished.set()
+        thread=threading.Thread(target=respond);thread.start();control_times=[]
+        try:
+            while not finished.wait(.5):
+                started=time.monotonic()
+                assert c.get('/api/v1/jobs/'+job,headers=auth['alice']).status_code==200
+                assert c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':_slot(main,task),'execution_id':task['execution_id']}).status_code==200
+                control_times.append(time.monotonic()-started)
+                assert main.SessionLocal.kw['bind'].pool.checkedout()==0
+            thread.join(timeout=5)
+            assert not errors and not thread.is_alive(),str(errors)
+            assert len(control_times)>=5
+            with main.SessionLocal() as session:
+                rows=list(session.scalars(select(LogReadRequest)))
+                cached=sum(len(json.dumps(row.response).encode()) for row in rows if row.response is not None)
+                from sqlalchemy import text
+                database_bytes=session.scalar(text('SELECT pg_database_size(current_database())'))
+                assert len(rows)==128 and 0<cached<=8*1024*1024
+            ordered=sorted(durations);controls=sorted(control_times)
+            print('SLOW_NODE_METRICS '+json.dumps({'delay_seconds':20,'requests':128,'cached_bytes':cached,'database_bytes':database_bytes,
+                'admission_p50_seconds':ordered[len(ordered)//2],'admission_p95_seconds':ordered[int(len(ordered)*.95)],
+                'control_p95_seconds':controls[int(len(controls)*.95)],'control_checks':len(controls),
+                'elapsed_seconds':time.monotonic()-begin,'cpu_seconds':time.process_time()-cpu,
+                'peak_rss_kib':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,'connections_after':main.SessionLocal.kw['bind'].pool.checkedout()}))
+        finally:thread.join(timeout=25)
     current = frozen
     monkeypatch.setattr(process_logs, "now", lambda: current + timedelta(seconds=31))
     accepted = c.post(
@@ -142,8 +180,8 @@ def test_new_log_protocol_negotiates_only_complete_capability(env, capabilities)
     assert (task.get("log_protocol") == 2) == ("bounded_logs_v2" in capabilities)
 
 
-@pytest.mark.parametrize("parallel", [False, True])
-def test_postgres_small_pool_offline_node_burst(env, monkeypatch, parallel, pg):
+@pytest.mark.parametrize("parallel,slow", [(False,False),(True,False),(True,True)])
+def test_postgres_small_pool_offline_node_burst(env, monkeypatch, parallel, slow, pg):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from backend.app.core import Base, Pool
@@ -170,7 +208,7 @@ def test_postgres_small_pool_offline_node_burst(env, monkeypatch, parallel, pg):
             main, "SessionLocal", sessionmaker(engine, expire_on_commit=False)
         )
         test_offline_node_burst_has_global_bound_and_releases_connections(
-            env, monkeypatch, parallel=parallel
+            env, monkeypatch, parallel=parallel, slow=slow
         )
         assert engine.pool.checkedout() == 0
     finally:

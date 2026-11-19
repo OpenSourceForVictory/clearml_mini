@@ -123,4 +123,12 @@ Worker 0.21.4起，宿主机和Docker业务默认显式取消执行实例PID上�
 
 ## 独立日志预算
 
-Worker 0.21.6 默认不限制整机日志总量；仍保留每分片 4 MiB、每 scope 16 MiB、每执行 256 MiB 的预算，避免单次输出无界增长。配置文件可使用 `process_log_policy` 对象设置 `segment_bytes`、`scope_bytes`、`execution_bytes`，均为整数，要求 65536 ≤ 分片 ≤ scope ≤ 执行 ≤ 1 TiB。配置在新执行初始化时快照，修改后重启 Worker，不改变活动执行预算。当前没有预算 revision 的界面同步通道，不接受有限 node_bytes 配额。布局和保留边界见 [执行日志](execution-logs.md)。
+Worker 0.21.6 默认不限制整机日志总量；仍保留每分片 4 MiB、每 scope 16 MiB、每执行 256 MiB 的预算，避免单次输出无界增长。配置文件可使用 `process_log_policy` 对象设置 `segment_bytes`、`scope_bytes`、`execution_bytes`，均为整数，要求 65536 ≤ 分片 ≤ scope ≤ 执行 ≤ 1 TiB。0.21.6–0.21.10 使用本地配置，在新执行初始化时快照，修改后重启 Worker，不改变活动执行预算。0.21.11 使用下节平台版本同步，平台已确认配置优先于本地值；不接受有限 node_bytes 配额。布局和保留边界见 [执行日志](execution-logs.md)。
+
+## 独立日志预算同步
+
+管理设置 → 机器 → 查看配置 → 数据保留 → 展开执行数据，可设置日志分片、单份日志、单次执行的字节预算（界面单位 MiB）。三者递增，分片至少 64 KiB，最大 1 TiB。整机总量不限制；这不影响已有执行数据保留策略。
+
+保存只增加平台期望版本；每张卡的 Worker 0.21.11（process_log_policy_v1）独立持久化并回报生效版本。旧 Worker 显示需要升级。应用失败保留上次已确认配置，不把保存成功当成节点已生效。API 不等待节点磁盘操作。执行首次领取时冻结该卡已确认版本，重领、恢复以及之后降额都不改该执行；降额仅影响后续执行，不立即清理历史文件。配置同步在独立日志线程，最多每 30 秒一次，失败不阻断心跳和业务。
+
+该配置需要数据库 b841e23；按[迁移指南](database-migration.md)先迁移再更新 API，随后按[节点升级说明](worker-upgrades.md)选择节点升级。Worker 状态文件同级的 `.log-policy` 保存本卡回执，不修改业务账号的 shell 环境。

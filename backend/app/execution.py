@@ -4,6 +4,7 @@ import base64
 import binascii
 import os
 import secrets
+from . import log_policy
 from datetime import timedelta
 from typing import Literal, Optional
 from fastapi import Depends, HTTPException
@@ -173,6 +174,8 @@ def install(app, db, current):
     install_retention(app, db, admin, current, worker_auth)
     from .process_logs import install as install_process_logs
     install_process_logs(app, db, current, worker_auth)
+    from .log_policy import install as install_log_policy
+    install_log_policy(app, db, admin, worker_auth)
     from .shared_artifacts import install as install_shared_artifacts
     install_shared_artifacts(app, db, current, worker_auth)
 
@@ -303,7 +306,7 @@ def install(app, db, current):
         slot.accelerator_backends=body.accelerator_backends if body.protocol_version>=11 else []
         slot.gpu_model = body.gpu_model
         slot.vram_mb = body.vram_mb if body.vram_mb is not None else body.vram_gb * 1024
-        slot.software = body.software.model_dump() if body.software else None
+        slot.software = log_policy.merge_software(slot.software, body.software.model_dump() if body.software else None)
         if body.software and 'probe_references' not in body.software.model_fields_set:
             slot.software.pop('probe_references',None)
         slot.protocol_version = body.protocol_version
@@ -336,7 +339,7 @@ def install(app, db, current):
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             cancel = run.status == 'CANCEL_REQUESTED'
         if not body.execution_id and body.software is not None:
-            slot.software = body.software.model_dump()
+            slot.software = log_policy.merge_software(slot.software, body.software.model_dump())
         if not body.execution_id and body.storage is not None:
             storage_protocol.acknowledge(s, worker, slot, body.storage)
         if not body.execution_id and body.runtime is not None:
@@ -444,6 +447,10 @@ def install(app, db, current):
                 and (template.get('execution_mode') == 'host' or template.get('runtime'))):
             task['log_protocol'] = 2
             if 'process_logs_v1' in (slot.software or {}).get('capabilities',[]):task['process_logs_v1']=True
+        if task.get('process_logs_v1'):
+            from .log_policy import snapshot as log_snapshot
+            value=log_snapshot(s,run,slot)
+            if value is not None:task['process_log_policy']=value
         from .shared_artifacts import plan as artifact_plan
         task.update(artifact_plan(s,run,worker,slot,job,fresh_artifact_plan))
         if job.benchmark == 'cs-client':

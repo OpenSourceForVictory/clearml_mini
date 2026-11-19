@@ -1,0 +1,12 @@
+  -   75 tests/cs-framework.spec.ts:4:1 › save reusable suite and run with concurrency; view partial episode results
+  -   87 tests/fleet-production.spec.ts:5:1 › production fleet: member wizard, actual execution, logs and owner isolation
+  -  108 tests/orchestration-live.spec.ts:4:1 › real API: publish template copy, create suite and queue managed orchestration atomically
+  -  127 tests/run-wizard-live.spec.ts:4:1 › real trial, three-case formal execution and empty-pool queue through wizard
+  -  160 tests/suites-live.spec.ts:4:1 › RoboTwin subset, drafts, publish, copies, export and archive through real API
+  -  161 tests/suites-live.spec.ts:56:1 › YAML defaults and field errors have no implicit persistence
+  -  181 tests/templates-live.spec.ts:5:1 › real API persists client/server Docker/host template contracts
+  -  204 tests/workbench.spec.ts:4:1 › GPU environment check reports real rendering results
+  -  205 tests/workbench.spec.ts:25:1 › login, submit, cancel, retry, resources and administration
+  -  206 tests/workbench.spec.ts:104:1 › configure heterogeneous shared pool and submit GPU requirements
+  10 skipped
+  197 passed (3.3m)

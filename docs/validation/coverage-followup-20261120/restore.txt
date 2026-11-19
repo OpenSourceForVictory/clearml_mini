@@ -1,0 +1,1 @@
+PASS: a730d12 custom dump -> independent restore -> b841e23; historical log preserved; policy insert succeeds
