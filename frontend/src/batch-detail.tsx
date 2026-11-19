@@ -18,7 +18,7 @@ type Monitor={outcomes?:Outcomes;suite_id?:string|null;orchestrated?:boolean;sch
 type RetryResult={retried:number;skipped:number;items:{job_id:string;outcome:string;message?:string;attempt:number}[]};
 const eligible=(c:Case)=>['FAILED','TIMED_OUT'].includes(c.status);
 type Filters={status:string;reason:string;query:string};
-export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.MutableRefObject<Record<string,Filters>>;id:string;onBack:()=>void;onJob:(id:string)=>void}) {
+export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters:React.MutableRefObject<Record<string,Filters>>;id:string;onBack:()=>void;onRerun?:(id:string)=>void;onJob:(id:string)=>void}) {
   const [tab,setTab]=useState('tasks');
   const [episodeRows,setEpisodeRows]=useState<Record<string,boolean>>({});
   const [showParameters,setShowParameters]=useState(false),[showServices,setShowServices]=useState(false);
@@ -44,7 +44,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters}:{savedFilters:React.M
     const r=await api<RetryResult>('batches/'+id+'/retry-failed','POST',{items:Object.entries(selected).map(([job_id,expected_run_id])=>({job_id,expected_run_id}))});
     setResult(r);setSelected({});
   }catch(e){setRetryError(String(e)+'；保留原尝试选择，可安全再次提交。');}finally{setBusy(false);}}
-  return <section className="panel batch-detail" aria-label="批次详情"><div className="batch-detail-toolbar"><button onClick={onBack}>返回批次列表</button><ReportDownloads id={id}/></div>
+  return <section className="panel batch-detail" aria-label="批次详情"><div className="batch-detail-toolbar"><button onClick={onBack}>返回批次列表</button>{onRerun&&<button onClick={()=>onRerun(id)}>基于此批次创建</button>}<ReportDownloads id={id}/></div>
     {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>

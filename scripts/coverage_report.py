@@ -16,7 +16,7 @@ FUNCTIONS = {
     '节点监控': ['node_agent/*.py'],
     '运行模板注册管理': ['backend/app/clients.py','backend/app/templates.py','backend/app/template_versions.py','runner/template_contract.py','runner/image_runtime.py'],
     '评测结果与批次管理': ['backend/app/reports.py','backend/app/batch_controls.py','backend/app/batch_deletion.py','backend/app/monitoring.py'],
-    '任务集合与编排': ['backend/app/suites.py','backend/app/batches.py','backend/app/orchestrations.py','backend/app/services.py'],
+    '任务集合与编排': ['backend/app/batch_rerun.py','backend/app/suites.py','backend/app/batches.py','backend/app/orchestrations.py','backend/app/services.py'],
 }
 
 

@@ -181,3 +181,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 分作用域日志开发：runner/process_log_contract.py 定义身份/预算/游标；backend/app/execution_locations.py 按 Run 和 execution_id 查询历史目录，不使用当前节点配置推断。任务/批次共用 frontend/src/execution-location.tsx。新 Catalog/Read/Subscriber 模型及 z629c01 为后续按需日志读取基础，未完成 Worker 接入前不能宣称已支持回合文件。操作边界见 docs/execution-logs.md、database-migration.md；OpenSpec process-scoped-execution-logs 管理全链路实施。
 
 整任务普通命令展示：`backend/app/result_views.py` 的 detail_mode 由任务类型及进程模式决定，`episodes.py` 不补造此类计划回合，`frontend/src/cs.tsx` 展示整次执行；批次入口复用同一模式。该模式使用任务退出码统计执行（不冒充独立业务子进程退出证据），保留生命周期诊断。协议单进程及逐回合路径不变；操作说明见 docs/batch-monitoring.md。
+
+历史批次再次运行：`backend/app/batch_rerun.py` 提供只读 `GET /api/v1/batches/{id}/rerun-draft`，按任务/编排快照白名单恢复提交字段，批量检查模板和池；`frontend/src/batch-rerun.ts` 定义草稿契约，列表/详情经 CSWorkbench 导入 RunWizard。来源只在草稿显示，不复用执行地址、实例或幂等键。缺失、异构和不可用配置明确提示；操作见 docs/suite-run-preflight.md，定向测试见 test_batch_rerun.py 与 batch-rerun.spec.ts。无需本功能数据库迁移。

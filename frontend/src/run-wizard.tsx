@@ -1,3 +1,4 @@
+import type {WizardLaunch} from './batch-rerun';
 import {requestId} from './request-id';
 import React, {useEffect, useRef, useState} from 'react';
 import {ResourceContract,ResourceRequest} from './resource-requirements';
@@ -19,12 +20,14 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
 const initial={unlimited_timeout:false,cpu_unlimited:false,memory_unlimited:false,cpus:'',ram_gb:'',title:'',pool_id:'',gpu_mode:'exclusive',requested_vram_gb:0,required_gpu_model:'',max_concurrent:1,request_timeout_seconds:10,timeout_seconds:300,environment:'{}'};
-export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:{suite:Suite}|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
+export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBatch}:{templates:Template[];pools:{id:string;name:string}[];suites:Suite[];launch:WizardLaunch|null;onSubmitted:()=>void;onBatch?:(id:string)=>void;onJob:(id:string)=>void}) {
   const [resourceDrafts,setResourceDrafts]=useState<Record<string,Record<string,any>>>({});
   const [draft,setDraft]=useState(initial),[suiteId,setSuiteId]=useState(''),[templateId,setTemplateId]=useState('');
   const [serviceMode,setServiceMode]=useState<'external'|'managed'|'none'>('external'),[servers,setServers]=useState<ServerTemplate[]>([]),[serviceRows,setServiceRows]=useState([newService()]),[stopAfter,setStopAfter]=useState(true);
   const [executionLimit,setExecutionLimit]=useState<number|null>(null),[limitError,setLimitError]=useState(''),[limitReload,setLimitReload]=useState(0);
-  const timeoutEdited=useRef(false);
+  const timeoutEdited=useRef(!!launch?.rerun);
+  const [importAcknowledged,setImportAcknowledged]=useState(false);
+  const imported=launch?.rerun;
   useEffect(()=>{
     let active=true;setExecutionLimit(null);setLimitError('');
     api<{client_execution_max_seconds:number;client_execution_default_seconds:number}>('execution-limits').then(data=>{
@@ -51,12 +54,30 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const [submittedId,setSubmittedId]=useState('');
   const [trialCase,setTrialCase]=useState(''),[trial,setTrial]=useState<Trial|null>(null),[trialError,setTrialError]=useState(''),[submitted,setSubmitted]=useState('');
   const sequence=useRef(0),pending=useRef(false),keys=useRef<Record<string,{body:string;value:string}>>({});
-  const selectedSuite=suites.find(s=>s.id===suiteId)||(launch?.suite.id===suiteId?launch.suite:undefined),template=allTemplates.find(t=>t.id===templateId);
+  const selectedSuite=suites.find(s=>s.id===suiteId)||(launch?.suite?.id===suiteId?launch.suite:undefined),template=allTemplates.find(t=>t.id===templateId);
   const ordinaryOnce=template?.task_type==='command'&&!(template.execution_mode==='host'&&template.host_runtime?.episode_launch==='per_episode');
-  useEffect(()=>{if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
+  useEffect(()=>{if(imported&&template?.id===imported.submission.client.template_id)return;if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   function availableTemplate(s:Suite){return (s.template_ids||[s.template_id]).find(id=>allTemplates.some(t=>t.id===id))||s.template_id;}
-  useEffect(()=>{if(launch){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
+  useEffect(()=>{if(launch?.suite){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
+  useEffect(()=>{
+    if(!launch?.rerun)return;
+    const input=launch.rerun.submission,c=input.client;
+    timeoutEdited.current=true;addressDirty.current=true;sequence.current++;keys.current={};
+    setImportAcknowledged(false);setTrial(null);setTrialError('');setTrialCase('');setSubmitted('');setSubmittedId('');setPreview(null);setError('');setStep(0);
+    setSaveSuite(false);setSuiteId('');setSuiteDefaults({});setValues({});setTemplateId(c.template_id);setCases(input.cases);
+    setDraft({...initial,title:input.title,pool_id:input.pool_id,max_concurrent:input.max_concurrent,
+      environment:JSON.stringify(c.environment||{},null,2),request_timeout_seconds:c.request_timeout_seconds,
+      timeout_seconds:c.timeout_seconds,unlimited_timeout:c.timeout_seconds===0});
+    setResourceDrafts({[c.template_id]:input.resources});setServiceMode(c.service_mode);
+    setAddresses(c.endpoints||[{url:'',mode:'shared'}]);setStopAfter(input.stop_after_batch);
+    setServiceRows(input.services.length?input.services.map((v,i)=>({...newService(i),...v,
+      instance_count:v.instance_count??0,parameters:{},imported_parameters:v.parameters,
+      environment:JSON.stringify(v.environment||{},null,2),resource_overrides:v.resources,
+      cpus:v.resources?.cpus==null?'':String(v.resources.cpus),ram_gb:v.resources?.ram_gb==null?'':String(v.resources.ram_gb),
+      cpu_unlimited:v.resources?.cpu_unlimited,memory_unlimited:v.resources?.memory_unlimited,
+      gpu_mode:v.resources?.gpu_mode||'exclusive',requested_vram_gb:v.resources?.requested_vram_gb??0})): [newService()]);
+  },[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
   useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
   useEffect(()=>{
@@ -80,6 +101,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   }
   function editAddress(index:number,change:Partial<{url:string;mode:'exclusive'|'shared'}>){addressDirty.current=true;setAddresses(old=>old.map((e,i)=>i===index?{...e,...change}:e));}
   function body(){
+    if(imported?.issues.some(i=>i.fatal))throw Error('历史配置存在无法自动恢复的问题，不能提交');
+    if(imported?.issues.length&&!importAcknowledged)throw Error('请先核对并确认历史配置问题');
     validateTimeout();
     const environment=JSON.parse(draft.environment);
     if(!environment||Array.isArray(environment)||typeof environment!=='object'||Object.values(environment).some(v=>typeof v!=='string'))throw Error('启动变量覆盖 JSON 必须是字符串键值对象');
@@ -89,7 +112,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='external')validateAddresses();
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
-    const inputCases=parseCases(ordinaryOnce?cases.map(c=>({...c,episodes:1})):cases);
+    const inputCases=parseCases(ordinaryOnce&&!imported?cases.map(c=>({...c,episodes:1})):cases);
     return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpu_unlimited?{cpu_unlimited:true}:{}),...(draft.memory_unlimited?{memory_unlimited:true}:{}),...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
       new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
       client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.unlimited_timeout?0:draft.timeout_seconds}};
@@ -136,6 +159,11 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     <ol className="wizard-steps" aria-label="运行步骤">{steps.map((name,i)=><li key={name} aria-current={i===step?'step':undefined}>{i+1}. {name}</li>)}</ol>
     <p className="hint">选择业务配置与并发偏好，平台负责分配机器和传递参数；实际通信和执行可通过试跑验证。</p>
     {error&&<p role="alert" className="error">{error}</p>}
+    {imported&&<section aria-label="历史批次来源"><h3>基于历史批次创建</h3><p>来源：{imported.source.title} · {imported.source.batch_id}。只创建新批次，不改变原批次。原客户端：{imported.templates.client.name} / {imported.templates.client.version}。</p><ul>{imported.templates.services.map((t,i)=><li key={i}>原服务 {i+1}：{t.name} / {t.version} · {t.id}</li>)}</ul>
+    <p>已恢复各任务的最终参数和资源，单项配置优先于公共配置；请在清单中逐项修改。重新预检后才能提交，不复用原实例或预检结果。</p>
+    {imported.issues.length>0&&<><ul>{imported.issues.map((i,n)=><li key={n}>{i.path}：{i.message}{i.fatal?'（无法恢复，禁止提交）':''}</li>)}</ul>
+    {!imported.issues.some(i=>i.fatal)&&<label><input type="checkbox" checked={importAcknowledged} onChange={e=>setImportAcknowledged(e.target.checked)}/>我已重新选择或明确确认使用当前模板、资源池，并补齐缺失配置；接受与历史配置的差异，重新预检</label>}</>}
+    </section>}
     <form onSubmit={next}><fieldset disabled={busy}>
     {step===0&&<>
       <div className="submit-grid"><Field label="选择已保存集合"><select value={suiteId} onChange={e=>chooseSuite(e.target.value)}><option value="">自定义清单</option>{suites.map(s=><option key={s.id} value={s.id}>{s.name} / {s.version}</option>)}</select></Field>
@@ -143,7 +171,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       {!suiteId&&<><label><input type="checkbox" checked={saveSuite} onChange={e=>setSaveSuite(e.target.checked)}/>同时保存为可复用集合</label>{saveSuite&&<div className="row"><Field label="新集合名称"><input required value={suiteName} onChange={e=>setSuiteName(e.target.value)}/></Field><Field label="集合版本"><input required value={suiteVersion} onChange={e=>setSuiteVersion(e.target.value)}/></Field></div>}</>}
       {suiteId&&<button type="button" onClick={()=>{setSuiteDefaults(selectedSuite?.client_defaults||{});setSuiteName(selectedSuite?.name||'');setSuiteVersion('');setSuiteId('');setSaveSuite(true)}}>复制集合并修改</button>}
       {suiteId&&<p>使用已发布集合及关联客户端。临时修改请显式切换“自定义清单”。</p>}
-      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={ordinaryOnce}/>
+      <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={ordinaryOnce&&!imported}/>
     </>}
     {step===1&&<><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
@@ -152,7 +180,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。选择不限仍需心跳续租，且支持取消；需要 Worker 协议 16。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
       {limitError&&<p role="alert">平台执行时限读取失败：{limitError}</p>}<button type="button" onClick={()=>{setPreview(null);setLimitReload(n=>n+1)}}>刷新执行时限</button>
       {template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
-      {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/></>}
+      {template&&<><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/>{imported&&<button type="button" onClick={()=>{try{const parameters=parseValues(template.parameter_schema,values);setCases(old=>old.map(c=>({...c,parameters:{...c.parameters,...parameters}})));setError('');}catch(e){setError(String(e));}}}>将已填写的公共参数应用到所有任务</button>}</>}
       <Field label="启动变量覆盖 JSON"><textarea rows={3} value={draft.environment} onChange={e=>update('environment',e.target.value)}/></Field>
       <p className="hint">仅可覆盖模板允许的变量：{(template?.runtime||template?.host_runtime)?.overridable_env?.join(', ')||'无'}。请勿填写密码或令牌。</p>
     </>}
@@ -236,13 +264,14 @@ function CaseEditor({cases,setCases,setError,disabled=false,ordinary=false}:{cas
   return <>
         <fieldset disabled={disabled}>
         <Field label="导入 JSON 清单"><input type="file" accept="application/json,.json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>1048576)throw new Error('清单文件不能超过 1 MiB');setCases(parseCases(JSON.parse(await file.text())));setError('');}catch(error){setError(String(error));}e.target.value='';}}/></Field>
-        <div className="table-scroll"><table><thead><tr><th>唯一标识</th><th>仿真任务名</th><th>回合数</th><th>种子</th><th>参数 JSON</th><th></th></tr></thead><tbody>
+        <div className="table-scroll"><table><thead><tr><th>唯一标识</th><th>仿真任务名</th><th>回合数</th><th>种子</th><th>参数 JSON</th><th>单项资源 / 服务</th><th></th></tr></thead><tbody>
           {cases.map((c,i)=><tr key={i}>
             <td><input aria-label={`第 ${i+1} 项标识`} value={c.case_id} maxLength={100} required onChange={e=>change(i,'case_id',e.target.value)}/></td>
             <td><input aria-label={`第 ${i+1} 项任务名`} value={c.task_name} maxLength={200} required onChange={e=>change(i,'task_name',e.target.value)}/></td>
             <td><input aria-label={`第 ${i+1} 项回合数`} type="number" min={1} max={10000} required disabled={ordinary} value={ordinary?1:c.episodes} onChange={e=>change(i,'episodes',Number(e.target.value))}/></td>
             <td><input aria-label={`第 ${i+1} 项种子`} type="number" min={0} max={2147483647} required value={c.seed} onChange={e=>change(i,'seed',Number(e.target.value))}/></td>
             <td><textarea aria-label={`第 ${i+1} 项参数`} key={JSON.stringify(c.parameters)} defaultValue={JSON.stringify(c.parameters||{})} onBlur={e=>{try{const v=JSON.parse(e.target.value);if(!v||typeof v!=='object'||Array.isArray(v))throw new Error();change(i,'parameters',v);e.target.setCustomValidity('');}catch{e.target.setCustomValidity('参数必须是 JSON 对象');e.target.reportValidity();}}}/></td>
+            <td><details><summary>单项资源与服务关联</summary><textarea aria-label={`第 ${i+1} 项资源`} key={JSON.stringify(c.resources)} defaultValue={JSON.stringify(c.resources||{})} onBlur={e=>{try{const v=JSON.parse(e.target.value);if(!v||typeof v!=='object'||Array.isArray(v))throw Error();change(i,'resources',v);e.target.setCustomValidity('');}catch{e.target.setCustomValidity('资源必须是 JSON 对象');e.target.reportValidity();}}}/><textarea aria-label={`第 ${i+1} 项服务关联`} key={JSON.stringify(c.service_keys)} defaultValue={JSON.stringify(c.service_keys||[])} onBlur={e=>{try{const v=JSON.parse(e.target.value);if(!Array.isArray(v)||v.some(x=>typeof x!=='string'))throw Error();change(i,'service_keys',v);e.target.setCustomValidity('');}catch{e.target.setCustomValidity('服务关联必须是字符串数组');e.target.reportValidity();}}}/><p>单项值优先于公共配置。空资源对象使用公共申请；空服务列表使用兼容服务。</p></details></td>
             <td><button type="button" disabled={cases.length===1} onClick={()=>setCases(old=>old.filter((_,n)=>n!==i))}>移除</button></td>
           </tr>)}
         </tbody></table></div>

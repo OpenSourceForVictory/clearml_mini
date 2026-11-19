@@ -332,6 +332,8 @@ def admin_health(user: User = Depends(current), s: Session = Depends(db)):
 install(app, db, current)
 install_clients(app, db, current)
 install_batches(app, db, current)
+from .batch_rerun import install as install_batch_rerun
+install_batch_rerun(app, db, current)
 install_episodes(app, db, current)
 install_builds(app, db, current)
 

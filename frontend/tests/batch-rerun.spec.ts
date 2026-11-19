@@ -1,0 +1,71 @@
+import {test,expect,type Page} from '@playwright/test';
+async function setup(page:Page){
+ let fail=false,delay=0,lose=false;const requests:any[]=[];
+ const template={id:'t',name:'Historical client',version:'1',execution_mode:'host',host_runtime:{episode_launch:'whole_task',overridable_env:['MODE']},enabled:true,protocols:['ws'],task_type:'evaluation',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true}}}};
+ const server={id:'s',name:'Historical server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{count:{type:'integer'}}}};
+ const draft:any={schema_version:1,source:{batch_id:'old',title:'历史批次',suite_id:'changed-suite'},templates:{client:template,services:[server]},issues:[],submission:{title:'历史批次（再次运行）',pool_id:'pool',max_concurrent:2,suite_id:null,resources:{},stop_after_batch:false,client:{template_id:'t',service_mode:'managed',timeout_seconds:0,request_timeout_seconds:19,environment:{MODE:'old'}},cases:[{case_id:'a',task_name:'first',episodes:3,seed:0,parameters:{speed:2},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,memory_unlimited:false},service_keys:['model']},{case_id:'b',task_name:'second',episodes:7,seed:20,parameters:{speed:5},resources:{cpus:4,ram_gb:8},service_keys:['model']}],services:[{key:'model',template_id:'s',pool_id:'pool',slot_id:'fixed-slot',mode:'shared',instance_count:2,parameters:{count:0},environment:{},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,gpu_mode:'exclusive',requested_vram_gb:0,accelerator_type:'npu'}}]}};
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={id:'user',username:'user',role:'user'};
+  if(p==='execution-limits'){await new Promise(r=>setTimeout(r,100));data={client_execution_max_seconds:7200,client_execution_default_seconds:300};}
+  if(p==='client-templates')data=[template];if(p==='runtime-templates/server')data=[server];if(p==='pools')data=[{id:'pool',name:'历史池'}];
+  if(p==='suites/manage')data={items:[],total:0};
+  if(p==='batches')data=[{id:'old',title:'历史批次',status:'SUCCEEDED',total:2,finished:2,succeeded:2,total_episodes:10,cases:[]}];
+  if(p.endsWith('/monitor'))data={id:'old',title:'历史批次',max_concurrent:2,total:2,finished:2,total_episodes:10,cases:[],summary:{states:{},completed_episodes:0,successes:0}};
+  if(p.endsWith('/rerun-draft')){const wait=delay,bad=fail;await new Promise(r=>setTimeout(r,wait));if(bad){await route.fulfill({status:404,json:{detail:'batch not found'}});return;}data=draft;}
+  if(p==='orchestrations/preflight'){const body=route.request().postDataJSON();requests.push({kind:'check',body});data={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:body.cases,reasons:[],nodes:[],note:'test',effective_parameters:body.cases.map((c:any)=>({case_id:c.case_id,parameters:c.parameters,sources:{}}))};}
+  if(p==='orchestrations'){requests.push({kind:'submit',body:route.request().postDataJSON(),key:route.request().headers()['idempotency-key']});if(lose){lose=false;await route.abort();return;}data={id:'new',title:'new',cases:[]};}
+  await route.fulfill({json:data});
+ });
+ await page.goto('/#/cs/results');
+ return {draft,requests,setFail:(v:boolean)=>{fail=v;},setDelay:(v:number)=>{delay=v;},lose:()=>{lose=true;}};
+}
+
+test('list import preserves overrides, edit, fresh preflight and idempotent new submission',async({page})=>{
+ const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});await expect(w.getByRole('region',{name:'历史批次来源'})).toContainText('历史批次');
+ await expect(w.getByLabel('选择已保存集合')).toHaveValue('');await expect(w.getByLabel('第 2 项回合数')).toHaveValue('7');
+ await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":9}');await w.getByLabel('第 1 项任务名').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('不限制每项总执行时长')).toBeChecked();
+ await expect(w.getByLabel('请求超时秒')).toHaveValue('19');await expect(w.getByLabel('启动变量覆盖 JSON')).toContainText('old');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('服务来源')).toHaveValue('managed');
+ await expect(w.getByLabel('服务 1 实例数')).toHaveValue('2');await expect(w.getByLabel('批次结束且客户端清理完成后停止服务')).not.toBeChecked();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('客户端资源池')).toHaveValue('pool');
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ const body=c.requests[0].body;expect(body.suite_id).toBeNull();expect(body.client.timeout_seconds).toBe(0);expect(body.cases[0].parameters.speed).toBe(9);expect(body.cases[1].parameters.speed).toBe(5);expect(body.cases[0].resources.cpu_unlimited).toBe(true);
+ expect(body.services[0]).toMatchObject({instance_count:2,slot_id:'fixed-slot',parameters:{count:0},resources:{accelerator_type:'npu',cpu_unlimited:true}});
+ c.lose();await w.getByRole('button',{name:'提交评测批次',exact:true}).click();await expect(w.getByRole('alert')).toBeVisible();
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();await expect(w.getByRole('status')).toContainText('已提交');
+ const posts=c.requests.filter(x=>x.kind==='submit');expect(posts[0].key).toBe(posts[1].key);
+});
+
+test('detail entry, failed import retry and explicit issue acknowledgement',async({page})=>{
+ const c=await setup(page);await page.getByRole('button',{name:'查看批次',exact:true}).click();
+ c.setFail(true);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('导入失败');
+ c.setFail(false);c.draft.issues=[{path:'services.0.instance_count',code:'instance_count_required',message:'请填写明确的实例数',fatal:false}];c.draft.submission.services[0].instance_count=null;
+ await page.getByRole('button',{name:'重试导入',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'});
+ await expect(w).toContainText('请填写明确的实例数');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务 1 实例数')).toHaveValue('0');await w.getByLabel('服务 1 实例数').fill('3');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('alert')).toContainText('请先核对');expect(c.requests).toHaveLength(0);
+ await w.getByRole('checkbox',{name:'我已重新选择',exact:false}).check();await w.getByRole('button',{name:'重新检查',exact:true}).click();await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ expect(c.requests[0].body.services[0].instance_count).toBe(3);
+});
+
+test('reimport starts clean, stale response ignored and fatal issue never preflights',async({page})=>{
+ const c=await setup(page);c.setDelay(250);
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ c.setDelay(0);c.setFail(true);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('导入失败');
+ await page.waitForTimeout(350);await expect(page).toHaveURL(/cs\/results/);
+ c.setFail(false);await page.getByRole('button',{name:'重试导入',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});await expect(w.getByLabel('批次名称',{exact:true})).toHaveValue('历史批次（再次运行）');
+ await w.getByLabel('批次名称',{exact:true}).fill('edited');
+ await page.evaluate(()=>{location.hash='/cs/results';});
+ c.draft.issues=[{path:'client',code:'heterogeneous',message:'不能合并不同客户端',fatal:true}];
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ await expect(w.getByLabel('批次名称',{exact:true})).toHaveValue('历史批次（再次运行）');
+ await expect(w).toContainText('无法恢复，禁止提交');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');for(let i=0;i<2;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('alert')).toContainText('不能提交');expect(c.requests).toHaveLength(0);
+});

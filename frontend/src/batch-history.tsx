@@ -8,7 +8,7 @@ const labels:Record<string,string>={PENDING:'排队中',RUNNING:'运行中',SUCC
 const terminal=new Set(['SUCCEEDED','FAILED','CANCELLED']);
 const tone=(status:string)=>status==='SUCCEEDED'?'success':status==='FAILED'?'failure':status==='RUNNING'?'running':'neutral';
 
-export function BatchHistory({batches,page,loading,error,compareIds,onCompareChange,onOpen,onPage,onDeleted}:{batches:Batch[];page:number;loading:boolean;error:string;compareIds:string[];onCompareChange:(ids:string[])=>void;onOpen:(id:string)=>void;onPage:(page:number)=>void;onDeleted:(id:string)=>void}) {
+export function BatchHistory({batches,page,loading,error,compareIds,onCompareChange,onOpen,onRerun,onPage,onDeleted}:{batches:Batch[];page:number;loading:boolean;error:string;compareIds:string[];onCompareChange:(ids:string[])=>void;onOpen:(id:string)=>void;onRerun?:(id:string)=>void;onPage:(page:number)=>void;onDeleted:(id:string)=>void}) {
  const [query,setQuery]=useState(''),[status,setStatus]=useState(''),[deleting,setDeleting]=useState<Batch|null>(null),[busy,setBusy]=useState(false),[deleteError,setDeleteError]=useState(''),[notice,setNotice]=useState('');
  const dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{if(deleting)dialog.current?.showModal();},[deleting]);
@@ -30,7 +30,7 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
     <td>{b.max_concurrent??'—'}</td>
     <td className="history-progress"><span>已结束 {b.finished}/{b.total}</span><progress aria-label={b.title+' 任务完成进度'} value={percent} max={100}/><small>任务正常完成 {b.succeeded} · 未结束 {Math.max(0,b.total-b.finished)}</small></td>
     <td><ExecutionOutcome value={b.outcomes}/></td><td><ProtocolOutcome value={b.outcomes}/></td>
-    <td><div className="history-actions"><button onClick={()=>onOpen(b.id)}>查看批次</button><button className="history-delete" disabled={!terminal.has(b.status)} title={!terminal.has(b.status)?'请先进入批次取消任务，等待停止并清理后删除':'删除批次及其任务，保留审计数据'} onClick={()=>{setDeleting(b);setDeleteError('');setNotice('');}}>删除批次</button></div></td>
+    <td><div className="history-actions"><button onClick={()=>onOpen(b.id)}>查看批次</button>{onRerun&&<button onClick={()=>onRerun(b.id)}>基于此批次创建</button>}<button className="history-delete" disabled={!terminal.has(b.status)} title={!terminal.has(b.status)?'请先进入批次取消任务，等待停止并清理后删除':'删除批次及其任务，保留审计数据'} onClick={()=>{setDeleting(b);setDeleteError('');setNotice('');}}>删除批次</button></div></td>
    </tr>;
   })}</tbody></table></div>}
   <div className="pagination"><button disabled={page===1||loading} onClick={()=>onPage(page-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20||loading} onClick={()=>onPage(page+1)}>下一页</button></div>

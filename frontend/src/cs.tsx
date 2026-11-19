@@ -1,3 +1,4 @@
+import type {RerunDraft,WizardLaunch} from './batch-rerun';
 import {ResultOutcomes,executionLabels,protocolLabels} from './result-outcomes';
 import {FunctionPages} from './navigation';
 import {SuiteManager} from './suites';
@@ -14,12 +15,19 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
 }
 
-export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaunch=null}:{initialLaunch?:{suite:Suite}|null;pageView?:'wizard'|'records';admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
+export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaunch=null}:{initialLaunch?:WizardLaunch|null;pageView?:'wizard'|'records';admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
-  const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<{suite:Suite}|null>(initialLaunch);
+  const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<WizardLaunch|null>(initialLaunch);
   useEffect(()=>{if(initialLaunch)setLaunch(initialLaunch)},[initialLaunch]);
+  const rerunSequence=useRef(0);
+  const [importState,setImportState]=useState<{id:string;loading:boolean;error:string}|null>(null);
+  async function importBatch(id:string){
+    const seq=++rerunSequence.current;setLaunch(null);setImportState({id,loading:true,error:''});
+    try{const draft=await api<RerunDraft>('batches/'+id+'/rerun-draft');if(seq!==rerunSequence.current)return;if(draft.schema_version!==1)throw Error('不支持的历史配置版本');setLaunch({rerun:draft});setImportState(null);location.hash='/cs';}
+    catch(e){if(seq===rerunSequence.current)setImportState({id,loading:false,error:String(e)});}
+  }
   const [resultsTab,setResultsTab]=useState('history');
   const deletedIds=useRef(new Set<string>());
   const [compareIds,setCompareIds]=useState<string[]>([]);
@@ -30,26 +38,27 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
   const openBatch=(id:string)=>{setResultsTab('history');location.hash='/cs/batches/'+id;};
   const refresh=async()=>{
     const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));
+    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));
   };
   useEffect(()=>{
     setLoading(true);
     let active=true,timer:ReturnType<typeof setTimeout>;
     async function load(){try{
       const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
+      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
     }catch(e){if(active)setError(String(e));}finally{if(active){setLoading(false);timer=setTimeout(load,2000);}}}
     if(!batchId&&!compareRoute.length)void load();return()=>{active=false;clearTimeout(timer);};
   },[page,launch,batchId,compareRoute.join()]);
   return <>
     <div className="page-title"><div><p className="eyebrow">CLIENT / SERVER</p><h1>{pageView==='wizard'?'业务评测向导':'评测运行与结果'}</h1><p className="muted">{pageView==='wizard'?'选择任务、客户端和推理服务，检查后提交业务评测。':'按提交批次查看运行状态、任务参数、服务状态与评测结果。'}</p></div></div>
     {error&&<p className="error" role="alert">{error}</p>}
-    <div hidden={!!batchId||!!compareRoute.length}><div hidden={pageView==='records'}><RunWizard templates={templates} pools={pools} suites={suites} launch={launch}
+    {importState&&<section aria-label="历史批次导入">{importState.loading?<p role="status">正在读取历史批次配置…</p>:<p role="alert">历史配置导入失败：{importState.error}<button onClick={()=>void importBatch(importState.id)}>重试导入</button></p>}</section>}
+    <div hidden={!!batchId||!!compareRoute.length}><div hidden={pageView==='records'}><RunWizard key={launch?.rerun?rerunSequence.current:0} templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/></div>
-    <div hidden={pageView==='wizard'}><FunctionPages label="评测运行与结果" value={resultsTab} onChange={setResultsTab} lazy items={[{id:'history',label:'运行记录',content:<BatchHistory batches={batches} page={page} loading={loading} error={error} compareIds={compareIds} onCompareChange={setCompareIds} onOpen={openBatch} onPage={p=>{setBatches([]);setPage(p);}} onDeleted={id=>{deletedIds.current.add(id);setCompareIds(old=>old.filter(x=>x!==id));setBatches(old=>old.filter(x=>x.id!==id));if(batches.length===1&&page>1)setPage(page-1);else void refresh().catch(e=>setError(String(e)));}}/>},{id:'suites',label:'评测任务集合管理',content:<SuiteManager templates={templates} onSaved={()=>void refresh().catch(e=>setError(String(e)))} onJob={setSelected} onRun={suite=>{setResultsTab('history');setLaunch({suite});location.hash='/cs';}}/>}]}/></div>
+    <div hidden={pageView==='wizard'}><FunctionPages label="评测运行与结果" value={resultsTab} onChange={setResultsTab} lazy items={[{id:'history',label:'运行记录',content:<BatchHistory batches={batches} page={page} loading={loading} error={error} compareIds={compareIds} onCompareChange={setCompareIds} onOpen={openBatch} onRerun={id=>void importBatch(id)} onPage={p=>{setBatches([]);setPage(p);}} onDeleted={id=>{deletedIds.current.add(id);setCompareIds(old=>old.filter(x=>x!==id));setBatches(old=>old.filter(x=>x.id!==id));if(batches.length===1&&page>1)setPage(page-1);else void refresh().catch(e=>setError(String(e)));}}/>},{id:'suites',label:'评测任务集合管理',content:<SuiteManager templates={templates} onSaved={()=>void refresh().catch(e=>setError(String(e)))} onJob={setSelected} onRun={suite=>{setResultsTab('history');setLaunch({suite});location.hash='/cs';}}/>}]}/></div>
     </div>
     {compareRoute.length===2&&<BatchComparison left={compareRoute[0]} right={compareRoute[1]} onBack={()=>{location.hash='/cs/results';}}/>}
-    {batchId&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onBack={()=>{location.hash='/cs/results';}} onJob={setSelected}/>}
+    {batchId&&<BatchDetail key={batchId} id={batchId} savedFilters={batchFilters} onRerun={id=>void importBatch(id)} onBack={()=>{location.hash='/cs/results';}} onJob={setSelected}/>}
     {selected&&renderJob(selected,()=>setSelected(''))}
   </>;
 }
