@@ -45,3 +45,5 @@
 - [x] 7.1 实现产物根缺省/null继承整机、显式覆盖、界面说明；验证下发/确认、变更/清空、旧配置与文档同步。
 
 继承切片证据：docs/validation/artifact-root-inheritance-20261119/README.md；本轮未部署，不能把前次上线记录当作继承功能已上线。
+
+继承补丁已按用户要求部署，API/前端更新、Worker0.21.10未重装、数据库a730d12未迁移。真实Worker继承回执、还原原配置、浏览器提示及既有产物可读通过；证据docs/validation/artifact-root-inheritance-20261119/deployment.json。

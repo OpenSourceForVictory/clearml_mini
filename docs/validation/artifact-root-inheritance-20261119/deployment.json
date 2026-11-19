@@ -1,0 +1,20 @@
+{
+  "source": "60962dc",
+  "image": "mini-eval-api:artifact-inheritance-20261119",
+  "health": "healthy",
+  "database": "a730d12",
+  "migration_performed": false,
+  "worker_upgraded": false,
+  "worker_version": "0.21.10",
+  "live_card_validation": {
+    "raw_artifact_root": null,
+    "effective_artifact_root": "/home/dgh/mini-eval-artifacts/validation-20261119",
+    "effective_workspace": "/mnt/eval-share/work/local4090-151/slots/0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+    "applied": true
+  },
+  "restored_card_config": null,
+  "restored_all_applied": true,
+  "browser": "PASS actual deployed UI: machine root present, card root blank/inherited, explanatory text visible",
+  "previous_batch_artifacts_readable": true,
+  "held_executions": 0
+}

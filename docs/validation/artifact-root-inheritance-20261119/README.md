@@ -9,3 +9,9 @@
 - 使用统一工具，PYTEST_ADDOPTS为 `--import-mode=importlib -k "test_storage or worker_storage or artifact_layout or execution_launch_boundaries"`，运行 `.venv/bin/python -m scripts.test_coverage --output 自选目录`，完整分母不裁剪。
 
 本轮未部署、未运行真机继承任务。只需发布API和前端，无新增数据库迁移，已有Worker0.21.10不需重装；已有配置在发布后重新保存整机存储设置并等待逐卡确认。指南和Skill参考已同步。
+
+## 后续部署完成
+
+用户授权后已部署60962dc，镜像mini-eval-api:artifact-inheritance-20261119，API健康；数据库保持a730d12，没有执行迁移或重装Worker。发布前6节点无占用执行，暂停新准入、备份数据库后更新API/前端，保留原监听、环境和共享只读挂载。
+
+在本机local4090-151临时设置卡级工作目录（实际路径不变）且产物根为null，真实Worker0.21.10回执确认产物根继承整机；随后恢复原卡配置并确认已应用，再恢复节点准入。没有提交新业务任务。真实Chromium验证整机产物值、卡表单留空及继承提示；前次两个可见批次产物仍可读取。详见deployment.json。本地备份/完整回执/截图位于受限.runtime/artifact-inheritance-release-20261119，不入库。前文“本轮未部署”与results.json为开发验证时点，部署状态以本节为准。
