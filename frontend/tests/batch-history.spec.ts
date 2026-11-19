@@ -101,7 +101,7 @@ test('list displays two weighted rates and coverage without detailed counters',a
  await setup(page,baseOutcome);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
  await expect(row).toContainText('正常退出率 90.0%（9/10）');await expect(row).toContainText('退出码已知 10/20 次');
  await expect(row).toContainText('评测成功率 80.0%（8/10）');await expect(row).toContainText('有效结果 10/20 回合');await expect(row).toContainText('1 项未接入');
- await expect(row).not.toContainText('正常结束 9 次');await expect(row).not.toContainText('业务失败 2');
+ await expect(row.getByText(/正常结束 9 次/)).not.toBeVisible();await expect(row.getByText(/业务成功 8 · 业务失败 2/)).not.toBeVisible();
  await expect(page.getByRole('row',{name:/^批次 运行批次/})).toContainText('已结束 1/3');
 });
 for(const kind of ['pending','invalid','command','failed'])test(`zero and missing denominators ${kind}`,async({page})=>{
@@ -111,4 +111,15 @@ for(const kind of ['pending','invalid','command','failed'])test(`zero and missin
  await expect(row).toContainText(kind==='failed'?'正常退出率 0.0%（0/2）':'正常退出率 暂无数据');
  await expect(row).toContainText(kind==='command'?'未接入（普通命令）':kind==='invalid'?'暂无有效结果':kind==='failed'?'评测成功率 0.0%（0/2）':'评测成功率 待上报');
  if(kind!=='failed')await expect(row).not.toContainText('0.0%');
+});
+
+test('list rate columns expand their own details and preserve open state through polling',async({page})=>{
+ await setup(page,baseOutcome);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
+ await row.getByText('查看程序执行详情',{exact:true}).click();await expect(row.getByText(/正常结束 9 次/)).toBeVisible();
+ await expect(row.getByText(/业务成功 8 · 业务失败 2/)).not.toBeVisible();
+ await row.getByText('查看回合结果详情',{exact:true}).click();await expect(row.getByText(/业务成功 8 · 业务失败 2/)).toBeVisible();
+ await page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/batches');
+ await expect(row.getByText(/正常结束 9 次/)).toBeVisible();await expect(row.getByText(/业务成功 8 · 业务失败 2/)).toBeVisible();
+ await row.getByText('查看程序执行详情',{exact:true}).click();await expect(row.getByText(/正常结束 9 次/)).not.toBeVisible();
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

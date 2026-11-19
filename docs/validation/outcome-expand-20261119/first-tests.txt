@@ -1,0 +1,55 @@
+
+Running 25 tests using 1 worker
+
+(node:1529073) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (422ms)
+  ✓   2 frontend/tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (422ms)
+  ✓   3 frontend/tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (322ms)
+  ✓   4 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (341ms)
+  ✓   5 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (329ms)
+  ✓   6 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (344ms)
+  ✓   7 frontend/tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (174ms)
+  ✓   8 frontend/tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (203ms)
+  ✓   9 frontend/tests/batch-history.spec.ts:100:1 › list displays two weighted rates and coverage without detailed counters (184ms)
+  ✓  10 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators pending (163ms)
+  ✓  11 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators invalid (155ms)
+  ✓  12 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators command (161ms)
+  ✓  13 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators failed (156ms)
+  ✓  14 frontend/tests/batch-history.spec.ts:116:1 › list rate columns expand their own details and preserve open state through polling (2.2s)
+  ✓  15 frontend/tests/batch-monitoring.spec.ts:31:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.6s)
+  ✓  16 frontend/tests/batch-monitoring.spec.ts:42:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓  17 frontend/tests/batch-monitoring.spec.ts:48:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓  18 frontend/tests/batch-monitoring.spec.ts:56:1 › detail tabs preserve filtering and retry selection and contain narrow tables (297ms)
+  ✓  19 frontend/tests/batch-monitoring.spec.ts:74:1 › client placement is a separate column with GPU zero and unassigned states (167ms)
+  ✓  20 frontend/tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds (6.6s)
+  ✓  21 frontend/tests/batch-monitoring.spec.ts:110:1 › zero exits and invalid protocol are separate at batch task and episode levels (254ms)
+  ✓  22 frontend/tests/batch-monitoring.spec.ts:128:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓  23 frontend/tests/batch-monitoring.spec.ts:145:1 › result summaries use two separate cards and stack on narrow screens (204ms)
+  ✓  24 frontend/tests/batch-monitoring.spec.ts:157:1 › summary details are collapsed, expandable and preserved across polling (2.2s)
+  ✘  25 frontend/tests/batch-monitoring.spec.ts:169:1 › task row opens local execution and protocol counts without opening another task (45.0s)
+
+
+  1) frontend/tests/batch-monitoring.spec.ts:169:1 › task row opens local execution and protocol counts without opening another task 
+
+    Test timeout of 45000ms exceeded.
+
+    Error: locator.click: Test timeout of 45000ms exceeded.
+    Call log:
+      - waiting for getByRole('row').filter({ has: getByText('case0', { exact: true }) }).getByText('查看程序执行详情', { exact: true })
+
+
+      169 | test('task row opens local execution and protocol counts without opening another task',async({page})=>{
+      170 |  await setup(page);const row=page.getByRole('row').filter({has:page.getByRole('checkbox',{name:'选择补跑 case0',exact:true})});
+    > 171 |  await row.getByText('查看程序执行详情',{exact:true}).click();await expect(row.getByText(/正常结束 3 次/)).toBeVisible();
+          |                                               ^
+      172 |  await row.getByText('查看回合结果详情',{exact:true}).click();await expect(row.getByText(/结果校验异常 3/)).toBeVisible();
+      173 |  await expect(page.getByRole('region',{name:'程序执行统计'}).locator('details')).not.toHaveAttribute('open','');
+      174 | });
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-monitoring.spec.ts:171:47
+
+    Error Context: frontend/test-results/batch-monitoring-task-row--646f8-ithout-opening-another-task/error-context.md
+
+  1 failed
+    frontend/tests/batch-monitoring.spec.ts:169:1 › task row opens local execution and protocol counts without opening another task 
+  24 passed (1.3m)

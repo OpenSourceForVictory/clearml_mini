@@ -165,3 +165,10 @@ test('summary details are collapsed, expandable and preserved across polling',as
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await execution.getByText('查看程序执行详情',{exact:true}).click();await expect(execution.getByText(/正常结束 3 次/)).not.toBeVisible();
 });
+
+test('task row opens local execution and protocol counts without opening another task',async({page})=>{
+ await setup(page);const row=page.getByRole('row').filter({has:page.getByRole('checkbox',{name:'选择补跑 case0',exact:true})});
+ await row.getByText('查看程序执行详情',{exact:true}).click();await expect(row.getByText(/正常结束 3 次/)).toBeVisible();
+ await row.getByText('查看回合结果详情',{exact:true}).click();await expect(row.getByText(/结果校验异常 3/)).toBeVisible();
+ await expect(page.getByRole('region',{name:'程序执行统计'}).locator('details')).not.toHaveAttribute('open','');
+});

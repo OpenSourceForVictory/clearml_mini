@@ -26,3 +26,7 @@
 - [x] 5.2 运行关联浏览器、类型检查、构建与 OpenSpec 校验，发布已验证前端并保存边界，提交代码。
 
 简洁结果摘要验证与发布记录：docs/validation/outcome-summary-20261119/README.md。
+
+- [x] 5.3 补齐列表/任务行的独立展开入口，验证展开、收起、轮询和窄屏，更新文档并发布修正。
+
+行内展开修正验证：docs/validation/outcome-expand-20261119/README.md。

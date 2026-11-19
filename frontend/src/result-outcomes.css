@@ -5,5 +5,5 @@
 
 .outcome-summary{display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
 .outcome-summary small{color:#536258;line-height:1.5}
-.result-outcomes details{margin-top:10px}
-.result-outcomes summary{cursor:pointer}
+.outcome-cell details{margin-top:6px;white-space:normal;overflow-wrap:anywhere}
+.outcome-cell summary{cursor:pointer;color:#245c3b;text-decoration:underline;text-underline-offset:3px}
