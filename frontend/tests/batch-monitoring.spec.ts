@@ -172,3 +172,48 @@ test('task row opens local execution and protocol counts without opening another
  await row.getByText('查看回合结果详情',{exact:true}).click();await expect(row.getByText(/结果校验异常 3/)).toBeVisible();
  await expect(page.getByRole('region',{name:'程序执行统计'}).locator('details')).not.toHaveAttribute('open','');
 });
+
+test('artifact drawer opens from task with grouping and closes without losing filters',async({page})=>{
+ await setup(page);
+ await page.route('**/jobs/j0/attempts/*/artifacts',route=>route.fulfill({json:[
+  {id:'task-file',name:'summary.json',size_bytes:20,episode_ids:[],media_type:'application/octet-stream'},
+  {id:'round-file',name:'episode-1/video.mp4',size_bytes:2048,episode_ids:[1],media_type:'video/mp4'},
+ ]}));
+ await page.route('**/artifacts/round-file/media-access',route=>route.fulfill({json:{url:'/test-video.mp4',media_type:'video/mp4'}}));
+ await page.route('**/test-video.mp4',route=>route.fulfill({status:404}));
+ await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
+ await page.getByRole('button',{name:'查看产物',exact:true}).click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await expect(drawer).toBeVisible();
+ await expect(drawer.getByRole('table')).toContainText('summary.json');
+ await drawer.getByLabel('产物归属').selectOption('1');
+ await expect(drawer.getByRole('table')).not.toContainText('summary.json');
+ await drawer.getByRole('button',{name:'查看 / 下载'}).click();
+ await expect(drawer.locator('video')).toHaveAttribute('src','/test-video.mp4');
+ await expect(drawer.getByRole('link',{name:'下载文件'})).toHaveAttribute('href','/test-video.mp4');
+ await page.keyboard.press('Escape');
+ await expect(drawer).toHaveCount(0);
+ await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('FAILED');
+});
+
+test('artifact errors do not claim an empty result and history stays separate',async({page})=>{
+ await setup(page);let fail=true;
+ await page.route('**/jobs/j0/attempts/*/artifacts',route=>{
+  if(fail)return route.fulfill({status:503,json:{detail:'storage unavailable'}});
+  return route.fulfill({json:route.request().url().includes('/old/')?[]:[{id:'new-file',name:'new-report.json',size_bytes:2}]});
+ });
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await expect(drawer.getByRole('alert')).toContainText('产物读取失败');
+ await expect(drawer.getByText('当前筛选下暂无已上传产物。',{exact:false})).toHaveCount(0);
+ fail=false;await expect(drawer.getByRole('table')).toContainText('new-report.json');
+ await drawer.getByLabel('产物执行尝试').selectOption('old');
+ await expect(drawer.getByText('当前筛选下暂无已上传产物。',{exact:false})).toBeVisible();
+ await expect(drawer.getByRole('table')).not.toContainText('new-report.json');
+ await drawer.getByLabel('产物执行尝试').selectOption('new');
+ await expect(drawer.getByRole('table')).toContainText('new-report.json');
+ await page.setViewportSize({width:390,height:844});
+ const bounds=await drawer.boundingBox();expect(bounds!.width).toBeLessThanOrEqual(390);
+ await drawer.getByRole('button',{name:'关闭产物'}).click();
+ await expect(drawer).toHaveCount(0);
+});

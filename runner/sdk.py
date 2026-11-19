@@ -1,5 +1,5 @@
 """Simulation SDK: users implement one episode; the framework owns reporting."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import importlib
 import json
 import os
@@ -41,6 +41,31 @@ class EvaluationClient:
 class Context:
     config: dict
     output_dir: Path
+    _episode_output_dir: Path | None = field(default=None, repr=False)
+
+    @property
+    def episode_output_dir(self):
+        """Current episode directory; unavailable during task setup."""
+        if self._episode_output_dir is None:
+            raise RuntimeError("episode_output_dir is only available inside run_episode")
+        self._episode_output_dir.mkdir(parents=True, exist_ok=True)
+        if self._episode_output_dir.is_symlink():
+            raise ValueError("episode output directory must not be a symbolic link")
+        return self._episode_output_dir
+
+    def artifact_path(self, path):
+        """Return the task-root-relative reference expected by EpisodeResult."""
+        from .cs_contract import artifact_name
+        value = Path(path)
+        if not value.is_absolute():
+            value = self.output_dir / value
+        try:
+            name = value.resolve().relative_to(self.output_dir.resolve()).as_posix()
+        except ValueError:
+            raise ValueError("artifact must be inside the task output directory") from None
+        if not artifact_name(name):
+            raise ValueError("invalid artifact reference")
+        return name
 
     @property
     def input(self):
@@ -106,7 +131,10 @@ def run(client, config, output_dir=None):
             client.process_exit_code = None
             begin = time.monotonic()
             try:
-                result = client.run_episode(config, episode, context)
+                nested = config.get("_parent_episode_id") is not None
+                episode_directory = context.output_dir if nested else context.output_dir / ("episode-" + str(i))
+                episode_context = replace(context, _episode_output_dir=episode_directory)
+                result = client.run_episode(config, episode, episode_context)
                 if not isinstance(result, EpisodeResult):
                     raise EpisodeResultError('invalid_episode_result')
                 event = {**base, 'status': 'COMPLETED', 'success': result.success,

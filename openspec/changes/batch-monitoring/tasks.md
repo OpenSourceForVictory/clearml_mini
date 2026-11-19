@@ -30,3 +30,8 @@
 - [x] 5.3 补齐列表/任务行的独立展开入口，验证展开、收起、轮询和窄屏，更新文档并发布修正。
 
 行内展开修正验证：docs/validation/outcome-expand-20261119/README.md。
+
+## 6. 运行产物入口修正
+- [x] 6.1 任务行直接展开运行产物，区分加载、错误及空列表，说明输出目录与上传时机，回归下载、切换、空列表、失败路径并同步指南和文档。
+
+入口修正已纳入 task-result-artifacts 基础阶段；后续大文件存储与节点目录浏览在该变更跟踪，不计入本任务完成范围。证据：docs/validation/task-result-artifacts-foundation-20261119/README.md。

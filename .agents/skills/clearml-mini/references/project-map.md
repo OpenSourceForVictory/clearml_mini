@@ -203,3 +203,7 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 结果详情入口补齐：ExecutionOutcome/ProtocolOutcome 统一包含摘要及原生 details，供列表、任务行及顶部卡片复用；不再仅 ResultOutcomes 卡片有入口。测试覆盖行内独立展开、收起、轮询保留及窄屏。
 
 0.21.8 普通业务账号日志：process_log_store.locked 对父目录使用 O_PATH，仅最终日志根使用读句柄，兼容宿主机工作目录只授予穿过权限；禁止符号链接不变。test_process_log_traversal 验证 service/business/episode、父目录不可列出、缺少穿过权限、最终目录不可读和链接/非目录拒绝。出现 process log unavailable 而业务仍运行时，核对 Runner 是否包含此修复，不能通过开放所有执行目录代替修复；更新与边界见 docs/execution-logs.md。
+
+SDK 回合目录接口：runner/sdk.py 保留 Context.output_dir 与旧 artifacts 相对任务根语义；episode_output_dir 在 run_episode 中按需创建，独立 context 防止前一回合引用变化；_parent_episode_id 标记下使用既有输出根避免二次嵌套。artifact_path 仅生成根内相对引用，不上传。测试 test_sdk_output_directories.py；说明 docs/task-input.md。完整产物通道/侧栏设计见 openspec/changes/task-result-artifacts，未完成项不可当作已上线能力。
+
+产物侧栏基础：frontend/src/artifact-browser.tsx 从任务/回合打开，backend/app/clients.py 按 EpisodeRecord 声明返回 episode_ids，artifact_media.py 提供文件限定短期 cookie 与 GET/HEAD/Range 访问。旧 RunArtifact.data 继续读；新持久卷/节点目录通道尚未实施。测试 test_artifact_media.py、batch-monitoring.spec.ts；说明 docs/batch-monitoring.md。此阶段无迁移，不代表完整 task-result-artifacts 完成或真机验收。

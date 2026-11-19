@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
-from .core import ClientTemplate, Job, Run, RunArtifact
+from .core import ClientTemplate, Job, Run, RunArtifact, EpisodeRecord
 from .scheduling import lock, seconds
 from runner.cs_contract import VERSION, endpoint_parts
 from runner import image_runtime
@@ -190,6 +190,8 @@ def snapshot(s, body, owner_id=None):
 
 
 def install(app, db, current):
+    from .artifact_media import install as install_media
+    install_media(app, db, current)
     @app.get('/api/v1/execution-limits')
     def execution_limits(user=Depends(current)):
         limit = seconds('EXECUTION_TIMEOUT_SECONDS', 3600)
@@ -248,7 +250,13 @@ def install(app, db, current):
     @app.get('/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts')
     def artifacts(job_id: str, run_id: str, user=Depends(current), s: Session = Depends(db)):
         visible_run(s, job_id, run_id, user)
-        return [{k: getattr(a, k) for k in ('id', 'name', 'size_bytes', 'sha256')}
+        from .artifact_media import media_type
+        references = {}
+        for episode in s.scalars(select(EpisodeRecord).where(EpisodeRecord.run_id == run_id)):
+            for name in (episode.result or {}).get('artifacts', []):
+                references.setdefault(name, []).append(episode.episode_id)
+        return [{**{k: getattr(a, k) for k in ('id', 'name', 'size_bytes', 'sha256')},
+                 'episode_ids': sorted(references.get(a.name, [])), 'media_type': media_type(a.name)}
                 for a in s.scalars(select(RunArtifact).where(RunArtifact.run_id == run_id).order_by(RunArtifact.name))]
 
     @app.get('/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}')

@@ -94,3 +94,19 @@ CS 评测批次 → 评测集合运行提供五步向导：集合、客户端、
 保留策略下、无等待客户端时的显式恢复将重新排队服务任务。旧执行尚未清理时拒绝恢复。
 
 回退前必须停止新编排提交并排空两端执行；不能让旧调度器接管仍在等待服务的客户端预留。
+
+## SDK 回合输出目录（新增接口）
+
+原生 SDK 的 `context.output_dir` 仍是整次任务输出目录，旧 `EpisodeResult.artifacts` 仍使用相对此目录的路径，不自动重写旧引用。在 `run_episode` 中可访问 `context.episode_output_dir`，首次访问时创建 `episode-N` 子目录；未使用该接口的旧业务不新增空目录，以免影响旧 Worker 的扫描条目限制。每回合 context 独立，不修改全局环境。`setup` 中没有当前回合，访问该属性会报错。每回合包装后的 SDK 使用已分配的输出目录，不重复嵌套。
+
+```python
+def run_episode(self, task, episode, context):
+    report = context.episode_output_dir / "report.json"
+    report.write_text('{"success": true}')
+    return EpisodeResult(
+        success=True,
+        artifacts=[context.artifact_path(report)],
+    )
+```
+
+`artifact_path` 只将目录内文件路径转换为任务根相对引用，不上传文件、不创建文件，也不代表文件已存在。外部路径及指向外部的符号链接会被拒绝。该接口本身不增加 Worker 产物额度；视频存储、回合归属采集和结果侧栏仍由 `task-result-artifacts` 变更后续实施，不能将目录接口测试视为完整产物验收。

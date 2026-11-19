@@ -1,3 +1,4 @@
+import {ArtifactBrowser} from './artifact-browser';
 import {ProcessLogs} from './process-logs';
 import {ExecutionLocation} from './execution-location';
 import {ResultOutcomes,ExecutionOutcome,ProtocolOutcome,type Outcomes} from './result-outcomes';
@@ -90,7 +91,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
         <td><ExecutionOutcome value={c.outcomes}/></td><td><ProtocolOutcome value={c.outcomes}/></td>
         <td>{c.waiting&&<><p>{c.waiting.reasons.map(r=>r.message).join('；')||'等待可用节点'}</p><details><summary>节点诊断</summary>{c.waiting.nodes.map(n=><p key={n.node_name+':'+n.gpu_index}>{n.node_name} / 设备 {n.gpu_index}: {n.reasons.map(r=>r.message).join('；')||'符合要求'}</p>)}</details></>}
           <details><summary>执行配置</summary><p>{c.config.pool_name} · {c.config.client_name}/{c.config.client_version}</p><p>实际推理地址：{c.config.endpoint||'未分配'} · {c.config.endpoint_mode==='exclusive'?'独占':c.config.endpoint_mode==='shared'?'共享':''}</p><ul>{c.config.endpoint_candidates?.map(e=><li key={e.url}>候选：{e.url} · {e.mode==='exclusive'?'独占':'共享'}</li>)}</ul><p>{c.config.gpu_mode} · 显存 {c.config.requested_vram_gb} GiB</p></details>{c.error&&<p>{c.error}</p>}</td>
-        <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{c.outcomes?.detail_mode==='execution'?(episodeRows[c.job_id]?'收起执行':'查看执行'):(episodeRows[c.job_id]?'收起回合':'查看回合')}</button><button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={8}><section aria-label={c.case_id+(c.outcomes?.detail_mode==='execution'?' 执行状态':' 回合状态')}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
+        <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{c.outcomes?.detail_mode==='execution'?(episodeRows[c.job_id]?'收起执行':'查看执行'):(episodeRows[c.job_id]?'收起回合':'查看回合')}</button>{c.run_id&&<ArtifactBrowser jobId={c.job_id} runId={c.run_id}/>}<button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={8}><section aria-label={c.case_id+(c.outcomes?.detail_mode==='execution'?' 执行状态':' 回合状态')}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
       {!cases.length&&<p>没有符合筛选条件的任务。</p>}
       {job&&<AttemptInspector key={job} jobId={job} onClose={()=>setJob('')}/>}
       </section>
@@ -100,7 +101,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
 function AttemptInspector({jobId,onClose}:{jobId:string;onClose:()=>void}) {
   const {data,error}=usePoll<{attempts:{id:string;attempt:number;status:string;endpoint?:string;service_key?:string;service_execution_id?:string}[]}>('jobs/'+jobId);
   const [run,setRun]=useState('');
-  useEffect(()=>{if(!run&&data?.attempts.length)setRun(data.attempts.at(-1)!.id);},[data,run]);
+  useEffect(()=>{if(data?.attempts.length)setRun(selected=>selected||data.attempts.at(-1)!.id);},[data]);
   return <section aria-label="任务排查"><h3>执行尝试与结果</h3><button onClick={onClose}>关闭任务排查</button>{error&&<p role="alert">{error}</p>}
     <label>执行尝试<select aria-label="执行尝试" value={run} onChange={e=>setRun(e.target.value)}>{data?.attempts.map(r=><option key={r.id} value={r.id}>尝试 {r.attempt} · {statusLabels[r.status]||r.status}</option>)}</select></label>
     {run&&<p>本次执行地址：{data?.attempts.find(r=>r.id===run)?.endpoint||'未分配'} · 服务执行：{data?.attempts.find(r=>r.id===run)?.service_execution_id||'外部服务或未分配'}</p>}
