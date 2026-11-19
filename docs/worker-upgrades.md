@@ -76,3 +76,5 @@ Runner 没有独立版本号，随节点组件包更新宿主机代码；使用�
 退出码上报：Worker 0.18.2 保持协议 15，完成请求增加可选 exit_code，Runner 逐回合终态事件也可含实际业务子进程退出码。先部署迁移 x407a89 与 API，再升级节点，避免旧 API 拒绝新增事件字段；旧记录不回填。详情见 [批次监控](batch-monitoring.md)。容器内旧 Runner 需要按本页的注入/镜像更新方式更新。
 
 日志 v2 升级顺序：备份数据库，迁移至 y518b90，发布 API/前端，再升级所选节点 Worker/随包 Runner 至 0.21.0。协议版本仍为 17，以 bounded_logs_v2 能力协商；旧 API 未下发 log_protocol 时新 Worker 保持旧行为，已有 journal 不切换。先完成在途任务再回退节点，保留新增日志表；降级迁移会删除 v2 历史。见 [执行日志说明](execution-logs.md)。
+
+Worker 0.21.2 修复宿主机显式 per_episode 的回合数、种子、输入及目录映射时机；必须更新 Worker 和随包 Runner 后提交新任务。无需额外数据库迁移，Docker/整任务契约不变。见 [宿主机参数映射说明](host-execution.md#单回合参数映射修复worker-0212)。

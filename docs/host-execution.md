@@ -4,7 +4,7 @@
 
 宿主机模板可选 `host_runtime.environment_source=login`。Worker 在任务启动时以节点批准的业务账号运行非交互登录 shell，只读取导出的环境变量，再合并模板变量、允许的任务覆盖和节点 CANN 环境；平台分配的 GPU/NPU 可见设备变量最后写入。当前 SSH 会话、交互式 alias 与未导出的 shell 变量不会继承。登录 shell 超时、退出失败或输出无效时拒绝启动，错误不展示变量值。登录环境只传给业务子进程，平台 supervisor/runner 使用受控环境。模板不能切换业务账号。未填写此字段的旧模板维持原启动行为。各节点的 CANN 路径可不同，应在节点业务账号登录配置或批准环境中准备。
 
-客户端宿主机模板还可选 `host_runtime.episode_launch=per_episode`。Worker 仍只创建一个受 systemd 管理的执行单元；其中的 runner 按集合回合数顺序启动前台业务子进程。每次传入单回合 `MINI_EVAL_INPUT`、独立 work/output 目录、`MINI_EVAL_EPISODE_ID` 和 `MINI_EVAL_EPISODE_SEED`。任务业务参数与平台参数先绑定，再展开回合占位符。当前子进程退出并完成协议校验后才启动下一回合；非零退出或无效结果停止后续回合。业务入口必须保持前台，后台派生后立即退出无法代表业务完成。普通命令以退出码记录每回合完成进度，但不计算评测成功率；直接协议每次必须输出单回合 final，由平台汇总。SDK 命令仍按原有每回合写 `MINI_EVAL_RESULT` 的方式运行。缺省 `whole_task`、Docker 执行及服务端模板维持原行为。 定向及节点验证边界见 [本次验证记录](validation/host-shell-episode-launch/README.md)。
+客户端宿主机模板还可选 `host_runtime.episode_launch=per_episode`。Worker 仍只创建一个受 systemd 管理的执行单元；其中的 runner 按集合回合数顺序启动前台业务子进程。每次传入单回合 `MINI_EVAL_INPUT`、独立 work/output 目录、`MINI_EVAL_EPISODE_ID` 和 `MINI_EVAL_EPISODE_SEED`。先生成本回合输入，再展开回合占位符并绑定任务业务参数与平台参数。当前子进程退出并完成协议校验后才启动下一回合；非零退出或无效结果停止后续回合。业务入口必须保持前台，后台派生后立即退出无法代表业务完成。普通命令以退出码记录每回合完成进度，但不计算评测成功率；直接协议每次必须输出单回合 final，由平台汇总。SDK 命令仍按原有每回合写 `MINI_EVAL_RESULT` 的方式运行。缺省 `whole_task`、Docker 执行及服务端模板维持原行为。 定向及节点验证边界见 [本次验证记录](validation/host-shell-episode-launch/README.md)。
 
 管理员在机器详情 → 宿主机批准环境中配置命名环境，例如：
 
@@ -201,3 +201,14 @@ Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json
 旧 journal 没有保存的错误无法补回。找不到 unit、没有可靠退出记录且本地标记已尝试创建或平台状态为 RUNNING 时，仍拒绝重复执行；提示附 execution_id、service_instance_id（旧 API 为 unknown）、unit、source。同名服务实例使用不同执行 ID；不同卡 Worker 的 journal、每次执行控制目录与 systemd unit 独立，清理只针对该执行。
 
 需要更新并重启节点各卡 Worker 才生效，不能仅替换文件后保留旧进程。更新 API 后 claim 附带服务实例 ID，无数据库迁移。应先排空并按节点升级流程操作。修复原始启动问题后从平台重试产生新执行，不承诺自动恢复旧失败任务。专项验证与未覆盖边界见 [验证记录](validation/host-launch-failure-recovery/README.md)。
+
+
+## 单回合参数映射修复（Worker 0.21.2）
+
+旧版本可能在循环外把 `task.episodes` 或 `${episodes}` 展开成任务总回合数。例如平台计划10次启动，第一次业务却拿到 `--episodes 10`，业务内部重复执行而平台第1回合一直等待该进程退出。旧版本也可能提前固定种子及输入/工作/输出目录。这个触发条件已在本地复现，但不能据此断定所有“第1回合等待结果”都是同一原因。
+
+宿主机显式“每回合启动”现在在每次启动前解析参数：`task.episodes` / `${episodes}` 为1，`task.seed` / `${seed}` 为当前回合种子，输入和工作/输出路径属于该回合。直接协议、普通命令和显式 per_episode SDK 命令一致；业务自定义参数不会按名称自动改写，手工写死的 `--episodes 10` 也不会被替换。外层保留总回合数和顺序事件编号。整任务、Docker 和服务端方式不变。
+
+升级节点组件包中的 Worker 与 Runner 后，提交新任务验证，不需要创建宿主机 Runner 镜像或数据库迁移。现有进程不会热更新。第二回合运行时第一回合就应能显示结果，无须等整任务退出。界面日志按执行尝试汇总，业务内部打印 episode1 不代表平台回合编号。
+
+验证及失败证据见 [参数映射回归记录](validation/episode-mapping-20261119/README.md)。

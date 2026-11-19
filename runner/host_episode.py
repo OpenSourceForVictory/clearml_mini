@@ -12,6 +12,23 @@ from .sdk import EpisodeResult, EvaluationClient, run
 from .task_input import build
 
 
+def episode_input(task, episode, context, environment):
+    work=context.work_dir/('episode-'+str(episode.id))
+    output=context.output_dir/('episode-'+str(episode.id))
+    work.mkdir(parents=True,exist_ok=True,mode=0o700)
+    output.mkdir(parents=True,exist_ok=True,mode=0o700)
+    path=work/'input.json'
+    child={k:v for k,v in task.items() if k not in ('_resolved_environment','_resolved_command','_resolved_cwd')}
+    child.update(episodes=1,seed=episode.seed,_parent_episode_id=episode.id)
+    env={**environment,'MINI_EVAL_INPUT':str(path),'MINI_EVAL_WORK_DIR':str(work),
+         'MINI_EVAL_OUTPUT_DIR':str(output),'MINI_EVAL_EPISODE_ID':str(episode.id),
+         'MINI_EVAL_EPISODE_SEED':str(episode.seed),'MINI_EVAL_RESULT':str(work/'result.json')}
+    child=build(child,env)
+    with os.fdopen(os.open(path,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600),'w') as stream:
+        json.dump(child,stream,ensure_ascii=False,allow_nan=False)
+    return child,env
+
+
 class HostEpisodeClient(EvaluationClient):
     def __init__(self, command, cwd, environment, ordinary):
         self.command=command
@@ -20,24 +37,25 @@ class HostEpisodeClient(EvaluationClient):
         self.ordinary=ordinary
 
     def run_episode(self, task, episode, context):
-        work=context.work_dir/('episode-'+str(episode.id))
-        output=context.output_dir/('episode-'+str(episode.id))
-        work.mkdir(parents=True,exist_ok=True,mode=0o700)
-        output.mkdir(parents=True,exist_ok=True,mode=0o700)
-        path=work/'input.json'
-        child={k:v for k,v in task.items() if k not in ('_resolved_environment','_resolved_command','_resolved_cwd')}
-        child.update(episodes=1,seed=episode.seed,_parent_episode_id=episode.id)
-        child=build(child,{**self.environment,'MINI_EVAL_WORK_DIR':str(work),'MINI_EVAL_OUTPUT_DIR':str(output)})
-        with os.fdopen(os.open(path,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600),'w') as stream:
-            json.dump(child,stream,ensure_ascii=False,allow_nan=False)
-        result_path=work/'result.json'
-        values={'episode_id':str(episode.id),'episode_seed':str(episode.seed),
-                'input_path':str(path),'result_path':str(result_path),
-                'work_dir':str(work),'output_dir':str(output)}
+        child,env=episode_input(task,episode,context,self.environment)
+        values={k:str(child.get(k,'')) for k in ('task_name','episodes','seed','endpoint')}
+        values.update(episode_id=str(episode.id),episode_seed=str(episode.seed),
+                      input_path=env['MINI_EVAL_INPUT'],result_path=env['MINI_EVAL_RESULT'],
+                      work_dir=env['MINI_EVAL_WORK_DIR'],output_dir=env['MINI_EVAL_OUTPUT_DIR'])
         command=[TOKEN.sub(lambda m:values.get(m[1],m[0]),arg) for arg in self.command]
-        env={**self.environment,'MINI_EVAL_INPUT':str(path),'MINI_EVAL_WORK_DIR':str(work),
-             'MINI_EVAL_OUTPUT_DIR':str(output),'MINI_EVAL_EPISODE_ID':str(episode.id),
-             'MINI_EVAL_EPISODE_SEED':str(episode.seed),'MINI_EVAL_RESULT':str(result_path)}
+        configured={**task['template']['host_runtime'].get('environment',{}),**task.get('environment',{})}
+        for key in configured:
+            env[key]=TOKEN.sub(lambda m:values.get(m[1],m[0]),env.get(key,configured[key]))
+        from .parameter_contract import bind_values
+        from .task_input import bind_platform
+        schema=task['template'].get('parameter_schema')
+        if schema is not None:
+            command,additions=bind_values(schema,child.get('parameters',{}),command)
+            if set(additions)&set(configured):raise ValueError('business environment conflicts with runtime configuration')
+            env.update(additions)
+        command,additions=bind_platform(task['template'].get('platform_bindings',[]),child,command)
+        if set(additions)&set(configured):raise ValueError('platform environment conflicts with runtime configuration')
+        env.update(additions)
         command=for_template(task['template'],command,self.cwd,env)
         final=[]
         started=time.monotonic()

@@ -1,0 +1,318 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_____ test_per_episode_dynamic_mapping_uses_child_input[argv-direct-False] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi0')
+integration = 'direct', ordinary = False, target = 'argv'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi0/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 1)
+E         CS client startup failed: business episode 1 exited with code 1
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=2, stdout=...^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: (\'3\', 1)\nCS client startup failed: business episode 1 exited with code 1\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+_____ test_per_episode_dynamic_mapping_uses_child_input[argv-direct-True] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi1')
+integration = 'direct', ordinary = True, target = 'argv'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi1/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 1)
+E         CS client startup failed: business episode 1 exited with code 1
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=2, stdout=...^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: (\'3\', 1)\nCS client startup failed: business episode 1 exited with code 1\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+__ test_per_episode_dynamic_mapping_uses_child_input[argv-sdk-command-False] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2')
+integration = 'sdk-command', ordinary = False, target = 'argv'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 3)
+E         Traceback (most recent call last):
+E           File "<frozen runpy>", line 198, in _run_module_as_main
+E           File "<frozen runpy>", line 88, in _run_code
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 75, in <module>
+E             if __name__=='__main__':main()
+E                                     ~~~~^^
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 70, in main
+E             metrics=run(CommandClient(),config)
+E           File "/home/dgh/Code/clearml_mini/runner/sdk.py", line 107, in run
+E             result = client.run_episode(config, episode, context)
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 59, in run_episode
+E             process.check_returncode()
+E             ~~~~~~~~~~~~~~~~~~~~~~~~^^
+E           File "/opt/anaconda3/lib/python3.13/subprocess.py", line 508, in check_returncode
+E             raise CalledProcessError(self.returncode, self.args, self.stdout,
+E                                      self.stderr)
+E         subprocess.CalledProcessError: Command '['/home/dgh/Code/clearml_mini/.venv/bin/python', '/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2/mapped.py', '--count', '3', '--seed', '7', '--work', '/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2/work', '--out', '/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2/output']' returned non-zero exit status 1.
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=1, stdout=...out\', \'/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi2/output\']\' returned non-zero exit status 1.\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+_____ test_per_episode_dynamic_mapping_uses_child_input[env-direct-False] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi3')
+integration = 'direct', ordinary = False, target = 'env'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi3/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 1)
+E         CS client startup failed: business episode 1 exited with code 1
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=2, stdout=...^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: (\'3\', 1)\nCS client startup failed: business episode 1 exited with code 1\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+______ test_per_episode_dynamic_mapping_uses_child_input[env-direct-True] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi4')
+integration = 'direct', ordinary = True, target = 'env'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi4/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 1)
+E         CS client startup failed: business episode 1 exited with code 1
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=2, stdout=...^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: (\'3\', 1)\nCS client startup failed: business episode 1 exited with code 1\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+___ test_per_episode_dynamic_mapping_uses_child_input[env-sdk-command-False] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi5')
+integration = 'sdk-command', ordinary = False, target = 'env'
+
+    @pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+    @pytest.mark.parametrize('target',['argv','env'])
+    def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+        script=tmp_path/'mapped.py'
+        script.write_text('''import json,os,sys
+    from pathlib import Path
+    c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+    i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+    if len(sys.argv)>1:
+        values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+        n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+    else:
+        n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+    assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+    assert int(seed)==c['seed']==7+i-1
+    assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+    assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+    assert Path(work).name==Path(out).name=='episode-'+str(i)
+    assert c['business']['scene']=='test'
+    Path(out,'seen').write_text(str(i))
+    if 'MINI_EVAL_RESULT' in os.environ:
+        Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+    print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+    ''')
+        sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+        names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+        extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+        result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi5/mapped.py", line 10, in <module>
+E             assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: ('3', 3)
+E         Traceback (most recent call last):
+E           File "<frozen runpy>", line 198, in _run_module_as_main
+E           File "<frozen runpy>", line 88, in _run_code
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 75, in <module>
+E             if __name__=='__main__':main()
+E                                     ~~~~^^
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 70, in main
+E             metrics=run(CommandClient(),config)
+E           File "/home/dgh/Code/clearml_mini/runner/sdk.py", line 107, in run
+E             result = client.run_episode(config, episode, context)
+E           File "/home/dgh/Code/clearml_mini/runner/command_sdk.py", line 59, in run_episode
+E             process.check_returncode()
+E             ~~~~~~~~~~~~~~~~~~~~~~~~^^
+E           File "/opt/anaconda3/lib/python3.13/subprocess.py", line 508, in check_returncode
+E             raise CalledProcessError(self.returncode, self.args, self.stdout,
+E                                      self.stderr)
+E         subprocess.CalledProcessError: Command '['/home/dgh/Code/clearml_mini/.venv/bin/python', '/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi5/mapped.py']' returned non-zero exit status 1.
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/dgh/Code/clearml_mini/.venv/bin/python', '-m', 'runner.cs_entry'], returncode=1, stdout=...\', \'/tmp/pytest-of-dgh/pytest-573/test_per_episode_dynamic_mappi5/mapped.py\']\' returned non-zero exit status 1.\n').returncode
+
+backend/tests/test_host_shell_episode.py:417: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[argv-direct-False]
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[argv-direct-True]
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[argv-sdk-command-False]
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[env-direct-False]
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[env-direct-True]
+FAILED backend/tests/test_host_shell_episode.py::test_per_episode_dynamic_mapping_uses_child_input[env-sdk-command-False]
+6 failed, 51 deselected, 1 warning in 0.76s

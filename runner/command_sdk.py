@@ -16,14 +16,26 @@ from .template_contract import command as validate_command
 
 class CommandClient(EvaluationClient):
     def run_episode(self, task, episode, context):
+        env=dict(os.environ)
+        if task['template'].get('execution_mode')=='host':
+            env.update(task.get('_resolved_environment',{}))
+        runtime = task['template'].get('runtime')
+        cwd=task.get('_resolved_cwd') or (runtime or {}).get('working_directory') or context.work_dir
+        per_episode=(task['template'].get('execution_mode')=='host'
+                     and (task['template'].get('host_runtime') or {}).get('episode_launch')=='per_episode')
         result_path = context.work_dir / ('episode-result-'+str(episode.id)+'.json')
+        if per_episode:
+            from .host_episode import episode_input
+            task,env=episode_input(task,episode,context,env)
+            result_path=Path(env['MINI_EVAL_RESULT'])
         result_path.unlink(missing_ok=True)
         values = {k:str(task[k]) for k in ('task_name','episodes','seed','endpoint')}
         values.update(episode_id=str(episode.id),episode_seed=str(episode.seed),result_path=str(result_path),
-                      input_path=os.environ['MINI_EVAL_INPUT'],work_dir=str(context.work_dir),output_dir=str(context.output_dir))
+                      input_path=env['MINI_EVAL_INPUT'] if per_episode else os.environ['MINI_EVAL_INPUT'],
+                      work_dir=env['MINI_EVAL_WORK_DIR'] if per_episode else str(context.work_dir),
+                      output_dir=env['MINI_EVAL_OUTPUT_DIR'] if per_episode else str(context.output_dir))
         # Runtime resolver sets per-node asset paths; no shell evaluation is used.
         values.update(task.get('_resolved_assets', {}))
-        runtime = task['template'].get('runtime')
         if runtime:
             values.update({'assets:'+k:v for k,v in runtime['assets'].items()})
             values.update({'mounts:'+k:v['target'] for k,v in runtime.get('mounts',{}).items()})
@@ -33,9 +45,6 @@ class CommandClient(EvaluationClient):
                 return values[match[1]]
             return TOKEN.sub(replace,text)
         argv=[expand(x) for x in validate_command(task['template']['command'])]
-        env=dict(os.environ)
-        if task['template'].get('execution_mode')=='host':
-            env.update(task.get('_resolved_environment',{}))
         settings=task['template'].get('host_runtime') or runtime or {}
         for k,v in {**settings.get('environment',{}),**task.get('environment',{})}.items():env[k]=expand(v)
         schema = task['template'].get('parameter_schema')
@@ -52,7 +61,6 @@ class CommandClient(EvaluationClient):
         env.update(additions)
         env.update(MINI_EVAL_EPISODE_ID=str(episode.id),MINI_EVAL_EPISODE_SEED=str(episode.seed),MINI_EVAL_RESULT=str(result_path))
         from .process_command import for_template
-        cwd=task.get('_resolved_cwd') or (runtime or {}).get('working_directory') or context.work_dir
         argv=for_template(task['template'],argv,cwd,env)
         process = subprocess.run(argv,env=env,cwd=cwd,check=False)
         self.process_exit_code = process.returncode

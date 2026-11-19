@@ -164,3 +164,5 @@ Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，�
 数据库迁移操作入口：docs/database-migration.md，适用于其他实际部署机器。核对原 --env-file/-p/全部 -f 配置，api/migrate/bootstrap 使用同目标镜像；迁移前排空与备份，显式 run --rm --no-deps migrate 后启动并验收。restart 不迁移，Compose 不自动升级节点，不能用 stamp 或删卷绕过失败。日志优化 y518b90 有迁移，Worker0.21.1 恢复修复无新增迁移；head 以目标镜像为准。
 
 2026-11-19 修正后完整复测：docs/validation/full-recheck-20261119/README.md；Python 1629 通过/133 跳过、前端 138 通过/10 跳过、无失败。本轮真实迁移补测 3 通过，合并本轮覆盖数据过门槛；默认 scripts.test_coverage 因 scripts 未启用迁移而覆盖不足仍返回 1，不能混淆测试成功与默认命令退出码。未更新 29 或验收真实 NPU 模型。
+
+宿主机每回合参数映射修复（0.21.2）：HostBackend 保留回合相关占位符，cs_entry 将 direct/普通命令映射推迟至 host_episode；显式 per_episode command_sdk 使用相同单回合输入。task.episodes 为1，seed/路径随回合变化，外层计数不变。整任务/Docker 不变，无迁移。验证 test_episode_mapping_pipeline.py（真实子进程、协议1/2事件上传替身，第二回合运行时可上传第一回合结果）与 test_host_shell_episode.py；见 docs/host-execution.md。

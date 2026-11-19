@@ -63,6 +63,14 @@ def main():
         # Publish the normalized input before the user's program starts. Keep
         # legacy fields so existing SDK clients continue reading the same file.
         Path(input_path).write_text(json.dumps(config,ensure_ascii=False,allow_nan=False))
+        host_runtime=config['template'].get('host_runtime') or {}
+        if (config['template'].get('execution_mode')=='host'
+                and host_runtime.get('episode_launch')=='per_episode'
+                and config['template'].get('integration_mode')!='sdk-command'):
+            # Bind against each child input, never against the outer task count.
+            from .host_episode import main as run_host_episodes
+            run_host_episodes(config,command,cwd,env)
+            return
         schema = config['template'].get('parameter_schema')
         if schema is not None and config['template'].get('integration_mode') != 'sdk-command':
             from .parameter_contract import bind_values
@@ -77,13 +85,6 @@ def main():
             env.update(additions)
         if config['template'].get('integration_mode') == 'sdk-command':
             command = [sys.executable, '-m', 'runner.command_sdk']
-        host_runtime=config['template'].get('host_runtime') or {}
-        if (config['template'].get('execution_mode')=='host'
-                and host_runtime.get('episode_launch')=='per_episode'
-                and config['template'].get('integration_mode')!='sdk-command'):
-            from .host_episode import main as run_host_episodes
-            run_host_episodes(config,command,cwd,env)
-            return
         from .process_command import for_template
         command=for_template(config['template'],command,cwd,env)
         # Keep the SDK wrapper on the controlled platform environment; it

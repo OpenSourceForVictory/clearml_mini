@@ -384,3 +384,68 @@ def test_login_environment_special_names_reach_real_child(monkeypatch):
         'import json,os,sys; print(json.dumps({k:os.environ[k] for k in json.loads(sys.argv[1])}))',
         json.dumps(list(expected))],env=captured,capture_output=True,text=True,check=True,timeout=5)
     assert json.loads(result.stdout)==expected
+
+
+@pytest.mark.parametrize('integration,ordinary',[('direct',False),('direct',True),('sdk-command',False)])
+@pytest.mark.parametrize('target',['argv','env'])
+def test_per_episode_dynamic_mapping_uses_child_input(tmp_path,integration,ordinary,target):
+    script=tmp_path/'mapped.py'
+    script.write_text('''import json,os,sys
+from pathlib import Path
+c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+i=int(os.environ['MINI_EVAL_EPISODE_ID'])
+if len(sys.argv)>1:
+    values=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+    n,seed,work,out=(values[k] for k in ('--count','--seed','--work','--out'))
+else:
+    n,seed,work,out=(os.environ[k] for k in ('COUNT','SEED','WORK','OUT'))
+assert int(n)==c['episodes']==c['task']['episodes']==1,(n,c['episodes'])
+assert int(seed)==c['seed']==7+i-1
+assert work==c['platform']['paths']['work']==os.environ['MINI_EVAL_WORK_DIR']
+assert out==c['platform']['paths']['output']==os.environ['MINI_EVAL_OUTPUT_DIR']
+assert Path(work).name==Path(out).name=='episode-'+str(i)
+assert c['business']['scene']=='test'
+Path(out,'seen').write_text(str(i))
+if 'MINI_EVAL_RESULT' in os.environ:
+    Path(os.environ['MINI_EVAL_RESULT']).write_text(json.dumps({'success':True}))
+print(json.dumps({'final':{'episode_count':1,'success_rate':1,'runtime':0.01}}),flush=True)
+''')
+    sources=['task.episodes','task.seed','platform.paths.work','platform.paths.output']
+    names=['--count','--seed','--work','--out'] if target=='argv' else ['COUNT','SEED','WORK','OUT']
+    extra={'integration_mode':integration,'platform_bindings':[{'source':s,'target':target,'name':n} for s,n in zip(sources,names)]}
+    result,events,_,output=client(tmp_path,script,episodes=3,ordinary=ordinary,template_extra=extra)
+    assert result.returncode==0,result.stderr
+    assert [e['status'] for e in events]==['STARTED','COMPLETED']*3
+    assert [e['episode_id'] for e in events if e['status']=='COMPLETED']==[1,2,3]
+    assert [output.joinpath('episode-'+str(i),'seen').read_text() for i in (1,2,3)]==['1','2','3']
+
+
+@pytest.mark.parametrize('mode,integration',[('host','direct'),('docker','direct'),('host','sdk-command'),('docker','sdk-command')])
+def test_existing_whole_task_mapping_preserves_total(tmp_path,mode,integration):
+    script=tmp_path/'whole.py'
+    script.write_text('''import json,os,sys
+from pathlib import Path
+c=json.load(open(os.environ['MINI_EVAL_INPUT']))
+assert sys.argv[1:]==['--count','3']
+assert c['episodes']==c['task']['episodes']==3
+if 'MINI_EVAL_RESULT' in os.environ:Path(os.environ['MINI_EVAL_RESULT']).write_text('{"success":true}')
+print('{"final":{"episode_count":3,"success_rate":1,"runtime":0.01}}',flush=True)
+''')
+    result,_,_,_=client(tmp_path,script,episodes=3,mode=mode,launch='whole_task',template_extra={
+        'integration_mode':integration,'platform_bindings':[{'source':'task.episodes','target':'argv','name':'--count'}]})
+    assert result.returncode==0,result.stderr
+
+
+@pytest.mark.parametrize('binding',['business','platform'])
+def test_per_episode_environment_conflict_fails_before_business(tmp_path,binding):
+    script=tmp_path/'must_not_run.py'
+    script.write_text("from pathlib import Path\nPath('unexpected-launch').touch()\n")
+    extra={'host_runtime':{'command_mode':'exec','episode_launch':'per_episode','environment':{'VALUE':'explicit'}}}
+    if binding=='business':
+        extra['parameter_schema']={'version':1,'fields':{'scene':{'type':'string','binding':{'target':'env','name':'VALUE'}}}}
+    else:extra['platform_bindings']=[{'source':'task.episodes','target':'env','name':'VALUE'}]
+    result,events,_,_=client(tmp_path,script,template_extra=extra)
+    assert result.returncode!=0
+    assert [e['status'] for e in events]==['STARTED','ERROR']
+    assert not (tmp_path/'unexpected-launch').exists()
+    assert 'environment conflicts' in result.stderr

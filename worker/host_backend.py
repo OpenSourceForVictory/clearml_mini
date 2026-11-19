@@ -109,7 +109,9 @@ class HostBackend:
             if name not in assets:raise RuntimeError('unconfigured logical asset: '+name)
             validate_storage({**w.config,'assets_root':assets[name],'cache_root':assets[name]},w.config.get('_supervisor_state',w.path),w.config.get('_config_path'))
             values['assets:'+name]=assets[name]
-        def expand(text):return TOKEN.sub(lambda m:values.get(m[1],m[0]),text)
+        deferred = ({'episodes','seed','input_path','work_dir','output_dir'}
+                    if host.get('episode_launch')=='per_episode' and config.get('workload')!='service' else set())
+        def expand(text):return TOKEN.sub(lambda m:m[0] if m[1] in deferred else values.get(m[1],m[0]),text)
         argv=[expand(x) for x in config['template']['command']]
         code_root=Path(profile['code_root']).resolve()
         generic=host.get('command_mode')=='exec'
