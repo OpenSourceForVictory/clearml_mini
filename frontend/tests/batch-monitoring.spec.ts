@@ -153,3 +153,15 @@ test('result summaries use two separate cards and stack on narrow screens',async
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }
 });
+
+test('summary details are collapsed, expandable and preserved across polling',async({page})=>{
+ await setup(page);const execution=page.getByRole('region',{name:'程序执行统计'}),protocol=page.getByRole('region',{name:'平台协议回合结果统计'});
+ await expect(execution.getByText('正常退出率 100.0%（3/3）')).toBeVisible();await expect(protocol.getByText('评测成功率 暂无有效结果')).toBeVisible();
+ await expect(execution.locator('details')).not.toHaveAttribute('open','');await expect(protocol.locator('details')).not.toHaveAttribute('open','');
+ await execution.getByText('查看程序执行详情',{exact:true}).click();await protocol.getByText('查看回合结果详情',{exact:true}).click();
+ await expect(execution.getByText(/正常结束 3 次/)).toBeVisible();await expect(protocol.getByText(/结果校验异常 3/)).toBeVisible();
+ await page.waitForResponse(r=>r.url().includes('/monitor'));
+ await expect(execution.locator('details')).toHaveAttribute('open','');await expect(protocol.locator('details')).toHaveAttribute('open','');
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await execution.getByText('查看程序执行详情',{exact:true}).click();await expect(execution.getByText(/正常结束 3 次/)).not.toBeVisible();
+});

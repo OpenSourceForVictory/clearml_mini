@@ -197,3 +197,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 运行配置动态映射：batch-parameters.tsx 的 Mappings 合并 platform_bindings 与 parameter_schema.fields 的 binding（默认 input），值来自当前任务/服务定义快照。不得仅展示 platform_bindings 或将基础命令称为实际执行 argv。浏览器回归覆盖宿主机/容器客户端、服务端、业务绑定独立存在、任务切换及缺失旧快照；操作见 docs/batch-monitoring.md。仅前端变更，无 Worker/数据库升级。
 
 运行配置命令展开：frontend/src/batch-command-preview.tsx 按 Runner 的占位符、业务 binding、platform_bindings 顺序预览 argv，env/input 单独处理；宿主机 per_episode 改写回合和 seed，SDK-command 非 per_episode 保留任务字段。使用已有任务/模板快照，无新表、上报或 Worker 修改。execution-launch-snapshots 扩展已由用户撤销。历史批次导入必须部署 batch_rerun API，不能只发布静态前端；通用 Not Found 与 batch not found 区分提示。
+
+结果摘要简化：result-outcomes.tsx 的 ExecutionOutcome/ProtocolOutcome 用已知退出码、有效协议结果作为各自分母，并显示覆盖进度。ResultOutcomes 通过原生 details 保留完整计数，列表进入批次/任务查看明细；零分母不伪造 0%，协议异常与未接入区分。不改 result_views.py、数据库或节点。说明见 docs/batch-monitoring.md，回归 batch-history/batch-monitoring。

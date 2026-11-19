@@ -1,0 +1,66 @@
+
+Running 27 tests using 1 worker
+
+(node:1499015) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (318ms)
+  ✓   2 frontend/tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (420ms)
+  ✓   3 frontend/tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (312ms)
+  ✓   4 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (345ms)
+  ✓   5 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (344ms)
+  ✓   6 frontend/tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (344ms)
+  ✓   7 frontend/tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (177ms)
+  ✓   8 frontend/tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (180ms)
+  ✓   9 frontend/tests/batch-history.spec.ts:100:1 › list displays two weighted rates and coverage without detailed counters (173ms)
+  ✓  10 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators pending (165ms)
+  ✓  11 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators invalid (168ms)
+  ✓  12 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators command (167ms)
+  ✓  13 frontend/tests/batch-history.spec.ts:107:60 › zero and missing denominators failed (180ms)
+  ✓  14 frontend/tests/batch-monitoring.spec.ts:31:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.6s)
+  ✓  15 frontend/tests/batch-monitoring.spec.ts:42:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓  16 frontend/tests/batch-monitoring.spec.ts:48:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓  17 frontend/tests/batch-monitoring.spec.ts:56:1 › detail tabs preserve filtering and retry selection and contain narrow tables (318ms)
+  ✓  18 frontend/tests/batch-monitoring.spec.ts:74:1 › client placement is a separate column with GPU zero and unassigned states (156ms)
+  ✘  19 frontend/tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds (5.2s)
+(node:1501021) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  20 frontend/tests/batch-monitoring.spec.ts:110:1 › zero exits and invalid protocol are separate at batch task and episode levels (271ms)
+  ✓  21 frontend/tests/batch-monitoring.spec.ts:128:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓  22 frontend/tests/batch-monitoring.spec.ts:145:1 › result summaries use two separate cards and stack on narrow screens (195ms)
+  ✓  23 frontend/tests/batch-monitoring.spec.ts:157:1 › summary details are collapsed, expandable and preserved across polling (2.2s)
+  ✓  24 frontend/tests/batch-reports.spec.ts:33:1 › cross-page selection limit, back preserves draft/page and direct refresh (649ms)
+  ✓  25 frontend/tests/batch-reports.spec.ts:43:1 › authenticated JSON CSV downloads and failed download creates no file (307ms)
+  ✓  26 frontend/tests/batch-reports.spec.ts:53:1 › manual refresh preserves snapshot on error, no overlapping refresh (4.0s)
+  ✓  27 frontend/tests/batch-reports.spec.ts:59:1 › switching comparison rejects stale response and private batch clears data (1.7s)
+
+
+  1) frontend/tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: 'case0 回合状态' })
+    Expected substring: "普通命令退出码"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: 'case0 回合状态' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'case0 回合状态' })
+        8 × locator resolved to <section aria-label="case0 回合状态">…</section>
+          - unexpected value "case0 · 尝试 1回合状态与结果判定来源：平台协议业务结果（success）。已上报完成 1/3，异常回合 1。程序执行退出码待上报回合结果（平台协议）回合结果待上报平台执行进程退出码：0（整次执行，不等同于每回合业务子进程退出码）缺少协议回合结果；退出码 0 不能代替协议成功上报。回合种子程序执行状态回合结果（平台协议）业务进程退出码指标 / 异常17正常结束业务失败0{}28正常结束回合异常（未分类）0"missing protocol result"39退出码未上报结果未上报未上报{}上一页回合第 1 页下一页回合"
+
+
+       99 |  await expect(episodes).not.toContainText('业务成功 1');
+      100 |  source='exit_code';code=7;
+    > 101 |  await expect(episodes).toContainText('普通命令退出码');
+          |                         ^
+      102 |  await expect(episodes).toContainText('执行进程退出码：7');
+      103 |  code=null;await expect(episodes).toContainText('执行进程退出码：未上报');
+      104 |  reporting=false;await expect(episodes).toContainText('整次执行');await expect(episodes.getByRole('table')).toHaveCount(0);await expect(episodes.getByRole('button',{name:'下一页回合'})).toHaveCount(0);await expect(episodes).toContainText('配置回合数 3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-monitoring.spec.ts:101:25
+
+    Error Context: frontend/test-results/batch-monitoring-episode-e-af05e-exits-and-unreported-rounds/error-context.md
+
+  1 failed
+    frontend/tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds 
+  26 passed (38.7s)

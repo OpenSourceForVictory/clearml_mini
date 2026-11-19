@@ -15,7 +15,7 @@ async function setup(page:Page,outcomes?:any){
 test('scoped filters, reported progress, responsive long titles and active deletion disabled',async({page})=>{
  await setup(page);
  const done=page.getByRole('row',{name:'批次 完成批次',exact:true});
- await expect(done).toContainText('协议结果统计未上报');
+ await expect(done).toContainText('回合结果待上报');
  await expect(page.getByRole('row',{name:/^批次 /}).nth(1).getByRole('button',{name:'删除批次'})).toBeDisabled();
  await page.getByLabel('当前页状态').selectOption('RUNNING');await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(1);
  await page.getByLabel('搜索当前页').fill('不存在');await expect(page.getByText('当前页没有匹配的批次。')).toBeVisible();
@@ -94,4 +94,21 @@ test('outcome text stays within separate columns at desktop and narrow widths',a
   }))).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }
+});
+
+const baseOutcome={execution:{normal:9,abnormal:1,running:2,unknown:1,not_started:7},protocol:{planned:20,success:8,failure:2,invalid:1,errors:1,unreported:8,not_applicable_tasks:1,valid:10,success_rate:.8}};
+test('list displays two weighted rates and coverage without detailed counters',async({page})=>{
+ await setup(page,baseOutcome);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
+ await expect(row).toContainText('正常退出率 90.0%（9/10）');await expect(row).toContainText('退出码已知 10/20 次');
+ await expect(row).toContainText('评测成功率 80.0%（8/10）');await expect(row).toContainText('有效结果 10/20 回合');await expect(row).toContainText('1 项未接入');
+ await expect(row).not.toContainText('正常结束 9 次');await expect(row).not.toContainText('业务失败 2');
+ await expect(page.getByRole('row',{name:/^批次 运行批次/})).toContainText('已结束 1/3');
+});
+for(const kind of ['pending','invalid','command','failed'])test(`zero and missing denominators ${kind}`,async({page})=>{
+ const value=JSON.parse(JSON.stringify(baseOutcome));value.execution={normal:0,abnormal:kind==='failed'?2:0,running:0,unknown:kind==='pending'?2:0,not_started:1};
+ value.protocol={planned:kind==='command'?0:3,success:0,failure:kind==='failed'?2:0,invalid:kind==='invalid'?3:0,errors:0,unreported:kind==='pending'?3:0,not_applicable_tasks:kind==='command'?1:0,valid:kind==='failed'?2:0,success_rate:kind==='failed'?0:null};
+ await setup(page,value);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
+ await expect(row).toContainText(kind==='failed'?'正常退出率 0.0%（0/2）':'正常退出率 暂无数据');
+ await expect(row).toContainText(kind==='command'?'未接入（普通命令）':kind==='invalid'?'暂无有效结果':kind==='failed'?'评测成功率 0.0%（0/2）':'评测成功率 待上报');
+ if(kind!=='failed')await expect(row).not.toContainText('0.0%');
 });

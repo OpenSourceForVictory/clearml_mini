@@ -2,3 +2,8 @@
 .result-outcomes>section{min-width:0;border:1px solid #dfe7e1;border-radius:8px;padding:14px;overflow-wrap:anywhere;line-height:1.6}
 .result-outcomes h4{margin:0 0 8px}
 @media(max-width:700px){.result-outcomes{grid-template-columns:minmax(0,1fr)}}
+
+.outcome-summary{display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.outcome-summary small{color:#536258;line-height:1.5}
+.result-outcomes details{margin-top:10px}
+.result-outcomes summary{cursor:pointer}
