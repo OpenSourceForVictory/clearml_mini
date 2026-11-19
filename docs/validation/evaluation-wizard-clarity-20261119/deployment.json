@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-11-19T15:57:47.017267+00:00",
+  "code_commit": "f731da0",
+  "image": "mini-eval-api:wizard-clarity-20261119",
+  "rollback_image": "mini-eval-api:artifact-inheritance-20261119",
+  "scope": "frontend static files only; api container recreated preserving API code and configuration",
+  "health": "healthy",
+  "database_revision": "a730d12",
+  "migration_run": false,
+  "worker_runner_upgraded": false,
+  "held_executions_before": 0,
+  "shared_artifacts_read_only": true,
+  "new_evaluation_tasks_submitted": 0,
+  "deployed_browser_audit": "saved suite and managed two-instance confirmation; real historical batch import passed",
+  "assets": [
+    {
+      "path": "/assets/index-9uvJpjni.js",
+      "sha256": "f7168eaf9f803c774ef9dbd16f09fc9166656706b7d2792815cbf736577790b1",
+      "matches_build": true
+    },
+    {
+      "path": "/assets/index-BRC11Ycx.css",
+      "sha256": "4cf72ac7a9ea888196db9421e699b18ae3ad4e8d26c857cee5e59da74ad01a82",
+      "matches_build": true
+    }
+  ]
+}
