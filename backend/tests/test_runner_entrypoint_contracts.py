@@ -120,3 +120,103 @@ def test_sdk_independent_root_rejects_invalid_result(execution,behavior):
     events=[json.loads(line) for line in (work/'episodes.jsonl').read_text().splitlines()]
     assert events[-1]['status']=='ERROR' and events[-1]['exit_code']==0
     assert result_error_code(events[-1]['error'])=='invalid_result_file'
+
+
+@pytest.mark.parametrize('scheme',['http','ws','https','wss'])
+def test_preflight_tcp_tls_without_http_method(monkeypatch,scheme):
+    from contextlib import nullcontext
+    calls=[]
+    class Socket:
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def settimeout(self,value):assert value>0
+        def connect(self,address):calls.append(address)
+    monkeypatch.setattr(cs_entry.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('192.0.2.10',19000))])
+    monkeypatch.setattr(cs_entry.socket,'socket',lambda *a:Socket())
+    class TLS:
+        def wrap_socket(self,sock,server_hostname):
+            assert server_hostname=='service.example';calls.append('tls');return nullcontext()
+    monkeypatch.setattr(cs_entry.ssl,'create_default_context',lambda:TLS())
+    cs_entry.preflight(scheme+'://service.example:19000',1)
+    assert calls==[('192.0.2.10',19000)]+(['tls'] if scheme in ('https','wss') else [])
+
+
+@pytest.mark.parametrize('fault',['dns-empty','unsafe-dns','timeout','refused'])
+def test_preflight_failure_does_not_report_ready(monkeypatch,fault):
+    addresses=[] if fault=='dns-empty' else [(2,1,6,'',('127.0.0.1' if fault=='unsafe-dns' else '192.0.2.10',19000))]
+    monkeypatch.setattr(cs_entry.socket,'getaddrinfo',lambda *a,**k:addresses)
+    class Socket:
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def settimeout(self,value):pass
+        def connect(self,address):raise OSError('unreachable')
+    monkeypatch.setattr(cs_entry.socket,'socket',lambda *a:Socket())
+    with pytest.raises((RuntimeError,ValueError)):
+        cs_entry.preflight('ws://service.example:19000',-1 if fault=='timeout' else 1)
+
+
+@pytest.mark.parametrize('mode',['host','docker'])
+def test_sdk_wrapper_preserves_platform_environment(execution,monkeypatch,mode):
+    inp,config,_,output=execution
+    config['template'].update(execution_mode=mode,integration_mode='sdk-command',runtime=None)
+    config['_resolved_environment']={'BUSINESS_ONLY':'secret-to-business'}
+    inp.write_text(json.dumps(config));seen=[]
+    monkeypatch.setattr('subprocess.call',lambda command,**kw:seen.append((command,kw)) or 0)
+    with pytest.raises(SystemExit) as error:cs_entry.main()
+    assert error.value.code==0
+    assert seen[0][0]==[sys.executable,'-m','runner.command_sdk']
+    assert 'BUSINESS_ONLY' not in seen[0][1]['env']
+    assert seen[0][1]['env']['MINI_EVAL_OUTPUT_DIR']==str(output)
+
+
+def test_entry_connects_and_preserves_captured_exit(execution,monkeypatch,capsys):
+    inp,config,_,_=execution;config.update(service_mode='external',_process_logs={'test':True})
+    inp.write_text(json.dumps(config));seen=[]
+    monkeypatch.setattr(cs_entry,'preflight',lambda endpoint,timeout:seen.append((endpoint,timeout)))
+    monkeypatch.setattr('runner.process_log_run.run',lambda *a,**kw:19)
+    with pytest.raises(SystemExit) as error:cs_entry.main()
+    assert error.value.code==19 and seen==[(config['endpoint'],1)]
+    assert '"stage": "connected"' in capsys.readouterr().out
+
+
+def test_entry_host_rounds_uses_real_children(execution):
+    inp,config,work,output=execution
+    config['template']={'execution_mode':'host','integration_mode':'direct','task_type':'command',
+        'command':[sys.executable,'-c','import os;from pathlib import Path;Path(os.environ["MINI_EVAL_OUTPUT_DIR"],"ran.txt").write_text(os.environ["MINI_EVAL_EPISODE_ID"])'],
+        'host_runtime':{'command_mode':'exec','episode_launch':'per_episode'}}
+    config.update(_resolved_cwd=str(work),task_type='command')
+    inp.write_text(json.dumps(config));cs_entry.main()
+    assert (output/'episode-1'/'ran.txt').read_text()=='1'
+    assert (output/'episode-2'/'ran.txt').read_text()=='2'
+
+
+@pytest.mark.parametrize('fault',['placeholder','business-env','platform-env'])
+def test_command_sdk_rejects_conflicting_mapping_before_start(execution,monkeypatch,fault):
+    inp,config,work,output=execution
+    config['template']['integration_mode']='sdk-command'
+    if fault=='placeholder':config['template']['command']=['echo','${undefined}']
+    elif fault=='business-env':config['template']['runtime']['environment']={'SCENE':'shadow'}
+    else:
+        config['template']['platform_bindings']=[{'source':'platform.paths.output','target':'env','name':'RESULT_DIR'}]
+        config['template']['runtime']['environment']={'RESULT_DIR':'shadow'}
+    inp.write_text(json.dumps(config))
+    monkeypatch.setattr('subprocess.run',lambda *a,**kw:pytest.fail('invalid mapping started business'))
+    with pytest.raises(ValueError):command_sdk.main()
+    events=[json.loads(x) for x in (work/'episodes.jsonl').read_text().splitlines()]
+    assert events[-1]['status']=='ERROR'
+
+
+def test_command_sdk_runtime_assets_mounts_and_captured_result(execution,monkeypatch):
+    inp,config,work,output=execution
+    config.update(episodes=1,_process_logs={'test':True})
+    runtime=config['template']['runtime'];runtime['assets']={'model':'/models'}
+    runtime['mounts']={'data':{'target':'/data'}}
+    config['template'].update(integration_mode='sdk-command',command=['echo','${assets:model}','${mounts:data}'])
+    def captured(argv,**kw):
+        assert Path(argv[0]).name=='echo' and argv[1:]==['/models','/data','--task','scene']
+        assert kw['env']['SCENE']=='kitchen' and kw['scope']=='episode'
+        Path(kw['env']['MINI_EVAL_RESULT']).write_text('{"success":true}')
+        return 0
+    monkeypatch.setattr('runner.process_log_run.run',captured)
+    inp.write_text(json.dumps(config));command_sdk.main()
+    assert json.loads((output/'report.json').read_text())['metrics']['success_rate']==1

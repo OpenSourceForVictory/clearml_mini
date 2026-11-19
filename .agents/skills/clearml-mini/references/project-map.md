@@ -217,3 +217,5 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 独立节点产物根：storage.py/worker Storage 同步可选 artifact_root，artifact_roots_v1 能力门控；shared_artifacts.plan 在首次 claim 使用现有 SharedArtifactRoot 冻结布局，不新增迁移。worker/artifact_layout.py 校验独立根并按业务账号创建批次/任务/执行目录，HostBackend 与 Docker 公共/别名绑定共用；不挂入工作目录树，保留清理隔离。runner SDK/host_episode/command_sdk 按 batch-v1 配置传当前回合目录；cs_entry 保持运行时 output_dir 别名的 env/input 一致。模板 platform.paths.output 显示为产物目录，普通命令不因新根改变 cwd。新 Worker0.21.10，旧镜像SDK升级边界见 docs/worker-upgrades.md、shared-storage-artifacts.md。测试 test_artifact_layout.py、storage.spec.ts、template-guidance.spec.ts。
 
 产物根继承：storage.desired 对卡级缺省/null artifact_root 合并整机值，不修改保存的原始覆盖；其他目录仍整份覆盖。旧配置更新API后需保存整机存储触发新修订，无迁移或Worker改动。回归 test_storage.py 的多卡下发与回执校验。
+
+产物Runner入口边界补测：test_runner_entrypoint_contracts覆盖SDK包装环境、宿主逐回合真实子进程、参数冲突拒绝、资产/挂载展开与连接检查。真实CUDA原生SDK按context.artifact_path登记回合文件并在结果页筛选验证，见docs/validation/artifact-runner-gpu-20261119；不把声明引用的归属测试当作自动manifest已完成或NPU模型验收。

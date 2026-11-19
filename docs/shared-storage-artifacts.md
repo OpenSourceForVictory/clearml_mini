@@ -106,3 +106,5 @@ DC=(docker compose --env-file .env -p mini-eval -f deploy/compose.yml \
 业务硬编码写 cwd 的文件不会自动搬到产物目录。未启用独立根时旧布局和旧引用不变。启用需要新版 Worker 和 Runner/SDK；平台注入适配器的模板随 Worker 更新，依赖镜像内旧 Runner/SDK 的旧式镜像需重建/更新 SDK。API 只读映射仍须覆盖新产物根，错误映射不会回退上传文件。
 
 当前部署可见的宿主机逐回合与 Docker 功能样例、入口及升级验收边界见 [2026-11-19 上线记录](validation/artifact-root-release-20261119/README.md)。样例为文件生成与浏览验证，不代表模型评测。
+
+原生SDK显式声明产物的真实CUDA三回合批次及回合筛选验证见 [SDK/GPU 验证记录](validation/artifact-runner-gpu-20261119/README.md)。这是张量计算与文件归属验证，不是模型评测；未声明文件的普通命令不会自动获得协议回合归属。

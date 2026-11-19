@@ -47,3 +47,5 @@
 继承切片证据：docs/validation/artifact-root-inheritance-20261119/README.md；本轮未部署，不能把前次上线记录当作继承功能已上线。
 
 继承补丁已按用户要求部署，API/前端更新、Worker0.21.10未重装、数据库a730d12未迁移。真实Worker继承回执、还原原配置、浏览器提示及既有产物可读通过；证据docs/validation/artifact-root-inheritance-20261119/deployment.json。
+
+Runner入口补测与SDK真GPU阶段验收：docs/validation/artifact-runner-gpu-20261119/README.md。153通过/1跳过，cs_entry与command_sdk分别98.90/97.06、95.60/96.67；全仓门槛仍未达标。可见CUDA原生SDK3回合批次f0517199-0ec0-42d0-9d73-b4e398988232成功，明确协议引用的文件归属/筛选通过。NPU SSH可达但缺API共享路径映射，等待用户配置，完整5.2及manifest相关项保持待完成。

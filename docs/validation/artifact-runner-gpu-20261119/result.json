@@ -1,0 +1,31 @@
+{
+  "batch_id": "f0517199-0ec0-42d0-9d73-b4e398988232",
+  "job_id": "f43d4d64-251d-4d8a-bc1c-8a8823a9fcdb",
+  "run_id": "15839138-0c5e-452e-9dc9-9234889ce873",
+  "checks": [
+    {
+      "episode": 1,
+      "path": "episodes/1/output/cuda-result.json",
+      "episode_ids": [
+        1
+      ]
+    },
+    {
+      "episode": 2,
+      "path": "episodes/2/output/cuda-result.json",
+      "episode_ids": [
+        2
+      ]
+    },
+    {
+      "episode": 3,
+      "path": "episodes/3/output/cuda-result.json",
+      "episode_ids": [
+        3
+      ]
+    }
+  ],
+  "status": "SUCCEEDED",
+  "cleanup_confirmed": true,
+  "model_evaluation": false
+}
