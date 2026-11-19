@@ -19,6 +19,10 @@ def per_episode_process(template):
              (template.get('host_runtime') or {}).get('episode_launch') == 'per_episode'))
 
 
+def single_command(template):
+    return template.get('task_type') == 'command' and not per_episode_process(template)
+
+
 def process_state(code, started, ended, terminal):
     if type(code) is int:
         return 'normal' if code == 0 else 'abnormal'
@@ -55,9 +59,10 @@ def summarize_attempt(job, run, rows):
         for view in views:execution[view['execution_state']] += 1
         execution['not_started'] += max(0, job.episodes-len(rows))
     else:
-        # A successful outer exit also proves its synchronous business command
+        # Whole-task commands report the execution exit, including setup failures.
+        # For protocol tasks a successful outer exit proves its synchronous business command
         # returned 0. A nonzero wrapper exit may instead be setup/teardown failure.
-        code = 0 if run.exit_code == 0 else None
+        code = run.exit_code if command else (0 if run.exit_code == 0 else None)
         started = bool(rows) or run.status in {'RUNNING', 'CANCEL_REQUESTED'} or run.exit_code is not None
         ended = run.status in TERMINAL and (started or run.status != 'CANCELLED')
         execution[process_state(code, started, ended, run.status in TERMINAL)] = 1
@@ -71,7 +76,8 @@ def summarize_attempt(job, run, rows):
     protocol['success_rate'] = protocol['success']/valid if valid else None
     return dict(execution=execution, protocol=protocol,
                 process_scope='per_episode' if per_process else 'single_process',
-                wrapper_exit_code=run.exit_code)
+                wrapper_exit_code=run.exit_code,
+                detail_mode='execution' if single_command(template) else 'episodes')
 
 
 def aggregate(values):

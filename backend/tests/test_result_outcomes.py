@@ -179,3 +179,47 @@ def test_sdk_continue_preserves_three_zero_exits_without_traceback(tmp_path,monk
     assert [e['status'] for e in events]==['STARTED','ERROR']*3
     assert all(e['exit_code']==0 and result_error_code(e['error'])=='missing_final' for e in events if e['status']=='ERROR')
     assert 'Traceback' not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('mode,kind,expected',[
+    ('once','command','execution'),('per_episode','command','episodes'),
+    ('once','evaluation','episodes'),('per_episode','evaluation','episodes'),
+])
+def test_detail_mode_uses_process_contract_not_reporting(mode,kind,expected):
+    t=template();t.update(task_type=kind,episode_reporting=True,host_runtime={'episode_launch':mode})
+    value=summary(t,[],code=7)
+    assert value['detail_mode']==expected
+    assert sum(value['execution'].values())==(1 if mode=='once' else 3)
+    if expected=='execution':
+        assert value['execution']['abnormal']==1 and value['protocol']['planned']==0
+    t['integration_mode']='sdk-command'
+    assert summary(t,[])['detail_mode']=='episodes'
+
+
+@pytest.mark.parametrize('status,code,expected',[
+    ('SUCCEEDED',0,'normal'),('FAILED',7,'abnormal'),('TIMED_OUT',None,'unknown'),
+    ('CANCELLED',None,'not_started'),('RUNNING',None,'running'),('FAILED',None,'unknown'),
+])
+def test_whole_command_lifecycle_and_exit(status,code,expected):
+    t=template();t.update(task_type='command',host_runtime={'episode_launch':'once'})
+    result=summary(t,[],status=status,code=code,episodes=10)
+    assert result['execution'][expected]==1 and sum(result['execution'].values())==1
+    assert result['protocol']['valid']==0
+
+
+def test_whole_command_api_does_not_invent_rounds_preserves_history(env):
+    main,c,auth=env;b,_=batch(env);item=b['cases'][0]
+    with main.SessionLocal() as s:
+        j=s.get(Job,item['job_id']);j.episodes=10
+        j.client_spec={**j.client_spec,'template':{**template(),'task_type':'command','host_runtime':{'episode_launch':'once'},'episode_reporting':True}}
+        run=s.get(Run,item['run_id']);transition(s,run,'FAILED');run.exit_code=7
+        s.commit()
+    path=f'/api/v1/jobs/{item["job_id"]}/attempts/{item["run_id"]}/episodes?include_planned=true'
+    value=c.get(path,headers=auth['alice']).json()
+    assert value['items']==[] and value['planned']==10
+    assert value['outcomes']['detail_mode']=='execution'
+    assert value['outcomes']['execution']['abnormal']==1
+    assert c.get(path,headers=auth['bob']).status_code==404
+    with main.SessionLocal() as s:
+        s.add(EpisodeRecord(run_id=item['run_id'],episode_id=1,seed=7,started={'episode_id':1},result=None));s.commit()
+    assert len(c.get(path,headers=auth['alice']).json()['items'])==1

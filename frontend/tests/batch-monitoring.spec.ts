@@ -1,8 +1,8 @@
 import {test,expect,type Page} from '@playwright/test';
 const outcomes={execution:{normal:3,abnormal:0,running:0,unknown:0,not_started:0},protocol:{planned:3,success:0,failure:0,invalid:3,errors:0,unreported:0,not_applicable_tasks:0,valid:0,success_rate:null}};
-async function setup(page:Page){
+async function setup(page:Page,detailMode?:'execution'|'episodes'){
   let offline=false,run='r1',lose=false,delay=false;const requests:any[]=[];
-  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({outcomes,job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
+  const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({outcomes:{...outcomes,detail_mode:detailMode},job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -19,6 +19,7 @@ async function setup(page:Page){
     if(path.endsWith('/retry-failed')){requests.push(route.request().postDataJSON());if(lose){lose=false;await route.abort();return;}data={retried:0,skipped:2,items:[{job_id:'j0',outcome:'skipped',message:'尝试已变化，请刷新后重新选择',attempt:2},{job_id:'j1',outcome:'skipped',message:'旧执行尚未确认清理',attempt:1}]};}
     if(path==='jobs/j0')data={attempts:[{id:'old',attempt:1,status:'FAILED'},{id:'new',attempt:2,status:'FAILED'}]};
     if(path.endsWith('/logs'))data={chunks:[{content:new URL(route.request().url()).searchParams.get('run_id')+' log'}],next_after:1};
+    if(path.endsWith('/execution-location'))data={execution_id:null,node_name:null,directories:[]};
     if(path.endsWith('/episodes'))data={planned:2,progress:{completed:1,successes:0,errors:0},items:[]};
     if(path.endsWith('/artifacts'))data=[{id:'file',name:path.includes('/old/')?'old.json':'new.json',size_bytes:2}];
     await route.fulfill({json:data});
@@ -100,7 +101,7 @@ test('episode expansion separates protocol results, process exits and unreported
  await expect(episodes).toContainText('普通命令退出码');
  await expect(episodes).toContainText('执行进程退出码：7');
  code=null;await expect(episodes).toContainText('执行进程退出码：未上报');
- reporting=false;await expect(episodes).toContainText('整次执行');await expect(episodes.getByRole('table').getByRole('row')).toHaveCount(2);
+ reporting=false;await expect(episodes).toContainText('整次执行');await expect(episodes.getByRole('table')).toHaveCount(0);await expect(episodes.getByRole('button',{name:'下一页回合'})).toHaveCount(0);await expect(episodes).toContainText('配置回合数 3');
  await page.getByRole('button',{name:'收起回合',exact:true}).click();
  await expect(episodes).toHaveCount(0);
 });
@@ -121,4 +122,22 @@ test('zero exits and invalid protocol are separate at batch task and episode lev
   await expect(table.getByRole('row').nth(i)).toContainText('结果校验异常');
   await expect(table.getByRole('row').nth(i).getByRole('cell').nth(4)).toHaveText('0');
  }
+});
+
+
+test('whole command hides rounds even with reporting flag and preserves exit diagnostics',async({page})=>{
+ await setup(page,'execution');
+ await expect(page.getByRole('button',{name:'查看回合',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'查看执行',exact:true})).toHaveCount(4);
+ let code:number|null=0,status='SUCCEEDED',mode='execution';
+ await page.route('**/jobs/j0/attempts/*/episodes?*',async route=>route.fulfill({json:{planned:10,run_status:status,exit_code:code,result_source:'exit_code',episode_reporting:true,
+  outcomes:{detail_mode:mode,process_scope:'single_process',execution:{normal:code===0?1:0,abnormal:code===7?1:0,running:0,unknown:code===null?1:0,not_started:0},protocol:{planned:0,not_applicable_tasks:1}},
+  progress:{completed:0,errors:0},items:[]}}));
+ await page.getByRole('button',{name:'排查任务',exact:true}).first().click();
+ const panel=page.getByRole('region',{name:'整次执行状态'});
+ await expect(panel).toContainText('配置回合数 10');await expect(panel).toContainText('正常结束');
+ await expect(page.getByRole('table',{name:'逐回合状态'})).toHaveCount(0);
+ code=7;status='FAILED';await expect(panel).toContainText('退出码：7');await expect(panel).toContainText('执行异常');
+ code=null;status='TIMED_OUT';await expect(panel).toContainText('超时');await expect(panel).toContainText('不能判定正常结束');
+ mode='episodes';await expect(panel).toHaveCount(0);await expect(page.getByRole('table',{name:'逐回合状态'})).toBeVisible();
 });

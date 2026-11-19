@@ -61,7 +61,7 @@ def install(app, db, current):
                if include_planned else query.order_by(EpisodeRecord.episode_id).offset((page-1)*100).limit(100))
         rows=list(s.scalars(query.order_by(EpisodeRecord.episode_id)))
         items={r.episode_id:{'episode_id':r.episode_id,'seed':r.seed,'started':r.started,'result':r.result,'updated_at':r.updated_at, **episode_view(template,r,run.status)} for r in rows}
-        if include_planned:
+        if include_planned and outcomes['detail_mode'] != 'execution':
             for i in range(start,min(start+100,job.episodes+1)):
                 items.setdefault(i,{'episode_id':i,'seed':episode_seed((job.client_spec or {}).get('seed',0),i),'started':None,'result':None,'updated_at':None, **episode_view(template,None,run.status)})
         return {'outcomes':outcomes,'planned':job.episodes,'progress':summarize(all_rows),'page':page,

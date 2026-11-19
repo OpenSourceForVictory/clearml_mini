@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type Outcomes={execution:{normal:number;abnormal:number;running:number;unknown:number;not_started:number};protocol:{planned:number;success:number;failure:number;invalid:number;errors:number;unreported:number;not_applicable_tasks:number;valid:number;success_rate:number|null};process_scope?:string;wrapper_exit_code?:number|null};
+export type Outcomes={execution:{normal:number;abnormal:number;running:number;unknown:number;not_started:number};protocol:{planned:number;success:number;failure:number;invalid:number;errors:number;unreported:number;not_applicable_tasks:number;valid:number;success_rate:number|null};detail_mode?:'execution'|'episodes';process_scope?:string;wrapper_exit_code?:number|null};
 export const executionLabels:Record<string,string>={normal:'正常结束',abnormal:'异常退出',running:'运行中',unknown:'退出码未上报',not_started:'未启动',not_applicable:'不适用（无独立回合进程）'};
 export const protocolLabels:Record<string,string>={success:'业务成功',failure:'业务失败',invalid:'结果校验异常',error:'回合异常（未分类）',unreported:'结果未上报',not_applicable:'不适用'};
 

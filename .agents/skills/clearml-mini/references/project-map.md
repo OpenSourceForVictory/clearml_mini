@@ -179,3 +179,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 0.21.5 上线验收：docs/validation/episode-result-release-20261119/README.md；6 节点 13 槽位升级，真实本机宿主机逐回合与 Docker 普通命令、真实页面验证两套结果。本功能无新增迁移，但部署从 x407a89 补迁移至此前日志版本 y518b90；先备份和隔离恢复验证。非 GPU/NPU 模型验收。
 
 分作用域日志开发：runner/process_log_contract.py 定义身份/预算/游标；backend/app/execution_locations.py 按 Run 和 execution_id 查询历史目录，不使用当前节点配置推断。任务/批次共用 frontend/src/execution-location.tsx。新 Catalog/Read/Subscriber 模型及 z629c01 为后续按需日志读取基础，未完成 Worker 接入前不能宣称已支持回合文件。操作边界见 docs/execution-logs.md、database-migration.md；OpenSpec process-scoped-execution-logs 管理全链路实施。
+
+整任务普通命令展示：`backend/app/result_views.py` 的 detail_mode 由任务类型及进程模式决定，`episodes.py` 不补造此类计划回合，`frontend/src/cs.tsx` 展示整次执行；批次入口复用同一模式。该模式使用任务退出码统计执行（不冒充独立业务子进程退出证据），保留生命周期诊断。协议单进程及逐回合路径不变；操作说明见 docs/batch-monitoring.md。
