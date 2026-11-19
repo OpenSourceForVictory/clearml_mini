@@ -129,3 +129,13 @@ def test_declared_episode_artifact_references_only(env):
     items = client.get(base.rsplit('/', 1)[0], headers=auth['alice']).json()
     assert items[0]['episode_ids'] == [2]  # Never infer episode 1 from its directory name.
     assert items[0]['media_type'] == 'video/mp4'
+
+
+def test_webp_preview_and_json_download():
+    request = Request({'type': 'http', 'method': 'GET', 'headers': []})
+    response = content_response(request, b'RIFF', 'preview.WEBP', 'hash')
+    assert response.headers['content-type'] == 'image/webp'
+    assert response.headers['content-disposition'].startswith('inline;')
+    response = content_response(request, b'{"html":"<script>"}', 'result.json', 'hash')
+    assert response.headers['content-type'] == 'application/octet-stream'
+    assert response.headers['content-disposition'].startswith('attachment;')

@@ -6,3 +6,8 @@
 .artifact-drawer td{overflow-wrap:anywhere;}
 .artifact-drawer video,.artifact-drawer img{display:block;max-width:100%;max-height:60vh;margin:12px 0;}
 @media(max-width:600px){.artifact-drawer{padding:12px;width:100vw;}}
+
+.artifact-text pre {white-space: pre-wrap; overflow-wrap: anywhere; max-height: 60vh; overflow: auto;}
+.artifact-text {overflow-wrap: anywhere;}
+.artifact-text ul {padding-left: 1.2rem;}
+.artifact-text td {max-width: 24rem; white-space: pre-wrap; overflow-wrap: anywhere;}

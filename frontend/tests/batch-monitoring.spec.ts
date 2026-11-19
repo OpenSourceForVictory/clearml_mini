@@ -217,3 +217,90 @@ test('artifact errors do not claim an empty result and history stays separate',a
  await drawer.getByRole('button',{name:'关闭产物'}).click();
  await expect(drawer).toHaveCount(0);
 });
+
+async function openPreview(page:Page,name:string,body:string,status=200,headers:Record<string,string>={}){
+ await setup(page);
+ await page.route('**/jobs/j0/attempts/*/artifacts',route=>route.fulfill({json:[{id:'preview',name,size_bytes:body.length}]}));
+ await page.route('**/artifacts/preview/media-access',route=>route.fulfill({json:{url:'/preview-file',media_type:'application/octet-stream'}}));
+ await page.route('**/preview-file',route=>{
+  expect(route.request().headers()['range']).toBe('bytes=0-262144');
+  return route.fulfill({body,status,headers});
+ });
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ await page.getByRole('dialog',{name:'运行产物',exact:true}).getByRole('button',{name:'查看 / 下载'}).click();
+ return page.getByRole('region',{name:'产物预览'});
+}
+
+test('artifact JSON renders folded objects and invalid JSON shows safe original text',async({page})=>{
+ const preview=await openPreview(page,'report.json','{"metric":{"score":0.5},"html":"<script>window.bad=true</script>"}');
+ await expect(preview.locator('details').first()).toHaveAttribute('open','');
+ await expect(preview.getByText('score:',{exact:true})).toHaveCount(0);
+ await preview.locator('summary').nth(1).click();
+ await expect(preview.getByText('score:',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Object.hasOwn(window,'bad'))).toBe(false);
+ await page.route('**/preview-file',route=>route.fulfill({body:'{"broken":<script>alert(1)</script>'}));
+ await preview.getByRole('button',{name:'重新加载预览'}).click();
+ await expect(preview.getByRole('alert')).toContainText('JSON 解析失败');
+ await expect(preview.locator('pre')).toContainText('<script>alert(1)</script>');
+});
+
+test('artifact CSV handles quoted newlines and bounds table rendering',async({page})=>{
+ const preview=await openPreview(page,'metrics.csv','name,value\r\n"a,b","line1\nline2"\r\n"a""b",2');
+ const table=preview.getByRole('table',{name:'CSV 预览'});
+ await expect(table.getByRole('row')).toHaveCount(3);
+ await expect(table.getByRole('cell',{name:'a,b',exact:true})).toBeVisible();
+ await expect(table.getByRole('cell',{name:'a"b',exact:true})).toBeVisible();
+ await page.route('**/preview-file',route=>route.fulfill({body:Array(201).fill(Array(51).fill('x').join(',')).join('\n')}));
+ await preview.getByRole('button',{name:'重新加载预览'}).click();
+ await expect(table.getByRole('row')).toHaveCount(200);
+ await expect(table.getByRole('row').first().getByRole('cell')).toHaveCount(50);
+ await expect(preview).toContainText('表格最多预览 200 行、50 列');
+});
+
+test('artifact preview truncates ignored Range and handles empty files and errors',async({page})=>{
+ const preview=await openPreview(page,'large.json',' '.repeat(262145)+'secret-tail');
+ await expect(preview).toContainText('内容已截断');
+ await expect(preview.getByRole('alert')).toHaveCount(0);
+ await expect(preview).not.toContainText('secret-tail');
+ await page.route('**/preview-file',route=>route.fulfill({status:403}));
+ await preview.getByRole('button',{name:'重新加载预览'}).click();
+ await expect(preview.getByRole('alert')).toContainText('HTTP 403');
+ await page.route('**/preview-file',route=>route.fulfill({status:416,headers:{'Content-Range':'bytes */0'}}));
+ await preview.getByRole('button',{name:'重新加载预览'}).click();
+ await expect(preview.locator('pre')).toHaveText('（空文件）');
+});
+
+test('artifact active content is download only',async({page})=>{
+ const preview=await openPreview(page,'unsafe.svg','<svg onload="alert(1)"/>');
+ await expect(preview).toContainText('此格式暂不提供在线预览');
+ await expect(preview.locator('img,iframe,object,svg')).toHaveCount(0);
+ await expect(preview.getByRole('link',{name:'下载文件'})).toBeVisible();
+});
+
+test('artifact text uses server total for truncation and renders UTF-8 safely',async({page})=>{
+ const preview=await openPreview(page,'output.log','节点日志',206,{'Content-Range':'bytes 0-11/999999'});
+ await expect(preview).toContainText('内容已截断');
+ await expect(preview.locator('pre')).toHaveText('节点日志');
+ await page.route('**/preview-file',route=>route.fulfill({body:''}));
+ await preview.getByRole('button',{name:'重新加载预览'}).click();
+ await expect(preview.locator('pre')).toHaveText('（空文件）');
+ await expect(preview).not.toContainText('内容已截断');
+});
+
+test('artifact switching cancels pending preview and does not show stale text',async({page})=>{
+ await setup(page);let release!:()=>void;
+ const blocked=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**/jobs/j0/attempts/*/artifacts',route=>route.fulfill({json:[{id:'slow',name:'slow.txt',size_bytes:5},{id:'fast',name:'fast.txt',size_bytes:5}]}));
+ await page.route('**/artifacts/*/media-access',route=>route.fulfill({json:{url:route.request().url().includes('/slow/')?'/slow-preview':'/fast-preview',media_type:'application/octet-stream'}}));
+ await page.route('**/slow-preview',async route=>{await blocked;await route.fulfill({body:'STALE'}).catch(()=>{});});
+ await page.route('**/fast-preview',route=>route.fulfill({body:'CURRENT'}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await drawer.getByRole('button',{name:'查看 / 下载'}).first().click();
+ await expect(drawer).toContainText('正在读取预览');
+ const failed=page.waitForEvent('requestfailed',r=>r.url().endsWith('/slow-preview'));
+ await drawer.getByRole('button',{name:'查看 / 下载'}).nth(1).click();
+ await failed;release();
+ await expect(drawer.locator('pre')).toHaveText('CURRENT');
+ await expect(drawer).not.toContainText('STALE');
+});

@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {api} from './api';
 import {usePoll} from './poll';
 import './artifact-browser.css';
+import {ArtifactTextPreview,textPreviewKind} from './artifact-text-preview';
 
 type Artifact={id:string;name:string;size_bytes:number;sha256:string;episode_ids?:number[];media_type?:string};
 export function ArtifactBrowser({jobId,runId,episode}:{jobId:string;runId:string;episode?:number}){
@@ -44,8 +45,9 @@ function ArtifactPreview({jobId,runId,file}:{jobId:string;runId:string;file:Arti
  return <section aria-label="产物预览"><h3>{file.name}</h3>{error&&<p role="alert">{error}</p>}
   {access?.media_type.startsWith('video/')&&<video key={access.url+refresh} src={access.url} controls preload="metadata" onError={()=>setError('视频暂时无法播放：授权可能已过期、文件读取失败或浏览器不支持此编码。可重新加载或下载。')}/>}
   {access?.media_type.startsWith('image/')&&<img src={access.url} alt={file.name} onError={()=>setError('图片读取失败，请重新加载或下载。')}/>}
-  {access?.media_type==='application/octet-stream'&&<p>此格式暂不提供在线预览，请下载查看。</p>}
+  {access&&textPreviewKind(file.name)&&<ArtifactTextPreview key={refresh} url={access.url} kind={textPreviewKind(file.name)!}/>}
+  {access?.media_type==='application/octet-stream'&&!textPreviewKind(file.name)&&<p>此格式暂不提供在线预览，请下载查看。</p>}
   {access&&<a href={access.url} download={file.name.split('/').at(-1)}>下载文件</a>}
-  {error&&<button onClick={()=>setRefresh(n=>n+1)}>重新加载预览</button>}
+  {(error||access)&&<button onClick={()=>setRefresh(n=>n+1)}>重新加载预览</button>}
  </section>;
 }

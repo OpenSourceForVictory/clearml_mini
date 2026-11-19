@@ -11,7 +11,7 @@ from .execution_locations import visible_run
 
 COOKIE = 'mini-eval-artifact'
 TYPES = {'.mp4': 'video/mp4', '.webm': 'video/webm', '.png': 'image/png',
-         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
+         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp'}
 
 
 def media_type(name):
