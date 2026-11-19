@@ -1,0 +1,47 @@
+
+Running 17 tests using 1 worker
+
+(node:426609) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   1 tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled (432ms)
+(node:426718) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 tests/batch-history.spec.ts:25:1 › delete confirmation cancel, conflict preserves row, retry clears comparison selection (461ms)
+  ✓   3 tests/batch-history.spec.ts:33:1 › deleting the only record on last page returns to previous page (300ms)
+  ✓   4 tests/batch-history.spec.ts:49:2 › delete HTTP 500 preserves row and selection and supports retry (349ms)
+  ✓   5 tests/batch-history.spec.ts:49:2 › delete HTTP 502 preserves row and selection and supports retry (361ms)
+  ✓   6 tests/batch-history.spec.ts:49:2 › delete HTTP 503 preserves row and selection and supports retry (363ms)
+  ✓   7 tests/batch-history.spec.ts:66:1 › API handles empty success, invalid success and non-JSON unauthorized responses (180ms)
+  ✓   8 tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (197ms)
+  ✓   9 tests/batch-monitoring.spec.ts:31:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.6s)
+  ✓  10 tests/batch-monitoring.spec.ts:42:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓  11 tests/batch-monitoring.spec.ts:48:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (4.4s)
+  ✓  12 tests/batch-monitoring.spec.ts:56:1 › detail tabs preserve filtering and retry selection and contain narrow tables (310ms)
+  ✓  13 tests/batch-monitoring.spec.ts:74:1 › client placement is a separate column with GPU zero and unassigned states (161ms)
+  ✓  14 tests/batch-monitoring.spec.ts:81:1 › episode expansion separates protocol results, process exits and unreported rounds (6.6s)
+  ✓  15 tests/batch-monitoring.spec.ts:110:1 › zero exits and invalid protocol are separate at batch task and episode levels (235ms)
+  ✓  16 tests/batch-monitoring.spec.ts:128:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓  17 tests/batch-monitoring.spec.ts:145:1 › result summaries use two separate cards and stack on narrow screens (183ms)
+
+
+  1) tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled 
+
+    Error: expect(received).toBeLessThan(expected)
+
+    Expected: < 90
+    Received:   130
+
+      21 |  await page.getByLabel('搜索当前页').fill('不存在');await expect(page.getByText('当前页没有匹配的批次。')).toBeVisible();
+      22 |  await page.getByRole('button',{name:'清除筛选'}).click();await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(2);
+    > 23 |  for(const width of [1440,390]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);const row=done;expect((await row.boundingBox())!.height).toBeLessThan(90);if(width===390)expect(await page.locator('.history-table-scroll').evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);}
+         |                                                                                                                                                                                                                                       ^
+      24 | });
+      25 | test('delete confirmation cancel, conflict preserves row, retry clears comparison selection',async({page})=>{
+      26 |  const ctl=await setup(page);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:23:231
+
+    Error Context: test-results/batch-history-scoped-filte-62ad9-nd-active-deletion-disabled/error-context.md
+
+  1 failed
+    tests/batch-history.spec.ts:15:1 › scoped filters, reported progress, responsive long titles and active deletion disabled 
+  16 passed (28.7s)

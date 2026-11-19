@@ -1,0 +1,28 @@
+
+Running 1 test using 1 worker
+
+(node:424224) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths (219ms)
+
+
+  1) tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      92 |     for(const rect of range.getClientRects())if(rect.left<box.left-1||rect.right>box.right+1)return false;
+      93 |    }return true;
+    > 94 |   }))).toBe(true);
+         |        ^
+      95 |   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      96 |  }
+      97 | });
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-history.spec.ts:94:8
+
+    Error Context: test-results/batch-history-outcome-text-d860a-t-desktop-and-narrow-widths/error-context.md
+
+  1 failed
+    tests/batch-history.spec.ts:83:1 › outcome text stays within separate columns at desktop and narrow widths 

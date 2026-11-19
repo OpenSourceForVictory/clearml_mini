@@ -141,3 +141,15 @@ test('whole command hides rounds even with reporting flag and preserves exit dia
  code=null;status='TIMED_OUT';await expect(panel).toContainText('超时');await expect(panel).toContainText('不能判定正常结束');
  mode='episodes';await expect(panel).toHaveCount(0);await expect(page.getByRole('table',{name:'逐回合状态'})).toBeVisible();
 });
+
+test('result summaries use two separate cards and stack on narrow screens',async({page})=>{
+ await setup(page);
+ for(const width of [1440,1024,390]){
+  await page.setViewportSize({width,height:1000});
+  const execution=(await page.getByRole('region',{name:'程序执行统计'}).boundingBox())!;
+  const protocol=(await page.getByRole('region',{name:'平台协议回合结果统计'}).boundingBox())!;
+  if(width>700){expect(protocol.x).toBeGreaterThanOrEqual(execution.x+execution.width);expect(Math.abs(protocol.width-execution.width)).toBeLessThan(2);}
+  else expect(protocol.y).toBeGreaterThanOrEqual(execution.y+execution.height);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }
+});

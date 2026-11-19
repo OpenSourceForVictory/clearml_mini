@@ -1,11 +1,11 @@
 import {test,expect,type Page} from '@playwright/test';
-async function setup(page:Page){
+async function setup(page:Page,outcomes?:any){
  let reject=false;const deleted:string[]=[];
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
   if(path==='auth/me')data={id:'u',username:'user',role:'user'};
-  if(path==='batches')data=[{id:'done',title:'完成批次',status:'SUCCEEDED',total:3,finished:3,succeeded:3,total_episodes:30,max_concurrent:2,created_at:'2026-11-16T01:00:00Z',cases:[{episode_reporting:true,progress:{completed:12}}]},{id:'active',title:'运行批次'+'long'.repeat(100),status:'RUNNING',total:3,finished:1,succeeded:1,total_episodes:30,cases:[]}].filter(b=>!deleted.includes(b.id));
+  if(path==='batches')data=[{id:'done',title:'完成批次',status:'SUCCEEDED',total:3,finished:3,succeeded:3,total_episodes:30,max_concurrent:2,created_at:'2026-11-16T01:00:00Z',cases:[{episode_reporting:true,progress:{completed:12}}]},{id:'active',title:'运行批次'+'long'.repeat(100),status:'RUNNING',total:3,finished:1,succeeded:1,total_episodes:30,cases:[]}].filter(b=>!deleted.includes(b.id)).map(b=>({...b,outcomes}));
   if(path==='batches/done'&&route.request().method()==='DELETE'){if(reject){await route.fulfill({status:409,json:{detail:'batch services must be stopped and cleaned before deletion'}});return;}deleted.push('done');data={deleted:true};}
   await route.fulfill({json:data});
  });
@@ -78,4 +78,20 @@ test('API handles empty success, invalid success and non-JSON unauthorized respo
  await page.route('**/api/v1/diagnostic-test',route=>route.fulfill({status:401,body:'Unauthorized'}));
  expect((await call()).error).toContain('请求失败 (401)');
  expect(await page.evaluate(()=>sessionStorage.getItem('eval-token'))).toBeNull();
+});
+
+test('outcome text stays within separate columns at desktop and narrow widths',async({page})=>{
+ const outcomes={execution:{normal:100000,abnormal:10,running:20,unknown:30,not_started:40},protocol:{planned:100000,success:90000,failure:100,invalid:30,errors:10,unreported:9860,not_applicable_tasks:2,valid:90100,success_rate:90000/90100}};
+ await setup(page,outcomes);
+ for(const width of [1440,1024,390]){
+  await page.setViewportSize({width,height:1000});
+  const cells=page.getByRole('row',{name:'批次 完成批次',exact:true}).locator('td:nth-child(7),td:nth-child(8),td:nth-child(9)');
+  expect(await cells.evaluateAll(elements=>elements.every(cell=>{
+   const box=cell.getBoundingClientRect(),walker=document.createTreeWalker(cell,NodeFilter.SHOW_TEXT);
+   let node;while((node=walker.nextNode())){if(!node.textContent?.trim())continue;const range=document.createRange();range.selectNodeContents(node);
+    for(const rect of range.getClientRects())if(rect.left<box.left-1||rect.right>box.right+1)return false;
+   }return true;
+  }))).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }
 });
