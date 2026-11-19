@@ -116,3 +116,7 @@ Worker 主动通过 HTTP API 注册、心跳和领取任务；平台不需要保
 SSH 纳管界面提示执行器未配置或不可用时，检查 [SSH 纳管执行器部署](ssh-onboarding-executor.md)。纳管执行器与节点 Agent 是两个不同程序，前者运行在平台主机。
 
 新节点推荐从机器管理使用 root SSH 纳管，安装系统 Agent/Worker，宿主机业务统一由 mini-eval 普通账号运行。账号、NFS UID/GID、目录权限和旧节点迁移限制见 [root 纳管指南](root-managed-host.md)。
+
+## 可选业务 PID 上限
+
+Worker 0.21.3起，宿主机和Docker业务默认继承运行时PID限制，不再强制256。每卡Worker JSON顶层 `execution_pids_limit` 可设null或正整数，空闲重启后新任务生效；不是环境变量，旧Worker不会读取它。配置、线程计数及验证命令见[业务进程与线程上限](host-execution.md#业务进程与线程上限worker-0213)。

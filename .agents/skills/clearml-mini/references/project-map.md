@@ -168,3 +168,5 @@ Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，�
 宿主机每回合参数映射修复（0.21.2）：HostBackend 保留回合相关占位符，cs_entry 将 direct/普通命令映射推迟至 host_episode；显式 per_episode command_sdk 使用相同单回合输入。task.episodes 为1，seed/路径随回合变化，外层计数不变。整任务/Docker 不变，无迁移。验证 test_episode_mapping_pipeline.py（真实子进程、协议1/2事件上传替身，第二回合运行时可上传第一回合结果）与 test_host_shell_episode.py；见 docs/host-execution.md。
 
 Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10回合、direct/普通命令/sdk-command及两种日志协议；断言实际业务进程 argv、环境、JSON输入及上报事件seed一致，取模2147483648回绕，字面量参数不改写。
+
+业务PID上限（Worker0.21.3）：worker/resource_limits.execution_pids_limit统一校验节点null/缺省或正整数；host_backend在launch.resource_limits.pids持久化，systemd与两处verify使用同一快照。client.create按同一配置添加或省略Docker --pids-limit；缺省不添加平台额度，不保证系统无限制。探测32不变。操作见docs/host-execution.md、worker-setup.md，回归test_execution_pids.py及验证记录docs/validation/execution-pids-20261119/README.md。

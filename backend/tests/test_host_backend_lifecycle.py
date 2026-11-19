@@ -75,7 +75,7 @@ def test_host_unlimited_axes_omit_selected_systemd_quotas(backend,monkeypatch,cp
     assert '--property=RuntimeMaxSec='+('infinity' if timeout==0 else '60') in commands[0]
     assert any('CPUQuota=' in value for value in commands[0])==bool(cpus)
     assert any('MemoryMax=' in value for value in commands[0])==bool(ram_gb)
-    assert verified==[('/test-group',cpus,ram_gb*1024**3)]
+    assert verified==[('/test-group',cpus,ram_gb*1024**3,None)]
 
 
 def test_remove_preserves_logs_and_bounded_read(backend,monkeypatch):
@@ -144,7 +144,7 @@ def test_start_enforces_identity_limits_and_no_duplicate(backend,monkeypatch,mod
     if mode=='system':assert '--property=User=business' in argv
     if mode=='npu':assert '--property=DeviceAllow=/dev/davinci0 rw' in argv
     assert stopped==([execution] if mode=='limits-fail' else [])
-    if mode!='launch-fails':assert verified==[('/test-group',2,3*1024**3)]
+    if mode!='launch-fails':assert verified==[('/test-group',2,3*1024**3,None)]
 
 
 def test_root_host_start_uses_bounded_unit_properties(backend,monkeypatch):

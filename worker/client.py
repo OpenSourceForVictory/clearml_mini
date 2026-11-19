@@ -18,6 +18,7 @@ import uuid
 
 from runner.cs_contract import INPUT_PATH, VERSION, endpoint_parts
 from .artifacts import read_artifacts
+from .resource_limits import execution_pids_limit
 from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
 from .storage import Storage
 from .retention import Retention
@@ -177,6 +178,7 @@ class Worker:
             self.save()
 
     def create(self, task):
+        pids=execution_pids_limit(self.config)
         if task.get('accelerator_type','gpu')=='gpu' and task.get('gpu_mode')=='shared' and isinstance(self.config.get('gpu_runtime'),dict) and self.config['gpu_runtime'].get('allow_shared') is not True:
             raise RuntimeError('GPU shared execution is not approved')
         if is_service(task): check_bind(task['client_spec']['service'])
@@ -211,8 +213,8 @@ class Worker:
         args = ['create', '--name', self.name(task['execution_id']),
                 '--label', 'mini-eval.execution=' + task['execution_id'], '--label', 'mini-eval.slot=' + self.slot_id,
                 '--network', 'bridge' if cs else 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-                '--pids-limit', '256',
                 '--log-driver', 'json-file', '--log-opt', 'max-size=1m', '--log-opt', 'max-file=1']
+        if pids is not None:args.extend(['--pids-limit',str(pids)])
         if task['cpus']:args.extend(['--cpus',str(task['cpus'])])
         if task['ram_gb']:args.extend(['--memory',str(task['ram_gb'])+'g'])
         if is_service(task):

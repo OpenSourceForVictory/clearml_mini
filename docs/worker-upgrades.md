@@ -78,3 +78,5 @@ Runner 没有独立版本号，随节点组件包更新宿主机代码；使用�
 日志 v2 升级顺序：备份数据库，迁移至 y518b90，发布 API/前端，再升级所选节点 Worker/随包 Runner 至 0.21.0。协议版本仍为 17，以 bounded_logs_v2 能力协商；旧 API 未下发 log_protocol 时新 Worker 保持旧行为，已有 journal 不切换。先完成在途任务再回退节点，保留新增日志表；降级迁移会删除 v2 历史。见 [执行日志说明](execution-logs.md)。
 
 Worker 0.21.2 修复宿主机显式 per_episode 的回合数、种子、输入及目录映射时机；必须更新 Worker 和随包 Runner 后提交新任务。无需额外数据库迁移，Docker/整任务契约不变。见 [宿主机参数映射说明](host-execution.md#单回合参数映射修复worker-0212)。
+
+Worker 0.21.3移除宿主机/Docker业务固定256进程线程限制，支持节点可选 `execution_pids_limit`。需要升级全部相关每卡Worker，新执行生效；无数据库迁移、协议仍为17、不需要重建业务镜像。配置和运行时默认值边界见[宿主机执行](host-execution.md)。

@@ -9,6 +9,14 @@ CGROUP_ROOT = Path('/sys/fs/cgroup')
 REQUIRED = {'cpu', 'memory', 'pids'}
 
 
+def execution_pids_limit(config):
+    """None inherits runtime defaults; an explicit positive integer bounds tasks."""
+    value = config.get('execution_pids_limit')
+    if value is not None and (type(value) is not int or value <= 0):
+        raise ValueError('execution_pids_limit must be null or a positive integer')
+    return value
+
+
 def environment():
     uid = os.getuid()
     return {**os.environ, 'XDG_RUNTIME_DIR': f'/run/user/{uid}',
@@ -37,7 +45,7 @@ def inspect_host():
         return {**result, 'reason': 'systemd_user_manager_unavailable', 'repairable': False}
 
 
-def verify_current(cpus, memory_bytes, pids=256):
+def verify_current(cpus, memory_bytes, pids=None):
     """Read kernel limits in the task itself, before invoking business code."""
     groups={}
     for line in Path('/proc/self/cgroup').read_text().splitlines():
@@ -49,14 +57,14 @@ def verify_current(cpus, memory_bytes, pids=256):
         verify_group(groups.get('cpu',''),cpus,memory_bytes,pids,groups=groups)
 
 
-def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
+def verify_group(group,cpus,memory_bytes,pids=None,groups=None):
     if not group.startswith('/'):raise ValueError('missing task cgroup')
     if (CGROUP_ROOT/'cgroup.controllers').is_file():
         root=CGROUP_ROOT/group.lstrip('/')
         # systemd need not enable an unused controller for an unlimited axis.
         if cpus:quota,period=(root/'cpu.max').read_text().split()
         if memory_bytes:memory=(root/'memory.max').read_text().strip()
-        tasks=(root/'pids.max').read_text().strip()
+        if pids is not None:tasks=(root/'pids.max').read_text().strip()
     else:
         groups=groups or dict.fromkeys(('cpu','memory','pids'),group)
         def read(controller,name):
@@ -80,10 +88,10 @@ def verify_group(group,cpus,memory_bytes,pids=256,groups=None):
             return (CGROUP_ROOT/controller/path.lstrip('/')/name).read_text().strip()
         if cpus:quota=read('cpu','cpu.cfs_quota_us');period=read('cpu','cpu.cfs_period_us')
         if memory_bytes:memory=read('memory','memory.limit_in_bytes')
-        tasks=read('pids','pids.max')
+        if pids is not None:tasks=read('pids','pids.max')
     if cpus and (quota=='max' or int(quota)<=0 or int(quota)>cpus*int(period)):raise ValueError('cpu_limit_not_enforced')
     if memory_bytes and (memory=='max' or not 0<int(memory)<=memory_bytes):raise ValueError('memory_limit_not_enforced')
-    if tasks=='max' or not 0<int(tasks)<=pids:raise ValueError('pids_limit_not_enforced')
+    if pids is not None and (tasks=='max' or not 0<int(tasks)<=pids):raise ValueError('pids_limit_not_enforced')
 
 
 def verify_host(source=None):

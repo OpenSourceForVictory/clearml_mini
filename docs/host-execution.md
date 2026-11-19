@@ -214,3 +214,19 @@ Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json
 验证及失败证据见 [参数映射回归记录](validation/episode-mapping-20261119/README.md)。
 
 逐回合种子公式为 `(初始 seed + 回合编号 - 1) % 2147483648`。例如初始42的10回合依次为42至51；初始2147483647依次为2147483647、0、1……。`${seed}`、`task.seed` 映射、单回合输入及 `MINI_EVAL_EPISODE_SEED` 一致；字面量 `--seed 42` 不自动改变。
+
+## 业务进程与线程上限（Worker 0.21.3）
+
+宿主机和容器业务不再固定限制为256。节点每卡 Worker JSON 顶层可配置 `execution_pids_limit`：省略或 `null` 表示平台不添加 PID 上限，宿主机继承 systemd 默认值，容器继承 Docker 默认值；正整数表示每个执行实例的进程和线程总上限。不是环境变量，不放在模板 environment 中；当前界面没有此配置项。0、负数、布尔值和字符串均拒绝。
+
+```json
+{"execution_pids_limit": null}
+```
+
+如确有资源保护需求，可根据代表性业务的线程峰值和余量配置正整数，不能把示例数值当作统一推荐值。同一实例的 supervisor、runner、业务子进程和线程共享额度，多个服务实例分别计数；该值不参与CPU/内存调度。短时探测仍保留独立的32上限。
+
+先升级所有相关 Worker 到0.21.3或以后，确认实际安装代码，再合并此字段到各卡现有配置（不要用示例覆盖整个JSON）。排空任务后重启相关Worker，重新提交任务；已创建容器/业务单元不会自动改变。无需数据库迁移，也不需要仅为此修复重建业务镜像。仅修改旧Worker JSON不会生效。
+
+宿主机检查 `systemctl show mini-eval-exec-<执行ID>.service -p TasksMax -p EffectiveTasksMax -p TasksCurrent -p LimitNPROC`；用户级单元用业务账号的 `systemctl --user`。容器检查 `docker inspect <容器名> --format '{{.HostConfig.PidsLimit}}'`，必要时结合容器cgroup实际值。继承不等于系统无限制，父级cgroup、systemd/Docker默认值、进程数和内存仍可能限制线程创建。
+
+旧代码的256可能导致 `libgomp: Thread creation failed`；手工仅调大systemd值但未同步校验可能导致 `pids_limit_not_enforced`。新代码把显式PID值保存在launch快照中，systemd启动、Worker校验、supervisor校验统一使用快照。若仍失败，保留错误及实际限制，不删除执行标记强行重跑。验证范围见[PID上限回归记录](validation/execution-pids-20261119/README.md)。

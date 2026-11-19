@@ -49,3 +49,6 @@
 
 ## 单回合映射时机修复
 已复现 per_episode 输入为 episodes=1，但 cs_entry 在循环前把 task.episodes 映射成总量10。Worker 的旧占位符展开也会提前固化 seed、输入/工作/输出路径。宿主机显式 per_episode 客户端应推迟这些动态占位符到单回合上下文生成后，并在该上下文绑定 argv/env。SDK 命令显式 per_episode 同样采用单回合输入；旧 whole_task SDK 和 Docker 保持原契约。外层任务总量、事件编号与 journal 路径保持不变。无需数据库迁移，更新节点 Worker/Runner；不能将本地复现等同于不可访问现场的确定根因。
+
+## 可选业务 PID 上限
+节点 Worker JSON 的 execution_pids_limit 为 null/缺省或正整数（布尔值、字符串、0、负数拒绝）。缺省不添加 TasksMax 或 Docker --pids-limit，不校验未申请的 pids 控制器；仍受运行时默认值、父级 cgroup 和系统资源约束。显式值在宿主机 create 时写入 launch.resource_limits.pids，start 从同一快照设置 TasksMax 和启动后校验，supervisor读取相同字段，避免不同默认值漂移。旧未带 pids 的 launch 在启动前补入节点当前配置；已启动执行不改写。Docker直接使用同一配置解析器。32进程的短时探测保持独立。无需迁移或重建业务镜像，更新并重启所有相关Worker后新执行生效。

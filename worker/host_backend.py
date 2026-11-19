@@ -9,6 +9,7 @@ import uuid
 import pwd
 from .host_environments import probe,user_environment
 from .storage import atomic_json
+from .resource_limits import execution_pids_limit
 from .workspace import execution_dirs,validate_storage,disk_status
 from runner.template_contract import host_config
 from runner.image_runtime import TOKEN,environment
@@ -61,6 +62,7 @@ class HostBackend:
         (self.root/'launch.json').unlink(missing_ok=True)
     def create(self,task):
         w=self.worker
+        pids=execution_pids_limit(w.config)
         npu=None
         account=None
         if task.get('accelerator_type')=='npu':
@@ -176,7 +178,7 @@ class HostBackend:
                             PYTHONPATH=platform_root+':'+str(code_root))
         login_source=host.get('environment_source')=='login'
         platform_python=sys.executable if generic or login_source else profile['python']
-        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3},'execution_id':task['execution_id'],'started':False,'command':[platform_python,'-m',module],'environment':platform_env if login_source else env,'cwd':values['work_dir']}
+        launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3,'pids':pids},'execution_id':task['execution_id'],'started':False,'command':[platform_python,'-m',module],'environment':platform_env if login_source else env,'cwd':values['work_dir']}
         if task.get('log_protocol') == 2:launch['log_protocol']=2
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
@@ -202,12 +204,16 @@ class HostBackend:
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())
         if launch['started']:raise RuntimeError('refusing duplicate host launch')
+        limits=launch.setdefault('resource_limits',{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3})
+        if 'pids' not in limits:limits['pids']=execution_pids_limit(self.worker.config)
+        pids=execution_pids_limit({'execution_pids_limit':limits['pids']})
         owner=path.stat()
         # This is a durable launch-attempt marker, not proof of a running unit.
         # Writing it after systemd-run would permit duplicate launch after a crash.
         launch['started']=True;atomic_json(path,launch)
         if self.system:os.chown(path,owner.st_uid,owner.st_gid)
-        properties={'Description':'Mini Eval execution '+task['execution_id'],'TasksMax':'256','KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
+        properties={'Description':'Mini Eval execution '+task['execution_id'],'KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
+        if pids is not None:properties['TasksMax']=str(pids)
         if task['cpus']:properties['CPUQuota']=str(task['cpus']*100)+'%'
         if task['ram_gb']:properties['MemoryMax']=str(task['ram_gb'])+'G'
         command=['systemd-run',*([] if self.system else ['--user']),'--quiet','--unit='+self.unit(task['execution_id']),'--working-directory='+str(Path(__file__).resolve().parent.parent)]
@@ -224,7 +230,7 @@ class HostBackend:
         try:
             group=self.control('show',self.unit(task['execution_id']),'--property=ControlGroup','--value').stdout.strip()
             from .resource_limits import verify_group
-            verify_group(group,task['cpus'],task['ram_gb']*1024**3)
+            verify_group(group,task['cpus'],task['ram_gb']*1024**3,pids)
         except Exception:
             self.stop(task['execution_id'])
             raise

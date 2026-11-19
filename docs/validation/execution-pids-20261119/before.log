@@ -1,0 +1,142 @@
+FFFFFFFFFFFFFFFFFFFFFF.............                                      [100%]
+=================================== FAILURES ===================================
+________________ test_host_snapshot_and_start_share_limit[None] ________________
+backend/tests/test_execution_pids.py:23: in test_host_snapshot_and_start_share_limit
+    assert launch['resource_limits']['pids']==value
+E   KeyError: 'pids'
+_________________ test_host_snapshot_and_start_share_limit[1] __________________
+backend/tests/test_execution_pids.py:23: in test_host_snapshot_and_start_share_limit
+    assert launch['resource_limits']['pids']==value
+E   KeyError: 'pids'
+_______________ test_host_snapshot_and_start_share_limit[355442] _______________
+backend/tests/test_execution_pids.py:23: in test_host_snapshot_and_start_share_limit
+    assert launch['resource_limits']['pids']==value
+E   KeyError: 'pids'
+______________ test_host_snapshot_and_start_share_limit[3355442] _______________
+backend/tests/test_execution_pids.py:23: in test_host_snapshot_and_start_share_limit
+    assert launch['resource_limits']['pids']==value
+E   KeyError: 'pids'
+_______________________ test_docker_optional_limit[None] _______________________
+backend/tests/test_execution_pids.py:41: in test_docker_optional_limit
+    if value is None:assert '--pids-limit' not in calls[0]
+E   AssertionError: assert '--pids-limit' not in ('create', '--name', 'mini-eval-a1a3dbd6-d2a7-463c-856d-df94c8223748', '--label', 'mini-eval.execution=a1a3dbd6-d2a7-463c-856d-df94c8223748', '--label', ...)
+________________________ test_docker_optional_limit[1] _________________________
+backend/tests/test_execution_pids.py:42: in test_docker_optional_limit
+    else:assert calls[0][calls[0].index('--pids-limit')+1]==str(value)
+E   AssertionError: assert '256' == '1'
+E     
+E     - 1
+E     + 256
+_____________________ test_docker_optional_limit[3355442] ______________________
+backend/tests/test_execution_pids.py:42: in test_docker_optional_limit
+    else:assert calls[0][calls[0].index('--pids-limit')+1]==str(value)
+E   AssertionError: assert '256' == '3355442'
+E     
+E     - 3355442
+E     + 256
+_______________ test_invalid_limit_rejected_before_docker[True] ________________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_______________ test_invalid_limit_rejected_before_docker[False] _______________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_________________ test_invalid_limit_rejected_before_docker[0] _________________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________________ test_invalid_limit_rejected_before_docker[-1] _________________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________________ test_invalid_limit_rejected_before_docker[256] ________________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________________ test_invalid_limit_rejected_before_docker[1.5] ________________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+______________ test_invalid_limit_rejected_before_docker[value6] _______________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+______________ test_invalid_limit_rejected_before_docker[value7] _______________
+backend/tests/test_execution_pids.py:48: in test_invalid_limit_rejected_before_docker
+    with pytest.raises(ValueError,match='execution_pids_limit'):w.create(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+___________ test_legacy_host_launch_gets_policy_before_marker[None] ____________
+backend/tests/test_execution_pids.py:67: in test_legacy_host_launch_gets_policy_before_marker
+    assert json.loads(path.read_text())['resource_limits']=={'cpus':0,'memory_bytes':0,'pids':value}
+E   KeyError: 'resource_limits'
+___________ test_legacy_host_launch_gets_policy_before_marker[4096] ____________
+backend/tests/test_execution_pids.py:67: in test_legacy_host_launch_gets_policy_before_marker
+    assert json.loads(path.read_text())['resource_limits']=={'cpus':0,'memory_bytes':0,'pids':value}
+E   KeyError: 'resource_limits'
+___________ test_legacy_host_launch_gets_policy_before_marker[False] ___________
+backend/tests/test_execution_pids.py:63: in test_legacy_host_launch_gets_policy_before_marker
+    with pytest.raises(ValueError,match='execution_pids_limit'):host.start(task)
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________ test_pid_verification_optional_or_bounded[max-None-True-True] _________
+backend/tests/test_execution_pids.py:78: in test_pid_verification_optional_or_bounded
+    if valid:limits.verify_group('/job',0,0,requested)
+worker/resource_limits.py:86: in verify_group
+    if tasks=='max' or not 0<int(tasks)<=pids:raise ValueError('pids_limit_not_enforced')
+E   ValueError: pids_limit_not_enforced
+________ test_pid_verification_optional_or_bounded[max-None-True-False] ________
+backend/tests/test_execution_pids.py:78: in test_pid_verification_optional_or_bounded
+    if valid:limits.verify_group('/job',0,0,requested)
+worker/resource_limits.py:86: in verify_group
+    if tasks=='max' or not 0<int(tasks)<=pids:raise ValueError('pids_limit_not_enforced')
+E   ValueError: pids_limit_not_enforced
+________ test_pid_verification_optional_or_bounded[None-None-True-True] ________
+backend/tests/test_execution_pids.py:78: in test_pid_verification_optional_or_bounded
+    if valid:limits.verify_group('/job',0,0,requested)
+worker/resource_limits.py:59: in verify_group
+    tasks=(root/'pids.max').read_text().strip()
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+/opt/anaconda3/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:537: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-583/test_pid_verification_optional2/job/pids.max'
+_______ test_pid_verification_optional_or_bounded[None-None-True-False] ________
+backend/tests/test_execution_pids.py:78: in test_pid_verification_optional_or_bounded
+    if valid:limits.verify_group('/job',0,0,requested)
+worker/resource_limits.py:83: in verify_group
+    tasks=read('pids','pids.max')
+worker/resource_limits.py:80: in read
+    return (CGROUP_ROOT/controller/path.lstrip('/')/name).read_text().strip()
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+/opt/anaconda3/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:537: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-583/test_pid_verification_optional3/pids/job/pids.max'
+=========================== short test summary info ============================
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[None]
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[1]
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[355442]
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[3355442]
+FAILED backend/tests/test_execution_pids.py::test_docker_optional_limit[None]
+FAILED backend/tests/test_execution_pids.py::test_docker_optional_limit[1] - ...
+FAILED backend/tests/test_execution_pids.py::test_docker_optional_limit[3355442]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[True]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[False]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[0]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[-1]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[256]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[1.5]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[value6]
+FAILED backend/tests/test_execution_pids.py::test_invalid_limit_rejected_before_docker[value7]
+FAILED backend/tests/test_execution_pids.py::test_legacy_host_launch_gets_policy_before_marker[None]
+FAILED backend/tests/test_execution_pids.py::test_legacy_host_launch_gets_policy_before_marker[4096]
+FAILED backend/tests/test_execution_pids.py::test_legacy_host_launch_gets_policy_before_marker[False]
+FAILED backend/tests/test_execution_pids.py::test_pid_verification_optional_or_bounded[max-None-True-True]
+FAILED backend/tests/test_execution_pids.py::test_pid_verification_optional_or_bounded[max-None-True-False]
+FAILED backend/tests/test_execution_pids.py::test_pid_verification_optional_or_bounded[None-None-True-True]
+FAILED backend/tests/test_execution_pids.py::test_pid_verification_optional_or_bounded[None-None-True-False]
+22 failed, 13 passed in 0.74s

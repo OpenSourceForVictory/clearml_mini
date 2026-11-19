@@ -1,0 +1,6 @@
+ERROR: file or directory not found: backend/tests/test_npu_host.py
+
+
+no tests ran in 0.00s
+/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/coverage/control.py:967: CoverageWarning: No data was collected. (no-data-collected); see https://coverage.readthedocs.io/en/7.17.3/messages.html#warning-no-data-collected
+  self._warn("No data was collected.", slug="no-data-collected")
