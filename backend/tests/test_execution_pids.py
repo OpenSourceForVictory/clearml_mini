@@ -11,11 +11,12 @@ from worker import resource_limits as limits
 from worker.host_backend import HostBackend
 
 
-@pytest.mark.parametrize('value', [None, 1, 355442, 3355442])
+@pytest.mark.parametrize('value', ['missing', None, 1, 355442, 3355442])
 def test_host_snapshot_and_start_share_limit(tmp_path, monkeypatch, value):
     (tmp_path/'app.py').write_text('pass')
     w=host_worker(tmp_path,['python3','app.py'])
-    w.config['execution_pids_limit']=value
+    if value != 'missing':w.config['execution_pids_limit']=value
+    else:value=None
     host=HostBackend(w);host.system=False
     monkeypatch.setattr('worker.host_backend.probe',lambda *a:None)
     host.create(w.state['task'])
@@ -29,17 +30,17 @@ def test_host_snapshot_and_start_share_limit(tmp_path, monkeypatch, value):
     monkeypatch.setattr(limits,'verify_group',lambda *a:verified.append(a))
     host.start(w.state['task'])
     props=[arg for arg in calls[0] if arg.startswith('--property=TasksMax=')]
-    assert props==([] if value is None else ['--property=TasksMax='+str(value)])
+    assert props==['--property=TasksMax='+('infinity' if value is None else str(value))]
     assert verified==[('/job',1,1024**3,value)]
 
 
-@pytest.mark.parametrize('value', [None, 1, 3355442])
+@pytest.mark.parametrize('value', ['missing', None, 1, 3355442])
 def test_docker_optional_limit(container,value):
     w,task,calls,_=container
-    w.config['execution_pids_limit']=value
+    if value != 'missing':w.config['execution_pids_limit']=value
+    else:value=None
     w.create(task)
-    if value is None:assert '--pids-limit' not in calls[0]
-    else:assert calls[0][calls[0].index('--pids-limit')+1]==str(value)
+    assert calls[0][calls[0].index('--pids-limit')+1]==('-1' if value is None else str(value))
 
 
 @pytest.mark.parametrize('value', [True, False, 0, -1, '256', 1.5, {}, []])

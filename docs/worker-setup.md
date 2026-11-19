@@ -119,4 +119,4 @@ SSH 纳管界面提示执行器未配置或不可用时，检查 [SSH 纳管执�
 
 ## 可选业务 PID 上限
 
-Worker 0.21.3起，宿主机和Docker业务默认继承运行时PID限制，不再强制256。每卡Worker JSON顶层 `execution_pids_limit` 可设null或正整数，空闲重启后新任务生效；不是环境变量，旧Worker不会读取它。配置、线程计数及验证命令见[业务进程与线程上限](host-execution.md#业务进程与线程上限worker-0213)。
+Worker 0.21.4起，宿主机和Docker业务默认显式取消执行实例PID上限（TasksMax=infinity、--pids-limit=-1），不再强制256。每卡Worker JSON顶层 `execution_pids_limit` 可设null或正整数，空闲重启后新任务生效；不是环境变量，旧Worker不会读取它。配置、线程计数及验证命令见[业务进程与线程上限](host-execution.md#业务进程与线程上限worker-0214)。

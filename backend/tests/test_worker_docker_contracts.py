@@ -53,7 +53,7 @@ def test_unlimited_container_axes_omit_only_selected_limits(container,cpus,ram_g
     worker.create(task)
     create=calls[0]
     assert all(option not in create for option in missing)
-    assert '--pids-limit' not in create
+    assert create[create.index('--pids-limit')+1]=='-1'
     if cpus:assert create[create.index('--cpus')+1]==str(cpus)
     if ram_gb:assert create[create.index('--memory')+1]==str(ram_gb)+'g'
 

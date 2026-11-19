@@ -3,9 +3,9 @@
 ### Requirement: 可选业务进程线程上限
 Worker SHALL 对宿主机和Docker使用节点 execution_pids_limit 可选正整数，缺省或null时不添加平台PID上限。
 
-#### Scenario: 继承运行时默认
+#### Scenario: 默认不额外限制
 - **WHEN** 节点未设置上限或设为null
-- **THEN** 业务启动不传TasksMax或--pids-limit，不检查未申请的PID额度；运行时与系统限制仍生效
+- **THEN** 业务启动显式传TasksMax=infinity或--pids-limit=-1，不检查未申请的PID额度；运行时与系统限制仍生效
 
 #### Scenario: 显式上限
 - **WHEN** 节点配置正整数

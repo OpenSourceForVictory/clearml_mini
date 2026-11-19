@@ -1,0 +1,45 @@
+FF...FF................................FFF.........                      [100%]
+=================================== FAILURES ===================================
+______________ test_host_snapshot_and_start_share_limit[missing] _______________
+backend/tests/test_execution_pids.py:33: in test_host_snapshot_and_start_share_limit
+    assert props==['--property=TasksMax='+('infinity' if value is None else str(value))]
+E   AssertionError: assert [] == ['--property=...Max=infinity']
+E     
+E     Right contains one more item: '--property=TasksMax=infinity'
+E     Use -v to get more diff
+________________ test_host_snapshot_and_start_share_limit[None] ________________
+backend/tests/test_execution_pids.py:33: in test_host_snapshot_and_start_share_limit
+    assert props==['--property=TasksMax='+('infinity' if value is None else str(value))]
+E   AssertionError: assert [] == ['--property=...Max=infinity']
+E     
+E     Right contains one more item: '--property=TasksMax=infinity'
+E     Use -v to get more diff
+_____________________ test_docker_optional_limit[missing] ______________________
+backend/tests/test_execution_pids.py:43: in test_docker_optional_limit
+    assert calls[0][calls[0].index('--pids-limit')+1]==('-1' if value is None else str(value))
+E   ValueError: tuple.index(x): x not in tuple
+_______________________ test_docker_optional_limit[None] _______________________
+backend/tests/test_execution_pids.py:43: in test_docker_optional_limit
+    assert calls[0][calls[0].index('--pids-limit')+1]==('-1' if value is None else str(value))
+E   ValueError: tuple.index(x): x not in tuple
+____ test_unlimited_container_axes_omit_only_selected_limits[0-0-missing0] _____
+backend/tests/test_worker_docker_contracts.py:56: in test_unlimited_container_axes_omit_only_selected_limits
+    assert create[create.index('--pids-limit')+1]=='-1'
+E   ValueError: tuple.index(x): x not in tuple
+____ test_unlimited_container_axes_omit_only_selected_limits[0-4-missing1] _____
+backend/tests/test_worker_docker_contracts.py:56: in test_unlimited_container_axes_omit_only_selected_limits
+    assert create[create.index('--pids-limit')+1]=='-1'
+E   ValueError: tuple.index(x): x not in tuple
+____ test_unlimited_container_axes_omit_only_selected_limits[2-0-missing2] _____
+backend/tests/test_worker_docker_contracts.py:56: in test_unlimited_container_axes_omit_only_selected_limits
+    assert create[create.index('--pids-limit')+1]=='-1'
+E   ValueError: tuple.index(x): x not in tuple
+=========================== short test summary info ============================
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[missing]
+FAILED backend/tests/test_execution_pids.py::test_host_snapshot_and_start_share_limit[None]
+FAILED backend/tests/test_execution_pids.py::test_docker_optional_limit[missing]
+FAILED backend/tests/test_execution_pids.py::test_docker_optional_limit[None]
+FAILED backend/tests/test_worker_docker_contracts.py::test_unlimited_container_axes_omit_only_selected_limits[0-0-missing0]
+FAILED backend/tests/test_worker_docker_contracts.py::test_unlimited_container_axes_omit_only_selected_limits[0-4-missing1]
+FAILED backend/tests/test_worker_docker_contracts.py::test_unlimited_container_axes_omit_only_selected_limits[2-0-missing2]
+7 failed, 44 passed in 1.52s

@@ -1,0 +1,204 @@
+{
+  "release": {
+    "id": "646a34ac98621c79ed4cc825f337888b839f770dac23f29be152b5fc25642857",
+    "version": "0.21.4",
+    "protocol_version": 17,
+    "capabilities": [
+      "docker",
+      "host",
+      "episode_reporting",
+      "typed_parameters",
+      "directory_mounts",
+      "inference_services",
+      "task_input",
+      "command_tasks",
+      "accelerator_contract",
+      "ascend_docker",
+      "ascend_host",
+      "service_readiness_v1",
+      "host_login_environment",
+      "host_episode_launch",
+      "bounded_logs_v2"
+    ],
+    "created_at": "2026-11-19T04:04:54.379689+00:00"
+  },
+  "fleet": [
+    {
+      "node": "ascend910b3-29",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "48e5ef51-5f9f-4f3e-a7fd-e31efea8b68f",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "269684ce-5f94-41e9-bc7d-83dddadd8044",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "b5b18d07-6ed9-4bc5-8eaf-ff8d48beeff4",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "2ad4afa2-8649-45ea-84ee-cc4e59ff1e3d",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "847e8acc-2bc1-415d-afeb-f37ac7792b7e",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "79981452-f401-40f9-94f8-45d179891997",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "8a54516b-5325-4a48-b500-cc4c0eb5c49e",
+          "version": "0.21.4",
+          "online": true
+        },
+        {
+          "id": "3549524a-15a0-46ec-b8df-22736c8b6d39",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    },
+    {
+      "node": "local4090-151",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    },
+    {
+      "node": "rtx3080-182",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    },
+    {
+      "node": "rtx4090-157",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "c49eb13e-bb5c-4497-99a1-1ac615d9dfde",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    },
+    {
+      "node": "rtx4090-183",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "245341bd-9b33-45b9-9b46-b1c59a41b80c",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    },
+    {
+      "node": "rtx8000-177",
+      "enabled": true,
+      "held_executions": 0,
+      "slots": [
+        {
+          "id": "a339dca3-1167-408c-aa03-48c800d9bce2",
+          "version": "0.21.4",
+          "online": true
+        }
+      ]
+    }
+  ],
+  "docker_runtime_default": {
+    "pids_limit": null,
+    "cgroup": "/system.slice/docker-21db233db7875cf33c64603cb60909d9274685941eaa66d627e701fe8472a9bd.scope",
+    "pids_max": "76745",
+    "scope": "TasksMax=76745\n"
+  },
+  "checks": [
+    {
+      "mode": "host",
+      "job_id": "327488d6-05c0-4d9a-90b2-ebb732d098a7",
+      "status": "SUCCEEDED",
+      "attempts": [
+        {
+          "id": "42b541a6-ad68-46b9-8549-ddf021ff83e6",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "metrics": null,
+          "error": null,
+          "cleanup_confirmed": true,
+          "slot_id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "reserved_vram_mb": 24564,
+          "log_bytes": 226,
+          "endpoint": null,
+          "service_instance_id": null,
+          "service_execution_id": null,
+          "service_key": null,
+          "waiting_service": false,
+          "endpoint_mode": null,
+          "endpoint_candidates": []
+        }
+      ],
+      "output": "PIDS_SMOKE {\"limit\": \"max\", \"current\": \"303\", \"threads_created\": 300, \"uid\": 1001, \"cgroup\": \"/sys/fs/cgroup/user.slice/user-1001.slice/user@1001.service/app.slice/mini-eval-exec-5e96069a-6ecd-4d16-99ed-d924471ff896.service\"}\n"
+    },
+    {
+      "mode": "docker",
+      "job_id": "2743ed53-70ef-4057-af3f-ac5285fa5f91",
+      "status": "SUCCEEDED",
+      "attempts": [
+        {
+          "id": "ad229ee8-527d-4ada-b58c-545eb6aeae2e",
+          "attempt": 1,
+          "status": "SUCCEEDED",
+          "metrics": null,
+          "error": null,
+          "cleanup_confirmed": true,
+          "slot_id": "18ffd929-e4e3-47eb-b175-ed97e2dd57a2",
+          "reserved_vram_mb": 10240,
+          "log_bytes": 110,
+          "endpoint": null,
+          "service_instance_id": null,
+          "service_execution_id": null,
+          "service_key": null,
+          "waiting_service": false,
+          "endpoint_mode": null,
+          "endpoint_candidates": []
+        }
+      ],
+      "output": "PIDS_SMOKE {\"limit\": \"57402\", \"current\": \"303\", \"threads_created\": 300, \"uid\": 0, \"cgroup\": \"/sys/fs/cgroup\"}\n"
+    }
+  ],
+  "npu_service": {
+    "id": "31393990-c2fa-4178-a2af-bed5061d6cff",
+    "state": "STOPPED",
+    "output": "{\"stage\": \"starting-service\", \"port\": 19500}\nPIDS_SMOKE {\"limit\": \"max\", \"current\": \"303\", \"threads_created\": 300, \"uid\": 1001, \"cgroup\": \"/sys/fs/cgroup/pids/system.slice/mini-eval-exec-3561ca95-04fa-4d12-91b7-bbf57e716510.service\"}\n"
+  },
+  "first_docker_failure": {
+    "id": "7e0e26b0-3845-43f5-9e10-833e4db60925",
+    "status": "FAILED",
+    "error": "Traceback (most recent call last):\n  File \"<string>\", line 13, in <module>\nAssertionError: ('unexpected execution limit', '76745')\n"
+  }
+}

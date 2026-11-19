@@ -10,7 +10,7 @@ REQUIRED = {'cpu', 'memory', 'pids'}
 
 
 def execution_pids_limit(config):
-    """None inherits runtime defaults; an explicit positive integer bounds tasks."""
+    """None disables the per-execution PID limit; positive integers bound tasks."""
     value = config.get('execution_pids_limit')
     if value is not None and (type(value) is not int or value <= 0):
         raise ValueError('execution_pids_limit must be null or a positive integer')

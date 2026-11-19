@@ -169,4 +169,6 @@ Agent HTTP 集成测试的模拟 systemctl 状态只在 start/stop 时写入，�
 
 Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10回合、direct/普通命令/sdk-command及两种日志协议；断言实际业务进程 argv、环境、JSON输入及上报事件seed一致，取模2147483648回绕，字面量参数不改写。
 
-业务PID上限（Worker0.21.3）：worker/resource_limits.execution_pids_limit统一校验节点null/缺省或正整数；host_backend在launch.resource_limits.pids持久化，systemd与两处verify使用同一快照。client.create按同一配置添加或省略Docker --pids-limit；缺省不添加平台额度，不保证系统无限制。探测32不变。操作见docs/host-execution.md、worker-setup.md，回归test_execution_pids.py及验证记录docs/validation/execution-pids-20261119/README.md。
+业务PID上限（Worker0.21.4）：worker/resource_limits.execution_pids_limit统一校验节点null/缺省或正整数；host_backend在launch.resource_limits.pids持久化，systemd与两处verify使用同一快照。client.create按同一配置设置Docker --pids-limit（缺省/null为-1）；缺省/null使用TasksMax=infinity，不保证系统无限制。探测32不变。操作见docs/host-execution.md、worker-setup.md，回归test_execution_pids.py及验证记录docs/validation/execution-pids-20261119/README.md。
+
+0.21.4发布验证见docs/validation/unlimited-pids-20261119/README.md：6机13槽升级成功；宿主机客户端和NPU节点服务pids.max=max，Docker -1仍可能被运行时systemd scope默认限制为有限值，检查实际cgroup，不以参数代替生效证据。

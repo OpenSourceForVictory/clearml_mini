@@ -1,0 +1,16 @@
+........................................................................ [ 36%]
+.................................................sss.................... [ 73%]
+................sssss................................                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] backend/tests/test_host_backend.py:33: set HOST_EXECUTION_TEST=1 for real systemd user units
+SKIPPED [1] backend/tests/test_host_backend.py:61: real systemd opt-in
+SKIPPED [1] backend/tests/test_host_backend.py:78: real systemd opt-in
+SKIPPED [1] backend/tests/test_managed_host.py:72: requires root, systemd and provisioned mini-eval test account
+SKIPPED [4] backend/tests/test_managed_host.py:81: requires root, systemd and provisioned mini-eval test account
+189 passed, 8 skipped, 1 warning in 23.59s

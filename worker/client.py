@@ -214,7 +214,7 @@ class Worker:
                 '--label', 'mini-eval.execution=' + task['execution_id'], '--label', 'mini-eval.slot=' + self.slot_id,
                 '--network', 'bridge' if cs else 'none', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                 '--log-driver', 'json-file', '--log-opt', 'max-size=1m', '--log-opt', 'max-file=1']
-        if pids is not None:args.extend(['--pids-limit',str(pids)])
+        args.extend(['--pids-limit','-1' if pids is None else str(pids)])
         if task['cpus']:args.extend(['--cpus',str(task['cpus'])])
         if task['ram_gb']:args.extend(['--memory',str(task['ram_gb'])+'g'])
         if is_service(task):

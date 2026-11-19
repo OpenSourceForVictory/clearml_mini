@@ -79,4 +79,6 @@ Runner 没有独立版本号，随节点组件包更新宿主机代码；使用�
 
 Worker 0.21.2 修复宿主机显式 per_episode 的回合数、种子、输入及目录映射时机；必须更新 Worker 和随包 Runner 后提交新任务。无需额外数据库迁移，Docker/整任务契约不变。见 [宿主机参数映射说明](host-execution.md#单回合参数映射修复worker-0212)。
 
-Worker 0.21.3移除宿主机/Docker业务固定256进程线程限制，支持节点可选 `execution_pids_limit`。需要升级全部相关每卡Worker，新执行生效；无数据库迁移、协议仍为17、不需要重建业务镜像。配置和运行时默认值边界见[宿主机执行](host-execution.md)。
+Worker 0.21.4移除宿主机/Docker业务固定256进程线程限制，支持节点可选 `execution_pids_limit`。需要升级全部相关每卡Worker，新执行生效；无数据库迁移、协议仍为17、不需要重建业务镜像。配置和运行时默认值边界见[宿主机执行](host-execution.md)。
+
+0.21.3的null/省略表示继承运行时默认；0.21.4改为显式TasksMax=infinity、Docker --pids-limit=-1。已有正整数继续生效；CPU/内存和短时探测不变。
