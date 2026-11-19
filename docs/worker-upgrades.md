@@ -89,3 +89,14 @@ Worker/Runner 0.21.5 增加回合结果受控诊断：程序退出 0 与协议�
 ## 0.21.6 独立日志接线
 
 协议仍为 17，新增 `process_logs_v1` 能力。先更新 API/前端并确认数据库已有 `z629c01`，再通过原节点升级流程更新选定 Worker；Runner 的 process_log_capture、process_log_store、process_log_run、process_log_contract 模块须与包一同更新，不仅替换 client.py。新任务才协商该能力，旧执行保持原行为。容器使用独立执行日志挂载和支持注入的 Runner，旧镜像不强制启用。此文档不是节点已升级的证明。详见 [执行日志](execution-logs.md)。
+
+## SDK 和使用指南是否随更新生效
+
+节点组件发布包包含整个 `runner/`，包括原生 Python SDK `runner/sdk.py`。只拉取或提交仓库代码不会自动升级节点；先部署控制端源码、发布组件包，再对指定节点排空升级并核对发布摘要。
+
+- 宿主机：平台入口使用节点安装目录中的 Runner；业务进程的 PYTHONPATH 默认包含该目录。业务自行更改导入路径或携带同名 runner 包时，要核对实际导入来源，不能仅凭 Worker 版本判定。
+- 容器运行适配器：Worker 在新容器执行中复制当前节点的 Runner。升级节点后新执行采用新版；已有执行不热替换。
+- 旧式镜像内置 Runner 或业务自行安装的 SDK：节点组件升级不修改镜像或业务环境，需单独更新并验证。
+- 界面使用指南随前端版本发布；仓库操作文档和 Skill 随代码变更同步。提交文档并不等于现场页面已更新，需要部署对应前端。
+
+原生 Python SDK 程序在客户端模板选择“直接评测协议”（`integration_mode=direct`），由业务程序导入 EvaluationClient；不是新增名为 sdk 的接入方式。

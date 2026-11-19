@@ -558,3 +558,199 @@ def test_process_log_launch_modes(
             failure == "none"
         )
     assert all(e["status"] == "closed" for e in entries)
+
+
+@pytest.mark.parametrize(
+    "execution_mode,launch,error_policy",
+    [
+        ("host", "whole_task", "stop"),
+        ("host", "whole_task", "continue"),
+        ("host", "per_episode", "stop"),
+        ("host", "per_episode", "continue"),
+        ("docker", "whole_task", "stop"),
+    ],
+)
+@pytest.mark.parametrize(
+    "outcome", ["success", "business_false", "exception", "invalid_result", "exit"]
+)
+def test_native_sdk_process_logs(
+    tmp_path, execution_mode, launch, error_policy, outcome
+):
+    """Exercise the actual EvaluationClient API, not the command adapter."""
+    image = os.environ.get("PROCESS_LOG_TEST_IMAGE")
+    if execution_mode == "docker" and not image:
+        pytest.skip("set PROCESS_LOG_TEST_IMAGE for real Docker integration")
+    config = setup_log(tmp_path)
+    work, out = tmp_path / "work", tmp_path / "output"
+    work.mkdir()
+    out.mkdir()
+    per_episode = launch == "per_episode"
+    script = tmp_path / "native_client.py"
+    script.write_text(
+        """import json,os,sys
+from pathlib import Path
+from runner.sdk import EvaluationClient,EpisodeResult,run
+class Client(EvaluationClient):
+ def setup(self, context):
+  print('NATIVE_SETUP', flush=True)
+ def run_episode(self, task, episode, context):
+  parent=int(os.environ.get('MINI_EVAL_EPISODE_ID',episode.id))
+  print('NATIVE_CALL '+json.dumps({'parent':parent,'episode':episode.id,'seed':episode.seed,'episodes':task['episodes'],'business':context.business,'marker':os.environ.get('SDK_MARKER')}),flush=True)
+  print('NATIVE_STDERR '+str(parent),file=sys.stderr,flush=True)
+  if parent==2:
+"""
+        + {
+            "success": "   pass\n",
+            "business_false": "   return EpisodeResult(False)\n",
+            "exception": "   raise RuntimeError('native test exception')\n",
+            "invalid_result": "   return None\n",
+            "exit": "   raise SystemExit(7)\n",
+        }[outcome]
+        + """  return EpisodeResult(True)
+ def teardown(self):
+  print('NATIVE_TEARDOWN',flush=True)
+run(Client(),json.loads(Path(os.environ['MINI_EVAL_INPUT']).read_text()))
+"""
+    )
+    python = "python3" if execution_mode == "docker" else sys.executable
+    task = dict(
+        contract_version=1,
+        service_mode="none",
+        endpoint="",
+        task_name="native",
+        episodes=3,
+        seed=2147483647,
+        parameters={"label": "native-param"},
+        template=dict(
+            execution_mode=execution_mode,
+            integration_mode="direct",  # Native SDK programs emit the direct protocol.
+            task_type="evaluation",
+            host_runtime=dict(
+                command_mode="exec",
+                episode_launch=launch,
+                episode_error_policy=error_policy,
+            ),
+            command=[python, str(script)],
+        ),
+        _resolved_command=[python, str(script)],
+        _resolved_environment={},
+        _resolved_cwd=str(tmp_path),
+        _process_logs=config,
+    )
+    path = tmp_path / "input.json"
+    path.write_text(json.dumps(task))
+    environment = dict(
+        PYTHONPATH=str(Path.cwd()),
+        MINI_EVAL_INPUT=str(path),
+        MINI_EVAL_WORK_DIR=str(work),
+        MINI_EVAL_OUTPUT_DIR=str(out),
+        SDK_MARKER="native-env",
+    )
+    command = [python, "-m", "runner.cs_entry"]
+    if execution_mode == "docker":
+        tmp_path.chmod(0o777)
+        for p in (work, out, Path(config["root"])):
+            p.chmod(0o777)
+        (Path(config["root"]) / ".lock").chmod(0o666)
+        command = [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+            "--entrypoint",
+            "python3",
+            "--workdir",
+            "/adapter",
+            "--mount",
+            f"type=bind,source={tmp_path},target={tmp_path}",
+            "--mount",
+            f"type=bind,source={Path.cwd() / 'runner'},target=/adapter/runner,readonly",
+        ]
+        environment["PYTHONPATH"] = "/adapter"
+        for k, v in environment.items():
+            command.extend(["-e", k + "=" + v])
+        command.extend([image, "-m", "runner.cs_entry"])
+    result = subprocess.run(
+        command,
+        env={**os.environ, **environment},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    failed = outcome in ("exception", "invalid_result", "exit")
+    continuing = per_episode and error_policy == "continue"
+    count = 2 if failed and not continuing else 3
+    assert (result.returncode != 0) == failed, result.stderr
+    if outcome == "exit" and not per_episode:
+        assert result.returncode == 7
+    calls = [
+        json.loads(line.removeprefix("NATIVE_CALL "))
+        for line in result.stdout.splitlines()
+        if line.startswith("NATIVE_CALL ")
+    ]
+    assert [c["parent"] for c in calls] == list(range(1, count + 1)), result.stderr
+    assert [c["seed"] for c in calls] == [2147483647, 0, 1][:count]
+    assert [c["episode"] for c in calls] == (
+        [1] * count if per_episode else list(range(1, count + 1))
+    )
+    assert all(c["episodes"] == (1 if per_episode else 3) for c in calls)
+    assert all(c["marker"] == "native-env" for c in calls)
+    assert all(c["business"] == {"label": "native-param"} for c in calls)
+    events = [
+        json.loads(line) for line in (work / "episodes.jsonl").read_text().splitlines()
+    ]
+    # SystemExit bypasses the native SDK's Exception handler; the outer host
+    # per-episode adapter still records the observed process exit as ERROR.
+    expected = []
+    for i in range(1, count + 1):
+        expected.append("STARTED")
+        if i == 2 and outcome == "exit" and not per_episode:
+            continue
+        expected.append("ERROR" if i == 2 and failed else "COMPLETED")
+    assert [e["status"] for e in events] == expected
+    published = [
+        line
+        for line in result.stdout.splitlines()
+        if line.startswith("MINI_EVAL_EVENT ")
+    ]
+    assert len(published) == len(events)  # no duplicated child events
+    if outcome == "business_false":
+        assert events[3]["status"] == "COMPLETED" and events[3]["success"] is False
+    finals = [
+        json.loads(line)["final"]
+        for line in result.stdout.splitlines()
+        if line.startswith("{") and '"final"' in line
+    ]
+    assert len(finals) == (0 if failed else 1)
+    if finals:
+        assert finals[0]["episode_count"] == 3
+        assert finals[0]["success_rate"] == (
+            2 / 3 if outcome == "business_false" else 1
+        )
+    entries = list(index(config)["scopes"].values())
+    assert len(entries) == (count if per_episode else 1)
+    assert {e["scope"] for e in entries} == (
+        {"episode"} if per_episode else {"business"}
+    )
+    from runner.process_log_store import relative_directory
+
+    for entry in entries:
+        rows = [
+            json.loads(line)
+            for seg in entry["segments"]
+            for line in (
+                Path(config["root"])
+                / relative_directory(entry["scope"], entry["episode_id"])
+                / seg["name"]
+            )
+            .read_text()
+            .splitlines()
+        ]
+        assert entry["status"] == "closed"
+        assert any(
+            r["stream"] == "stderr" and "NATIVE_STDERR" in r["text"] for r in rows
+        )
+        assert any(r["stream"] == "stdout" and "NATIVE_CALL" in r["text"] for r in rows)

@@ -55,3 +55,7 @@ Runner 在真实业务子进程边界采集 stdout/stderr，仍保留原诊断�
 部署 API/前端并按数据库迁移文档确认已有 `z629c01`，再升级选定 Worker 及随包 Runner。容器需要支持 Runner 注入，旧镜像保留旧能力。本次接线没有增加新的 Alembic revision。未升级节点不会自动出现新文件。
 
 关联验证见 [接线验证记录](validation/process-log-connected-20261119/README.md)。全量压力、配置 revision 界面和大文件分片下载仍未完成，不将基础接线测试等同于完整 OpenSpec 验收或已部署。
+
+原生 Python SDK 补充验证：宿主机整任务模式及 Docker 的 SDK 内循环共用 business 日志；宿主机每回合启动原生 SDK 程序时，各进程接收 episodes=1，分别使用 episode 日志。业务返回 `EpisodeResult(False)` 是正常完成的失败评测结果，不是进程执行异常；异常、非法结果和非零退出分别验证。详见接线验证记录中的原生 SDK 补测。
+
+原生 Python SDK 程序在客户端模板选择“直接评测协议”（`integration_mode=direct`），由业务程序导入 EvaluationClient；不是新增名为 sdk 的接入方式。

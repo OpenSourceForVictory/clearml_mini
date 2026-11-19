@@ -35,3 +35,15 @@
 OpenSpec 复合任务仍保留未完成标记：预算期望/生效 revision 管理界面、超过 8 MiB 下载的分片回退、完整索引崩溃恢复及压力验收。当前只保证已测试的部分写入尾部处理，不宣称所有淘汰/索引崩溃时序已恢复。节点不在线、文件损坏或清理竞争会显示超时/读取失败/busy，原诊断日志仍可用。没有据此降低原验收标准或归档整项设计。
 
 相关操作文档同步：execution-logs、host-execution、worker-setup、worker-upgrades、batch-monitoring、界面指南及项目 Skill 的 project-map。
+
+## 原生 Python SDK 补测（2026-11-19）
+
+`test_native_sdk_process_logs` 新增 25 项，业务直接继承 EvaluationClient，并调用 runner.sdk.run；模板使用真实支持的 `integration_mode=direct`（界面“直接评测协议”）。不是通过 sdk-command 的结果文件间接模拟原生 SDK。
+
+5 种运行配置 × 5 种结果：宿主机整任务 stop/continue、宿主机逐回合 stop/continue、Docker 整任务；结果为正常、EpisodeResult(False)、抛出异常、返回非法结果、SystemExit(7)。整任务配置中的 continue 不扩展为逐回合继续；原生 SDK 的 SystemExit 不生成当前回合 ERROR 事件，宿主机外层逐回合包装仍记录对应非零退出。此项如实验证现有行为，不掩盖差异。
+
+检查参数/环境传递、episodes=3 或单次=1、seed 2147483647→0→1、最终汇总、业务失败与执行失败区分、内外事件不重复、stdout/stderr 来源、business 公共日志或 episode 独立日志。实际 Docker 为普通 UID、断网、注入当前源码，不是发布镜像或平台全链路升级验收。
+
+首次审查发现测试填入了 API 不支持的 integration_mode=sdk；已改为 direct 并重跑，最终新增 25 项通过。没有修改生产执行逻辑。单项输出见 native-sdk-tests.txt；整份接线文件回归 81 项通过、无跳过（包含新 25 项及先前用例），统一口径覆盖率见 native-sdk-regression.txt 和 native-sdk-coverage.md。未插桩的业务子进程和容器不计入覆盖率；覆盖率门槛仍未达到，不以测试通过数替代覆盖率。
+
+同时补充 worker-upgrades、execution-logs、界面升级指南和 Skill：SDK 随节点组件包更新；提交仓库代码不会自动更新节点，旧式业务镜像需独立更新。界面指南需随前端部署才在现场生效。本次不升级平台或节点。

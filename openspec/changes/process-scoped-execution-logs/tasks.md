@@ -45,3 +45,5 @@
 本阶段验证：[独立日志基础模块](../../../docs/validation/process-log-primitives-20261119/README.md)。54 通过、1 跳过，覆盖率门槛未通过；全链路任务仍为 0/20 完整验收，不将基础模块完成等同于整体功能完成。
 
 2026-11-19 用户确认默认不限制整机日志配额，取代上述历史待决阻塞。已接通 Runner 文件采集、Worker 登记/历史读取、API 邮箱和界面抽屉；完成 3.1 组合测试。其他复合任务仍包含尚未验收的压力、恢复、配置界面或发布内容，不把部分实现标为完成。证据见 [接线验证](../../../docs/validation/process-log-connected-20261119/README.md)。
+
+原生 SDK 补测：test_native_sdk_process_logs 新增 25 项实际 EvaluationClient 组合，其中 5 项实际 Docker；核对整任务公共日志、宿主机逐回合日志、事件去重、参数/环境/seed 与错误策略。未因此标记包含取消、同名实例及生产发布的复合任务为完成。

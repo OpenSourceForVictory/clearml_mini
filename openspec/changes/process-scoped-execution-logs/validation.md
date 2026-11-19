@@ -45,3 +45,5 @@
 ## 本次决策与阶段证据
 
 整机配额默认不限制，跨账号配额通道不启用；执行内预算继续有限。现有压测项目仍为完整验收要求，不能以单进程小程序替代。已执行的接线回归与未完成项见 [验证记录](../../../docs/validation/process-log-connected-20261119/README.md)。
+
+原生 SDK 组合要求：真实 EvaluationClient 子类，在 host 整任务（stop/continue 不扩大适用范围）、host per_episode（stop/continue）及 Docker 整任务下覆盖正常、业务结果 False、Exception、非法 EpisodeResult、SystemExit(7)。同时检查回合事件只上报一次、最终汇总、seed 回绕、输入/环境与公共/逐回合日志。独立进程及容器未插桩，不合并为已统计的行覆盖率。
