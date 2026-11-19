@@ -185,3 +185,5 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 历史批次再次运行：`backend/app/batch_rerun.py` 提供只读 `GET /api/v1/batches/{id}/rerun-draft`，按任务/编排快照白名单恢复提交字段，批量检查模板和池；`frontend/src/batch-rerun.ts` 定义草稿契约，列表/详情经 CSWorkbench 导入 RunWizard。来源只在草稿显示，不复用执行地址、实例或幂等键。缺失、异构和不可用配置明确提示；操作见 docs/suite-run-preflight.md，定向测试见 test_batch_rerun.py 与 batch-rerun.spec.ts。无需本功能数据库迁移。
 
 结果布局：frontend/src/batch-history.css 为程序执行/协议结果保留独立列并允许换行；result-outcomes.css 使用专用双列汇总卡片，窄屏堆叠，不复用 submit-grid。batch-history/batch-monitoring 浏览器测试检查文本边界，避免只验证文案却遗漏覆盖相邻列的问题。此修正只需前端发布，无数据库迁移或节点升级。
+
+独立日志基础模块：runner/process_log_capture.py 为增量 JSONL 编码与异步有界写入队列；worker/process_log_reader.py 为可信目录句柄和分片索引上的安全分页。test_process_log_primitives 覆盖真实本地子进程退出、故障 sink、UTF-8、游标隔离、轮转缺口与文件替换。尚未接入 Worker 读取线程或生产 Runner，配额通道待决；不能将模块测试称为真实节点日志功能验收。边界与内部页预算见 docs/execution-logs.md。
