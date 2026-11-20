@@ -1,0 +1,43 @@
+{
+  "commit": "c659a63",
+  "onboarding_list_ok": true,
+  "operation_count": 0,
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "local4090-151",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "status": "online",
+      "enabled": true,
+      "held": 0
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "image": "mini-eval-api:onboarding-db-20261120",
+  "previous_image": "mini-eval-api:layout-20261120",
+  "commit": "c659a63",
+  "worker_upgrade_pending": false,
+  "migration": false,
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "local4090-151",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "enabled": true,
+      "held": 0
+    }
+  ]
+}
