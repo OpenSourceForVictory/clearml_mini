@@ -11,6 +11,7 @@
 | [batch-controls](../../../openspec/changes/batch-controls/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [batch-delete-error-diagnostics](../../../openspec/changes/batch-delete-error-diagnostics/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [batch-monitoring](../../../openspec/changes/batch-monitoring/tasks.md) | 13/13 | 记录完成，证据以原报告版本为准 |
+| [batch-priority](../../../openspec/changes/archive/2026-11-20-batch-priority/tasks.md) | 6/6 | 已部署至本机平台并同步主规格；现场无排队任务，真实队列保存/排序未做端到端验收 |
 | [batch-reports](../../../openspec/changes/batch-reports/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [batch-rerun-wizard](../../../openspec/changes/batch-rerun-wizard/tasks.md) | 12/12 | 记录完成，证据以原报告版本为准 |
 | [batch-run-configuration](../../../openspec/changes/batch-run-configuration/tasks.md) | 12/12 | 记录完成，证据以原报告版本为准 |

@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import create_engine, text, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import make_url
-from backend.app.core import Base, User, Pool, Worker, Slot, EvaluationBatch, Job, Run, RunLogState, RunLogChunk, now
+from backend.app.core import Base, User, Pool, Worker, Slot, Job, Run, RunLogState, RunLogChunk, now
 from backend.app.execution_logs import append, LogChunk
 from backend.app.batch_deletion import remove
 
@@ -41,7 +41,10 @@ def seed(engine, create=True):
         s.add(Worker(id='w', node_name='w', token_hash='unused'))
         s.commit()
         s.add(Slot(id='s', node_name='w', queue_name='log-test', worker_id='w', pool_id='p', gpu_index=0, gpu_uuid='virtual', gpu_model='virtual'))
-        s.add(EvaluationBatch(id='b', owner_id='u', title='logs'))
+        # Migration tests seed schemas older than the current ORM, so insert
+        # only columns that existed since evaluation_batches was introduced.
+        s.execute(text("INSERT INTO evaluation_batches (id, owner_id, title, created_at) VALUES ('b', 'u', 'logs', :created_at)"),
+                  {'created_at': now()})
         s.commit()
         s.add(Job(id='j', batch_id='b', owner_id='u', pool_id='p', title='log-test', benchmark='mock', model_ref='m', episodes=1, status='RUNNING'))
         s.commit()
