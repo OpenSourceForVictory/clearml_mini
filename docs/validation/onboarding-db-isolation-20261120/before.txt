@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_two_slow_executor_lists_leave_small_pool_and_heartbeat_available _____
+backend/tests/test_onboarding_db_isolation.py:39: in test_two_slow_executor_lists_leave_small_pool_and_heartbeat_available
+    assert engine.pool.checkedout() == 0
+E   assert 2 == 0
+E    +  where 2 = checkedout()
+E    +    where checkedout = <sqlalchemy.pool.impl.QueuePool object at 0x7412eab9e3f0>.checkedout
+E    +      where <sqlalchemy.pool.impl.QueuePool object at 0x7412eab9e3f0> = Engine(postgresql+psycopg://postgres@127.0.0.1:32797/log_test_808403ae65284264b82b86cc242e5353).pool
+=============================== warnings summary ===============================
+../../.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_onboarding_db_isolation.py::test_two_slow_executor_lists_leave_small_pool_and_heartbeat_available
+1 failed, 1 warning in 8.25s

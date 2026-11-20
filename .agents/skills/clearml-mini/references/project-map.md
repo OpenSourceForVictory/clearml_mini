@@ -272,3 +272,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 服务管理表格使用局部services.css的固定可读列宽和容器内横向滚动；STOPPED/CANCELLED的旧退出与探测消息折叠为历史诊断，其他故障仍显示。实际截图发现窄列折字，services.spec.ts验证位置列宽、390px无页面溢出及诊断折叠。
 
 日志/产物复合边界测试与证据：`docs/validation/final-contract-audit-20261120/README.md`，包含真实PostgreSQL小池、登记/删除、路径替换、staging、宿主/Docker服务退出取消以及日志UI恢复。万scope历史索引不得称为万次业务吞吐验收。
+
+SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，结果对账再开事务；cleanup/begin仍是实际清理授权边界。回归与失败证据见`docs/validation/onboarding-db-isolation-20261120/README.md`，仅API更新。

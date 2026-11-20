@@ -81,7 +81,9 @@ def reconcile_cleanup(s,job,user):
 def install(app,db,admin):
     @app.get('/api/v1/admin/ssh-onboarding')
     def listing(user=Depends(admin),s=Depends(db)):
-        value=executor('/list',{'actor':user.id})
+        actor=user.id
+        s.close()  # Authentication must not pin a connection during local IPC.
+        value=executor('/list',{'actor':actor})
         lock(s)
         for job in value.get('operations',[]):
             if job.get('kind')=='cleanup':reconcile_cleanup(s,job,user)
@@ -101,7 +103,11 @@ def install(app,db,admin):
         try:form=validate(body)
         except (Rejected,ValueError):raise HTTPException(400,'invalid SSH cleanup form') from None
         if form['username']!='root':raise HTTPException(400,'cleanup requires root SSH')
-        return executor('/cleanup-check',{'actor':user.id,'form':form,'authorization':request.headers.get('authorization','')})
+        payload={'actor':user.id,'form':form,'authorization':request.headers.get('authorization','')}
+        # This is a read-only eligibility check. The executor must obtain a new
+        # cleanup/begin authorization before removal, rechecking revision/busy.
+        s.close()
+        return executor('/cleanup-check',payload)
 
     @app.post('/api/v1/admin/nodes/{identity}/cleanup/eligibility')
     def cleanup_eligibility(identity:str,body:dict,user=Depends(admin),s=Depends(db)):
@@ -125,33 +131,45 @@ def install(app,db,admin):
     @app.post('/api/v1/admin/nodes/{identity}/cleanup/complete')
     def cleanup_complete(identity:str,body:CleanupComplete,user=Depends(admin),s=Depends(db)):
         # Completion is reconciled from the trusted executor, never from caller-supplied success.
-        value=executor('/list',{'actor':user.id})
+        actor=user.id
+        s.close()
+        value=executor('/list',{'actor':actor})
         job=next((j for j in value.get('operations',[]) if j['id']==body.operation_id and j.get('kind')=='cleanup' and (j.get('node_id') or j.get('form',{}).get('node_id'))==identity),None)
         if not job or not job.get('cleanup_result'):raise HTTPException(409,'executor cleanup receipt unavailable')
         lock(s);reconcile_cleanup(s,job,user);s.commit()
         return {'recorded':True}
 
     @app.post('/api/v1/admin/ssh-onboarding/check')
-    def check(body:dict,request:Request,user=Depends(admin)):
+    def check(body:dict,request:Request,user=Depends(admin),s=Depends(db)):
         try:form=validate(body)
         except (Rejected,ValueError):raise HTTPException(400,'invalid SSH onboarding form') from None
-        return executor('/check',{'actor':user.id,'form':form,'authorization':request.headers.get('authorization','')})
+        payload={'actor':user.id,'form':form,'authorization':request.headers.get('authorization','')}
+        s.close()
+        return executor('/check',payload)
 
     @app.post('/api/v1/admin/ssh-onboarding/{identity}/confirm')
-    def confirm(identity:str,request:Request,user=Depends(admin)):
-        return executor('/confirm',{'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')})
+    def confirm(identity:str,request:Request,user=Depends(admin),s=Depends(db)):
+        payload={'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')}
+        s.close()
+        return executor('/confirm',payload)
 
     @app.post('/api/v1/admin/ssh-onboarding/{identity}/verify')
-    def verify(identity:str,request:Request,user=Depends(admin)):
-        return executor('/verify',{'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')})
+    def verify(identity:str,request:Request,user=Depends(admin),s=Depends(db)):
+        payload={'actor':user.id,'id':identity,'authorization':request.headers.get('authorization','')}
+        s.close()
+        return executor('/verify',payload)
 
     @app.post('/api/v1/admin/ssh-onboarding/{identity}/cancel')
-    def cancel(identity:str,user=Depends(admin)):
-        return executor('/cancel',{'actor':user.id,'id':identity})
+    def cancel(identity:str,user=Depends(admin),s=Depends(db)):
+        payload={'actor':user.id,'id':identity}
+        s.close()
+        return executor('/cancel',payload)
 
     @app.post('/api/v1/admin/ssh-onboarding/{identity}/trust')
-    def trust(identity:str,body:dict,request:Request,user=Depends(admin)):
-        return executor('/trust',{'actor':user.id,'id':identity,'fingerprint':body.get('fingerprint'),'authorization':request.headers.get('authorization','')})
+    def trust(identity:str,body:dict,request:Request,user=Depends(admin),s=Depends(db)):
+        payload={'actor':user.id,'id':identity,'fingerprint':body.get('fingerprint'),'authorization':request.headers.get('authorization','')}
+        s.close()
+        return executor('/trust',payload)
 
     @app.post('/api/v1/admin/ssh-enrollment/begin')
     def start(body:Begin,user=Depends(admin),s=Depends(db)):
