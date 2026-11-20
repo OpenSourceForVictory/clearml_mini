@@ -463,3 +463,30 @@ test('custom browse source keeps namespace in media grants and resets preview wh
  await expect(drawer.getByRole('region',{name:'产物预览'})).toHaveCount(0);
  await expect(drawer).toContainText('/shared/output');
 });
+
+
+test('shared browse retries a transient busy response and stops retrying after source switch',async({page})=>{
+ await setup(page);let custom=0;
+ await page.route('**/shared-artifacts?*',route=>{
+  if(new URL(route.request().url()).searchParams.get('directory')==='custom'){
+   custom++;
+   if(custom===1)return route.fulfill({status:429,headers:{'Retry-After':'1'},json:{detail:'busy'}});
+   return route.fulfill({json:{enabled:true,storage_id:'s',output_root:'/custom',node_name:'n',path:'',version:'v',next:null,items:[]}});
+  }
+  return route.fulfill({json:{enabled:false,items:[]}});
+ });
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物'});await drawer.getByLabel('产物来源').selectOption('custom');
+ await expect(drawer).toContainText('正在重试');await expect(drawer).toContainText('/custom');expect(custom).toBe(2);
+ let busy=0;
+ await page.route('**/shared-artifacts?*',route=>{busy++;return route.fulfill({status:429,headers:{'Retry-After':'1'},json:{detail:'still busy'}});});
+ await drawer.getByRole('button',{name:'刷新共享目录'}).click();await expect(drawer).toContainText('正在重试');
+ await drawer.getByLabel('产物来源').selectOption('legacy');await page.waitForTimeout(1200);expect(busy).toBe(1);
+});
+
+test('shared browse retains final busy error after bounded retries',async({page})=>{
+ await setup(page);let calls=0;
+ await page.route('**/shared-artifacts?*',route=>{calls++;return route.fulfill({status:429,headers:{'Retry-After':'1'},json:{detail:'busy retained'}});});
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物'});await expect(drawer.getByRole('alert')).toContainText('busy retained');expect(calls).toBe(3);
+});
