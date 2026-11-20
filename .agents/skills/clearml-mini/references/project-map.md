@@ -237,3 +237,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 日志预算 0.21.11 本机界面升级与部署验收见 docs/validation/log-policy-release-20261120/README.md：数据库 b841e23、本机 GPU 节点升级、其他节点旧版、三回合日志下载及预算还原；后续操作须重新查询当前版本，不能把此记录当全节点升级。
 
 回合产物元数据：runner/artifact_manifest.py 写入目录内 .mini-eval-artifacts，SDK lazy 属性/host_episode 使用；worker/artifact_reader.py 在固定执行根内读显式归属，shared_artifacts.py 以协议逐文件声明优先。元数据不能授权任意路径；固定 -I 子进程按已安装绝对位置加载辅助模块，SDK ZIP 必须包含该模块。操作与兼容边界见 docs/shared-storage-artifacts.md。
+
+向导资源布局：导航样式仅匹配 .shell > aside，托管服务资源摘要使用普通 section，避免 fixed 长条遮挡；run-wizard 的 wizard-resource-grid 将资源契约和高级约束跨整行；resource-requirements 的字段容器在向导内响应式排列。回归 wizard-clarity.spec.ts 覆盖1440/1024/390px及GPU/NPU/旧模板、锁定与草稿/预检参数，不改调度契约；操作见 docs/template-resource-requirements.md。

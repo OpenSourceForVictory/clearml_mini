@@ -1,0 +1,27 @@
+
+Running 1 test using 1 worker
+
+(node:1189337) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 (448ms)
+
+
+  1) frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 ─
+
+    Error: expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "fixed"
+
+      70 |  const button=w.getByRole('button',{name:'修改服务端资源',exact:true});const summary=button.locator('..');await button.scrollIntoViewIfNeeded();
+      71 |  await page.screenshot({path:`test-results/managed-resource-${width}.png`});
+    > 72 |  expect(await summary.evaluate(e=>getComputedStyle(e).position)).not.toBe('fixed');
+         |                                                                      ^
+      73 |  const b=await summary.boundingBox(),r=await w.getByRole('region',{name:'客户端资源与批次并发'}).boundingBox();expect(b!.x).toBeGreaterThanOrEqual(r!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(r!.x+r!.width);expect(b!.y).toBeGreaterThan(r!.y);expect(b!.height).toBeLessThan(300);
+      74 |  await expect(summary).toContainText('2 个实例');await expect(summary).toContainText('客户端池');await button.click();await expect(w.getByLabel('服务 1 实例数')).toHaveValue('2');
+      75 |  await w.getByLabel('服务 1 资源池').selectOption('server-pool');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(summary).toContainText('服务端池');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:72:70
+
+    Error Context: frontend/test-results/wizard-clarity-managed-res-f7b18-mary-stays-inside-form-1440/error-context.md
+
+  1 failed
+    frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 ──

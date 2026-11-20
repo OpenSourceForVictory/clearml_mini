@@ -1,7 +1,8 @@
 import {test,expect,Page} from '@playwright/test';
-async function setup(page:Page,options:{mode?:string;task?:string;integration?:string;launch?:string}={}){
+async function setup(page:Page,options:{mode?:string;task?:string;integration?:string;launch?:string;accelerator?:'gpu'|'npu'}={}){
  const checks:any[]=[],submissions:any[]=[];
- const template={id:'c',name:'验证客户端',version:'3',enabled:true,execution_mode:options.mode||'host',task_type:options.task||'evaluation',integration_mode:options.integration||'direct',protocols:['http'],command:['python','run.py'],host_runtime:{episode_launch:options.launch||'per_episode',episode_error_policy:'continue',overridable_env:['MODE']},runtime:{overridable_env:['MODE']},parameter_schema:{version:1,fields:{speed:{type:'integer',default:1}}}};
+ const contract=options.accelerator?{version:1,cpu:{minimum:1,default:2},memory:{minimum:1,default:4},accelerator:{type:options.accelerator,mode:'exclusive',memory:{minimum:0,default:0}},allow_overrides:['cpus','ram_gb','requested_vram_gb']}:undefined;
+ const template={resource_requirements:contract,id:'c',name:'验证客户端',version:'3',enabled:true,execution_mode:options.mode||'host',task_type:options.task||'evaluation',integration_mode:options.integration||'direct',protocols:['http'],command:['python','run.py'],host_runtime:{episode_launch:options.launch||'per_episode',episode_error_policy:'continue',overridable_env:['MODE']},runtime:{overridable_env:['MODE']},parameter_schema:{version:1,fields:{speed:{type:'integer',default:1}}}};
  const server={...template,id:'s',name:'验证服务',version:'2',status:'published',protocol:'http'};
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -36,3 +37,41 @@ test('100 task import and failed replacement preserve draft, last task can be ed
 test('service illegal environment prevents advancing and preserves raw input',async({page})=>{const {w}=await setup(page);await client(w);await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByLabel('服务来源',{exact:true}).selectOption('managed');await w.getByLabel('服务 1 模板').selectOption('s');await w.getByText('服务资源与运行变量',{exact:true}).click();await w.getByText('服务 1 运行变量 JSON（高级编辑）',{exact:true}).click();await w.getByLabel('服务 1 运行变量 JSON',{exact:true}).fill('{"UNAPPROVED":"x"}');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('服务 1 模板')).toBeVisible();await expect(w.getByLabel('服务 1 运行变量 JSON',{exact:true})).toHaveValue('{"UNAPPROVED":"x"}');});
 for(const width of [1024,1440])test(`desktop ${width} layout keeps final controls above action bar`,async({page})=>{const {w}=await setup(page);await page.setViewportSize({width,height:900});await client(w);const field=w.getByLabel('环境变量 MODE',{exact:true});await field.focus();await field.scrollIntoViewIfNeeded();const rect=await field.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(rect!.y+rect!.height).toBeLessThanOrEqual(bar!.y);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);});
 test('multiple service definitions preserve their own resource pools and count',async({page})=>{const {w,checks}=await setup(page);await client(w);await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByLabel('服务来源',{exact:true}).selectOption('managed');await w.getByLabel('服务 1 模板').selectOption('s');await w.getByRole('button',{name:'添加服务定义'}).click();await w.getByLabel('服务 2 模板').selectOption('s');await w.getByLabel('服务 2 实例数').fill('2');await w.getByLabel('服务 2 资源池').selectOption('server-pool');await confirm(w);expect(checks[0].services.map((s:any)=>({key:s.key,pool:s.pool_id,count:s.instance_count}))).toEqual([{key:'default',pool:'client-pool',count:1},{key:'service2',pool:'server-pool',count:2}]);await expect(w.getByRole('region',{name:'服务端配置确认'})).toContainText('service2');});
+
+for(const width of [1440,1024,390])for(const accelerator of [undefined,'gpu','npu'] as const)test(`resource layout ${width} ${accelerator||'legacy'}`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ const {w,checks}=await setup(page,{accelerator});await client(w);
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByLabel('推理服务地址',{exact:true}).fill('http://service:9000');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ const region=w.getByRole('region',{name:'客户端资源与批次并发'}),grid=region.locator('.submit-grid').first();
+ const group=accelerator?region.getByRole('group',{name:'客户端资源',exact:true}):region.locator('details');
+ if(!accelerator)await group.locator('summary').click();
+ await group.screenshot({path:`test-results/resource-${width}-${accelerator||'legacy'}.png`});
+ const outer=await grid.boundingBox(),box=await group.boundingBox();
+ expect(box!.width).toBeGreaterThan(outer!.width-12);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const input=accelerator?w.getByLabel('客户端资源 · CPU 核数',{exact:true}):w.getByLabel('每项 CPU 核数（可选）',{exact:true});
+ await input.fill('3');
+ if(accelerator){await expect(w.getByLabel('客户端资源 · 加速设备类型',{exact:true})).toHaveValue(accelerator);await expect(w.getByLabel('客户端资源 · 加速设备类型',{exact:true})).toBeDisabled();}
+ for(const field of await group.locator('input:not([type=checkbox]),select').all()){
+  const b=await field.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(box!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(box!.x+box!.width);
+ }
+ for(const target of [input,group.locator('input:not([type=checkbox]),select').last(),...(accelerator?[group.getByRole('button',{name:'恢复模板资源默认值'})]:[])]){await target.scrollIntoViewIfNeeded();const b=await target.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(b!.y+b!.height).toBeLessThanOrEqual(bar!.y);}
+ await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+ await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ if(!accelerator)await group.locator('summary').click();await expect(input).toHaveValue('3');
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>checks.length).toBe(1);expect(checks[0].resources.cpus).toBe(3);
+});
+for(const width of [1440,1024,390])test(`managed resource summary stays inside form ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:900});const {w}=await setup(page);await client(w);
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByLabel('服务来源',{exact:true}).selectOption('managed');await w.getByLabel('服务 1 模板').selectOption('s');await w.getByLabel('服务 1 实例数').fill('2');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+ const button=w.getByRole('button',{name:'修改服务端资源',exact:true});const summary=button.locator('..');await button.scrollIntoViewIfNeeded();
+ await page.screenshot({path:`test-results/managed-resource-${width}.png`});
+ expect(await summary.evaluate(e=>getComputedStyle(e).position)).not.toBe('fixed');
+ const b=await summary.boundingBox(),r=await w.getByRole('region',{name:'客户端资源与批次并发'}).boundingBox();expect(b!.x).toBeGreaterThanOrEqual(r!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(r!.x+r!.width);expect(b!.y).toBeGreaterThan(r!.y);expect(b!.height).toBeLessThan(300);
+ await expect(summary).toContainText('2 个实例');await expect(summary).toContainText('客户端池');await button.click();await expect(w.getByLabel('服务 1 实例数')).toHaveValue('2');
+ await w.getByLabel('服务 1 资源池').selectOption('server-pool');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(summary).toContainText('服务端池');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

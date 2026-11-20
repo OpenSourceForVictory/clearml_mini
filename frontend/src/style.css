@@ -140,7 +140,7 @@ h3 {
   display: flex;
   min-height: 100vh;
 }
-aside {
+.shell > aside {
   width: 225px;
   background: #173d31;
   color: #dce9de;
@@ -471,7 +471,7 @@ dd {
   }
 }
 @media (max-width: 760px) {
-  aside {
+  .shell > aside {
     width: 100%;
     position: static;
     padding: 14px;
@@ -628,3 +628,21 @@ dd {
 .run-wizard .wizard-values th,.run-wizard .wizard-values td {overflow-wrap:anywhere}
 .run-wizard .table-scroll {max-height:60vh;overflow:auto}
 @media(max-width:700px){.run-wizard .submit-grid{grid-template-columns:1fr}.run-wizard .wizard-module{padding:12px}.run-wizard .wizard-env-row{display:block}.run-wizard .run-summary{display:block}.run-wizard .run-summary dt{margin-top:10px;font-weight:600}.run-wizard .run-summary dd{margin:4px 0}.run-wizard .wizard-actions{flex-wrap:wrap}}
+
+/* Whole resource groups span the outer grid; their fields own the inner layout. */
+.run-wizard .wizard-resource-grid > fieldset,
+.run-wizard .wizard-resource-grid > details {grid-column:1 / -1;width:100%;margin:0;box-sizing:border-box}
+.run-wizard .resource-request {padding:16px;border:1px solid #d5dfd7;border-radius:8px;min-width:0}
+.run-wizard .resource-request-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;margin:18px 0}
+.run-wizard .resource-request-field {min-width:0}
+.run-wizard .resource-request-field .field {margin:0}
+.run-wizard .resource-request-field small {display:block;margin-top:6px;color:var(--muted,#687485);overflow-wrap:anywhere}
+.run-wizard .resource-request input,.run-wizard .resource-request select {min-width:0;max-width:100%;box-sizing:border-box}
+.run-wizard .resource-request button {height:auto;white-space:normal}
+.run-wizard .wizard-resource-grid > details .field {margin:14px 0}
+@media(max-width:700px){.run-wizard .resource-request-fields{grid-template-columns:1fr}.run-wizard .resource-request{padding:12px}}
+
+.run-wizard .wizard-resource-actions {position:static}
+
+.run-wizard .wizard-service-resources {margin-top:20px;padding:16px;border:1px solid #d5dfd7;border-radius:8px;background:#f6f9f7;overflow-wrap:anywhere}
+.run-wizard .wizard-service-resources h4 {margin:0 0 12px}

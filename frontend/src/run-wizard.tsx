@@ -200,7 +200,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       {serviceMode==='managed'&&<><ManagedServices value={serviceRows} onChange={setServiceRows} templates={servers} pools={pools} clientPoolId={draft.pool_id} onCopy={t=>setCopy({kind:'server',source:t})}/><label><input type="checkbox" checked={stopAfter} onChange={e=>setStopAfter(e.target.checked)}/>批次结束且客户端清理完成后停止服务</label></>}
       {serviceMode==='none'&&<p>普通命令按退出码判断执行结果，无需提供服务地址。</p>}
     </WizardModule>}
-    {step===3&&<WizardModule title="客户端资源与批次并发"><div className="submit-grid">
+    {step===3&&<WizardModule title="客户端资源与批次并发"><div className="submit-grid wizard-resource-grid">
       <Field label="客户端资源池"><select required value={draft.pool_id} onChange={e=>update('pool_id',e.target.value)}><option value="" disabled>选择资源池</option>{pools.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
       <Field label="最大并发任务数"><input type="number" required min={1} max={100} value={draft.max_concurrent} onChange={e=>update('max_concurrent',Number(e.target.value))}/></Field>
       {template?.resource_requirements?<ResourceRequest contract={template.resource_requirements} value={resourceDrafts[templateId]||{}} onChange={v=>{setResourceDrafts({...resourceDrafts,[templateId]:v});setPreview(null)}} label="客户端资源"/>:<>      <Field label="客户端 GPU 模式"><select value={draft.gpu_mode} onChange={e=>update('gpu_mode',e.target.value)}><option value="exclusive">独占</option><option value="shared">共享</option></select></Field>
@@ -208,7 +208,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <details><summary>高级资源约束</summary><label><input type="checkbox" checked={draft.cpu_unlimited} onChange={e=>update('cpu_unlimited',e.target.checked)}/>不限制 CPU 上限</label><label><input type="checkbox" checked={draft.memory_unlimited} onChange={e=>update('memory_unlimited',e.target.checked)}/>不限制内存上限</label><p>选择不限时，仍须填写对应正数最低申请量，用于调度预约；实际超出预约的用量不保证可用。</p><Field label="每项 CPU 核数（可选）"><input type="number" min={1} step={1} required={draft.cpu_unlimited} value={draft.cpus} placeholder="使用资源池默认值" onChange={e=>update('cpus',e.target.value)}/></Field>
       <Field label="每项内存 GiB（可选）"><input type="number" min={1} step={1} required={draft.memory_unlimited} value={draft.ram_gb} placeholder="使用资源池默认值" onChange={e=>update('ram_gb',e.target.value)}/></Field>
       <Field label="指定 GPU 型号（可选）"><input maxLength={100} value={draft.required_gpu_model} onChange={e=>update('required_gpu_model',e.target.value)}/></Field></details></>}
-    </div>{serviceMode==='managed'&&<aside><h4>服务端资源池</h4>{serviceRows.map(row=><p key={row.key}>{row.key} · {row.instance_count} 个实例 · {pools.find(p=>p.id===(row.pool_id||draft.pool_id))?.name||'尚未选择资源池'}</p>)}<button type="button" onClick={()=>goBack(2)}>修改服务端资源</button></aside>}</WizardModule>}
+    </div>{serviceMode==='managed'&&<section className="wizard-service-resources" aria-label="服务端资源摘要"><h4>服务端资源池</h4>{serviceRows.map(row=><p key={row.key}>{row.key} · {row.instance_count} 个实例 · {pools.find(p=>p.id===(row.pool_id||draft.pool_id))?.name||'尚未选择资源池'}</p>)}<button type="button" onClick={()=>goBack(2)}>修改服务端资源</button></section>}</WizardModule>}
     {step===4&&<>
       <h3>确认运行配置</h3><p>核对以下配置；预检通过前，参数和资源仅为待解析配置。提交不会立即保证获得资源。</p>
       <WizardModule title="任务清单确认"><button type="button" onClick={()=>goBack(0)}>修改任务清单</button><dl className="run-summary"><dt>批次名称</dt><dd>{draft.title}</dd><dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:'自定义清单'}</dd><dt>任务与回合</dt><dd>{ordinaryOnce?`${cases.length} 项任务，每项启动一次`: `${cases.length} 项任务，${cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合`}</dd></dl>
@@ -234,7 +234,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         </details>
       </div>}
     </>}
-    <div className="wizard-actions">{step===4&&preview&&<button type="button" className="primary" disabled={!preview.can_submit||!!submitted} onClick={()=>void submit()}>{preview.status==='ready'?'提交评测批次':'提交排队'}</button>}{step>0&&<button type="button" onClick={()=>goBack(step-1)}>上一步</button>}{step<4&&<button type="submit" className="primary">{step===3?'检查并确认':'下一步'}</button>}</div>
+    <div className={`wizard-actions${step===3?' wizard-resource-actions':''}`}>{step===4&&preview&&<button type="button" className="primary" disabled={!preview.can_submit||!!submitted} onClick={()=>void submit()}>{preview.status==='ready'?'提交评测批次':'提交排队'}</button>}{step>0&&<button type="button" onClick={()=>goBack(step-1)}>上一步</button>}{step<4&&<button type="submit" className="primary">{step===3?'检查并确认':'下一步'}</button>}</div>
     </fieldset></form>
     {copy&&<TemplateCopy key={copy.source.id} {...copy} onClose={()=>setCopy(null)} onPublished={t=>{if(copy.kind==='client'){setExtraTemplates(old=>[...old,t as Template]);setTemplateId(t.id);if(selectedSuite)setSuiteDefaults(selectedSuite.client_defaults||{});setSuiteId('');setValues({})}else{setServers(old=>[...old,t as ServerTemplate]);setServiceRows(old=>old.map(s=>s.template_id===copy.source.id?{...s,template_id:t.id}:s))}setCopy(null)}}/>}
     {submitted&&<p role="status">{submitted}{onBatch&&<button onClick={()=>onBatch(submittedId)}>查看已提交批次</button>}</p>}

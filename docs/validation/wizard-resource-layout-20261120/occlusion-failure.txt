@@ -1,0 +1,115 @@
+
+Running 24 tests using 1 worker
+
+(node:1184517) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/wizard-clarity.spec.ts:22:1 › two instances and independent pool visible in complete confirmation; editing invalidates check (692ms)
+  ✓   2 frontend/tests/wizard-clarity.spec.ts:27:1 › environment key editor and JSON keep values, invalid input cannot advance (380ms)
+  ✓   3 frontend/tests/wizard-clarity.spec.ts:30:1 › read-only suite and copied task detail retain zero and invalid JSON is revealed (489ms)
+  ✓   4 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"evaluation","integration":"sdk","launch":"per_episode"} (248ms)
+  ✓   5 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"evaluation","integration":"direct","launch":"whole_task"} (218ms)
+  ✓   6 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"command","integration":"direct","launch":"whole_task"} (234ms)
+  ✓   7 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"docker","task":"evaluation","integration":"sdk","launch":"whole_task"} (245ms)
+  ✓   8 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"docker","task":"command","integration":"direct","launch":"whole_task"} (238ms)
+  ✓   9 frontend/tests/wizard-clarity.spec.ts:34:1 › mobile and keyboard navigation keep controls reachable and labels aligned (331ms)
+  ✓  10 frontend/tests/wizard-clarity.spec.ts:35:1 › single-task override appears as effective value; resource and connectivity boundaries remain explicit (446ms)
+  ✓  11 frontend/tests/wizard-clarity.spec.ts:36:1 › 100 task import and failed replacement preserve draft, last task can be edited (481ms)
+  ✓  12 frontend/tests/wizard-clarity.spec.ts:37:1 › service illegal environment prevents advancing and preserves raw input (382ms)
+  ✓  13 frontend/tests/wizard-clarity.spec.ts:38:32 › desktop 1024 layout keeps final controls above action bar (261ms)
+  ✓  14 frontend/tests/wizard-clarity.spec.ts:38:32 › desktop 1440 layout keeps final controls above action bar (262ms)
+  ✓  15 frontend/tests/wizard-clarity.spec.ts:39:1 › multiple service definitions preserve their own resource pools and count (387ms)
+  ✓  16 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 legacy (591ms)
+  ✘  17 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu (485ms)
+(node:1185477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  18 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 npu (560ms)
+(node:1185596) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  19 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 legacy (650ms)
+  ✓  20 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 gpu (591ms)
+  ✓  21 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 npu (630ms)
+  ✓  22 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 legacy (614ms)
+  ✘  23 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 gpu (513ms)
+(node:1186076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  24 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 npu (598ms)
+
+
+  1) frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu ────────────────────────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 831
+    Received:    835.1875
+
+      58 |   const b=await field.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(box!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(box!.x+box!.width);
+      59 |  }
+    > 60 |  for(const target of [input,group.locator('input:not([type=checkbox]),select').last(),...(accelerator?[group.getByRole('button',{name:'恢复模板资源默认值'})]:[])]){await target.scrollIntoViewIfNeeded();const b=await target.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(b!.y+b!.height).toBeLessThanOrEqual(bar!.y);}
+         |                                                                                                                                                                                                                                                                                                                 ^
+      61 |  await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+      62 |  await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+      63 |  if(!accelerator)await group.locator('summary').click();await expect(input).toHaveValue('3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:60:305
+
+    Error Context: frontend/test-results/wizard-clarity-resource-layout-1440-gpu/error-context.md
+
+  2) frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 npu ────────────────────────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 831
+    Received:    835.1875
+
+      58 |   const b=await field.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(box!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(box!.x+box!.width);
+      59 |  }
+    > 60 |  for(const target of [input,group.locator('input:not([type=checkbox]),select').last(),...(accelerator?[group.getByRole('button',{name:'恢复模板资源默认值'})]:[])]){await target.scrollIntoViewIfNeeded();const b=await target.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(b!.y+b!.height).toBeLessThanOrEqual(bar!.y);}
+         |                                                                                                                                                                                                                                                                                                                 ^
+      61 |  await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+      62 |  await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+      63 |  if(!accelerator)await group.locator('summary').click();await expect(input).toHaveValue('3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:60:305
+
+    Error Context: frontend/test-results/wizard-clarity-resource-layout-1440-npu/error-context.md
+
+  3) frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 gpu ─────────────────────────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 831
+    Received:    880.578125
+
+      58 |   const b=await field.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(box!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(box!.x+box!.width);
+      59 |  }
+    > 60 |  for(const target of [input,group.locator('input:not([type=checkbox]),select').last(),...(accelerator?[group.getByRole('button',{name:'恢复模板资源默认值'})]:[])]){await target.scrollIntoViewIfNeeded();const b=await target.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(b!.y+b!.height).toBeLessThanOrEqual(bar!.y);}
+         |                                                                                                                                                                                                                                                                                                                 ^
+      61 |  await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+      62 |  await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+      63 |  if(!accelerator)await group.locator('summary').click();await expect(input).toHaveValue('3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:60:305
+
+    Error Context: frontend/test-results/wizard-clarity-resource-layout-390-gpu/error-context.md
+
+  4) frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 npu ─────────────────────────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 831
+    Received:    880.578125
+
+      58 |   const b=await field.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(box!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(box!.x+box!.width);
+      59 |  }
+    > 60 |  for(const target of [input,group.locator('input:not([type=checkbox]),select').last(),...(accelerator?[group.getByRole('button',{name:'恢复模板资源默认值'})]:[])]){await target.scrollIntoViewIfNeeded();const b=await target.boundingBox(),bar=await w.locator('.wizard-actions').boundingBox();expect(b!.y+b!.height).toBeLessThanOrEqual(bar!.y);}
+         |                                                                                                                                                                                                                                                                                                                 ^
+      61 |  await w.getByLabel('客户端资源池',{exact:true}).selectOption('client-pool');
+      62 |  await w.getByRole('button',{name:'上一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+      63 |  if(!accelerator)await group.locator('summary').click();await expect(input).toHaveValue('3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:60:305
+
+    Error Context: frontend/test-results/wizard-clarity-resource-layout-390-npu/error-context.md
+
+  4 failed
+    frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu ─────────────────────────
+    frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 npu ─────────────────────────
+    frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 gpu ──────────────────────────
+    frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 npu ──────────────────────────
+  20 passed (11.7s)

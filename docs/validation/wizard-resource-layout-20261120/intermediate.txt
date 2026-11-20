@@ -1,0 +1,64 @@
+
+Running 27 tests using 1 worker
+
+(node:1192036) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/wizard-clarity.spec.ts:22:1 › two instances and independent pool visible in complete confirmation; editing invalidates check (623ms)
+  ✓   2 frontend/tests/wizard-clarity.spec.ts:27:1 › environment key editor and JSON keep values, invalid input cannot advance (412ms)
+  ✓   3 frontend/tests/wizard-clarity.spec.ts:30:1 › read-only suite and copied task detail retain zero and invalid JSON is revealed (451ms)
+  ✓   4 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"evaluation","integration":"sdk","launch":"per_episode"} (242ms)
+  ✓   5 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"evaluation","integration":"direct","launch":"whole_task"} (243ms)
+  ✓   6 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"host","task":"command","integration":"direct","launch":"whole_task"} (227ms)
+  ✓   7 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"docker","task":"evaluation","integration":"sdk","launch":"whole_task"} (233ms)
+  ✓   8 frontend/tests/wizard-clarity.spec.ts:33:376 › runtime semantics {"mode":"docker","task":"command","integration":"direct","launch":"whole_task"} (245ms)
+  ✓   9 frontend/tests/wizard-clarity.spec.ts:34:1 › mobile and keyboard navigation keep controls reachable and labels aligned (355ms)
+  ✓  10 frontend/tests/wizard-clarity.spec.ts:35:1 › single-task override appears as effective value; resource and connectivity boundaries remain explicit (455ms)
+  ✓  11 frontend/tests/wizard-clarity.spec.ts:36:1 › 100 task import and failed replacement preserve draft, last task can be edited (527ms)
+  ✓  12 frontend/tests/wizard-clarity.spec.ts:37:1 › service illegal environment prevents advancing and preserves raw input (415ms)
+  ✓  13 frontend/tests/wizard-clarity.spec.ts:38:32 › desktop 1024 layout keeps final controls above action bar (291ms)
+  ✓  14 frontend/tests/wizard-clarity.spec.ts:38:32 › desktop 1440 layout keeps final controls above action bar (294ms)
+  ✓  15 frontend/tests/wizard-clarity.spec.ts:39:1 › multiple service definitions preserve their own resource pools and count (401ms)
+  ✓  16 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 legacy (654ms)
+  ✓  17 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu (613ms)
+  ✓  18 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 npu (609ms)
+  ✓  19 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 legacy (625ms)
+  ✓  20 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 gpu (597ms)
+  ✓  21 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1024 npu (611ms)
+  ✓  22 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 legacy (624ms)
+  ✓  23 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 gpu (630ms)
+  ✓  24 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 390 npu (647ms)
+  ✘  25 frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 (5.7s)
+(node:1194581) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  26 frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1024 (471ms)
+  ✓  27 frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 390 (459ms)
+
+
+  1) frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 ─
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '集合运行向导' }).getByRole('button', { name: '修改服务端资源', exact: true }).locator('..')
+    Expected substring: "服务端池"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '集合运行向导' }).getByRole('button', { name: '修改服务端资源', exact: true }).locator('..') with timeout 5000ms
+      - waiting for getByRole('region', { name: '集合运行向导' }).getByRole('button', { name: '修改服务端资源', exact: true }).locator('..')
+
+
+      73 |  const b=await summary.boundingBox(),r=await w.getByRole('region',{name:'客户端资源与批次并发'}).boundingBox();expect(b!.x).toBeGreaterThanOrEqual(r!.x);expect(b!.x+b!.width).toBeLessThanOrEqual(r!.x+r!.width);expect(b!.y).toBeGreaterThan(r!.y);expect(b!.height).toBeLessThan(300);
+      74 |  await expect(summary).toContainText('2 个实例');await expect(summary).toContainText('客户端池');await button.click();await expect(w.getByLabel('服务 1 实例数')).toHaveValue('2');
+    > 75 |  await w.getByLabel('服务 1 资源池').selectOption('server-pool');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(summary).toContainText('服务端池');
+         |                                                                                                                                               ^
+      76 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      77 | });
+      78 |
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:75:143
+
+    Error Context: frontend/test-results/wizard-clarity-managed-res-f7b18-mary-stays-inside-form-1440/error-context.md
+
+  1 failed
+    frontend/tests/wizard-clarity.spec.ts:66:36 › managed resource summary stays inside form 1440 ──
+  26 passed (18.3s)

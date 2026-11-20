@@ -1,0 +1,28 @@
+
+Running 1 test using 1 worker
+
+(node:1177980) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu (504ms)
+
+
+  1) frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu ────────────────────────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1039
+    Received:   514.5
+
+      50 |  await group.screenshot({path:`test-results/resource-${width}-${accelerator||'legacy'}.png`});
+      51 |  const outer=await grid.boundingBox(),box=await group.boundingBox();
+    > 52 |  expect(box!.width).toBeGreaterThan(outer!.width-12);
+         |                     ^
+      53 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      54 |  const input=accelerator?w.getByLabel('客户端资源 · CPU 核数',{exact:true}):w.getByLabel('每项 CPU 核数（可选）',{exact:true});
+      55 |  await input.fill('3');
+        at /home/dgh/Code/clearml_mini/frontend/tests/wizard-clarity.spec.ts:52:21
+
+    Error Context: frontend/test-results/wizard-clarity-resource-layout-1440-gpu/error-context.md
+
+  1 failed
+    frontend/tests/wizard-clarity.spec.ts:41:94 › resource layout 1440 gpu ─────────────────────────
