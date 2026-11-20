@@ -37,6 +37,7 @@ def test_attempt_location_no_cleanup_filter_and_no_current_path_guess(env):
         s.commit()
     data=c.get(route,headers=auth['alice']).json()
     assert data['execution_id']==task['execution_id']!=data['run_id']
+    assert data['output_directory'] is None
     assert {d['path'] for d in data['directories']}=={f'/old/runs/{task["execution_id"]}',f'/second/runs/{task["execution_id"]}',None}
     assert c.get(route,headers=auth['bob']).status_code==404
     assert c.get(route,headers=auth['admin']).status_code==200
@@ -68,5 +69,38 @@ def test_location_ignores_foreign_slot_and_execution_inventory(env):
         s.commit()
     response=c.get(route,headers=auth['alice'])
     assert response.status_code==200
+    assert response.json()['output_directory']['path']=='/correct/runs/'+task['execution_id']+'/output'
     assert [d['path'] for d in response.json()['directories']]==['/correct/runs/'+task['execution_id']]
     assert c.get(route.replace(task['run_id'],str(uuid.uuid4())),headers=auth['alice']).status_code==404
+
+
+@pytest.mark.parametrize('layout,state', [('legacy','reported'),('batch-v1','reported'),('batch-v1','planned')])
+def test_output_metadata_independent_of_mapping_and_files(env,monkeypatch,layout,state):
+    from backend.app.core import SharedArtifactRoot
+    main,c,auth=env;token,slots=node(env);job=submit(env);task=claim(env,token,slots[0])
+    monkeypatch.setenv('MINI_EVAL_SHARED_STORAGE','invalid-json')
+    route=f'/api/v1/jobs/{job}/attempts/{task["run_id"]}/execution-location'
+    with main.SessionLocal() as s:
+        s.add(SharedArtifactRoot(run_id=task['run_id'],execution_id=task['execution_id'],snapshot={
+            'layout':layout,'state':state,'node_name':'historical-node','output_root':'/not-mounted/execution'}))
+        s.commit()
+    result=c.get(route,headers=auth['alice'])
+    assert result.status_code==200
+    out=result.json()['output_directory']
+    assert out['path']=='/not-mounted/execution'+('/output' if layout=='batch-v1' else '')
+    assert out['state']==state and out['node_name']=='historical-node'
+    assert c.get(route,headers=auth['bob']).status_code==404
+    with main.SessionLocal() as s:
+        row=s.get(SharedArtifactRoot,task['run_id'])
+        assert row.snapshot['state']==state  # reading must not register a planned directory
+        row.execution_id=str(uuid.uuid4());s.commit()
+    assert c.get(route,headers=auth['alice']).json()['output_directory'] is None
+
+
+def test_invalid_output_record_does_not_guess(env):
+    from backend.app.core import SharedArtifactRoot
+    main,c,auth=env;token,slots=node(env);job=submit(env);task=claim(env,token,slots[0])
+    with main.SessionLocal() as s:
+        s.add(SharedArtifactRoot(run_id=task['run_id'],execution_id=task['execution_id'],snapshot={'output_root':'/bad/../path'}));s.commit()
+    route=f'/api/v1/jobs/{job}/attempts/{task["run_id"]}/execution-location'
+    assert c.get(route,headers=auth['alice']).json()['output_directory'] is None

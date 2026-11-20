@@ -22,9 +22,22 @@ function ArtifactDrawer({jobId,initialRun,episode,close}:{jobId:string;initialRu
    {!job?.attempts?.some(a=>a.id===run)&&<option value={run}>当前执行 {run}</option>}
    {job?.attempts?.map(a=><option key={a.id} value={a.id}>尝试 {a.attempt} · {a.id}</option>)}
   </select></label>
+  <ArtifactOutputLocation key={"output/"+run} jobId={jobId} run={run}/>
   <ArtifactRun key={run} jobId={jobId} run={run} episode={episode}/>
  </dialog>;
 }
+function ArtifactOutputLocation({jobId,run}:{jobId:string;run:string}){
+ const {data,error}=usePoll<{output_directory?:{path:string;execution_root:string|null;node_name:string|null;state:string}|null}>(`jobs/${jobId}/attempts/${run}/execution-location`);
+ const output=data?.output_directory;
+ return <section aria-label="产物输出目录"><h4>产物输出目录（节点路径）</h4>
+ {error?<p>输出目录记录读取失败，请刷新或确认 API 版本。</p>:!data?<p>正在读取输出目录记录…</p>:output?<>
+ <p>节点：{output.node_name||'未记录'}</p><p style={{overflowWrap:'anywhere'}}>输出目录：<code>{output.path}</code></p>
+ {output.execution_root&&output.execution_root!==output.path&&<p style={{overflowWrap:'anywhere'}}>执行产物根：<code>{output.execution_root}</code>（包含公共输出及各回合子目录）</p>}
+ <p>{output.state==='planned'?'计划目录，尚未收到节点登记确认。':'本次执行记录的目录。'}路径记录不保证文件仍存在或 API 有读取权限。</p>
+ </>:<p>本次执行没有唯一可用的输出目录记录；不根据节点当前配置推测历史路径。</p>}
+ </section>;
+}
+
 function ArtifactRun({jobId,run,episode}:{jobId:string;run:string;episode?:number}){
  const [source,setSource]=useState('shared');
  return <><label>产物来源<select value={source} onChange={e=>setSource(e.target.value)}><option value="shared">共享存储（API 直读）</option><option value="legacy">历史上传产物</option></select></label>

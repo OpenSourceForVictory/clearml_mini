@@ -13,3 +13,9 @@
 
 ## 原部署命令兼容（用户追加要求）
 主 deploy/compose.yml 内置两项环境变量和总目录只读绑定；无需显式追加 overlay。Compose 不支持按环境变量省略单条 volumes，未设置变量时绑定仓库内 deploy/empty-artifacts 占位目录，环境变量仍为空，API不启用映射或共享传输。设置变量时绑定真实目录，create_host_path=false 防止错字生成空目录。仅API新增挂载，migrate/bootstrap/onboarding保持原行为；旧overlay与主文件按容器目标路径合并，不产生重复挂载，旧自定义映射保留。与选择自动挂载任意主机父目录或要求用户改命令相比，占位目录范围最小且支持既有Compose版本。
+
+## 来源选择修复
+API enabled=false 是未配置状态，不是切换来源指令。前端保留选择、显示配置和旧版API提示，提供手动查看历史产物按钮和刷新；异常响应仍显示错误。
+
+## 输出目录独立展示
+复用 execution-location 增加 output_directory，只读已冻结SharedArtifactRoot或同执行唯一清单，不调用会校验映射或落库的snapshot。batch-v1分别显示执行根与公共output，planned明确未确认；无唯一记录显示未知。前端独立轮询元数据，与共享列表和历史来源选择互不依赖，沿用尝试权限校验。

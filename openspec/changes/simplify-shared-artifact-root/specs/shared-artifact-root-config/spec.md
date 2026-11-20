@@ -29,3 +29,15 @@
 #### Scenario: Legacy overlay
 - **WHEN** 原命令仍包含shared-storage-compose.yml
 - **THEN** 相同容器目标挂载合并为一条，显式高级映射仍优先。
+
+### Requirement: Preserve artifact source selection
+界面 SHALL 默认选择API共享直读，未启用时明确提示配置要求，不自动覆盖用户选择。
+#### Scenario: Disabled shared storage
+- **WHEN** API返回enabled=false
+- **THEN** 保留共享来源并显示未启用说明，用户仍可手动选择历史来源、切回或刷新重试。
+
+### Requirement: Output directory visibility independent of file access
+平台 SHALL 通过本次执行的元数据展示节点产物路径，不依赖共享映射或文件读取成功；没有记录或存在歧义时明确提示，计划目录与已上报目录区分展示。
+#### Scenario: File access disabled or fails
+- **WHEN** 用户有权查看执行且文件读取未启用或失败
+- **THEN** 仍能看到该执行已记录路径，但不保证目录存在；无记录时不从当前节点配置推断。

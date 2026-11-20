@@ -185,6 +185,7 @@ test('artifact drawer opens from task with grouping and closes without losing fi
  await page.getByLabel('任务状态',{exact:true}).selectOption('FAILED');
  await page.getByRole('button',{name:'查看产物',exact:true}).click();
  const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await drawer.getByLabel('产物来源').selectOption('legacy');
  await expect(drawer).toBeVisible();
  await expect(drawer.getByRole('table')).toContainText('summary.json');
  await drawer.getByLabel('产物归属').selectOption('1');
@@ -205,13 +206,16 @@ test('artifact errors do not claim an empty result and history stays separate',a
  });
  await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
  const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await drawer.getByLabel('产物来源').selectOption('legacy');
  await expect(drawer.getByRole('alert')).toContainText('产物读取失败');
  await expect(drawer.getByText('当前筛选下暂无已上传产物。',{exact:false})).toHaveCount(0);
  fail=false;await expect(drawer.getByRole('table')).toContainText('new-report.json');
  await drawer.getByLabel('产物执行尝试').selectOption('old');
+ await drawer.getByLabel('产物来源').selectOption('legacy');
  await expect(drawer.getByText('当前筛选下暂无已上传产物。',{exact:false})).toBeVisible();
  await expect(drawer.getByRole('table')).not.toContainText('new-report.json');
  await drawer.getByLabel('产物执行尝试').selectOption('new');
+ await drawer.getByLabel('产物来源').selectOption('legacy');
  await expect(drawer.getByRole('table')).toContainText('new-report.json');
  await page.setViewportSize({width:390,height:844});
  const bounds=await drawer.boundingBox();expect(bounds!.width).toBeLessThanOrEqual(390);
@@ -228,6 +232,7 @@ async function openPreview(page:Page,name:string,body:string,status=200,headers:
   return route.fulfill({body,status,headers});
  });
  await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ await page.getByRole('dialog',{name:'运行产物',exact:true}).getByLabel('产物来源').selectOption('legacy');
  await page.getByRole('dialog',{name:'运行产物',exact:true}).getByRole('button',{name:'查看 / 下载'}).click();
  return page.getByRole('region',{name:'产物预览'});
 }
@@ -297,6 +302,7 @@ test('artifact switching cancels pending preview and does not show stale text',a
  await page.route('**/fast-preview',route=>route.fulfill({body:'CURRENT'}));
  await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
  const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await drawer.getByLabel('产物来源').selectOption('legacy');
  await drawer.getByRole('button',{name:'查看 / 下载'}).first().click();
  await expect(drawer).toContainText('正在读取预览');
  const failed=page.waitForEvent('requestfailed',r=>r.url().endsWith('/slow-preview'));
@@ -340,3 +346,48 @@ test('shared storage failure is explicit and never silently switches to legacy',
  await drawer.getByLabel('产物来源').selectOption('legacy');
  await expect(drawer.getByRole('table',{name:'运行产物文件'})).toBeVisible();
 });
+
+
+test('disabled shared storage preserves source choice and can recover after configuration',async({page})=>{
+ await setup(page);let enabled=false;
+ await page.route('**/shared-artifacts?*',route=>route.fulfill({json:enabled?
+  {enabled:true,storage_id:'configured',output_root:'/artifacts/output',node_name:'node',path:'',version:'v1',next:null,items:[]}:
+  {enabled:false,items:[]}}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await expect(drawer.getByRole('status')).toContainText('API 尚未启用共享产物读取');
+ await expect(drawer.getByLabel('产物来源')).toHaveValue('shared');
+ await expect(drawer).toContainText('SHARED_ARTIFACT_HOST_ROOT');
+ await expect(drawer.getByText('正在读取共享目录…')).toHaveCount(0);
+ await drawer.getByRole('button',{name:'查看历史上传产物',exact:true}).click();
+ await expect(drawer.getByLabel('产物来源')).toHaveValue('legacy');
+ await expect(drawer.getByRole('table',{name:'运行产物文件'})).toBeVisible();
+ await drawer.getByLabel('产物来源').selectOption('shared');
+ await expect(drawer.getByRole('status')).toContainText('API 尚未启用共享产物读取');
+ await expect(drawer.getByLabel('产物来源')).toHaveValue('shared');
+ enabled=true;await drawer.getByRole('button',{name:'刷新共享目录'}).click();
+ await expect(drawer).toContainText('存储：configured');
+ await expect(drawer.getByText('API 尚未启用共享产物读取。',{exact:false})).toHaveCount(0);
+ await expect(drawer.getByLabel('产物来源')).toHaveValue('shared');
+});
+
+
+for(const mode of ['disabled','failed','planned','missing'] as const){
+ test(`output directory remains visible independently of artifact access: ${mode}`,async({page})=>{
+  await setup(page);
+  await page.route('**/execution-location',route=>route.fulfill({json:{output_directory:mode==='missing'?null:{path:'/recorded/run/output',execution_root:'/recorded/run',node_name:'recorded-node',state:mode==='planned'?'planned':'reported'}}}));
+  await page.route('**/shared-artifacts?*',route=>mode==='failed'?route.fulfill({status:503,json:{detail:'mount unavailable'}}):route.fulfill({json:{enabled:false,items:[]}}));
+  await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+  const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+  const location=drawer.getByRole('region',{name:'产物输出目录',exact:true});
+  if(mode==='missing')await expect(location).toContainText('没有唯一可用的输出目录记录');
+  else {
+   await expect(location).toContainText('/recorded/run/output');
+   await expect(location).toContainText('recorded-node');
+   if(mode==='planned')await expect(location).toContainText('尚未收到节点登记确认');
+  }
+  if(mode==='failed')await expect(drawer.getByRole('alert')).toContainText('mount unavailable');
+  await drawer.getByLabel('产物来源').selectOption('legacy');
+  if(mode!=='missing')await expect(location).toContainText('/recorded/run/output');
+ });
+}

@@ -1,7 +1,7 @@
 """Attempt-specific, reported host paths. Never infer history from live settings."""
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from .core import Job, Run, ExecutionData, Slot, Worker
+from .core import Job, Run, ExecutionData, Slot, Worker, SharedArtifactRoot
 from runner.process_log_contract import absolute_directory, identity
 
 
@@ -23,6 +23,35 @@ def reported_path(root, entry, execution, location="runs"):
         return None
 
 
+def output_location(s, run, records):
+    """Metadata only: no mount access, mapping validation, lock or registration."""
+    row = s.get(SharedArtifactRoot, run.id)
+    if row:
+        value = row.snapshot or {}
+        if row.execution_id != run.execution_id:
+            return None
+        try:
+            root = absolute_directory(value.get('output_root'))
+        except (ValueError, TypeError):
+            return None
+        return dict(path=root + '/output' if value.get('layout') == 'batch-v1' else root,
+                    execution_root=root, node_name=value.get('node_name'),
+                    state='planned' if value.get('state') == 'planned' else 'reported')
+    candidates = set()
+    for record in records:
+        if (record.identity or {}).get('location', 'runs') != 'runs':
+            continue
+        root = reported_path(record.root_path, record.entry_name, run.execution_id)
+        if root:
+            candidates.add((record.worker_id, root + '/output'))
+    if len(candidates) != 1:
+        return None
+    worker_id, path = next(iter(candidates))
+    worker = s.get(Worker, worker_id)
+    return dict(path=path, execution_root=None, node_name=worker.node_name if worker else None,
+                state='inventory')
+
+
 def view(s, run):
     slot=s.get(Slot,run.slot_id) if run.slot_id else None
     worker=s.get(Worker,slot.worker_id) if slot else None
@@ -31,6 +60,7 @@ def view(s, run):
         ExecutionData.execution_id==run.execution_id).order_by(ExecutionData.scanned_at.desc(),ExecutionData.id)).all() if run.execution_id else []
     return {'run_id':run.id,'execution_id':run.execution_id,
             'node_name':worker.node_name if worker else None,
+            'output_directory':output_location(s,run,records),
             'directories':[{'id':d.id,'path':reported_path(d.root_path,d.entry_name,run.execution_id,(d.identity or {}).get("location","runs")),
                             'scan_status':d.scan_status,'cleanup_status':d.last_cleanup_status,
                             'scanned_at':d.scanned_at,'source':'node_inventory'} for d in records]}
