@@ -2,7 +2,13 @@
 
 本清单覆盖当前 OpenSpec 全部历史变更。它区分需求记录、测试资产、实际运行证据和发布验收；不把勾选任务、测试文件存在或覆盖率达标当作全功能正确的证明。目录内 [历史任务台账](changes.md) 列出每项变更及每条未勾选任务，不遗漏早期 MVP。
 
-## 当前可复核基线
+## 最新状态与阅读顺序
+
+下面的“初始可复核基线”和阶段记录保留当时失败、未发布及待办信息，不代表最新部署状态。最新生产 API 包含 c659a63 的 SSH 连接池修复，数据库为 c952f34；本机 local4090-151 已通过界面升级到 Worker/Runner 0.21.12，其他节点未批量升级。最新测试结论见 [最终补全回归](../full-followup-20261120/README.md)，部署见 [SSH 连接池发布记录](../onboarding-db-isolation-20261120/README.md)。
+
+独立日志的 21 项条款已逐项补验，见 [日志与产物复合条款](../final-contract-audit-20261120/README.md)。产物已完成平台目录、自定义目录及真机矩阵；最终联合门禁单独登记。取消的启动快照、暂缓的 Worker 文件转发和整机配额通道不恢复实施。
+
+## 初始可复核基线
 
 - `cc2f1fe`：Python 2218 通过、101 跳过；浏览器 197 通过、10 跳过。Python 行 91.73%、分支 82.58%，各目录和关键组门槛通过。[完整记录](../coverage-followup-20261120/README.md)保留失败与跳过。
 - `0f19b46`：新增集合全选，6 项相关浏览器测试及 TypeScript 通过。[专项记录](../suite-selection-20261120/README.md)。仅前端变更，未重跑全部测试，不能把旧全量数字作为本提交重新全量的结果。
@@ -81,3 +87,22 @@ initial-mvp中的Compose启动、调度轮转/FIFO/限额、逐卡身份与TTL�
 generic-machine-runtime-management的SSH执行器和幂等安装（5.1/5.2）已有onboarding_transport、ssh_onboarding、onboarding_recovery_edges、node_installation/system_node_installer、Agent安装回连等实现和测试；日志/凭据脱敏、身份变化拒绝、安装中断不重放、非标准布局保护、NFS单元保留均有具体断言。隔离SSH目标完整安装5.3不据此勾选。
 
 该变更6.1/6.2的五节点部署与跨物理机编排验收由2026-11-16 production-fleet-acceptance承接：0.12.0/协议10、五节点身份/NFS保留、8种host/docker跨机CS组合及两小时多用户排队/暂停/取消/重试。它是已完成的历史验收，不意味着本轮把五节点都升级到了0.21.12；本轮只升级授权的本机节点。最新版本边界见本轮发布记录。
+
+
+## 尚未结项的具体边界
+
+- 真实 RoboTwin：已在 `rtx8000-177` 发现可用的 Zero-WAM/PiperPika checkpoint 候选，但仍缺 mini-eval 可调用的完整 RoboTwin simulator 配置和真实平台批次验收；GPU/NPU 算术、模拟协议及日志/产物验收均不能代替该项。
+- 隔离 SSH 首次安装：已有执行器、向导、失败恢复与真实连接池测试；仍需允许全新安装的隔离目标。未对已有业务机器解除纳管或重装以凑验收。
+- 通用非 GPU/NPU 设备：逻辑设备映射、就绪回执和独占预留尚未完整实现；需要明确目标设备与两台物理节点的路径。现有加速卡调度不等于任意设备支持。
+- 模块边界及原参数分层复合条款：已有参数绑定、目录挂载、端口、资源需求和预览；旧设计中的业务到资源映射与后续独立资源需求决策需要先统一，不能把缺少的部分写成已完成。静态导入图没有顶层环不代表函数内业务依赖或跨模块生命周期写入均已整改。
+- 跨模块一致性：现有真实 PostgreSQL 已覆盖成员迁移/领取、批次暂停/取消/领取、并发资源预约及重复提交；节点停用与领取的独立并发场景、所有状态拥有者边界还需逐项补证。原复合任务保持未勾选。
+
+这些项与本轮已上线的产物、日志和界面功能分开追踪。尚缺环境的信息已经询问，未把没有回复视为允许选择任意设备、模型或重装目标。
+
+### RoboTwin checkpoint 搜索补充（2026-11-20）
+
+在已纳管的 `rtx8000-177`（`192.168.8.177`）上只读核对到一套可用的 Zero-WAM/PiperPika Robotwin 模型：
+
+`/data/Zero-WAM/models/piperpika_checkpoint_eval_20261021/step_6000/model`
+
+该目录包含 8 个 transformer 权重分片、3 个 text-encoder 分片、VAE、tokenizer 和 `piperpika_action_contract.json`；目录的 `SHA256SUMS` 可复核完整性。该节点当前已有服务进程以该目录的 `best_model` 软链接加载模型，历史日志显示读取 RoboTwin ICL latent。模型服务不是 mini-eval 管理的真实 RoboTwin 仿真批次，机器上也没有独立的 RoboTwin simulator checkout 或完整评测结果目录，因此这项证据只能把 checkpoint 缺口改为“已发现候选，待平台真实模型评测”，不能勾选真实模型验收。

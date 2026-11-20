@@ -1,0 +1,19 @@
+{
+  "state": "intentionally_interrupted",
+  "reason": "New onboarding DB isolation regression found; final full suite moved to corrected source c659a63.",
+  "pytest_exit": {
+    "pytest_exit_code": 1
+  },
+  "junit": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "59",
+    "tests": "1021",
+    "time": "912.432",
+    "timestamp": "2026-11-20T11:57:48.461512+08:00",
+    "hostname": "Huawei"
+  },
+  "coverage_is_partial": true,
+  "merge_into_final_coverage": false
+}

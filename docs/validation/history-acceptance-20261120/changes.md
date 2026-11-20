@@ -35,7 +35,7 @@
 | [external-resource-admission](../../../openspec/changes/external-resource-admission/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [functional-workspace-pages](../../../openspec/changes/functional-workspace-pages/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [generic-business-commands](../../../openspec/changes/generic-business-commands/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
-| [generic-machine-runtime-management](../../../openspec/changes/generic-machine-runtime-management/tasks.md) | 31/40 | 仍有待核对/实施项 |
+| [generic-machine-runtime-management](../../../openspec/changes/generic-machine-runtime-management/tasks.md) | 32/40 | 仍有待核对/实施项 |
 | [heartbeat-db-contention](../../../openspec/changes/heartbeat-db-contention/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [host-business-working-directory](../../../openspec/changes/host-business-working-directory/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [host-device-environment-boundary](../../../openspec/changes/host-device-environment-boundary/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
@@ -85,7 +85,7 @@
 | [suite-management](../../../openspec/changes/suite-management/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-run-preflight](../../../openspec/changes/suite-run-preflight/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-select-all](../../../openspec/changes/suite-select-all/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
-| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 19/21 | 仍有待核对/实施项 |
+| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 21/21 | 本轮全量门禁、文档链接、兼容/回退边界已复核；未验收扩展项仍按台账单列 |
 | [task-submission-orchestration](../../../openspec/changes/task-submission-orchestration/tasks.md) | 21/21 | 记录完成，证据以原报告版本为准 |
 | [template-authoring-guidance](../../../openspec/changes/template-authoring-guidance/tasks.md) | 9/9 | 记录完成，证据以原报告版本为准 |
 | [template-resource-requirements](../../../openspec/changes/template-resource-requirements/tasks.md) | 15/15 | 记录完成，证据以原报告版本为准 |
@@ -95,7 +95,7 @@
 | [worker-storage-settings](../../../openspec/changes/worker-storage-settings/tasks.md) | 10/10 | 记录完成，证据以原报告版本为准 |
 | [ws-transport-connectivity](../../../openspec/changes/ws-transport-connectivity/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
 
-共 90 个已登记历史变更（另有本地空草稿）。以下根据当前tasks.md列出仍未勾选条款；撤销项保留讨论，不作为实施授权。
+共 89 个有任务文件的变更；本地另有2个空草稿。以下根据当前tasks.md列出仍未勾选条款；撤销项保留讨论，不作为实施授权。
 
 ## execution-launch-snapshots
 
@@ -115,14 +115,12 @@
 
 - 5.3 实现 SSH 注册向导与检查/纳管进度；完成隔离 SSH 目标端到端验收，文档说明失败修复和解除纳管边界，提交此功能。
 - 7.1 对照设计检查各模块状态写入和依赖方向，明确公共接口与错误契约；整改跨模块直接修改生命周期字段及循环业务依赖，保留兼容入口。
-- 7.2 补充局部故障测试：SSH 超时不影响现有任务、模板校验失败不占资源、探测/日志故障不阻塞续租取消，并验证有界重试及恢复。
 - 7.3 补充跨模块一致性测试：停用/迁移与领取竞争、评测/服务资源竞争、停止清理、过期事件与重复回合去重、模板快照不变；记录覆盖与未覆盖风险后提交。
 - 9.1 实现版本化平台/业务/运行参数契约及纯校验解析模块、兼容迁移和模板 API；验证类型、覆盖、argv/env/JSON 编码及旧快照。
 - 9.2 贯通集合任务参数、运行向导、批次原子校验与有效快照，明确定义业务到运行需求映射；验证任务/回合输入和资源预检一致。
 - 9.3 实现节点批准目录/设备映射及就绪回执、统一端口/独占设备预留和 Worker 能力门槛；验证竞争、缺失资源和过期修订。
 - 9.4 实现 Docker 目录/设备挂载及 host 参数解析，补启动前校验、日志脱敏、取消/丢租清理；两台节点验证不同路径与业务任务正确传递。
 - 9.5 模板界面分基础信息、平台参数、业务参数、运行参数，提供类型化编辑与有效命令/挂载预览；回归集合、调度、机器和服务模块，完成可执行联调后部署并提交。
-
 ## initial-mvp
 
 - 完成真实 ClearMLAdapter、远程 Runner repo/commit 配置及 Agent 可执行演示。

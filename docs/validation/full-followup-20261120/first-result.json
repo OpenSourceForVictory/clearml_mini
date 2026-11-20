@@ -1,0 +1,56 @@
+{
+  "commit": "9fb9943",
+  "passed": 2278,
+  "failed": 6,
+  "skipped": 99,
+  "duration_seconds": 1840.3,
+  "coverage_gate": "passed",
+  "tests_gate": "failed",
+  "failures": [
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[good-None]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    },
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[missing-missing_final]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    },
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[duplicate-multiple_final]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    },
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[null-invalid_final]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    },
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[fields-invalid_final]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    },
+    {
+      "name": "backend.tests.test_result_outcomes::test_adapter_real_child_under_parent_coverage[nonzero-process]",
+      "reason": "Missing episode context in direct adapter test; corrected in 3f1938b"
+    }
+  ],
+  "skip_reasons": {
+    "disposable privileged mount namespace required": 1,
+    "separate disposable migration database required": 2,
+    "requires isolated mini-eval-onboarding-test Compose project": 1,
+    "dedicated migration database required": 1,
+    "dedicated PostgreSQL required": 2,
+    "real process/container execution opt-in": 8,
+    "dedicated disposable orchestration migration database required": 1,
+    "dedicated disposable resource migration database required": 1,
+    "explicit disposable mount-namespace test required": 1,
+    "real host/docker sample opt-in": 8,
+    "requires local Docker image": 2,
+    "opt-in real Docker matrix": 24,
+    "set HOST_EXECUTION_TEST=1 for real systemd user units": 1,
+    "real systemd opt-in": 2,
+    "requires systemd user manager": 4,
+    "requires root, systemd and provisioned mini-eval test account": 5,
+    "requires Docker and delegated systemd": 22,
+    "requires local Docker image and real systemd opt-in": 12,
+    "requires built mini-eval-template-examples:v1 image": 1
+  }
+}
