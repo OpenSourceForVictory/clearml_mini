@@ -1,0 +1,8 @@
+1: opt-in real independent artifact Docker test
+1: opt-in real local Docker artifact test
+24: opt-in real Docker matrix
+1: set HOST_EXECUTION_TEST=1 for real systemd user units
+2: real systemd opt-in
+5: requires root, systemd and provisioned mini-eval test account
+20: set PROCESS_LOG_TEST_IMAGE for real Docker integration
+12: requires local Docker image and real systemd opt-in

@@ -312,3 +312,16 @@ def test_scope_and_offline_node(shared):
         worker=s.get(Worker,slot.worker_id);worker.enabled=False
         slot.heartbeat_at=slot.last_seen_at=now()-timedelta(days=3);s.commit()
     assert c.get(route(shared),headers=auth['alice']).status_code==200
+
+
+def test_registered_episode_directory_and_explicit_reference_priority(shared):
+    from runner.artifact_manifest import register
+    main,c,auth,token,job,task,output,mapping = shared
+    folder=output/'declared';folder.mkdir();(folder/'result.json').write_text('{}')
+    assert register(folder,3)
+    assert c.get(route(shared)+'?path=declared',headers=auth['alice']).json()['items'][0]['episode_ids']==[3]
+    with main.SessionLocal() as session:
+        session.add(EpisodeRecord(run_id=task['run_id'],episode_id=2,seed=1,started={},result={'artifacts':['declared/result.json']}))
+        session.commit()
+    assert c.get(route(shared)+'?path=declared',headers=auth['alice']).json()['items'][0]['episode_ids']==[2]
+    assert c.get(route(shared)+'?path=declared',headers=auth['bob']).status_code==404

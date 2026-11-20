@@ -2,7 +2,7 @@
 
 ## 1. 目录与回合契约
 - [x] 1.0 完成 SDK 兼容目录属性与相对路径辅助函数基础，正常/异常/嵌套/旧业务回归通过；文档明确目录 manifest 与完整采集仍待1.1。
-- [ ] 1.1 新增兼容的 SDK episode_output_dir、独立上下文及归属 manifest，覆盖 SDK/直接协议/普通命令、嵌套 Runner、异常和旧路径；同步 SDK 文档。
+- [x] 1.1 新增兼容的 SDK episode_output_dir、独立上下文及归属 manifest，覆盖 SDK/直接协议/普通命令、嵌套 Runner、异常和旧路径；同步 SDK 文档。
 - [ ] 1.2 增加模板结果浏览目录及快照/参数解析，校验宿主批准根与容器持久映射；补参数契约/模板/API/UI 测试，更新指南。
 
 ## 2. 共享目录登记与文件保留
@@ -49,3 +49,5 @@
 继承补丁已按用户要求部署，API/前端更新、Worker0.21.10未重装、数据库a730d12未迁移。真实Worker继承回执、还原原配置、浏览器提示及既有产物可读通过；证据docs/validation/artifact-root-inheritance-20261119/deployment.json。
 
 Runner入口补测与SDK真GPU阶段验收：docs/validation/artifact-runner-gpu-20261119/README.md。153通过/1跳过，cs_entry与command_sdk分别98.90/97.06、95.60/96.67；全仓门槛仍未达标。可见CUDA原生SDK3回合批次f0517199-0ec0-42d0-9d73-b4e398988232成功，明确协议引用的文件归属/筛选通过。当时NPU缺API共享路径映射。用户随后确认NPU服务不产生运行产物，不再等待配置NFS或产物映射；NPU只验收服务启动、就绪、设备、日志和清理。完整5.2及manifest相关项仍保持待完成。
+
+回合目录 manifest 切片（1.1）：SDK/宿主逐回合入口登记、嵌套父回合、异常保留及 API 目录归属已实现；普通命令/直接协议与实际 Docker SDK 三回合持久化通过。专项523通过/66跳过、浏览器21通过，保留失败与全仓覆盖门槛未通过；证据 docs/validation/artifact-manifest-20261120/README.md。Worker 0.21.12 尚未部署，无数据库迁移；2.2/2.3/4.2/5.x 的完整验收不据此勾选。

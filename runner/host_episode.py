@@ -15,8 +15,7 @@ from .episode_contract import EpisodeResultError
 
 def episode_input(task, episode, context, environment):
     work=context.work_dir/('episode-'+str(episode.id))
-    output=(context.episode_output_dir if task.get('_artifact_layout')=='batch-v1'
-            else context.output_dir/('episode-'+str(episode.id)))
+    output=context.episode_output_dir
     work.mkdir(parents=True,exist_ok=True,mode=0o700)
     output.mkdir(parents=True,exist_ok=True,mode=0o700)
     path=work/'input.json'

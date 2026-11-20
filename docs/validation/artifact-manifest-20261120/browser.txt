@@ -1,0 +1,28 @@
+
+Running 21 tests using 1 worker
+
+(node:1121309) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/batch-monitoring.spec.ts:32:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.8s)
+  ✓   2 tests/batch-monitoring.spec.ts:43:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓   3 tests/batch-monitoring.spec.ts:49:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓   4 tests/batch-monitoring.spec.ts:57:1 › detail tabs preserve filtering and retry selection and contain narrow tables (347ms)
+  ✓   5 tests/batch-monitoring.spec.ts:75:1 › client placement is a separate column with GPU zero and unassigned states (177ms)
+  ✓   6 tests/batch-monitoring.spec.ts:82:1 › episode expansion separates protocol results, process exits and unreported rounds (6.6s)
+  ✓   7 tests/batch-monitoring.spec.ts:111:1 › zero exits and invalid protocol are separate at batch task and episode levels (270ms)
+  ✓   8 tests/batch-monitoring.spec.ts:129:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓   9 tests/batch-monitoring.spec.ts:146:1 › result summaries use two separate cards and stack on narrow screens (189ms)
+  ✓  10 tests/batch-monitoring.spec.ts:158:1 › summary details are collapsed, expandable and preserved across polling (2.2s)
+  ✓  11 tests/batch-monitoring.spec.ts:170:1 › task row opens local execution and protocol counts without opening another task (226ms)
+  ✓  12 tests/batch-monitoring.spec.ts:177:1 › artifact drawer opens from task with grouping and closes without losing filters (309ms)
+  ✓  13 tests/batch-monitoring.spec.ts:200:1 › artifact errors do not claim an empty result and history stays separate (2.6s)
+  ✓  14 tests/batch-monitoring.spec.ts:235:1 › artifact JSON renders folded objects and invalid JSON shows safe original text (408ms)
+  ✓  15 tests/batch-monitoring.spec.ts:248:1 › artifact CSV handles quoted newlines and bounds table rendering (526ms)
+  ✓  16 tests/batch-monitoring.spec.ts:261:1 › artifact preview truncates ignored Range and handles empty files and errors (412ms)
+  ✓  17 tests/batch-monitoring.spec.ts:274:1 › artifact active content is download only (288ms)
+  ✓  18 tests/batch-monitoring.spec.ts:281:1 › artifact text uses server total for truncation and renders UTF-8 safely (314ms)
+  ✓  19 tests/batch-monitoring.spec.ts:291:1 › artifact switching cancels pending preview and does not show stale text (338ms)
+  ✓  20 tests/batch-monitoring.spec.ts:309:1 › shared artifacts browse directories and preview through API without upload (388ms)
+  ✓  21 tests/batch-monitoring.spec.ts:332:1 › shared storage failure is explicit and never silently switches to legacy (276ms)
+
+  21 passed (36.2s)

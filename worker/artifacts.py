@@ -20,6 +20,8 @@ def read_artifacts(container):
                     prefix, _, name = member.name.partition('/')
                     if prefix != OUTPUT_DIR.rsplit('/', 1)[-1]:
                         raise RuntimeError('invalid artifact archive root')
+                    if any(p == '.mini-eval-artifacts' or p.startswith('.mini-eval-artifacts-') for p in name.split('/')):
+                        continue
                     if name == '.mini-eval-protocol' or name.startswith('.mini-eval-protocol/'):
                         continue  # Platform protocol journal, not a business artifact.
                     if member.isdir():

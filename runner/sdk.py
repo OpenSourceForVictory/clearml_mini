@@ -42,6 +42,7 @@ class Context:
     config: dict
     output_dir: Path
     _episode_output_dir: Path | None = field(default=None, repr=False)
+    _episode_id: int | None = field(default=None, repr=False)
 
     @property
     def episode_output_dir(self):
@@ -51,6 +52,9 @@ class Context:
         self._episode_output_dir.mkdir(parents=True, exist_ok=True)
         if self._episode_output_dir.is_symlink():
             raise ValueError("episode output directory must not be a symbolic link")
+        from .artifact_manifest import register
+        if not register(self._episode_output_dir, self._episode_id):
+            print("artifact episode metadata could not be confirmed; inspect artifact attribution", file=sys.stderr)
         return self._episode_output_dir
 
     def artifact_path(self, path):
@@ -135,7 +139,8 @@ def run(client, config, output_dir=None):
                 nested = config.get("_parent_episode_id") is not None
                 episode_directory = (context.output_dir if nested else Path(config["_artifact_root"])/"episodes"/str(i)/"output"
                                      if config.get("_artifact_layout")=="batch-v1" else context.output_dir / ("episode-" + str(i)))
-                episode_context = replace(context, _episode_output_dir=episode_directory)
+                episode_context = replace(context, _episode_output_dir=episode_directory,
+                                          _episode_id=config.get("_parent_episode_id", i))
                 result = client.run_episode(config, episode, episode_context)
                 if not isinstance(result, EpisodeResult):
                     raise EpisodeResultError('invalid_episode_result')

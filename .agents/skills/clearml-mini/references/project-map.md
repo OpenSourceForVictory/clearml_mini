@@ -235,3 +235,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 历史功能验收索引：docs/validation/history-acceptance-20261120/README.md 关联核心行为、测试入口、真机版本及待验边界；changes.md 包含全部历史变更与未勾选条款。继续实施时按当前任务刷新台账，不能用历史通过报告或复合任务的部分实现代替当前完整验收；已撤销启动快照、已替代 ClearML 运行时和暂缓 Worker 文件转发必须保留用户决策。
 
 日志预算 0.21.11 本机界面升级与部署验收见 docs/validation/log-policy-release-20261120/README.md：数据库 b841e23、本机 GPU 节点升级、其他节点旧版、三回合日志下载及预算还原；后续操作须重新查询当前版本，不能把此记录当全节点升级。
+
+回合产物元数据：runner/artifact_manifest.py 写入目录内 .mini-eval-artifacts，SDK lazy 属性/host_episode 使用；worker/artifact_reader.py 在固定执行根内读显式归属，shared_artifacts.py 以协议逐文件声明优先。元数据不能授权任意路径；固定 -I 子进程按已安装绝对位置加载辅助模块，SDK ZIP 必须包含该模块。操作与兼容边界见 docs/shared-storage-artifacts.md。

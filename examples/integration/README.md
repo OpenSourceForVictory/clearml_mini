@@ -40,3 +40,9 @@ python self_test.py
 创建包含 echo_a/echo_b/echo_c 的集合，每项两回合；在向导选择客户端模板，服务来源选平台启动并选择回显服务模板，设置资源池和并发。服务端从 platform.listen 读监听端口，客户端从 platform.service.endpoint 获取地址。预期六回合结束且 echo_verified=1。共享/独占和资源不足排队由平台处理。
 
 具体步骤也可随时在平台“用户指南”阅读，不需要访问源码仓库。
+
+### 回合产物目录
+
+配套 API 和 Worker/Runner 0.21.12 支持回合目录归属。原生 SDK 在 `run_episode` 中使用 `context.episode_output_dir / 'result.json'` 写文件，会懒创建目录并登记当前回合；`context.output_dir` 保留公共目录语义。目录内的文件可按回合查看，不强制逐文件返回 `artifacts`；显式返回的 `artifacts` 引用优先。嵌套 SDK 保持父回合编号，不额外嵌套目录。不读取该属性的旧业务不增加空目录或元数据。目录登记失败不改变业务结果，未登记文件仍可按任务浏览。
+
+`.mini-eval-artifacts` 是平台隐藏元数据，不应作为业务产物编辑或引用；它不授予目录权限。旧 API 不会自动显示新归属；先更新 API，再更新实际 Runner/SDK。单进程直接协议仍由业务显式声明文件归属，平台不按文件夹名称推测。

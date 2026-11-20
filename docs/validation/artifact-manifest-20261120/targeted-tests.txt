@@ -1,0 +1,69 @@
+...........................s............................................ [ 26%]
+...................................s.................................... [ 52%]
+........................................................................ [ 79%]
+.........................................................                [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-final-20261120/tests.xml -
+271 passed, 2 skipped, 2074 deselected, 1 warning in 80.46s (0:01:20)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-final-20261120/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-final-20261120/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-final-20261120/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 172 | 36.71% | 16.30% |
+| backend/app | 51 | 51.26% | 17.60% |
+| worker | 29 | 32.36% | 21.25% |
+| node_agent | 8 | 19.44% | 2.86% |
+| runner | 30 | 46.26% | 30.72% |
+| onboarding | 9 | 17.88% | 2.44% |
+| scripts | 45 | 13.78% | 2.01% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 49.75% | 22.57% |
+| 节点纳管与升级 | 18 | 21.96% | 2.34% |
+| 业务执行与结果 | 48 | 46.29% | 31.81% |
+| 节点监控 | 8 | 19.44% | 2.86% |
+| 运行模板注册管理 | 5 | 59.57% | 34.26% |
+| 评测结果与批次管理 | 4 | 27.33% | 0.00% |
+| 任务集合与编排 | 5 | 30.36% | 0.00% |
+
+## 门槛检查
+
+backend/app: line 51.26% < 80.00%
+backend/app: branch 17.60% < 70.00%
+worker: line 32.36% < 80.00%
+worker: branch 21.25% < 70.00%
+node_agent: line 19.44% < 80.00%
+node_agent: branch 2.86% < 70.00%
+runner: line 46.26% < 80.00%
+runner: branch 30.72% < 70.00%
+onboarding: line 17.88% < 80.00%
+onboarding: branch 2.44% < 70.00%
+scripts: line 13.78% < 80.00%
+scripts: branch 2.01% < 70.00%
+调度与资源: line 49.75% < 90.00%
+调度与资源: branch 22.57% < 80.00%
+节点纳管与升级: line 21.96% < 90.00%
+节点纳管与升级: branch 2.34% < 80.00%
+业务执行与结果: line 46.29% < 90.00%
+业务执行与结果: branch 31.81% < 80.00%
+节点监控: line 19.44% < 80.00%
+节点监控: branch 2.86% < 70.00%
+运行模板注册管理: line 59.57% < 80.00%
+运行模板注册管理: branch 34.26% < 70.00%
+评测结果与批次管理: line 27.33% < 80.00%
+评测结果与批次管理: branch 0.00% < 70.00%
+任务集合与编排: line 30.36% < 80.00%
+任务集合与编排: branch 0.00% < 70.00%

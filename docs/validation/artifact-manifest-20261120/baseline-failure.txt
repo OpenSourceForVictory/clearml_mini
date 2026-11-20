@@ -1,0 +1,27 @@
+..............................................................F......... [ 64%]
+F...s...................................                                 [100%]
+=================================== FAILURES ===================================
+____________________ test_registration_and_real_subprocess _____________________
+backend/tests/test_artifact_reader.py:142: in test_registration_and_real_subprocess
+    assert result['status'] == 'ready'
+E   AssertionError: assert 'reader_unavailable' == 'ready'
+E
+E     - ready
+E     + reader_unavailable
+___________ test_real_business_permissions_and_search_only_ancestors ___________
+backend/tests/test_artifact_reader.py:211: in test_real_business_permissions_and_search_only_ancestors
+    assert result['status'] == 'ready'
+E   AssertionError: assert 'reader_unavailable' == 'ready'
+E
+E     - ready
+E     + reader_unavailable
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_artifact_reader.py::test_registration_and_real_subprocess
+FAILED backend/tests/test_artifact_reader.py::test_real_business_permissions_and_search_only_ancestors
+2 failed, 109 passed, 1 skipped, 1 warning in 36.92s

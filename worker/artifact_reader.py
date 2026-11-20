@@ -13,6 +13,19 @@ import os
 import stat
 import sys
 
+if __package__:
+    from runner.artifact_manifest import read as episode_manifest
+else:
+    # The isolated -I helper deliberately has no application import path.
+    # Load only this fixed, installed sibling; never add business cwd to sys.path.
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        '_artifact_manifest', Path(__file__).resolve().parents[1] / 'runner' / 'artifact_manifest.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    episode_manifest = module.read
+
 BLOCK_BYTES = 1024 * 1024
 PAGE_ITEMS = 100
 RESERVED = {'.mini-eval-protocol', '.mini-eval-artifacts'}
@@ -38,7 +51,7 @@ def parts(value, absolute=False):
     if not value:
         return ()
     items = value.split('/')
-    if any(p in ('', '.', '..') or p in RESERVED for p in items):
+    if any(p in ('', '.', '..') or (p in RESERVED or p.startswith('.mini-eval-artifacts-')) for p in items):
         raise ReadError('invalid_path')
     return tuple(items)
 
@@ -95,7 +108,7 @@ def query(root, expected, request):
                 def scan():
                     with os.scandir(fd) as entries:
                         for entry in entries:
-                            if entry.name in RESERVED:
+                            if entry.name in RESERVED or entry.name.startswith('.mini-eval-artifacts-'):
                                 continue
                             fingerprint[0] += 1
                             fingerprint[1] ^= int.from_bytes(hashlib.sha256(
@@ -107,11 +120,24 @@ def query(root, expected, request):
                     raise ReadError('file_changed')
                 if after and not request.get('version'):
                     raise ReadError('invalid_request')
+                # Only explicit metadata can assign an episode. Ancestors are
+                # opened beneath this execution root; metadata never changes roots.
+                episode = None
+                for depth in range(len(components) + 1):
+                    with directory(root, expected, '/'.join(components[:depth])) as ancestor:
+                        declared = episode_manifest(ancestor)
+                        if declared is not None:
+                            episode = declared
                 items = []
                 for name in names[:limit]:
                     st = os.stat(name, dir_fd=fd, follow_symlinks=False)
                     kind = 'directory' if stat.S_ISDIR(st.st_mode) else 'file' if stat.S_ISREG(st.st_mode) and st.st_nlink == 1 else 'unsupported'
+                    declared = episode
+                    if kind == 'directory':
+                        with directory(root, expected, '/'.join((*components, name))) as child:
+                            declared = episode_manifest(child) or episode
                     items.append({'name': name, 'kind': kind, 'size_bytes': st.st_size,
+                                  'episode_ids': [declared] if declared is not None else [],
                                   'version': version(st)})
                 fingerprint = [0, 0]
                 for _ in scan():

@@ -171,7 +171,7 @@ def install(app, db, current, worker_auth):
             dict(operation='list', path=path, after=after, version=version), user_id)
         for entry in result['items']:
             entry['path'] = str(PurePosixPath(path) / entry['name'])
-            entry['episode_ids'] = linked.get(entry['path'], [])
+            entry['episode_ids'] = linked.get(entry['path'], entry.get('episode_ids', []))
             entry['media_type'] = media_type(entry['name'])
         return {**result, 'enabled': True, 'path': path, 'storage_id': location['storage_id'],
                 'node_name': location['node_name'], 'output_root': location['output_root']}

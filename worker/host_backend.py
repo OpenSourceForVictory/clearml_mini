@@ -254,6 +254,7 @@ class HostBackend:
         for i,p in enumerate(root.rglob('*')):
             if i>128:raise RuntimeError('too many artifact entries')
             name=p.relative_to(root).as_posix()
+            if any(part == '.mini-eval-artifacts' or part.startswith('.mini-eval-artifacts-') for part in p.relative_to(root).parts):continue
             if p.is_symlink() or not artifact_name(name):raise RuntimeError('invalid artifact path')
             if p.is_dir():continue
             if not p.is_file():raise RuntimeError('artifact is not a regular file')

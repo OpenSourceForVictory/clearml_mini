@@ -1,0 +1,74 @@
+............................s........................................... [ 12%]
+....................................s................................... [ 24%]
+........................................................................ [ 36%]
+.........................................ssssssssssssssssssssssss...sss. [ 48%]
+........................................................................ [ 61%]
+..................................sssss................................. [ 73%]
+.s.s.s.s.s.s.s.s.s.s.s.s.s.s.s....s....s....s....s....s................. [ 85%]
+.ssssssssssss........................................................... [ 97%]
+.............                                                            [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-expanded-20261120/tests.xml -
+523 passed, 66 skipped, 1758 deselected, 1 warning in 159.93s (0:02:39)
+Wrote JSON report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-expanded-20261120/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-expanded-20261120/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/coverage-artifacts/artifact-manifest-expanded-20261120/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 172 | 43.10% | 23.92% |
+| backend/app | 51 | 52.82% | 20.40% |
+| worker | 29 | 47.69% | 37.24% |
+| node_agent | 8 | 19.44% | 2.86% |
+| runner | 30 | 64.12% | 46.89% |
+| onboarding | 9 | 22.07% | 10.98% |
+| scripts | 45 | 13.90% | 2.10% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 50.42% | 25.00% |
+| 节点纳管与升级 | 18 | 23.98% | 6.32% |
+| 业务执行与结果 | 48 | 65.99% | 51.42% |
+| 节点监控 | 8 | 19.44% | 2.86% |
+| 运行模板注册管理 | 5 | 61.12% | 37.50% |
+| 评测结果与批次管理 | 4 | 27.33% | 0.00% |
+| 任务集合与编排 | 5 | 30.36% | 0.00% |
+
+## 门槛检查
+
+backend/app: line 52.82% < 80.00%
+backend/app: branch 20.40% < 70.00%
+worker: line 47.69% < 80.00%
+worker: branch 37.24% < 70.00%
+node_agent: line 19.44% < 80.00%
+node_agent: branch 2.86% < 70.00%
+runner: line 64.12% < 80.00%
+runner: branch 46.89% < 70.00%
+onboarding: line 22.07% < 80.00%
+onboarding: branch 10.98% < 70.00%
+scripts: line 13.90% < 80.00%
+scripts: branch 2.10% < 70.00%
+调度与资源: line 50.42% < 90.00%
+调度与资源: branch 25.00% < 80.00%
+节点纳管与升级: line 23.98% < 90.00%
+节点纳管与升级: branch 6.32% < 80.00%
+业务执行与结果: line 65.99% < 90.00%
+业务执行与结果: branch 51.42% < 80.00%
+节点监控: line 19.44% < 80.00%
+节点监控: branch 2.86% < 70.00%
+运行模板注册管理: line 61.12% < 80.00%
+运行模板注册管理: branch 37.50% < 70.00%
+评测结果与批次管理: line 27.33% < 80.00%
+评测结果与批次管理: branch 0.00% < 70.00%
+任务集合与编排: line 30.36% < 80.00%
+任务集合与编排: branch 0.00% < 70.00%

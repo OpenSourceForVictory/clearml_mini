@@ -1,0 +1,11 @@
+.....................F                                                   [100%]
+=================================== FAILURES ===================================
+_____ test_legacy_collectors_skip_metadata_and_keep_business_files[docker] _____
+backend/tests/test_artifact_manifest.py:126: in test_legacy_collectors_skip_metadata_and_keep_business_files
+    assert read_artifacts('container')==[('episode-1/result.json',b'{}')]
+worker/artifacts.py:22: in read_artifacts
+    raise RuntimeError('invalid artifact archive root')
+E   RuntimeError: invalid artifact archive root
+=========================== short test summary info ============================
+FAILED backend/tests/test_artifact_manifest.py::test_legacy_collectors_skip_metadata_and_keep_business_files[docker]
+1 failed, 21 passed in 0.11s
