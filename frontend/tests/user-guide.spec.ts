@@ -16,7 +16,13 @@ test('guide search, SDK download and role filtering',async({page})=>{
  await dialog.getByLabel('搜索指南').fill('SDK');
  await dialog.getByRole('button',{name:'业务接入：选择模式与下载 SDK',exact:true}).first().click();
  await expect(dialog.getByRole('heading',{name:'业务接入：选择模式与下载 SDK'})).toBeVisible();
- const download=page.waitForEvent('download');await dialog.getByRole('link',{name:'下载 SDK 与三种接入样例（ZIP）'}).click();
+ await expect(dialog.getByText(/task_type=command/)).toBeVisible();
+ await expect(dialog.getByRole('link',{name:'下载业务接入完整指南（含模板操作和协议样例）'})).toBeVisible();
+ await dialog.getByRole('button',{name:'SDK 对接：输入、回合与结果',exact:true}).click();
+ await expect(dialog.getByText(/EvaluationClient/)).toBeVisible();
+ await dialog.getByRole('button',{name:'直接评测协议：非 Python 程序也可接入',exact:true}).click();
+ await expect(dialog.getByText(/MINI_EVAL_EVENT/)).toBeVisible();
+ const download=page.waitForEvent('download');await dialog.getByRole('link',{name:'下载 SDK 与四种客户端接入样例（ZIP）'}).click();
  expect((await download).suggestedFilename()).toBe('mini-eval-sdk.zip');
  await dialog.getByLabel('搜索指南').fill('no-such-guide-0123');await expect(dialog.getByRole('status')).toContainText('未找到');
  await page.keyboard.press('Escape');await expect(dialog).not.toBeVisible();await expect(page.getByRole('button',{name:'用户指南',exact:true})).toBeFocused();expect(writes).toEqual([]);

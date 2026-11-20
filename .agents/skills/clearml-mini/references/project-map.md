@@ -228,7 +228,7 @@ API共享产物直读：shared_storage.py 管理显式节点/根/marker映射，
 
 服务探测会话申请也属于启动阶段：worker/client.py 在启动租约续期线程存活时重试 503/传输故障，受启动时限、取消和租约约束。test_worker_service_execution.py 覆盖 host/Docker 重试、拒绝、停止和超时；不能把 unit missing 一律归因于同名实例。
 
-SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库外独立日志运行；新增 Runner 运行时依赖需同步 scripts/build_integration_bundle.py 清单并重新生成 frontend/public/integration/mini-eval-sdk.zip，普通 self_test 通过不能替代可选日志路径验证。
+面向业务用户的入口是左侧“用户指南 → 业务接入”，主说明见 docs/user-guidance.md，完整操作/可复制样例在 examples/integration/README.md；指南必须区分 task_type、integration_mode、execution_mode 与宿主机 episode_launch，退出码不能替代评测结果。SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库外独立日志运行；新增 Runner 运行时依赖需同步 scripts/build_integration_bundle.py 清单并重新生成 frontend/public/integration/mini-eval-sdk.zip，普通 self_test 通过不能替代可选日志路径验证。
 
 日志预算：backend/app/log_policy.py 管理整机期望版本与每卡回执；worker/log_policy.py 在历史日志线程持久化。首次领取冻结 ExecutionLogPolicy（b841e23），心跳不可覆盖回执；整机配额仍不限制。前端入口为机器数据保留，详见 docs/execution-logs.md。
 

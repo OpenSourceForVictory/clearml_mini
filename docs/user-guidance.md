@@ -42,6 +42,12 @@
 
 每次修改代码必须同步相关文档或 Skill，规则记录在根目录 AGENTS.md。新增功能页须补指南，协议变更须同步可执行样例。Agent 入口为 `.agents/skills/clearml-mini/SKILL.md`，不作为用户操作入口。
 
+## 业务程序接入上手路径
+
+用户登录后从左侧“用户指南 → 业务接入”下载 `mini-eval-sdk.zip`，在解压目录运行 `python3 self_test.py`。应用内的“业务接入”“SDK 对接”“直接评测协议”主题分别解释模式选择、Python 类 SDK 与非 Python JSON-lines 协议；ZIP 中的[完整操作说明和样例](../examples/integration/README.md)提供界面字段、模板设置、输入结构、命令及结果格式和常见错误。
+
+接入说明将任务类型、协议方式、运行位置和逐回合启动分开解释；普通命令退出 0 只代表进程正常结束，评测成功率来自 SDK/直接协议的有效业务结果。ZIP 自检使用模拟业务，不调用模型、GPU/NPU、仿真器或现场服务。
+
 ## 下载包
 
 `scripts/build_integration_bundle.py` 从 runner 模块与 examples/integration 构建确定性 ZIP 到 `frontend/public/integration/mini-eval-sdk.zip`。静态包只含 SDK、样例与模板，不含部署配置、用户数据和凭据。用户从指南下载后执行 `python self_test.py`，无需访问平台或 GPU；包还包含独立 Dockerfile、HTTP 服务端样例与完整模板，具体使用步骤包含在包内。

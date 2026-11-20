@@ -15,6 +15,10 @@ def build(output=OUTPUT):
     files.update({f'runtime_templates/{name}': ROOT/f'examples/runtime_templates/{name}'
                   for name in ('client.py', 'episode.py', 'server.py')})
     files['catalog.json'] = ROOT/'frontend/public/template-examples/catalog.json'
+    # Keep a directly downloadable user guide beside the archive as well as
+    # inside it; the maintained source lives with the executable examples.
+    guide = ROOT/'examples/integration/README.md'
+    (ROOT/'frontend/public/integration/README.md').write_bytes(guide.read_bytes())
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, 'w', compression=ZIP_DEFLATED) as archive:

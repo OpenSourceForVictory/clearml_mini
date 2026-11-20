@@ -4,6 +4,12 @@
 
 客户端注册 API 为 `/api/v1/admin/client-templates`，服务端为 `/api/v1/admin/server-templates`。注册使用 POST，启停 PATCH `/{id}`，归档 DELETE `/{id}`，复制 POST `/{id}/clone` 带 name（可选）和 version。宿主机模板只能由管理员注册，使用 `host_runtime.environment_name` 指向节点批准环境，不填 image/runtime；Docker 使用 image 和 runtime。环境准备/实例部署由后续同一 OpenSpec 任务实现，模板注册不代表已经可以执行。
 
+## 端到端业务接入选择
+
+客户端模板的四个维度要分开选择：任务类型（评测 / 普通命令）、接入方式（direct / sdk-command）、执行位置（宿主机 / Docker）、宿主机回合启动（整任务 / 每回合）。普通命令只按退出码判定，不产生业务成功率；评测任务需要 SDK 或直接协议结果。SDK + 业务命令由适配器逐回合调用并读取 `MINI_EVAL_RESULT`；Python SDK 使用 `runner.sdk module:ClientClass`；直接协议读 `MINI_EVAL_INPUT` 并输出事件及 final。Docker 与整任务宿主机通常由单进程处理全部回合，宿主机逐回合选项则由平台每次以单回合输入启动业务进程。
+
+可下载接入包和完整可复制样例见[业务接入指南](../examples/integration/README.md)。指南覆盖模板 UI 设置、输入 JSON 的 `task/business/platform` 结构、命令行/环境变量映射、服务地址、事件格式、回合种子、退出状态与评测成功的差异，以及自检范围。包中的 `self_test.py` 只验证协议，不代表模型或仿真质量。
+
 ## SDK + 业务命令
 
 宿主机客户端模板可以在“宿主机环境来源”选择已批准业务账号的登录 shell 导出变量，并在“客户端回合启动”选择每回合启动一次业务程序。两个选项都需 Worker 协议 15；不填写时沿用旧模板行为。登录环境由业务账号在节点上提供，平台分配的设备可见变量始终覆盖同名值。Docker 与服务端模板不提供逐回合启动选项。具体执行、错误与权限边界见 [宿主机执行](host-execution.md)。
