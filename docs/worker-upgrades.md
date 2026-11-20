@@ -132,3 +132,5 @@ Worker/Runner 0.21.5 增加回合结果受控诊断：程序退出 0 与协议�
 ## 0.21.13 任务级 SDK 结果
 
 新增 Worker 协议 18 能力 `task_result_reporting_v1`。新建模板使用 `integration_mode=sdk-task-result` 时，先发布兼容 API/前端，再升级承接任务的 Worker；旧 Worker 不应领取此模式任务。无需数据库迁移，模板复用 `integration_mode`，任务结果复用 Run JSON。Worker 从本次 execution 的工作目录读取 `task-result.json` 并转发；业务程序没有平台凭据。Docker 业务镜像需包含更新 SDK 包；平台注入 Runner 的宿主机进程随 Worker 包更新。退出码与业务结果分别呈现，缺少结果显示未上报，不改变退出码所对应的程序状态。此记录说明升级要求，不表示现场已部署。
+
+2026-11-20 后续实际验收：API/前端已发布，仅 `local4090-151` 通过平台升级 API 更新至 0.21.13 / 协议 18。真实宿主机示例批次两项正常退出，分别上报业务成功与失败，并通过在线页面核验；其他节点和 Docker 镜像未升级，详情见[真实批次记录](validation/task-level-sdk-report-20261120/README.md)。
