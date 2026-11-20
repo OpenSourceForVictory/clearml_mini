@@ -35,7 +35,7 @@
 | [external-resource-admission](../../../openspec/changes/external-resource-admission/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [functional-workspace-pages](../../../openspec/changes/functional-workspace-pages/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [generic-business-commands](../../../openspec/changes/generic-business-commands/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
-| [generic-machine-runtime-management](../../../openspec/changes/generic-machine-runtime-management/tasks.md) | 27/40 | 仍有待核对/实施项 |
+| [generic-machine-runtime-management](../../../openspec/changes/generic-machine-runtime-management/tasks.md) | 31/40 | 仍有待核对/实施项 |
 | [heartbeat-db-contention](../../../openspec/changes/heartbeat-db-contention/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [host-business-working-directory](../../../openspec/changes/host-business-working-directory/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [host-device-environment-boundary](../../../openspec/changes/host-device-environment-boundary/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
@@ -49,7 +49,7 @@
 | [http-request-identifiers](../../../openspec/changes/http-request-identifiers/tasks.md) | 2/2 | 记录完成，证据以原报告版本为准 |
 | [hyphenated-business-parameters](../../../openspec/changes/hyphenated-business-parameters/tasks.md) | 2/2 | 记录完成，证据以原报告版本为准 |
 | [image-client-runtime](../../../openspec/changes/image-client-runtime/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
-| [initial-mvp](../../../openspec/changes/initial-mvp/tasks.md) | 5/17 | 仍有待核对/实施项 |
+| [initial-mvp](../../../openspec/changes/initial-mvp/tasks.md) | 11/17 | 仍有待核对/实施项 |
 | [legacy-node-reenrollment](../../../openspec/changes/legacy-node-reenrollment/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
 | [lightweight-workers](../../../openspec/changes/lightweight-workers/tasks.md) | 8/10 | 仍有待核对/实施项 |
 | [local-gpu-fleet-onboarding](../../../openspec/changes/local-gpu-fleet-onboarding/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
@@ -66,7 +66,7 @@
 | [per-device-storage-settings](../../../openspec/changes/per-device-storage-settings/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [pool-accelerator-labels](../../../openspec/changes/pool-accelerator-labels/tasks.md) | 2/2 | 记录完成，证据以原报告版本为准 |
 | [preflight-runtime-server-diagnostics](../../../openspec/changes/preflight-runtime-server-diagnostics/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
-| [process-scoped-execution-logs](../../../openspec/changes/process-scoped-execution-logs/tasks.md) | 13/21 | 仍有待核对/实施项 |
+| [process-scoped-execution-logs](../../../openspec/changes/process-scoped-execution-logs/tasks.md) | 21/21 | 记录完成，证据以原报告版本为准 |
 | [production-fleet-acceptance](../../../openspec/changes/production-fleet-acceptance/tasks.md) | 13/13 | 记录完成，证据以原报告版本为准 |
 | [project-coverage-baseline](../../../openspec/changes/project-coverage-baseline/tasks.md) | 6/6 | 记录完成，证据以原报告版本为准 |
 | [reenrollment-execution-modes](../../../openspec/changes/reenrollment-execution-modes/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
@@ -85,7 +85,7 @@
 | [suite-management](../../../openspec/changes/suite-management/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-run-preflight](../../../openspec/changes/suite-run-preflight/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-select-all](../../../openspec/changes/suite-select-all/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
-| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 17/21 | 仍有待核对/实施项 |
+| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 19/21 | 仍有待核对/实施项 |
 | [task-submission-orchestration](../../../openspec/changes/task-submission-orchestration/tasks.md) | 21/21 | 记录完成，证据以原报告版本为准 |
 | [template-authoring-guidance](../../../openspec/changes/template-authoring-guidance/tasks.md) | 9/9 | 记录完成，证据以原报告版本为准 |
 | [template-resource-requirements](../../../openspec/changes/template-resource-requirements/tasks.md) | 15/15 | 记录完成，证据以原报告版本为准 |
@@ -95,7 +95,7 @@
 | [worker-storage-settings](../../../openspec/changes/worker-storage-settings/tasks.md) | 10/10 | 记录完成，证据以原报告版本为准 |
 | [ws-transport-connectivity](../../../openspec/changes/ws-transport-connectivity/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
 
-共 90 个变更目录。以下保留所有原未勾选条款；撤销项保留讨论，不作为实施授权。
+共 90 个已登记历史变更（另有本地空草稿）。以下根据当前tasks.md列出仍未勾选条款；撤销项保留讨论，不作为实施授权。
 
 ## execution-launch-snapshots
 
@@ -113,11 +113,7 @@
 
 ## generic-machine-runtime-management
 
-- 5.1 实现独立 SSH 纳管执行器、临时凭据通道、主机身份校验及步骤状态；测试超时、重试、凭据脱敏和操作权限，补部署文档。
-- 5.2 实现环境探测、安装计划和幂等 Agent 安装/回连，保留旧手动注册；测试已有安装冲突、多卡和容器/宿主机能力，验证不覆盖当前 NFS 单元。
 - 5.3 实现 SSH 注册向导与检查/纳管进度；完成隔离 SSH 目标端到端验收，文档说明失败修复和解除纳管边界，提交此功能。
-- 6.1 完整回归、前端构建、OpenSpec strict，备份并迁移本地控制端、滚动更新当前五节点；验证原身份/NFS/历史记录保留，无 .174 操作。
-- 6.2 验证评测与服务资源竞争、多个集合排队、逐回合进度及停止恢复；记录实际结果与已知限制，复核五节点在线并提交交付文档。
 - 7.1 对照设计检查各模块状态写入和依赖方向，明确公共接口与错误契约；整改跨模块直接修改生命周期字段及循环业务依赖，保留兼容入口。
 - 7.2 补充局部故障测试：SSH 超时不影响现有任务、模板校验失败不占资源、探测/日志故障不阻塞续租取消，并验证有界重试及恢复。
 - 7.3 补充跨模块一致性测试：停用/迁移与领取竞争、评测/服务资源竞争、停止清理、过期事件与重复回合去重、模板快照不变；记录覆盖与未覆盖风险后提交。
@@ -130,14 +126,8 @@
 ## initial-mvp
 
 - 完成真实 ClearMLAdapter、远程 Runner repo/commit 配置及 Agent 可执行演示。
-- 完成 Compose 控制节点启动、健康检查和真实服务 smoke test。
-- 实现单领导者调度、跨用户轮转、FIFO、全局/用户限额与资源池匹配。
-- 实现逐卡槽位注册、物理 UUID 去重、Worker 在线 TTL 和节点资源限额。
 - 实现持久化投递 intent、稳定 attempt 标记、崩溃恢复与 ClearML 对账。
-- 实现任务状态同步、超时、Worker 断联宽限期和故障注入测试。
 - 通过多用户、多机型、多卡与单卡并发验收。
-- 完成取消、重试、日志、指标 API、所有剩余错误码及权限合同测试。
-- 完成 React 登录、任务、详情、Worker/Pool 和管理员界面。
 - 补齐部署脚本、中文运维文档、OpenAPI/curl 示例及全部 CI 检查。
 - 固定 RoboTwin 上游版本、Runner 镜像、资产与 checkpoint 契约。
 - 在远程 GPU Agent 上完成 RoboTwin 评测、结果展示、取消和重试验收。
@@ -147,30 +137,7 @@
 - 验证一台单卡及一台多卡机器的并发与无重复执行。
 - 固定 RoboTwin 上游版本、Runner 镜像、资产和 checkpoint 契约，在远程 GPU Worker 上验收。
 
-## process-scoped-execution-logs
-
-- 1.1 对齐 execution-directory-visibility 的执行身份与目录组件，定义 scope/episode/generation/游标和能力字段；用契约测试验证 run_id 不被当作 execution_id、同名实例/重试不碰撞，并同步 docs/execution-logs.md。
-- 1.2 实现日志目录登记、索引和受控请求数据模型及迁移，测试唯一键、任务授权、终态仅更新已登记目录、删除后迟到上报、旧日志保留；更新 docs/database-migration.md 和项目 Skill 参考索引。
-- 2.1 实现单 scope JSONL 分片、原子索引、稳定序号和恢复，测试无换行/编码、轮转、代次、部分写入和文件篡改，核对 scope/执行总量包含实际转义字节及元数据；同步节点文件布局文档。
-- 2.2 实现异步有界写入队列和 stderr 尾部，测试磁盘满/只读/慢写/队列溢出时持续排空、标记缺口且不改业务退出码；同步错误与完整性说明。
-- 2.3 实现执行内多 scope 预算协调、容量淘汰和已有保留策略衔接，整机不限制，测试多进程、10000 回合和进程崩溃，确保不删除结果/业务产物；更新 docs/worker-setup.md。
-- 3.2 接入整任务 cs_entry、原生 SDK 与 service_entry 的公共/实例 scope，测试启动失败、取消、非零退出、退出 0 缺结果和同名双实例；同步 SDK/服务运行文档。
-- 3.3 接入 host_supervisor 与 Docker 专用日志挂载/Runner 注入握手，避免外层重复全文采集，测试权限、旧镜像、容器删除后节点日志保留、原有参数/环境/设备限制不变；更新 docs/worker-upgrades.md 并验证发布包包含所需模块。
-- 3.4 实现启动/关闭日志登记及独立历史读取线程，测试 Worker 重启、API 断线、终态租约过期及节点工作目录变更，不重复执行业务；同步组件职责到 Skill 索引。
-- 4.1 实现用户分页请求、Worker 领取/回应、请求幂等合并、鉴权、TTL 和硬并发/缓存预算，测试超额 429、过期回收、重放、终态可读及无 DB 连接等待节点；同步 API 运维说明。
-- 4.2 实现受约束的目录句柄读取和 generation 游标，测试穿越、符号链接竞态、非普通文件、跨执行/节点、截断、流过滤空页及向前翻页；记录权限与缓存边界。
-- 4.3 将短页读取/轮转/执行数据清理和批次删除协调接入，测试 staging、下载中清理、迟到回包及清理状态不可复活；同步数据保留指南。
-- 5.1 实现共享日志抽屉，接入任务详情、批次回合与服务实例；测试单进程公共日志、逐回合和同名实例、旧尝试及迟到响应，复用身份/路径复制组件；同步界面指南和 docs/batch-monitoring.md。
-- 5.2 实现有限分页、跟随/暂停、来源过滤、缓存/离线/截断/清理状态、保留日志下载及有限分片回退；测试复制失败、关闭停止轮询、浏览器内存上限、下载中缺口和键盘焦点；同步日志操作文档。
-- 6.3 先在专用 PostgreSQL 恢复备份验证迁移，再按发布流程检查活跃任务、部署 API/前端并升级明确选择的测试节点；记录新旧能力混合、回滚边界和配置生效证据，不自动扩大到全节点。
-
 ## task-result-artifacts
 
-- 1.1 新增兼容的 SDK episode_output_dir、独立上下文及归属 manifest，覆盖 SDK/直接协议/普通命令、嵌套 Runner、异常和旧路径；同步 SDK 文档。
-- 1.2 增加模板结果浏览目录及快照/参数解析，校验宿主批准根与容器持久映射；补参数契约/模板/API/UI 测试，更新指南。
-- 2.2 实现元数据登记、幂等、文件变化/缺失状态与能力协商，新 Worker 停止主动文件上传；覆盖并发、重放、离线、删除与小连接池，更新接口文档。
-- 2.3 Worker 宿主/容器持久输出、回合归属索引、异常执行登记、清理协调，失败不改业务结果；覆盖真实 Docker 删除后读取、大文件/重启，更新节点升级指南。
-- 4.2 模板目录配置和任务/回合产物侧栏，历史尝试/筛选/文件状态/只读共享目录/视频图片文本预览下载；Playwright 覆盖状态、快速切换、窄屏、播放拖动及下载，更新界面指南。
 - 5.1 运行统一覆盖率与关联后端/浏览器/构建/OpenSpec检查，保存失败、跳过与真实覆盖率报告，修复本次引入缺陷。
-- 5.2 按 test-plan H 完成宿主机/Docker/GPU/NPU 真机样例验收，指定平台保留可查看批次及视频下载证据，明确模拟业务与实际模型边界。
 - 5.3 审查文档/Skill/链接和升级顺序、历史兼容/回退限制，提交各完成特性；未验收任务不勾选。

@@ -73,3 +73,11 @@
 待办表数量已按当前 tasks.md 重新统计，仍未完成的原复合任务没有因补充一个切片自动勾选。其中模板自定义浏览目录已补齐实现与发布验收；通用设备映射、完整多节点发布矩阵及真实 RoboTwin 模型/checkpoint 验收仍有缺口；当前生产可用的日志、平台输出目录浏览与这些扩展项必须区分。Worker 产物转发、整机日志配额通道、NPU 产物共享继续遵守用户暂缓/不需要的决定。
 
 最新产物真机矩阵见[最终矩阵](../artifact-final-matrix-20261120/README.md)，自定义目录已部署c952f34；NPU真实双实例、界面部署及停止清理均通过。全量最终结果以[补全回归](../full-followup-20261120/README.md)为准，旧基线数字不覆盖本轮源码。
+
+## 早期重复条款复核
+
+initial-mvp中的Compose启动、调度轮转/FIFO/限额、逐卡身份与TTL、超时断联取消、任务日志指标和React管理界面，已由lightweight-workers及后续专题实现。对应test_execution（公平/UUID/过期/权限/取消）、test_scheduling、test_memberships、结果/API合同、前端全套及[五节点验收](../production-fleet-acceptance/README.md)，本次实际六节点在线和部署健康复核通过。只完成不依赖ClearML的明确条款；带ClearML对账、远程真实RoboTwin与未逐条确认的复合项保持未完成。
+
+generic-machine-runtime-management的SSH执行器和幂等安装（5.1/5.2）已有onboarding_transport、ssh_onboarding、onboarding_recovery_edges、node_installation/system_node_installer、Agent安装回连等实现和测试；日志/凭据脱敏、身份变化拒绝、安装中断不重放、非标准布局保护、NFS单元保留均有具体断言。隔离SSH目标完整安装5.3不据此勾选。
+
+该变更6.1/6.2的五节点部署与跨物理机编排验收由2026-11-16 production-fleet-acceptance承接：0.12.0/协议10、五节点身份/NFS保留、8种host/docker跨机CS组合及两小时多用户排队/暂停/取消/重试。它是已完成的历史验收，不意味着本轮把五节点都升级到了0.21.12；本轮只升级授权的本机节点。最新版本边界见本轮发布记录。

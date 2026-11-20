@@ -7,20 +7,22 @@
 - [x] 补齐 PostgreSQL 的 Alembic 初始迁移、索引、UTC 时间戳及数据库集成测试。
 - [x] 完成管理员引导、用户鉴权、任务提交、列表/详情、资源池/Worker 概览与健康检查的 P0 API 合同测试。
 - [ ] 完成真实 ClearMLAdapter、远程 Runner repo/commit 配置及 Agent 可执行演示。
-- [ ] 完成 Compose 控制节点启动、健康检查和真实服务 smoke test。
+- [x] 完成 Compose 控制节点启动、健康检查和真实服务 smoke test。
 
 ## P1 — 调度与故障恢复
-- [ ] 实现单领导者调度、跨用户轮转、FIFO、全局/用户限额与资源池匹配。
-- [ ] 实现逐卡槽位注册、物理 UUID 去重、Worker 在线 TTL 和节点资源限额。
+- [x] 实现单领导者调度、跨用户轮转、FIFO、全局/用户限额与资源池匹配。
+- [x] 实现逐卡槽位注册、物理 UUID 去重、Worker 在线 TTL 和节点资源限额。
 - [ ] 实现持久化投递 intent、稳定 attempt 标记、崩溃恢复与 ClearML 对账。
-- [ ] 实现任务状态同步、超时、Worker 断联宽限期和故障注入测试。
+- [x] 实现任务状态同步、超时、Worker 断联宽限期和故障注入测试。
 - [ ] 通过多用户、多机型、多卡与单卡并发验收。
 
 ## P2 — 产品与运维
-- [ ] 完成取消、重试、日志、指标 API、所有剩余错误码及权限合同测试。
-- [ ] 完成 React 登录、任务、详情、Worker/Pool 和管理员界面。
+- [x] 完成取消、重试、日志、指标 API、所有剩余错误码及权限合同测试。
+- [x] 完成 React 登录、任务、详情、Worker/Pool 和管理员界面。
 - [ ] 补齐部署脚本、中文运维文档、OpenAPI/curl 示例及全部 CI 检查。
 
 ## 真实评测验收
 - [ ] 固定 RoboTwin 上游版本、Runner 镜像、资产与 checkpoint 契约。
 - [ ] 在远程 GPU Agent 上完成 RoboTwin 评测、结果展示、取消和重试验收。
+
+2026-11-20 历史对照：上述非ClearML条款由lightweight-workers及后续功能实现，证据见docs/validation/history-acceptance-20261120/README.md“早期重复条款复核”。含ClearML对账的撤销方案、真实模型与其他复合项不按替代实现直接勾选。
