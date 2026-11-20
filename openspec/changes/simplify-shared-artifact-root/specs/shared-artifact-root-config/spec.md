@@ -17,3 +17,15 @@
 #### Scenario: Isolation
 - **WHEN** 请求跨任务文件、链接或目录外文件
 - **THEN** 即使简化配置适用所有节点也必须拒绝。
+
+### Requirement: Preserve deployment commands
+平台 SHALL 在原 deploy/compose.yml 中支持可选产物根配置，无需增加Compose覆盖文件参数，且未配置时保持产物读取关闭。
+#### Scenario: Existing deployment without artifacts
+- **WHEN** 使用原构建和启动命令且未设置产物总目录
+- **THEN** Compose可以正常解析，不要求存在外部产物目录，API不启用共享映射。
+#### Scenario: Existing deployment with root
+- **WHEN** 设置已有产物总目录并沿用原部署命令
+- **THEN** API自动获得只读挂载和对应变量，不影响其他服务；不存在的配置目录不会自动创建。
+#### Scenario: Legacy overlay
+- **WHEN** 原命令仍包含shared-storage-compose.yml
+- **THEN** 相同容器目标挂载合并为一条，显式高级映射仍优先。

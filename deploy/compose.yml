@@ -77,7 +77,16 @@ services:
       LEASE_SECONDS: ${LEASE_SECONDS:-30}
       LOST_WORKER_GRACE_SECONDS: ${LOST_WORKER_GRACE_SECONDS:-30}
       EXECUTION_TIMEOUT_SECONDS: ${EXECUTION_TIMEOUT_SECONDS:-3600}
+      SHARED_ARTIFACT_HOST_ROOT: ${SHARED_ARTIFACT_HOST_ROOT:-}
+      MINI_EVAL_SHARED_STORAGE: ${MINI_EVAL_SHARED_STORAGE:-}
     volumes:
+      # An unset root mounts only an inert repository placeholder; API reading stays disabled.
+      - type: bind
+        source: ${SHARED_ARTIFACT_HOST_ROOT:-./empty-artifacts}
+        target: /mnt/mini-eval-artifacts
+        read_only: true
+        bind:
+          create_host_path: false
       - onboarding_socket:/run/mini-eval-managed-onboarding:ro
       - "${ONBOARDING_SOCKET_DIR:-../.runtime/onboarding-socket}:/run/mini-eval-onboarding"
     ports:

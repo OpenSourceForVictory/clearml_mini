@@ -242,4 +242,4 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 
 历史批次集合恢复：向导默认显示 source.suite_id 对应原集合（历史运行快照），客户端候选按集合关联过滤并保留当前可用的原客户端；历史任务仍通过cases提交、suite_id=null，不读取当前集合覆盖。用户显式点击使用当前配置才绑定实时集合。缺失客户端展示原名称及重选提示，fatal问题逐项显示且不绕过；回归 batch-rerun.spec.ts。
 
-共享产物简化配置：shared_storage 在高级JSON为空时从 SHARED_ARTIFACT_HOST_ROOT 生成各节点同路径映射，固定API容器根 /mnt/mini-eval-artifacts；shared-storage-compose.yml 同时传变量和只读挂载。简化模式无磁盘marker检查，保留执行鉴权和路径边界；高级JSON（含[]）完全优先，旧快照不自动转换。见 docs/shared-storage-artifacts.md；测试 test_shared_root_config.py。
+共享产物简化配置：shared_storage 在高级JSON为空时从 SHARED_ARTIFACT_HOST_ROOT 生成各节点同路径映射，固定API容器根 /mnt/mini-eval-artifacts；主 deploy/compose.yml 已内置变量和可选只读挂载，未设置变量时挂载 deploy/empty-artifacts 占位目录且不启用映射；原构建/启动命令不变。shared-storage-compose.yml 保留旧命令兼容。简化模式无磁盘marker检查，保留执行鉴权和路径边界；高级JSON（含[]）完全优先，旧快照不自动转换。见 docs/shared-storage-artifacts.md；测试 test_shared_root_config.py。

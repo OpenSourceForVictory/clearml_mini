@@ -12,14 +12,14 @@ API 主机和节点能访问同一份文件、且节点产物根位于同名路�
 SHARED_ARTIFACT_HOST_ROOT=/data/artifacts
 ```
 
-保留原项目名、环境文件和全部 Compose 覆盖文件，追加 `-f deploy/shared-storage-compose.yml` 后执行 `up -d --no-deps --force-recreate api`。例如基础部署：
+保留原项目名、环境文件和全部 Compose 覆盖文件，沿用原构建及启动命令即可，**不需要新增 `-f deploy/shared-storage-compose.yml`**。代码与API镜像更新后重建容器，例如基础源码部署：
 
 ```bash
 docker compose --env-file .env -p mini-eval -f deploy/compose.yml \
-  -f deploy/shared-storage-compose.yml up -d --no-deps --force-recreate api
+  up -d --no-deps --build --force-recreate api
 ```
 
-该 overlay 将总目录只读挂载到 API 的 `/mnt/mini-eval-artifacts`，并传入配置变量。仅改 `.env` 或 `restart` 不生效。目录必须已存在，不自动创建空目录代替挂载。节点界面的整机产物根填 `/data/artifacts` 或其子目录；卡留空继承整机配置。无需手填 JSON、节点名单或创建 `.mini-eval-storage-id`，后续所有子目录自动包含。
+主 `deploy/compose.yml` 将总目录只读挂载到 API 的 `/mnt/mini-eval-artifacts`，并传入配置变量。仅改 `.env` 或 `restart` 不生效。预构建镜像部署须先更新镜像，`--build` 不替代镜像发布。未配置变量时只挂载仓库占位目录且不启用API映射，不需要准备外部产物目录。目录必须已存在，不自动创建空目录代替挂载。节点界面的整机产物根填 `/data/artifacts` 或其子目录；卡留空继承整机配置。无需手填 JSON、节点名单或创建 `.mini-eval-storage-id`，后续所有子目录自动包含。
 
 默认映射适用于各节点，但只能读取用户有权访问、已登记执行的输出目录，不能通过浏览器传入任意宿主路径。拒绝 `/`、相对路径、穿越及链接。简化模式不验证磁盘身份标识，管理员须保证挂载来源正确；需要校验存储身份或节点/API路径不同时使用下面的高级配置。
 
@@ -60,14 +60,13 @@ MINI_EVAL_SHARED_STORAGE='[{"id":"project","node_names":["node-a"],"node_root":"
 
 多节点访问同一根可添加 node_names；不同节点根路径或不同存储使用不同 id 的映射项。多存储挂载自行扩展 overlay，全部使用 read_only: true 和 create_host_path: false。该环境变量必须进入 API 容器，仅修改 .env 而不重建容器不会生效。
 
-沿用原项目名、原环境文件及原有全部 overlay，再追加：
+高级模式同样沿用原项目名、原环境文件及原有全部 overlay；主Compose已内置挂载，例如：
 
 ```bash
-DC=(docker compose --env-file .env -p mini-eval -f deploy/compose.yml \
-  -f deploy/shared-storage-compose.yml)
+DC=(docker compose --env-file .env -p mini-eval -f deploy/compose.yml)
 ```
 
-如果原部署使用 lan-compose.yml 或固定镜像版本文件，保留这些文件及其顺序。按[数据库迁移指南](database-migration.md)构建同版 API/migrate/bootstrap、排空任务、备份并升级到 **a730d12**，随后用这个 DC 数组启动。以后重建 API 也须保留共享 overlay。无需新增文件存储卷，不要执行 down -v。
+如果原部署使用 lan-compose.yml 或固定镜像版本文件，保留这些文件及其顺序。按[数据库迁移指南](database-migration.md)构建同版 API/migrate/bootstrap、排空任务、备份并升级到 **a730d12**，随后用这个 DC 数组启动。原命令已使用 shared-storage-compose.yml 的可继续保留，相同目标挂载会合并；无需为此删除既有覆盖文件。无需新增文件存储卷，不要执行 down -v。
 
 更新相应节点到 **Worker 0.21.9**。当 API 对该节点下发 artifact_transport=shared 时，新 Worker 只登记输出路径，不再主动上传产物正文；未配置映射的节点沿用旧逻辑。旧 Worker 会忽略新标记、继续旧上传行为，因此仅升级 API 不能保证停止上传。Runner/SDK 不需要为了直读而升级。
 

@@ -1,4 +1,5 @@
-# Optional overlay: keep this -f argument on subsequent API recreations.
+# Legacy explicit overlay. Main compose.yml now includes optional shared storage.
+# Existing commands may keep this file; new deployments do not need to add it.
 services:
   api:
     environment:

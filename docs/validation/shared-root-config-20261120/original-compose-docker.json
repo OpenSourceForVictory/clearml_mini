@@ -1,0 +1,5 @@
+{
+  "unset": "verified real read-only container using main compose mount and environment",
+  "configured": "verified real read-only container using main compose mount and environment",
+  "missing": "rejected, no directory created"
+}
