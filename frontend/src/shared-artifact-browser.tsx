@@ -26,7 +26,7 @@ export function SharedArtifactBrowser({jobId,runId,episode,legacy}:{jobId:string
   <p>API 直接读取共享输出目录，文件不经过 Worker 转发。目录可能包含正在写入的文件；文件被清理后将不可访问。</p>
   {data&&<p>存储：{data.storage_id} · 执行节点：{data.node_name}<br/>节点输出目录：{data.output_root}</p>}
   {unavailable&&<div role="status"><p>API 尚未启用共享产物读取。请在部署环境设置 SHARED_ARTIFACT_HOST_ROOT，并更新、重建 API 容器；旧版 API 可能不支持该变量。API 主机必须能够访问节点的同一份产物文件。</p><button onClick={legacy}>查看历史上传产物</button></div>}
-  {!unavailable&&<><nav aria-label="产物目录"><button onClick={()=>navigate('')}>输出根目录</button>{path.split('/').filter(Boolean).map((name,i)=><button key={i} onClick={()=>navigate(path.split('/').slice(0,i+1).join('/'))}>{name}</button>)}</nav>
+  {!unavailable&&<><nav aria-label="产物目录"><button disabled={!path} onClick={()=>navigate(path.split('/').slice(0,-1).join('/'))}>返回上一层</button><button onClick={()=>navigate('')}>输出根目录</button>{path.split('/').filter(Boolean).map((name,i)=><button key={i} onClick={()=>navigate(path.split('/').slice(0,i+1).join('/'))}>{name}</button>)}</nav>
   <label>共享产物归属<select value={filter} onChange={e=>{setSelected(null);setFilter(e.target.value);}}><option value="all">全部文件</option><option value="task">未声明回合的文件</option>{rounds.map(n=><option key={n} value={n}>回合 {n}</option>)}</select></label>
   <p className="hint">归属筛选作用于当前页文件；目录始终显示，便于进入。回合归属以协议明确引用为准，不根据目录名猜测。</p></>}
   <button onClick={()=>{setSelected(null);setCursor(null);setRefresh(n=>n+1);}}>刷新共享目录</button>

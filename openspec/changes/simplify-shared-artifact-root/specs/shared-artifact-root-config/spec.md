@@ -41,3 +41,12 @@
 #### Scenario: File access disabled or fails
 - **WHEN** 用户有权查看执行且文件读取未启用或失败
 - **THEN** 仍能看到该执行已记录路径，但不保证目录存在；无记录时不从当前节点配置推断。
+
+### Requirement: Centered artifact browser and parent navigation
+产物浏览器 SHALL 使用居中大弹窗，在共享目录中提供返回上一层操作，保持根目录边界与窄屏可用性。
+#### Scenario: Parent navigation
+- **WHEN** 用户位于子目录并点击返回上一层
+- **THEN** 回到直接父目录并清空分页与文件预览；根目录时按钮禁用。
+#### Scenario: Modal sizing
+- **WHEN** 桌面或窄屏打开产物
+- **THEN** 弹窗居中且不超出视口，可滚动并通过关闭按钮或Escape关闭且恢复入口焦点。

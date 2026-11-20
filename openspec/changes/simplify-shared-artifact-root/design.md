@@ -19,3 +19,6 @@ API enabled=false 是未配置状态，不是切换来源指令。前端保留�
 
 ## 输出目录独立展示
 复用 execution-location 增加 output_directory，只读已冻结SharedArtifactRoot或同执行唯一清单，不调用会校验映射或落库的snapshot。batch-v1分别显示执行根与公共output，planned明确未确认；无唯一记录显示未知。前端独立轮询元数据，与共享列表和历史来源选择互不依赖，沿用尝试权限校验。
+
+## 产物弹窗布局
+原生dialog保留焦点与Escape语义，改为居中且宽度上限1280px、视口两侧留白；内部滚动，关闭栏sticky。返回上一层复用navigate以清除分页与预览，根目录禁用，不发越界路径请求。

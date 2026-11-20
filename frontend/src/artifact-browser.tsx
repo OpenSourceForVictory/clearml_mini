@@ -15,7 +15,7 @@ function ArtifactDrawer({jobId,initialRun,episode,close}:{jobId:string;initialRu
  const [run,setRun]=useState(initialRun);
  const {data:job}=usePoll<{attempts:{id:string;attempt:number;status:string}[]}>('jobs/'+jobId);
  useEffect(()=>{const previous=document.activeElement as HTMLElement;dialog.current?.showModal();return()=>previous?.focus();},[]);
- return <dialog ref={dialog} className="artifact-drawer" aria-label="运行产物" onCancel={close}>
+ return <dialog ref={dialog} className="artifact-dialog" aria-label="运行产物" onCancel={close}>
   <header><h2>运行产物</h2><button onClick={close}>关闭产物</button></header>
   <p>任务 {jobId}</p>
   <label>产物执行尝试<select value={run} onChange={e=>setRun(e.target.value)}>

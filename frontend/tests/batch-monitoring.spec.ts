@@ -391,3 +391,50 @@ for(const mode of ['disabled','failed','planned','missing'] as const){
   if(mode!=='missing')await expect(location).toContainText('/recorded/run/output');
  });
 }
+
+for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
+ test(`artifact modal is centered and bounded at ${viewport.width}px`,async({page})=>{
+  await setup(page);await page.setViewportSize(viewport);
+  const opener=page.getByRole('button',{name:'查看产物',exact:true}).first();
+  await opener.click();
+  const modal=page.getByRole('dialog',{name:'运行产物',exact:true});
+  const bounds=(await modal.boundingBox())!;
+  expect(Math.abs(bounds.x+bounds.width/2-viewport.width/2)).toBeLessThan(2);
+  expect(Math.abs(bounds.y+bounds.height/2-viewport.height/2)).toBeLessThan(2);
+  expect(bounds.width).toBeLessThan(viewport.width);
+  expect(bounds.height).toBeLessThan(viewport.height);
+  if(viewport.width===1440)expect(bounds.width).toBeGreaterThan(1000);
+  await expect(modal.getByRole('button',{name:'关闭产物'})).toBeInViewport();
+  await page.keyboard.press('Escape');await expect(modal).toHaveCount(0);await expect(opener).toBeFocused();
+  await opener.click();await modal.getByRole('button',{name:'关闭产物'}).click();await expect(opener).toBeFocused();
+ });
+}
+
+test('parent directory returns one level and clears paging and preview',async({page})=>{
+ await setup(page);const requests:URL[]=[];
+ await page.route('**/shared-artifacts?*',route=>{
+  const url=new URL(route.request().url());requests.push(url);
+  const path=url.searchParams.get('path')||'',after=url.searchParams.get('after');
+  const nextPath=path?path+'/child':'parent';
+  return route.fulfill({json:{enabled:true,storage_id:'test',node_name:'node',output_root:'/output',path,version:'v1',next:path==='parent/child'&&!after?'cursor':null,
+   items:path==='parent/child'?[{name:'file.txt',path:path+'/file.txt',kind:'file',size_bytes:4,version:'v1',episode_ids:[]}]:[{name:'child',path:nextPath,kind:'directory',size_bytes:0,version:'v1',episode_ids:[]}]}});
+ });
+ await page.route('**/shared-artifacts/media-access',route=>route.fulfill({json:{url:'/parent-preview',media_type:'application/octet-stream'}}));
+ await page.route('**/parent-preview',route=>route.fulfill({body:'text'}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const panel=page.getByRole('region',{name:'共享存储产物',exact:true});
+ await expect(panel.getByRole('button',{name:'返回上一层'})).toBeDisabled();
+ await panel.getByRole('button',{name:'打开目录'}).click();
+ await panel.getByRole('button',{name:'打开目录'}).click();
+ await panel.getByRole('button',{name:'下一页文件'}).click();
+ await panel.getByRole('button',{name:'查看 / 下载'}).click();
+ await expect(panel.getByRole('region',{name:'产物预览'})).toContainText('text');
+ await panel.getByRole('button',{name:'返回上一层'}).click();
+ await expect(panel.getByRole('button',{name:'打开目录'})).toBeVisible();
+ expect(requests.at(-1)!.searchParams.get('path')).toBe('parent');
+ expect(requests.at(-1)!.searchParams.has('after')).toBe(false);
+ await expect(panel.getByRole('region',{name:'产物预览'})).toHaveCount(0);
+ await panel.getByRole('button',{name:'返回上一层'}).click();
+ await expect(panel.getByRole('button',{name:'返回上一层'})).toBeDisabled();
+ expect(requests.at(-1)!.searchParams.get('path')).toBe('');
+});
