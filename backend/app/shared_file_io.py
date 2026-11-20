@@ -21,13 +21,14 @@ def filesystem(mapping, relative, query):
         root = mapping['api_root']
         st = os.stat(root, follow_symlinks=False)
         identity = [st.st_dev, st.st_ino]
-        marker = reader.respond(root, identity, {'operation': 'stat', 'path': '.mini-eval-storage-id'})
-        if marker.get('status') != 'ready' or marker['size_bytes'] > 130:
-            return {'status': 'storage_unavailable'}
-        marker = reader.respond(root, identity, {'operation': 'read', 'path': '.mini-eval-storage-id',
-                                'version': marker['version'], 'length': 130})
-        if marker.get('status') != 'ready' or base64.b64decode(marker['data']).decode().strip() != mapping['marker']:
-            return {'status': 'storage_unavailable'}
+        if not mapping.get('automatic'):
+            marker = reader.respond(root, identity, {'operation': 'stat', 'path': '.mini-eval-storage-id'})
+            if marker.get('status') != 'ready' or marker['size_bytes'] > 130:
+                return {'status': 'storage_unavailable'}
+            marker = reader.respond(root, identity, {'operation': 'read', 'path': '.mini-eval-storage-id',
+                                    'version': marker['version'], 'length': 130})
+            if marker.get('status') != 'ready' or base64.b64decode(marker['data']).decode().strip() != mapping['marker']:
+                return {'status': 'storage_unavailable'}
         validated = True
         reader.parts(relative)
         with reader.directory(root, identity, relative) as fd:

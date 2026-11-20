@@ -4,9 +4,32 @@
 
 本次只支持平台输出目录；自定义浏览目录、Worker 文件转发仍未启用。升级到配套 API 与 Worker/Runner 0.21.12 后，SDK 首次使用 episode_output_dir 或平台逐回合包装器创建目录时写入隐藏的 .mini-eval-artifacts 回合元数据；该目录及下级文件按显式登记归属。协议 artifacts 的逐文件声明优先，可关联多个回合。回合筛选作用于当前目录页，目录始终可进入；没有登记或有效声明的文件显示“未声明”，不凭文件名推测回合。
 
+## 简化部署：只设置一个总目录
+
+API 主机和节点能访问同一份文件、且节点产物根位于同名路径下时，在部署 `.env` 只增加：
+
+```dotenv
+SHARED_ARTIFACT_HOST_ROOT=/data/artifacts
+```
+
+保留原项目名、环境文件和全部 Compose 覆盖文件，追加 `-f deploy/shared-storage-compose.yml` 后执行 `up -d --no-deps --force-recreate api`。例如基础部署：
+
+```bash
+docker compose --env-file .env -p mini-eval -f deploy/compose.yml \
+  -f deploy/shared-storage-compose.yml up -d --no-deps --force-recreate api
+```
+
+该 overlay 将总目录只读挂载到 API 的 `/mnt/mini-eval-artifacts`，并传入配置变量。仅改 `.env` 或 `restart` 不生效。目录必须已存在，不自动创建空目录代替挂载。节点界面的整机产物根填 `/data/artifacts` 或其子目录；卡留空继承整机配置。无需手填 JSON、节点名单或创建 `.mini-eval-storage-id`，后续所有子目录自动包含。
+
+默认映射适用于各节点，但只能读取用户有权访问、已登记执行的输出目录，不能通过浏览器传入任意宿主路径。拒绝 `/`、相对路径、穿越及链接。简化模式不验证磁盘身份标识，管理员须保证挂载来源正确；需要校验存储身份或节点/API路径不同时使用下面的高级配置。
+
+非空 `MINI_EVAL_SHARED_STORAGE` 优先，`[]` 明确关闭映射，非法 JSON 报错而不自动降级。已有高级映射请保留，切换为简化模式不会自动迁移历史目录登记；旧映射身份不匹配的记录会拒绝读取。无新增数据库迁移或 Worker 协议变化，停止上传仍需已有支持共享传输的 Worker。远端节点只有本地磁盘、API 主机看不到文件时不能使用此功能。
+
+以下为高级配置说明。
+
 ## 1. 准备已有共享挂载
 
-节点工作目录必须位于共享存储内；平台服务器也须挂载同一存储。例：
+节点产物根（未设置独立根时为工作区输出）必须位于共享存储内；平台服务器也须挂载同一存储。例：
 
 - 节点名（与机器管理中的名称完全一致）：node-a
 - 节点共享根：/efs/project

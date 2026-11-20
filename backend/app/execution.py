@@ -454,8 +454,8 @@ def install(app, db, current):
         from .shared_artifacts import plan as artifact_plan
         task.update(artifact_plan(s,run,worker,slot,job,fresh_artifact_plan))
         if job.benchmark == 'cs-client':
-            from .shared_storage import mappings
-            if any(worker.node_name in m['node_names'] for m in mappings()):
+            from .shared_storage import mappings, allows_node
+            if any(allows_node(m, worker.node_name) for m in mappings()):
                 task['artifact_transport'] = 'shared'
         s.commit()
         return {'task': task, 'cleanup': []}

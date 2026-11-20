@@ -1,4 +1,5 @@
 """Administrator-defined shared filesystem mappings; never browser paths."""
+import hashlib
 import json
 import os
 import re
@@ -10,7 +11,16 @@ from worker.artifact_reader import parts, ReadError
 
 def mappings():
     try:
-        values = json.loads(os.getenv('MINI_EVAL_SHARED_STORAGE', '[]'))
+        explicit = os.getenv('MINI_EVAL_SHARED_STORAGE', '').strip()
+        root = os.getenv('SHARED_ARTIFACT_HOST_ROOT', '')
+        if not explicit and root:
+            parts(root, absolute=True)
+            root = str(PurePosixPath(root))
+            digest = hashlib.sha256(root.encode()).hexdigest()[:32]
+            return [dict(id='auto-' + digest, node_names=[], node_root=root,
+                         api_root='/mnt/mini-eval-artifacts', marker='auto-' + digest,
+                         automatic=True)]
+        values = json.loads(explicit or '[]')
         if not isinstance(values, list) or len(values) > 32:
             raise ValueError()
         ids = set()
@@ -31,13 +41,17 @@ def mappings():
         raise HTTPException(503, '共享存储映射配置无效，请联系管理员') from None
 
 
+def allows_node(mapping, node):
+    return bool(mapping.get('automatic')) or node in mapping['node_names']
+
+
 def match(node, path):
     try:
         parts(path, absolute=True)
     except ReadError:
         raise HTTPException(400, '执行输出目录不合法') from None
     target = PurePosixPath(path)
-    candidates = [m for m in mappings() if node in m['node_names']
+    candidates = [m for m in mappings() if allows_node(m, node)
                   and target.is_relative_to(PurePosixPath(m['node_root']))]
     if len(candidates) != 1:
         raise HTTPException(409, '执行输出目录没有唯一的共享存储映射')
@@ -53,6 +67,6 @@ def resolve(snapshot):
     if len(candidates) != 1 or candidates[0]['marker'] != snapshot['marker']:
         raise HTTPException(409, '此执行的共享存储授权已撤销或身份已变更')
     mapping = candidates[0]
-    if snapshot['node_name'] not in mapping['node_names']:
+    if not allows_node(mapping, snapshot['node_name']):
         raise HTTPException(403, '此节点的共享存储授权已撤销')
     return mapping
