@@ -1,0 +1,39 @@
+{
+  "image": "mini-eval-api:artifact-ui-20261120",
+  "previous_image": "mini-eval-api:rerun-suite-20261120",
+  "commit": "2f41135",
+  "worker_sdk_unchanged": true,
+  "migration": false,
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "local4090-151",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "enabled": true,
+      "held": 0
+    }
+  ]
+}

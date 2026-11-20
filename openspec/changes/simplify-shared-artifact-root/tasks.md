@@ -23,4 +23,6 @@
 
 5.1验证：docs/validation/artifact-source-location-20261120/modal-navigation.md；29项浏览器通过，未部署。
 
-- [ ] 5.2 修正实际发布发现的导航和表格继承样式，回归后发布并用真实历史GPU产物验证。
+- [x] 5.2 修正实际发布发现的导航和表格继承样式，回归后发布并用真实历史GPU产物验证。
+
+发布完成：docs/validation/artifact-ui-release-20261120/README.md；真实API与保留GPU产物浏览通过。原高级映射保留，Worker/SDK未升级，无数据库迁移。
