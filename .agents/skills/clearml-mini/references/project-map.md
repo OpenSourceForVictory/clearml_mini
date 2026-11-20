@@ -262,3 +262,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 模板自定义结果浏览目录：ClientTemplate.result_directory 由 result_directories.py 校验，execution.claim 首次解析并写 ExecutionBrowseRoot；宿主批准根/容器持久挂载最深匹配、类型化业务参数、历史不补造。shared_artifacts 使用 directory=custom 命名空间，媒体 cookie 同时绑定来源；共享 I/O 前释放数据库连接。自定义文件不推断回合归属、不修改业务结果。迁移 c952f34，无 Worker 协议变化；指南 docs/shared-storage-artifacts.md、runtime-templates.md、database-migration.md。测试 test_result_directories.py、test_result_directory_migration.py、template-guidance.spec.ts、batch-monitoring.spec.ts。
 
 共享目录快速切换遇429：SharedArtifactBrowser按照Retry-After等待1–5秒，最多重试两次；AbortController取消等待与旧读取，持续失败保留错误。API共享读取并发预算不变。真机快速来源切换复现，浏览器回归覆盖恢复/持续繁忙/切换取消。
+
+宿主机批准环境面板只配置Python/代码目录；业务身份由纳管账号及已有本地批准配置决定。新纳管继承SSH账号，旧节点升级/重新纳管保留身份，不能通过该表单切换账号；说明与docs/host-execution.md一致。
