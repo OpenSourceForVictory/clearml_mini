@@ -1,0 +1,20 @@
+[
+  {
+    "mode": "host",
+    "batch_id": "3078b497-66da-46e8-92bf-b3f6654254f6",
+    "job_id": "935ab8af-8c9f-4dce-84e2-288567e9a05d",
+    "run_id": "f8a68efc-fdde-41e0-8c5f-49d730d4469f",
+    "output_root": "/home/dgh/mini-eval-artifacts/validation-20261119/3078b497-66da-46e8-92bf-b3f6654254f6/935ab8af-8c9f-4dce-84e2-288567e9a05d/5fe6fae4-da7a-45ef-b738-1f4c898fc452/output/reports/demo",
+    "status": "SUCCEEDED",
+    "cleanup_confirmed": true
+  },
+  {
+    "mode": "docker",
+    "batch_id": "fc7c5738-fb9a-4998-a9a2-795ad6b019b1",
+    "job_id": "75b881a8-d4ef-4dcd-86d0-310598a801fc",
+    "run_id": "02362f2c-29bc-41f6-b203-0e0df24cd65a",
+    "output_root": "/home/dgh/mini-eval-artifacts/validation-20261119/fc7c5738-fb9a-4998-a9a2-795ad6b019b1/75b881a8-d4ef-4dcd-86d0-310598a801fc/de3d2dc0-d1e8-4ba4-ac35-eb949f56c003/output/reports/demo",
+    "status": "SUCCEEDED",
+    "cleanup_confirmed": true
+  }
+]

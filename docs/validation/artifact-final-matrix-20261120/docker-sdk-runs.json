@@ -1,0 +1,15 @@
+[
+  {
+    "name": "docker-sdk",
+    "batch_id": "e85f6e53-c9f8-432b-8aa8-f6f727aafc7f",
+    "job_id": "f4ae49c5-d88a-4d26-881d-4927951676fe",
+    "run_id": "96f62054-0f7b-44bf-b0e2-a1a9bcdcb17a",
+    "status": "SUCCEEDED",
+    "paths": [
+      "episodes/1/output",
+      "episodes/2/output",
+      "episodes/3/output"
+    ],
+    "cleanup_confirmed": true
+  }
+]

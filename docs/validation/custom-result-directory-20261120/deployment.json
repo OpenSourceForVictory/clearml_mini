@@ -1,0 +1,38 @@
+{
+  "image": "mini-eval-api:custom-directory-20261120",
+  "commit": "ec458c7",
+  "migration": "c952f34",
+  "worker_upgrade": false,
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "local4090-151",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "enabled": true,
+      "held": 0
+    }
+  ]
+}

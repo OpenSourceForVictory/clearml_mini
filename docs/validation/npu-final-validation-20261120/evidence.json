@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "held_after": 0,
+  "template_id": "f4b13318-a83f-49ad-8378-c34807d07bf0",
+  "services": [
+    {
+      "id": "8d8ef3b5-f8e8-4134-883f-052f1a3f0fd6",
+      "job_id": "3ecf7f9d-708f-490d-998a-e3c5def07a8a",
+      "slot_id": "847e8acc-2bc1-415d-afeb-f37ac7792b7e",
+      "port": 19500,
+      "physical_card": 2,
+      "systemd": "DeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci2 rw\nUser=HwHiAiUser\nId=mini-eval-exec-739744ff-c1bc-4ab8-8b48-9b4156ab9367.service\nActiveState=active\n",
+      "computation": {
+        "visible": "0",
+        "uid": 1001,
+        "pid": 3494871,
+        "value": 1240
+      },
+      "execution_id": "739744ff-c1bc-4ab8-8b48-9b4156ab9367",
+      "healthy": "HEALTHY",
+      "stopped": "STOPPED",
+      "cleanup_confirmed": true
+    },
+    {
+      "id": "524117c3-7ed0-444c-8808-a882f8bca50c",
+      "job_id": "ddd89818-64ee-47df-8b46-274a7030f475",
+      "slot_id": "b5b18d07-6ed9-4bc5-8eaf-ff8d48beeff4",
+      "port": 19501,
+      "physical_card": 3,
+      "systemd": "DeviceAllow=/dev/hisi_hdc rw\nDeviceAllow=/dev/devmm_svm rw\nDeviceAllow=/dev/davinci_manager rw\nDeviceAllow=/dev/davinci3 rw\nUser=HwHiAiUser\nId=mini-eval-exec-b9bd2afa-3dbb-48e5-93f1-5d707ab3230c.service\nActiveState=active\n",
+      "computation": {
+        "visible": "0",
+        "uid": 1001,
+        "pid": 3494991,
+        "value": 1240
+      },
+      "execution_id": "b9bd2afa-3dbb-48e5-93f1-5d707ab3230c",
+      "healthy": "HEALTHY",
+      "stopped": "STOPPED",
+      "cleanup_confirmed": true
+    }
+  ]
+}

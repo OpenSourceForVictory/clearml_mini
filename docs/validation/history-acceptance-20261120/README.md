@@ -32,13 +32,13 @@
 
 | 变更 | 结论与下一验收动作 |
 | --- | --- |
-| suite-select-all | 已补实现、正常/边界/只读测试、指南和 Skill，已提交；待前端部署 |
+| suite-select-all | 已补实现、正常/边界/只读测试、指南和 Skill，已提交并随本轮前端发布 |
 | execution-launch-snapshots | 用户已撤销，保留原讨论；由已完成的 batch-run-configuration 承接，不创建新表或 Worker 快照上传 |
 | initial-mvp | ClearMLAdapter、ClearML 对账由 lightweight-workers 明确替代；其余调度/界面/部署目标需逐条关联后续证据，真实 RoboTwin 模型验收不能用 mock 代替 |
 | lightweight-workers | 单/多卡并发与远程真实 RoboTwin 两项原复合验收仍需完整核对；未确定/核实 checkpoint、资产和模型，不标已完成 |
 | generic-machine-runtime-management | SSH 部分已有后续变更承接，但五节点发布、模块边界、通用设备挂载和两节点参数路径验收不能根据后续功能存在就整项勾选 |
-| process-scoped-execution-logs | 大量基础与真机证据已有；复合条款需逐条对照，最新配置同步发布/节点升级仍未验收 |
-| task-result-artifacts | 平台 output 根共享直读已交付；manifest、模板自定义目录和完整归属/清理矩阵仍未完成。Worker 文件转发仍按用户决定暂缓 |
+| process-scoped-execution-logs | 配置同步、真实界面升级和按需日志已发布验收；本轮继续逐项核对复合条款，不能按文件存在直接结项 |
+| task-result-artifacts | 平台 output 根、manifest与模板自定义目录已交付；完整联合矩阵仍逐条核对。Worker 文件转发仍按用户决定暂缓 |
 | host-inherit-task-limits | 空草稿；需求已由 host-shell-episode-launch 第 11/12 节及可选 PID 配置承接。保留草稿原状态，不伪造通过记录 |
 | host-login-environment | 空目录草稿；实现见 host-shell-episode-launch。尚无独立 delta，原全仓 strict 的失败边界保持可见 |
 
@@ -70,4 +70,6 @@
 
 历史导入确认已移到向导操作区，修改配置后撤销确认；部署后真实历史批次只读导入与修改验证通过。产物窗口、返回上层、共享不可用时仍显示输出目录已发布。0.21.12 manifest 已通过管理界面升级本机 GPU 节点，使用安装包 SDK 的真实 CUDA 三回合和浏览器归属预览通过，见 [发布记录](../artifact-manifest-release-20261120/README.md)。其他节点仍保留原版本，没有借本机验收扩大全节点升级。
 
-待办表数量已按当前 tasks.md 重新统计，仍未完成的原复合任务没有因补充一个切片自动勾选。尤其模板自定义浏览目录、通用设备映射、完整多节点发布矩阵及真实 RoboTwin 模型/checkpoint 验收仍有缺口；当前生产可用的日志、平台输出目录浏览与这些扩展项必须区分。Worker 产物转发、整机日志配额通道、NPU 产物共享继续遵守用户暂缓/不需要的决定。
+待办表数量已按当前 tasks.md 重新统计，仍未完成的原复合任务没有因补充一个切片自动勾选。其中模板自定义浏览目录已补齐实现与发布验收；通用设备映射、完整多节点发布矩阵及真实 RoboTwin 模型/checkpoint 验收仍有缺口；当前生产可用的日志、平台输出目录浏览与这些扩展项必须区分。Worker 产物转发、整机日志配额通道、NPU 产物共享继续遵守用户暂缓/不需要的决定。
+
+最新产物真机矩阵见[最终矩阵](../artifact-final-matrix-20261120/README.md)，自定义目录已部署c952f34；NPU真实双实例、界面部署及停止清理均通过。全量最终结果以[补全回归](../full-followup-20261120/README.md)为准，旧基线数字不覆盖本轮源码。
