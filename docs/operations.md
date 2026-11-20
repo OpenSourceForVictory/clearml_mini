@@ -2,6 +2,8 @@
 
 现有平台升级、数据库备份、Compose 自动迁移及失败处理见 [数据库迁移与 Compose 升级指南](database-migration.md)。可在其他部署机器按该文档执行，须沿用该机器的环境文件、项目名与覆盖配置。
 
+2026-11-20 批次排队优先级已部署到本机 `mini-eval` Compose 平台，数据库迁移版本为 `aa741b2`。无需升级 Worker。此部署仅在无非终态任务时重建 API，并先生成数据库备份；验证范围及未覆盖的真实队列操作见 [批次优先级验证记录](../openspec/changes/archive/2026-11-20-batch-priority/validation.md)（归档后路径）。
+
 2026-11-18 宿主机登录环境与逐回合启动发布：控制端镜像 `mini-eval-api:host-shell-episode-20261118`，数据库版本 `w396f78` 无迁移。29 号 NPU 节点与本机 GPU 节点升级 Worker 0.18.0 / 协议 15；其他节点保持旧版本，登录环境或逐回合模板会按协议门槛排除旧节点。发布、备份、真实任务及清理边界见 [验证记录](validation/host-shell-episode-launch/README.md)。
 
 默认平台部署现包含 SSH 纳管执行器：scripts/control.py up 同时构建 API 与 onboarding 镜像，Compose 自动启动、健康检查和连接。复制项目到新机器后按正常平台部署即可，平台用户无需另装执行器或配置 socket。机器注册与恢复均通过界面操作。详细架构与旧宿主机部署兼容见 [SSH 纳管执行器](ssh-onboarding-executor.md)。
