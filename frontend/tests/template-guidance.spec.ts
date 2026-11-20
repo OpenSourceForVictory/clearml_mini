@@ -169,3 +169,17 @@ test('artifact output is a platform parameter and saves as output-dir mapping',a
  await expect.poll(()=>writes.length).toBe(1);
  expect(writes[0].body.platform_bindings).toEqual([{source:'platform.paths.output',target:'argv',name:'--output-dir',encoding:'literal'}]);
 });
+
+
+test('custom browse directory is retained by copy and submitted without changing runtime output',async({page})=>{
+ const writes=await setup(page,false,{...template,result_directory:'${mounts:shared}/${business.scene}'});
+ await page.getByRole('button',{name:'复制新版本',exact:true}).click();
+ await expect(page.getByLabel('自定义结果浏览目录',{exact:true})).toHaveValue('${mounts:shared}/${business.scene}');
+ await page.getByLabel('版本',{exact:true}).fill('custom-copy');
+ await page.getByLabel('自定义结果浏览目录',{exact:true}).fill('${output_dir}/custom');
+ await page.getByRole('button',{name:'注册此版本'}).click();await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body.result_directory).toBe('${output_dir}/custom');
+ expect(writes[0].body.runtime.mounts).toEqual(template.runtime.mounts);
+ await page.getByRole('tab',{name:'服务端模板',exact:true}).click();await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await expect(page.getByLabel('自定义结果浏览目录',{exact:true})).toHaveCount(0);
+});

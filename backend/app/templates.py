@@ -10,6 +10,7 @@ from .scheduling import lock
 
 
 class ServerCreate(TemplateCreate):
+    result_directory: None = Field(default=None,exclude=True)
     port: int = Field(default=8000,ge=1024,le=65535)
     protocol: Literal['http','https','ws','wss']='http'
     health_path: str = Field(default='/healthz',min_length=1,max_length=500,pattern=r'^/[^\s]*$')

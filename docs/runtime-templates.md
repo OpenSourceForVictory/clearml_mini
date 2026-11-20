@@ -73,3 +73,8 @@ SDK 校验结果并生成原有 STARTED/COMPLETED/ERROR 回合事件，最终生
 ## 产物目录参数
 
 客户端/服务端模板均可在动态参数映射选择“产物目录”，绑定 argv --output-dir 或自定义环境变量；底层来源为 platform.paths.output。不要再定义同名业务参数或在基础命令重复写 --output-dir。也可使用 ${output_dir}、MINI_EVAL_OUTPUT_DIR 或输入 JSON。独立节点产物根不会改变业务 cwd；宿主机每回合启动时传当前回合目录，整个任务启动时传公共目录，容器传容器内路径。配置与升级见[共享产物指南](shared-storage-artifacts.md)。
+
+
+### 自定义结果浏览目录
+
+客户端模板可填写“自定义结果浏览目录”，如 `${output_dir}/reports` 或容器持久挂载 `${mounts:shared}/${business.scene}`。这是只读浏览位置，不是业务输出参数；要改变业务写入位置，仍需配置启动参数映射或业务环境。任务首次领取冻结解析路径，旧任务不按后来修改的模板推测。宿主批准根、容器持久映射、共享挂载和迁移要求见[共享产物指南](shared-storage-artifacts.md#客户端模板自定义结果浏览目录)。服务端模板不提供此字段。

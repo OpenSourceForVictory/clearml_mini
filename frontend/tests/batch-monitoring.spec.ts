@@ -440,3 +440,26 @@ test('parent directory returns one level and clears paging and preview',async({p
  await expect(panel.getByRole('button',{name:'返回上一层'})).toBeDisabled();
  expect(requests.at(-1)!.searchParams.get('path')).toBe('');
 });
+
+
+test('custom browse source keeps namespace in media grants and resets preview when switching',async({page})=>{
+ await setup(page);
+ await page.route('**/shared-artifacts?*',route=>{
+  const custom=new URL(route.request().url()).searchParams.get('directory')==='custom';
+  return route.fulfill({json:{enabled:true,storage_id:'efs',output_root:custom?'/shared/custom':'/shared/output',node_name:'node',path:'',version:'v',next:null,items:custom?[{name:'result.json',path:'result.json',kind:'file',size_bytes:15,version:'v1',episode_ids:[]}]:[]}});
+ });
+ await page.route('**/shared-artifacts/media-access',route=>{
+  expect(route.request().postDataJSON()).toEqual({directory:'custom',path:'result.json',version:'v1'});
+  return route.fulfill({json:{url:'/custom-preview',media_type:'application/json'}});
+ });
+ await page.route('**/custom-preview',route=>route.fulfill({body:'{"custom":true}'}));
+ await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
+ const drawer=page.getByRole('dialog',{name:'运行产物',exact:true});
+ await drawer.getByLabel('产物来源').selectOption('custom');
+ await expect(drawer).toContainText('不视为本次任务产物');await expect(drawer).toContainText('/shared/custom');
+ await expect(drawer.getByLabel('共享产物归属')).toHaveCount(0);
+ await drawer.getByRole('button',{name:'查看 / 下载'}).click();await expect(drawer.getByRole('region',{name:'产物预览'})).toContainText('custom:');
+ await drawer.getByLabel('产物来源').selectOption('shared');
+ await expect(drawer.getByRole('region',{name:'产物预览'})).toHaveCount(0);
+ await expect(drawer).toContainText('/shared/output');
+});

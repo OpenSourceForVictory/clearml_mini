@@ -453,6 +453,8 @@ def install(app, db, current):
             if value is not None:task['process_log_policy']=value
         from .shared_artifacts import plan as artifact_plan
         task.update(artifact_plan(s,run,worker,slot,job,fresh_artifact_plan))
+        from .result_directories import plan as browse_plan
+        browse_plan(s,run,worker,slot,job,fresh_artifact_plan)
         if job.benchmark == 'cs-client':
             from .shared_storage import mappings, allows_node
             if any(allows_node(m, worker.node_name) for m in mappings()):

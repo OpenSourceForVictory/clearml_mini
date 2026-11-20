@@ -257,3 +257,6 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 独立日志实时尾部不使用目录上报序号截断，目录刷新滞后仍可看到新输出；下载才固定结束序号，包含当前已显示页，后续分片沿用同一范围。该修正只需更新前端，不需要迁移或节点升级。
 
 尾部请求只复用请求发起后 3 秒内的已完成页；仍在排队/读取的相同请求继续合并。旧订阅者的页保持原 30 秒有效期，固定范围下载的缓存不变。全局 128 槽位及用户/节点并发上限继续生效。该缓存修正需更新 API，不需要数据库迁移或 Worker 升级。
+
+
+模板自定义结果浏览目录：ClientTemplate.result_directory 由 result_directories.py 校验，execution.claim 首次解析并写 ExecutionBrowseRoot；宿主批准根/容器持久挂载最深匹配、类型化业务参数、历史不补造。shared_artifacts 使用 directory=custom 命名空间，媒体 cookie 同时绑定来源；共享 I/O 前释放数据库连接。自定义文件不推断回合归属、不修改业务结果。迁移 c952f34，无 Worker 协议变化；指南 docs/shared-storage-artifacts.md、runtime-templates.md、database-migration.md。测试 test_result_directories.py、test_result_directory_migration.py、template-guidance.spec.ts、batch-monitoring.spec.ts。

@@ -40,6 +40,7 @@ class Registration(BaseModel):
 
 
 class FileQuery(BaseModel):
+    directory: Literal["platform","custom"] = "platform"
     model_config = ConfigDict(extra='forbid')
     path: str = Field(max_length=4096)
     version: str = Field(max_length=256)
@@ -138,6 +139,14 @@ def bindings(s, run_id):
     return linked
 
 
+def selected_location(s,run,directory):
+    if directory=='custom':
+        from .result_directories import location
+        return location(s,run)
+    if directory!='platform':raise HTTPException(400,'未知结果目录来源')
+    return snapshot(s,run)
+
+
 def install(app, db, current, worker_auth):
     root = '/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts'
 
@@ -157,31 +166,32 @@ def install(app, db, current, worker_auth):
 
     @app.get(root)
     async def listing(job_id: str, run_id: str, path: str = Query(default='', max_length=4096),
+                      directory: Literal['platform','custom'] = 'platform',
                       after: str = Query(default='', max_length=255), version: str | None = Query(default=None, max_length=512),
                       user=Depends(current), s=Depends(db)):
         run = visible_run(s, job_id, run_id, user)
         if not shared_storage.mappings():
             return {'enabled': False, 'items': []}
         safe_path(path)
-        location = snapshot(s, run)
+        location = selected_location(s, run, directory)
         mapping = shared_storage.resolve(location)
-        linked, user_id = bindings(s, run.id), user.id
+        linked, user_id = (bindings(s, run.id) if directory=='platform' else {}), user.id
         s.close()  # No connection/transaction survives shared filesystem I/O.
         result = await shared_file_io.read(mapping, location['relative'],
             dict(operation='list', path=path, after=after, version=version), user_id)
         for entry in result['items']:
             entry['path'] = str(PurePosixPath(path) / entry['name'])
-            entry['episode_ids'] = linked.get(entry['path'], entry.get('episode_ids', []))
+            entry['episode_ids'] = linked.get(entry['path'], entry.get('episode_ids', [])) if directory=='platform' else []
             entry['media_type'] = media_type(entry['name'])
         return {**result, 'enabled': True, 'path': path, 'storage_id': location['storage_id'],
-                'node_name': location['node_name'], 'output_root': location['output_root']}
+                'node_name': location['node_name'], 'output_root': location['output_root'], 'directory':directory}
 
     @app.post(root + '/media-access')
     async def grant(job_id: str, run_id: str, body: FileQuery, request: Request, response: Response,
                     user=Depends(current), s=Depends(db)):
         run = visible_run(s, job_id, run_id, user)
         safe_path(body.path)
-        location = snapshot(s, run)
+        location = selected_location(s, run, body.directory)
         mapping, user_id = shared_storage.resolve(location), user.id
         token = request.headers.get('authorization', '').partition(' ')[2]
         try:
@@ -192,10 +202,10 @@ def install(app, db, current, worker_auth):
         s.close()
         info = await shared_file_io.read(mapping, location['relative'],
             dict(operation='stat', path=body.path, version=body.version), user_id)
-        identity = hashlib.sha256((body.path + '\0' + info['version']).encode()).hexdigest()
+        identity = hashlib.sha256((body.directory + '\0' + body.path + '\0' + info['version']).encode()).hexdigest()
         path = f'/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media/{identity}'
         claims = dict(sub=user_id, aud='shared-artifact', exp=expires, job=job_id, run=run_id,
-                      path=body.path, version=info['version'], identity=identity)
+                      path=body.path, version=info['version'], identity=identity, directory=body.directory)
         response.set_cookie('mini-eval-shared-artifact', jwt.encode(claims, os.environ['JWT_SECRET'], algorithm='HS256'),
                             max_age=max(0, expires-int(time.time())), httponly=True, secure=request.url.scheme == 'https',
                             samesite='strict', path=path)
@@ -214,7 +224,7 @@ def install(app, db, current, worker_auth):
         if not user or not user.active:
             raise HTTPException(401, 'invalid user')
         run = visible_run(s, job_id, run_id, user)
-        location = snapshot(s, run)
+        location = selected_location(s, run, claims.get('directory','platform'))
         mapping, user_id = shared_storage.resolve(location), user.id
         s.close()
         query = dict(path=claims['path'], version=claims['version'])

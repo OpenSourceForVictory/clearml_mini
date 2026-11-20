@@ -72,7 +72,7 @@ def check_host_edit(user,old,new):
         # Members may reuse approved host templates, changing only business
         # defaults/constraints. They cannot replace command, bindings or runtime.
         if old['execution_mode']!='host':raise HTTPException(403,'host execution requires administrator approval')
-        for key in ('execution_mode','command','host_runtime','platform_bindings','integration_mode'):
+        for key in ('execution_mode','command','host_runtime','platform_bindings','integration_mode','result_directory'):
             if old.get(key)!=new.get(key):raise HTTPException(403,'host runtime changes require administrator approval')
         before=(old.get('parameter_schema') or {}).get('fields',{})
         after=(new.get('parameter_schema') or {}).get('fields',{})

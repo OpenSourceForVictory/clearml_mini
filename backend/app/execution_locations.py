@@ -1,7 +1,7 @@
 """Attempt-specific, reported host paths. Never infer history from live settings."""
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from .core import Job, Run, ExecutionData, Slot, Worker, SharedArtifactRoot
+from .core import Job, Run, ExecutionData, Slot, Worker, SharedArtifactRoot, ExecutionBrowseRoot
 from runner.process_log_contract import absolute_directory, identity
 
 
@@ -58,7 +58,10 @@ def view(s, run):
     records=s.scalars(select(ExecutionData).where(
         ExecutionData.run_id==run.id,ExecutionData.slot_id==run.slot_id,
         ExecutionData.execution_id==run.execution_id).order_by(ExecutionData.scanned_at.desc(),ExecutionData.id)).all() if run.execution_id else []
+    browse=s.get(ExecutionBrowseRoot,run.id)
+    browse_value=browse.snapshot if browse and browse.execution_id==run.execution_id else None
     return {'run_id':run.id,'execution_id':run.execution_id,
+            'result_directory':({'path':browse_value.get('output_root'),'node_name':browse_value.get('node_name'),'error':browse_value.get('error')} if browse_value else None),
             'node_name':worker.node_name if worker else None,
             'output_directory':output_location(s,run,records),
             'directories':[{'id':d.id,'path':reported_path(d.root_path,d.entry_name,run.execution_id,(d.identity or {}).get("location","runs")),

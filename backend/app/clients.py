@@ -22,6 +22,7 @@ class TemplateCreate(BaseModel):
     integration_mode: Literal['direct','sdk-command'] = 'direct'
     task_type: Literal['evaluation','command'] = 'evaluation'
     platform_bindings: list[dict] = Field(default_factory=list, max_length=32)
+    result_directory: str | None = Field(default=None,max_length=2000)
     resource_requirements: dict | None = None
     parameter_schema: dict | None = None
     host_runtime: dict | None = None
@@ -75,6 +76,8 @@ class TemplateCreate(BaseModel):
         names=set((settings or {}).get('environment',{}))|set((settings or {}).get('overridable_env',[]))
         if any(b.get('target')=='env' and b.get('name') in names for b in self.platform_bindings):
             raise ValueError('platform binding conflicts with runtime configuration')
+        from .result_directories import validate as result_directory
+        self.result_directory=result_directory(self.result_directory,self.model_dump())
         return self
 
     @field_validator('command')
@@ -148,7 +151,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements','result_directory')}
 
 
 def host_episode_launch(template):

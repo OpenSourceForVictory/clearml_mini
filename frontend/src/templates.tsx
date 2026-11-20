@@ -16,7 +16,7 @@ import {CommandMappings,validateMappings,PlatformBinding} from './command-mappin
 import {TemplateHelp,TemplateConfig} from './template-guidance';
 import {ParameterEditor,parameterDraft,parameterSchema} from './parameter-editor';
 
-export type Template={readiness?:Readiness|null;resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
+export type Template={result_directory?:string|null;readiness?:Readiness|null;resource_requirements?:ResourceContract|null;owner_id?:string|null;revision?:number;available_to_members?:boolean;task_type?:string;platform_bindings?:unknown[];parameter_schema?:Record<string,unknown>|null;id:string;name:string;version:string;image:string;execution_mode?:string;integration_mode?:string;command:string[];enabled:boolean;episode_reporting:boolean;endpoint_exclusive?:boolean;protocols:string[];runtime:any;host_runtime:any;port?:number;protocol?:string;health_type?:string;health_path?:string;startup_timeout?:number};
 export function Templates(){
  const [kind,setKind]=useState('client');
  return <><div className="tabs" role="tablist" aria-label="模板类型">{[['client','客户端模板'],['server','服务端模板'],['registration','镜像与代码接入']].map(([id,label])=><button role="tab" aria-selected={kind===id} key={id} onClick={()=>setKind(id)}>{label}</button>)}</div>
@@ -73,6 +73,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
  async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(readOnly)return;setBusy(true);setError('');try{const f=new FormData(e.currentTarget),assetMap=assetValues(assets),{environment,overridable_env}=environmentValues(environments[mode]);
    const body:any={name:f.get('name'),version:f.get('version'),execution_mode:mode,integration_mode:kind==='client'&&!ordinary?integration:'direct',command:JSON.parse(String(f.get('command'))),episode_reporting:kind==='client'&&!ordinary&&(reporting||integration==='sdk-command'),endpoint_exclusive:source?.endpoint_exclusive??false,protocols:source?.protocols||['http','https','ws','wss']};
    body.resource_requirements=resources;
+   if(kind==='client')body.result_directory=String(f.get('result_directory')||'')||null;
    body.parameter_schema=parameterSchema(parameters);
    validateMappings(bindings,body.parameter_schema,body.command,environment,overridable_env);
    body.platform_bindings=bindings;body.task_type=taskType;
@@ -88,6 +89,7 @@ export function TemplateForm({kind,source,onSave,onClose,readOnly=false}:{kind:s
  <p>业务需要输出参数时，在动态参数映射选择“产物目录”，例如绑定命令行 --output-dir。也可读取 MINI_EVAL_OUTPUT_DIR，或在命令中使用 {'${output_dir}'}。每回合启动时为当前回合目录；整任务启动为公共目录。</p>
  {mode==='docker'?<div className="row"><Field label="容器内工作目录"><input name="work_dir" required value={workDir} onChange={e=>setWorkDir(e.target.value)}/></Field><Field label="容器内产物目录"><input name="output_dir" required value={outputDir} onChange={e=>setOutputDir(e.target.value)}/></Field></div>:<p>工作目录使用节点工作区；产物目录按节点存储配置生成，未配置独立产物根时沿用旧工作区。</p>}
  </fieldset>
+ {kind==='client'&&<fieldset><legend>自定义结果浏览目录（可选）</legend><Field label="自定义结果浏览目录"><input name="result_directory" defaultValue={source?.result_directory||''} maxLength={2000} placeholder="例如 /shared/results/${business.scene}"/></Field><p>仅用于结果页只读浏览，不改变业务输出位置。可引用已声明业务字段如 {'${business.scene}'}；宿主机须在节点批准根内，容器须在持久挂载内，且 API 能访问同一共享存储。共享目录可能包含其他运行文件，不自动归属回合或清理。</p></fieldset>}
  <ResourceRequirements value={resources} onChange={setResources}/><fieldset><legend>业务参数</legend><p className="muted">这里定义可填写的字段，具体取值在集合任务或服务部署时填写。例如 scene（字符串）绑定命令行 --scene，平台会追加该参数；不要在命令中重复写同一绑定。任务名、回合数和种子在任务集合中配置。</p><details><summary>业务参数如何传给程序？</summary><p>输入文件：从 MINI_EVAL_INPUT 指向的 JSON 读取 business 字段。命令行：绑定名称填 --scene。环境变量：绑定名称填 SCENE。需要在提交时修改的字段，勾选“允许运行时覆盖”；不要使用 endpoint 等平台保留名称。</p></details><ParameterEditor value={parameters} onChange={setParameters}/></fieldset>
  <fieldset><legend>运行参数</legend>
  {kind==='client'&&<Field label="任务类型"><select value={taskType} onChange={e=>setTaskType(e.target.value)}><option value="evaluation">评测任务（回合与评测结果）</option><option value="command">普通命令（按退出码判定）</option></select></Field>}

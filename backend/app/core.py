@@ -338,6 +338,7 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    result_directory: Mapped[Optional[str]] = mapped_column(String(2000))
     resource_requirements: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')
     revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
@@ -417,6 +418,13 @@ class SharedArtifactRoot(Base):
     execution_id: Mapped[str] = mapped_column(String(36), nullable=False)
     snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ExecutionBrowseRoot(Base):
+    __tablename__ = 'execution_browse_roots'
+    run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id', ondelete='CASCADE'), primary_key=True)
+    execution_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
 
 
 class ExecutionData(Base):
