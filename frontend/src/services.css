@@ -1,0 +1,8 @@
+.service-management-scroll{max-width:100%;overflow-x:auto;margin-top:16px;border:1px solid #e0e7e2;border-radius:8px}
+.service-management-scroll:focus-visible{outline:2px solid #409578;outline-offset:2px}
+.service-management-table{min-width:1110px;table-layout:fixed;margin:0}
+.service-management-table th,.service-management-table td{box-sizing:border-box;vertical-align:top;white-space:normal;overflow-wrap:anywhere}
+.service-management-table th:nth-child(1){width:160px}.service-management-table th:nth-child(2){width:170px}.service-management-table th:nth-child(3){width:180px}.service-management-table th:nth-child(4){width:280px}.service-management-table th:nth-child(5){width:200px}.service-management-table th:nth-child(6){width:120px}
+.service-management-table button{white-space:nowrap;margin:3px 0}
+.service-management-table td:last-child button{display:block}
+.service-management-table details{max-width:100%}.service-management-table details p{overflow-wrap:anywhere}

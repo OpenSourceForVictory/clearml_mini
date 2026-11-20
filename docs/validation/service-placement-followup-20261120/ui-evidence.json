@@ -1,0 +1,11 @@
+{
+  "service_id": "13cb64a1-da0c-4f28-b087-eef5528733dc",
+  "job_id": "79e8ee43-07d6-4eae-9725-50290173725d",
+  "node": "ascend910b3-29",
+  "physical_card": 2,
+  "submitted_accelerator_type": "npu",
+  "healthy": true,
+  "logs_visible": true,
+  "stopped": true,
+  "cleanup_confirmed": true
+}

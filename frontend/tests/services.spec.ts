@@ -94,7 +94,7 @@ test('service management shows actual NPU placement and never guesses missing as
   if(p==='admin/nodes')data=[{id:'n',node_name:'candidate',roles:['server'],enabled:true,status:'online'}];
   if(p==='workers')data=[{id:'slot',worker_id:'n',pool_id:'p',node_name:'npu-node',accelerator_type:'npu',gpu_index:3,gpu_model:'Ascend'}];
   if(p==='admin/services')data=[
-   {id:'assigned',name:'assigned',placement:{id:'slot',node_name:'npu-node',accelerator_type:'npu',gpu_index:3}},
+   {id:'assigned',name:'assigned',error:'historical stop diagnostic',placement:{id:'slot',node_name:'npu-node',accelerator_type:'npu',gpu_index:3}},
    {id:'pending',name:'pending',placement:null},
    {id:'old',name:'old-api'},
   ].map(s=>({...s,worker_id:'n',state:'STOPPED',online:true,revision:1,desired_running:false,cleanup_pending:false,endpoint:'http://node',template:{name:'demo',version:'1'}}));
@@ -104,6 +104,10 @@ test('service management shows actual NPU placement and never guesses missing as
  await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'assigned',exact:true})})).toContainText('npu-node / NPU 3');
  await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'pending',exact:true})})).toContainText('未分配或位置记录不可用');
  await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'old-api',exact:true})})).toContainText('位置信息不可用');
+ await expect(page.getByText('historical stop diagnostic',{exact:true})).not.toBeVisible();
+ const table=page.getByRole('table',{name:'服务实例列表'});expect((await table.getByRole('columnheader',{name:'实际执行位置'}).boundingBox())!.width).toBeGreaterThanOrEqual(175);
+ await page.setViewportSize({width:390,height:844});const scroll=page.getByRole('region',{name:'服务实例表格'});
+ expect(await scroll.evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);expect(await page.evaluate(()=>document.body.scrollWidth)).toBeLessThanOrEqual(390);
  await page.getByRole('button',{name:'部署服务实例',exact:true}).click();
  await expect(page.getByLabel('目标机器 / 加速卡').locator('option[value="slot"]')).toHaveText('npu-node / NPU 3 · Ascend');
 });

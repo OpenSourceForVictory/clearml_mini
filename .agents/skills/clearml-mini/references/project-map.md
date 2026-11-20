@@ -268,3 +268,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 服务管理列表复用execution-placement.tsx展示services.view已有placement；不得回退到实例target slot。部署选择按accelerator_type显示GPU/NPU。缺失字段与null沿用既有兼容提示，无迁移或Worker变更；services.spec.ts覆盖实际NPU、未分配及旧API。
 
 服务旧模板部署表单按选中slot发送resources.accelerator_type，避免NPU目标被缺省GPU请求拒绝；资源契约分支仍使用契约值。services.spec.ts包含旧GPU字段兼容与NPU提交断言，保留修复前失败。
+
+服务管理表格使用局部services.css的固定可读列宽和容器内横向滚动；STOPPED/CANCELLED的旧退出与探测消息折叠为历史诊断，其他故障仍显示。实际截图发现窄列折字，services.spec.ts验证位置列宽、390px无页面溢出及诊断折叠。
