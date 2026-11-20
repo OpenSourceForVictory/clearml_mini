@@ -17,5 +17,5 @@
 .artifact-dialog nav button{border:1px solid #cad4e3;border-radius:6px;background:#f4f7f5;color:#263e31;padding:8px 12px;}
 .artifact-dialog nav button:hover:not(:disabled){background:#e5eee8;}
 .artifact-dialog nav button:disabled{opacity:.5;cursor:default;}
-.artifact-dialog table{min-width:0;table-layout:auto;}
+dialog.artifact-dialog table{min-width:0;table-layout:auto;}
 .artifact-dialog table th:first-child,.artifact-dialog table th:nth-child(5){width:auto;}
