@@ -19,3 +19,7 @@
 - 本轮前端全套：241 通过、10 条件跳过；前端未插桩，不纳入 Python 覆盖率。
 
 原始报告位于 `.runtime/final-followup-20261120/verified/`（`tests.xml`、`test-exit.json`、`summary.md`、`summary.json`、`coverage.xml`、`coverage.json`）。该目录是本机验证产物，不提交到 Git；本文件记录可复核的汇总结果。
+
+## 全量之后的真实 Docker 补跑
+
+复核跳过原因后，在本机 Docker 29.4 上单独启用了全量期间未开启的 `GENERIC_DOCKER_TEST=1`，运行 `backend/tests/test_generic_commands.py::test_docker_real_command_matrix`。使用本地隔离镜像 `mini-eval-api:root-managed-20261117`（image ID `sha256:16f8bca74599ba7ee7db6c539cc8e865d96a9f2b3354ebbac765ddd96603f570`）；每个容器使用临时目录、禁用网络、移除 capabilities，并限制为 1 CPU / 256 MiB。**24 项全部通过，11.45 秒**。这是一项独立补跑证据，不回写全量 `tests.xml` 的 99 跳过数，也不代表 systemd、特权挂载、迁移数据库或多物理节点用例均已补跑。
