@@ -1,0 +1,19 @@
+{
+  "batch_id": "3d7507fc-3e6a-4f13-8eb6-0a110ab50360",
+  "size": 67108864,
+  "checks": [
+    {
+      "range": "bytes=0-7",
+      "status": 206,
+      "length": 8,
+      "content_range": "bytes 0-7/67108864"
+    },
+    {
+      "range": "bytes=-8",
+      "status": 206,
+      "length": 8,
+      "content_range": "bytes 67108856-67108863/67108864"
+    }
+  ],
+  "cleanup_confirmed": true
+}

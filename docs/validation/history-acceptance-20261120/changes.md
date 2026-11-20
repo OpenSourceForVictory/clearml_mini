@@ -12,7 +12,7 @@
 | [batch-delete-error-diagnostics](../../../openspec/changes/batch-delete-error-diagnostics/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [batch-monitoring](../../../openspec/changes/batch-monitoring/tasks.md) | 13/13 | 记录完成，证据以原报告版本为准 |
 | [batch-reports](../../../openspec/changes/batch-reports/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
-| [batch-rerun-wizard](../../../openspec/changes/batch-rerun-wizard/tasks.md) | 10/10 | 记录完成，证据以原报告版本为准 |
+| [batch-rerun-wizard](../../../openspec/changes/batch-rerun-wizard/tasks.md) | 12/12 | 记录完成，证据以原报告版本为准 |
 | [batch-run-configuration](../../../openspec/changes/batch-run-configuration/tasks.md) | 12/12 | 记录完成，证据以原报告版本为准 |
 | [batch-task-deletion](../../../openspec/changes/batch-task-deletion/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [bounded-execution-logs](../../../openspec/changes/bounded-execution-logs/tasks.md) | 11/11 | 记录完成，证据以原报告版本为准 |
@@ -27,7 +27,7 @@
 | [desired-service-instances](../../../openspec/changes/desired-service-instances/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
 | [episode-result-diagnostics](../../../openspec/changes/episode-result-diagnostics/tasks.md) | 10/10 | 记录完成，证据以原报告版本为准 |
 | [evaluation-results-management](../../../openspec/changes/evaluation-results-management/tasks.md) | 6/6 | 记录完成，证据以原报告版本为准 |
-| [evaluation-wizard-clarity](../../../openspec/changes/evaluation-wizard-clarity/tasks.md) | 12/12 | 记录完成，证据以原报告版本为准 |
+| [evaluation-wizard-clarity](../../../openspec/changes/evaluation-wizard-clarity/tasks.md) | 13/13 | 记录完成，证据以原报告版本为准 |
 | [execution-directory-visibility](../../../openspec/changes/execution-directory-visibility/tasks.md) | 6/6 | 记录完成，证据以原报告版本为准 |
 | [execution-launch-snapshots](../../../openspec/changes/execution-launch-snapshots/tasks.md) | 0/11 | 用户撤销，不再实施 |
 | [execution-placement-display](../../../openspec/changes/execution-placement-display/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
@@ -66,7 +66,7 @@
 | [per-device-storage-settings](../../../openspec/changes/per-device-storage-settings/tasks.md) | 4/4 | 记录完成，证据以原报告版本为准 |
 | [pool-accelerator-labels](../../../openspec/changes/pool-accelerator-labels/tasks.md) | 2/2 | 记录完成，证据以原报告版本为准 |
 | [preflight-runtime-server-diagnostics](../../../openspec/changes/preflight-runtime-server-diagnostics/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
-| [process-scoped-execution-logs](../../../openspec/changes/process-scoped-execution-logs/tasks.md) | 6/20 | 仍有待核对/实施项 |
+| [process-scoped-execution-logs](../../../openspec/changes/process-scoped-execution-logs/tasks.md) | 7/20 | 仍有待核对/实施项 |
 | [production-fleet-acceptance](../../../openspec/changes/production-fleet-acceptance/tasks.md) | 13/13 | 记录完成，证据以原报告版本为准 |
 | [project-coverage-baseline](../../../openspec/changes/project-coverage-baseline/tasks.md) | 6/6 | 记录完成，证据以原报告版本为准 |
 | [reenrollment-execution-modes](../../../openspec/changes/reenrollment-execution-modes/tasks.md) | 5/5 | 记录完成，证据以原报告版本为准 |
@@ -85,7 +85,7 @@
 | [suite-management](../../../openspec/changes/suite-management/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-run-preflight](../../../openspec/changes/suite-run-preflight/tasks.md) | 7/7 | 记录完成，证据以原报告版本为准 |
 | [suite-select-all](../../../openspec/changes/suite-select-all/tasks.md) | 3/3 | 记录完成，证据以原报告版本为准 |
-| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 13/21 | 仍有待核对/实施项 |
+| [task-result-artifacts](../../../openspec/changes/task-result-artifacts/tasks.md) | 14/21 | 仍有待核对/实施项 |
 | [task-submission-orchestration](../../../openspec/changes/task-submission-orchestration/tasks.md) | 21/21 | 记录完成，证据以原报告版本为准 |
 | [template-authoring-guidance](../../../openspec/changes/template-authoring-guidance/tasks.md) | 9/9 | 记录完成，证据以原报告版本为准 |
 | [template-resource-requirements](../../../openspec/changes/template-resource-requirements/tasks.md) | 15/15 | 记录完成，证据以原报告版本为准 |
