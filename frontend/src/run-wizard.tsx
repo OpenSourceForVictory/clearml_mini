@@ -84,7 +84,14 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       gpu_mode:v.resources?.gpu_mode||'exclusive',requested_vram_gb:v.resources?.requested_vram_gb??0})): [newService()]);
   },[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
-  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
+  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');setImportAcknowledged(false);},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
+  useEffect(()=>{sequence.current++;setPreview(null);},[importAcknowledged]);
+  const missingInstanceCount=serviceMode==='managed'&&!!imported?.issues.some(i=>{
+    const match=/^services\.(\d+)\.instance_count$/.exec(i.path);
+    if(!match)return false;
+    const row=serviceRows[Number(match[1])];
+    return !!row&&(!Number.isInteger(row.instance_count)||row.instance_count<1||row.instance_count>20);
+  });
   useEffect(()=>{
     if(!trial?.id)return;
     let active=true;const id=trial.id;
@@ -170,8 +177,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {error&&<p role="alert" className="error">{error}</p>}
     {imported&&<section aria-label="历史批次来源"><h3>基于历史批次创建</h3><p>来源：{imported.source.title} · {imported.source.batch_id}。只创建新批次，不改变原批次。原客户端：{imported.templates.client.name} / {imported.templates.client.version}。</p><ul>{imported.templates.services.map((t,i)=><li key={i}>原服务 {i+1}：{t.name} / {t.version} · {t.id}</li>)}</ul>
     <p>已恢复各任务的最终参数和资源，单项配置优先于公共配置；请在清单中逐项修改。重新预检后才能提交，不复用原实例或预检结果。</p>
-    {imported.issues.length>0&&<><ul>{imported.issues.map((i,n)=><li key={n}>{i.path}：{i.message}{i.fatal?'（无法恢复，禁止提交）':''}</li>)}</ul>
-    {!imported.issues.some(i=>i.fatal)&&<label><input type="checkbox" checked={importAcknowledged} onChange={e=>setImportAcknowledged(e.target.checked)}/>我已重新选择或明确确认使用当前模板、资源池，并补齐缺失配置；接受与历史配置的差异，重新预检</label>}</>}
+    {imported.issues.length>0&&<p>有 {imported.issues.length} 项历史配置需要核对，请在本步骤底部查看“历史配置确认”。</p>}
     </section>}
     <p className="wizard-context">{draft.title||'未命名批次'} · {cases.length} 项任务 · {stepTitles[step]}</p><form onSubmit={next} onInvalidCapture={revealInvalid}><fieldset disabled={busy} className="wizard-form">
     {step===0&&<WizardModule title="任务与集合">
@@ -239,6 +245,14 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         </details>
       </div>}
     </>}
+    {imported&&imported.issues.length>0&&<section aria-label="历史配置确认"><h3>历史配置确认</h3><ul>{imported.issues.map((issue,n)=>{
+      const service=/^services\.(\d+)\.(instance_count|pool_id|template_id)$/.exec(issue.path);
+      const target=service?2:issue.path==='client.template_id'?1:issue.path==='pool_id'?3:null;
+      const label=service?`服务 ${Number(service[1])+1} ${service[2]==='instance_count'?'实例数':service[2]==='pool_id'?'资源池':'模板'}`:issue.path==='client.template_id'?'客户端模板':issue.path==='pool_id'?'客户端资源池':issue.path;
+      return <li key={n}>{label}：{issue.message}{issue.fatal?'（无法恢复，禁止提交）':''}{target!==null&&<span> · 第 {target+1} 步“{stepTitles[target]}”{target<step&&<button type="button" onClick={()=>goBack(target)}>修改{label}</button>}</span>}</li>;
+    })}</ul>{missingInstanceCount&&<p>请先在服务端步骤填写 1–20 的整数实例数，再确认历史配置。</p>}
+    {!imported.issues.some(i=>i.fatal)&&<label><input type="checkbox" disabled={missingInstanceCount} checked={importAcknowledged} onChange={e=>setImportAcknowledged(e.target.checked)}/>我已重新选择或明确确认使用当前模板、资源池，并补齐缺失配置；接受与历史配置的差异，重新预检</label>}
+    <p className="hint">修改运行配置后，需要再次确认并重新预检。</p></section>}
     <div className={`wizard-actions${step===3?' wizard-resource-actions':''}`}>{step===4&&preview&&<button type="button" className="primary" disabled={!preview.can_submit||!!submitted} onClick={()=>void submit()}>{preview.status==='ready'?'提交评测批次':'提交排队'}</button>}{step>0&&<button type="button" onClick={()=>goBack(step-1)}>上一步</button>}{step<4&&<button type="submit" className="primary">{step===3?'检查并确认':'下一步'}</button>}</div>
     </fieldset></form>
     {copy&&<TemplateCopy key={copy.source.id} {...copy} onClose={()=>setCopy(null)} onPublished={t=>{if(copy.kind==='client'){setExtraTemplates(old=>[...old,t as Template]);setTemplateId(t.id);if(selectedSuite)setSuiteDefaults(selectedSuite.client_defaults||{});setSuiteId('');setValues({})}else{setServers(old=>[...old,t as ServerTemplate]);setServiceRows(old=>old.map(s=>s.template_id===copy.source.id?{...s,template_id:t.id}:s))}setCopy(null)}}/>}

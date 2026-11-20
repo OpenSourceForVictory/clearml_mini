@@ -100,3 +100,19 @@ test('missing historical client is named and explicit suite-compatible selection
  const select=w.getByLabel('客户端模板',{exact:true});await expect(select).toHaveValue('gone');await expect(select.locator('option:checked')).toContainText('已停用客户端 / old');await expect(w.getByRole('region',{name:'运行模板',exact:true}).getByRole('alert')).toContainText('不在可用模板列表');
  await select.selectOption('t');await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('服务来源')).toBeVisible();await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('checkbox',{name:'我已重新选择',exact:false}).check();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);expect(c.requests[0].body.client.template_id).toBe('t');expect(c.requests[0].body.cases[1].parameters.speed).toBe(5);
 });
+
+test('history confirmation stays by actions and edits invalidate acknowledgement',async({page})=>{
+ const c=await setup(page);c.draft.issues=[{path:'services.0.instance_count',code:'instance_count_required',message:'请填写明确的实例数',fatal:false}];c.draft.submission.services[0].instance_count=null;
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'}),panel=w.getByRole('region',{name:'历史配置确认'}),ack=panel.getByRole('checkbox');
+ await expect(ack).toBeDisabled();await expect(panel).toContainText('第 3 步');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByLabel('服务 1 实例数').fill('2');await expect(ack).toBeEnabled();await ack.check();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(ack).toBeChecked();
+ await panel.getByRole('button',{name:'修改服务 1 实例数'}).click();await w.getByLabel('服务 1 实例数').fill('3');await expect(ack).not.toBeChecked();await ack.check();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ await ack.uncheck();await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toHaveCount(0);
+ await page.setViewportSize({width:390,height:844});await panel.scrollIntoViewIfNeeded();
+ const box=await panel.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(390);
+ expect(c.requests).toHaveLength(1);expect(c.requests[0].body.services[0].instance_count).toBe(3);
+});

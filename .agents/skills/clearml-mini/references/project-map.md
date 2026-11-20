@@ -251,3 +251,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 产物浏览UI：artifact-dialog为居中最大1280px原生dialog，窄屏留白并内部滚动；SharedArtifactBrowser返回父目录复用navigate清空分页/预览，根禁用。测试batch-monitoring.spec.ts覆盖居中尺寸、焦点与逐级返回。
 
 产物弹窗嵌在批次表格DOM中，artifact-dialog须覆盖全局nav列布局/低对比颜色及batch-detail-table的fixed列宽；回归检查目录导航row和表格auto。
+
+历史批次导入：每步底部的“历史配置确认”列出待核对字段与所属步骤，可返回已访问步骤修改。旧服务实例数必须先填写 1–20 的整数；修改配置后需重新确认并预检。无法恢复的问题仍禁止提交，无需数据库迁移或节点升级。

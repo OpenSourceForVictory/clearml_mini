@@ -28,3 +28,8 @@
 5.1证据 docs/validation/rerun-suite-selection-20261120/README.md：54项通过、真实批次只读导入通过，无迁移或Worker升级。
 
 5.1已发布并使用真实批次复验：mini-eval-api:rerun-suite-20261120；原集合/客户端默认选中、客户端步骤通过。仅前端，保留API/Worker/SDK版本与数据；六节点接纳恢复。
+
+## 6. 历史配置确认可达性
+- [x] 6.1 将问题与确认放到步骤操作区，标明修改步骤，实例数未补齐不能确认；配置变更撤销确认及预检。同步指南并验证正常、缺失、致命问题与再次编辑路径。
+
+6.1 验证：docs/validation/rerun-confirmation-20261120/README.md。9 项浏览器通过，类型/构建/strict 通过。
