@@ -1,0 +1,7 @@
+batch 19732d8e-d520-477a-b937-b59fda823ffb
+Business profile restored
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/final-followup-20261120/smoke.py", line 39, in <module>
+    assert j['status']=='SUCCEEDED',j['status']
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: FAILED

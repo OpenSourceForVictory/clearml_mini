@@ -51,3 +51,5 @@
 Runner入口补测与SDK真GPU阶段验收：docs/validation/artifact-runner-gpu-20261119/README.md。153通过/1跳过，cs_entry与command_sdk分别98.90/97.06、95.60/96.67；全仓门槛仍未达标。可见CUDA原生SDK3回合批次f0517199-0ec0-42d0-9d73-b4e398988232成功，明确协议引用的文件归属/筛选通过。当时NPU缺API共享路径映射。用户随后确认NPU服务不产生运行产物，不再等待配置NFS或产物映射；NPU只验收服务启动、就绪、设备、日志和清理。完整5.2及manifest相关项仍保持待完成。
 
 回合目录 manifest 切片（1.1）：SDK/宿主逐回合入口登记、嵌套父回合、异常保留及 API 目录归属已实现；普通命令/直接协议与实际 Docker SDK 三回合持久化通过。专项523通过/66跳过、浏览器21通过，保留失败与全仓覆盖门槛未通过；证据 docs/validation/artifact-manifest-20261120/README.md。Worker 0.21.12 尚未部署，无数据库迁移；2.2/2.3/4.2/5.x 的完整验收不据此勾选。
+
+0.21.12 发布续验：真实界面升级本机节点成功，已安装 SDK 的真实 CUDA 三回合产物目录归属、API 读取及浏览器预览通过；新增旧容器上传失败/清理路径测试 9 项，关联36项通过。失败批次与测试证据保留，详见 docs/validation/artifact-manifest-release-20261120/README.md。自定义目录、完整联合矩阵等复合任务不因此勾选。

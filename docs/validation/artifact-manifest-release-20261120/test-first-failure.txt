@@ -1,0 +1,89 @@
+FFFFFFFFF...........................                                     [100%]
+=================================== FAILURES ===================================
+_ test_invalid_archive_closes_and_kills_copy[entries0-invalid artifact archive root] _
+backend/tests/test_artifact_collection_failures.py:43: in test_invalid_archive_closes_and_kills_copy
+    process,state=copy_process(monkeypatch,archive(entries),alive=True)
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+_ test_invalid_archive_closes_and_kills_copy[entries1-invalid artifact directory] _
+backend/tests/test_artifact_collection_failures.py:43: in test_invalid_archive_closes_and_kills_copy
+    process,state=copy_process(monkeypatch,archive(entries),alive=True)
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+_ test_invalid_archive_closes_and_kills_copy[entries2-duplicate artifact name] _
+backend/tests/test_artifact_collection_failures.py:43: in test_invalid_archive_closes_and_kills_copy
+    process,state=copy_process(monkeypatch,archive(entries),alive=True)
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+____ test_invalid_archive_closes_and_kills_copy[entries3-too many entries] _____
+backend/tests/test_artifact_collection_failures.py:43: in test_invalid_archive_closes_and_kills_copy
+    process,state=copy_process(monkeypatch,archive(entries),alive=True)
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+__________ test_unreadable_archive_distinguishes_missing_output[True] __________
+backend/tests/test_artifact_collection_failures.py:51: in test_unreadable_archive_distinguishes_missing_output
+    process,state=copy_process(monkeypatch,b'not a tar archive',stderr=b'Could not find the file' if missing else b'docker unavailable')
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+_________ test_unreadable_archive_distinguishes_missing_output[False] __________
+backend/tests/test_artifact_collection_failures.py:51: in test_unreadable_archive_distinguishes_missing_output
+    process,state=copy_process(monkeypatch,b'not a tar archive',stderr=b'Could not find the file' if missing else b'docker unavailable')
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+_____________ test_nonzero_copy_exit_does_not_return_partial_files _____________
+backend/tests/test_artifact_collection_failures.py:59: in test_nonzero_copy_exit_does_not_return_partial_files
+    process,state=copy_process(monkeypatch,archive([('mini-eval-output/x','file',b'x')]),exit_code=1)
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+____________ test_truncated_file_is_rejected_even_with_valid_header ____________
+backend/tests/test_artifact_collection_failures.py:65: in test_truncated_file_is_rejected_even_with_valid_header
+    process,state=copy_process(monkeypatch,b'')
+backend/tests/test_artifact_collection_failures.py:21: in copy_process
+    class Process:
+backend/tests/test_artifact_collection_failures.py:22: in Process
+    stdout=io.BytesIO(data);stderr=io.BytesIO(stderr)
+E   NameError: name 'stderr' is not defined
+_________________ test_manifest_cleanup_failure_is_best_effort _________________
+backend/tests/test_artifact_collection_failures.py:82: in test_manifest_cleanup_failure_is_best_effort
+    assert artifact_manifest.register(tmp_path,1) is True
+E   AssertionError: assert False is True
+E    +  where False = <function register at 0x776f9f385ee0>(PosixPath('/tmp/pytest-of-dgh/pytest-737/test_manifest_cleanup_failure_0'), 1)
+E    +    where <function register at 0x776f9f385ee0> = <module 'runner.artifact_manifest' from '/home/dgh/Code/clearml_mini/runner/artifact_manifest.py'>.register
+=============================== warnings summary ===============================
+backend/tests/test_artifact_manifest.py::test_host_real_child_directory_registration[False-False]
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_artifact_collection_failures.py::test_invalid_archive_closes_and_kills_copy[entries0-invalid artifact archive root]
+FAILED backend/tests/test_artifact_collection_failures.py::test_invalid_archive_closes_and_kills_copy[entries1-invalid artifact directory]
+FAILED backend/tests/test_artifact_collection_failures.py::test_invalid_archive_closes_and_kills_copy[entries2-duplicate artifact name]
+FAILED backend/tests/test_artifact_collection_failures.py::test_invalid_archive_closes_and_kills_copy[entries3-too many entries]
+FAILED backend/tests/test_artifact_collection_failures.py::test_unreadable_archive_distinguishes_missing_output[True]
+FAILED backend/tests/test_artifact_collection_failures.py::test_unreadable_archive_distinguishes_missing_output[False]
+FAILED backend/tests/test_artifact_collection_failures.py::test_nonzero_copy_exit_does_not_return_partial_files
+FAILED backend/tests/test_artifact_collection_failures.py::test_truncated_file_is_rejected_even_with_valid_header
+FAILED backend/tests/test_artifact_collection_failures.py::test_manifest_cleanup_failure_is_best_effort
+9 failed, 27 passed, 1 warning in 0.93s
