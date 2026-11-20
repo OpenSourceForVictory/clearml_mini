@@ -7,3 +7,5 @@
 最终浏览器54通过/0失败/0跳过（tests.txt），TypeScript/Vite构建及OpenSpec严格验证通过。新增原集合可用/不可用、显式切换当前配置、无原集合、缺失客户端显式重选，验证原任务差异及预检payload；fatal问题仍不发预检。保留首次旧“自定义清单”断言失败、运行期间热更新失效、测试未等待平台时限导致导航停留及多alert定位歧义；修正夹具等待与精确定位，未放宽产品时限校验。浏览器未插桩，不声明Python或前端覆盖率达标。
 
 使用本机真实历史批次7e2bc00f-6858-4bb0-bd97-6c281a43d1ec只读导入核查，原集合/原客户端默认选中、保留任务、客户端步骤可前进，未模拟接口响应、未创建任务，见real-draft.txt。同步用户指南、批次文档、Skill参考；仅前端变更，无数据库迁移或Worker升级。
+
+已发布：mini-eval-api:rerun-suite-20261120（前版wizard-resources-20261120），基于前版仅替换前端且保留SDK下载包；API/Worker仍0.21.11代码，数据库无迁移。六节点无活动执行时暂停接纳，健康后恢复原enabled状态。部署后真实历史批次重新导入：原集合/客户端默认选择及下一步通过，未创建任务；见deployment.json、browser-deployed.log及suite.png/client.png。
