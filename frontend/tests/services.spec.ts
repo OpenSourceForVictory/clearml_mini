@@ -15,13 +15,13 @@ test('server machine shows deploy, status, logs and revisioned stop',async({page
  await expect(page.getByRole('button',{name:'启动新执行'})).toBeDisabled();
 });
 
-test('service deployment sends typed business values separately from environment',async({page})=>{
+for(const accelerator of [undefined,'npu'])test(`service deployment sends typed business values and selected accelerator ${accelerator||'legacy-gpu'}`,async({page})=>{
  let submitted:any;await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
   if(p==='auth/me')data={username:'admin',role:'admin'};
   if(p==='admin/nodes')data=[{id:'n',node_name:'server',roles:['server'],enabled:true,status:'online'}];
-  if(p==='workers')data=[{id:'slot',worker_id:'n',pool_id:'p',node_name:'server',gpu_index:0,gpu_model:'test'}];
+  if(p==='workers')data=[{id:'slot',worker_id:'n',pool_id:'p',node_name:'server',accelerator_type:accelerator,gpu_index:0,gpu_model:'test'}];
   if(p==='admin/server-templates')data=[{id:'t',name:'typed',version:'1',enabled:true,execution_mode:'docker',parameter_schema:{version:1,fields:{scene:{type:'string',required:true}}}}];
   if(p==='admin/services'&&route.request().method()==='POST'){submitted=route.request().postDataJSON();data={id:'s'}}
   await route.fulfill({json:data});
@@ -29,11 +29,11 @@ test('service deployment sends typed business values separately from environment
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();
  await page.getByRole('button',{name:'部署服务实例',exact:true}).click();
  await page.getByLabel('实例名称',{exact:true}).fill('typed instance');await page.getByLabel('服务端模板版本').selectOption('t');
- await page.getByLabel('目标机器 / GPU').selectOption('slot');await page.getByLabel('服务机器 IPv4 地址').fill('192.168.8.151');
+ await page.getByLabel('目标机器 / 加速卡').selectOption('slot');await page.getByLabel('服务机器 IPv4 地址').fill('192.168.8.151');
  await page.getByLabel('业务参数 JSON',{exact:true}).fill('{"scene":"room"}');
  await page.getByLabel('不限制内存上限',{exact:true}).check();await page.getByLabel('服务最低内存 GiB').fill('8');
  await page.getByRole('button',{name:'提交部署',exact:true}).click();
- await expect.poll(()=>submitted).toMatchObject({template_id:'t',slot_id:'slot',parameters:{scene:'room'},parameter_overrides:{},environment:{},resources:{ram_gb:8,memory_unlimited:true}});
+ await expect.poll(()=>submitted).toMatchObject({template_id:'t',slot_id:'slot',parameters:{scene:'room'},parameter_overrides:{},environment:{},resources:{ram_gb:8,memory_unlimited:true,accelerator_type:accelerator||'gpu'}});
 });
 
 test('readiness diagnostics are read-only and collapse on a narrow screen',async({page})=>{
@@ -83,4 +83,27 @@ test('same-name service logs select the execution history without mixing scoped 
  drawer=page.getByRole('dialog',{name:'服务实例日志'});await expect(drawer).toContainText('a-old scoped');await expect(drawer).not.toContainText('a-current scoped');await drawer.getByRole('button',{name:'关闭独立日志'}).click();
  await rows.nth(1).getByRole('button',{name:'日志',exact:true}).click();await page.getByRole('button',{name:'服务实例日志',exact:true}).click();
  drawer=page.getByRole('dialog',{name:'服务实例日志'});await expect(drawer).toContainText('b-current scoped');expect(queries).toEqual(['a-current','a-old','b-current']);
+});
+
+
+test('service management shows actual NPU placement and never guesses missing assignment',async({page})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={username:'admin',role:'admin'};
+  if(p==='admin/nodes')data=[{id:'n',node_name:'candidate',roles:['server'],enabled:true,status:'online'}];
+  if(p==='workers')data=[{id:'slot',worker_id:'n',pool_id:'p',node_name:'npu-node',accelerator_type:'npu',gpu_index:3,gpu_model:'Ascend'}];
+  if(p==='admin/services')data=[
+   {id:'assigned',name:'assigned',placement:{id:'slot',node_name:'npu-node',accelerator_type:'npu',gpu_index:3}},
+   {id:'pending',name:'pending',placement:null},
+   {id:'old',name:'old-api'},
+  ].map(s=>({...s,worker_id:'n',state:'STOPPED',online:true,revision:1,desired_running:false,cleanup_pending:false,endpoint:'http://node',template:{name:'demo',version:'1'}}));
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();
+ await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'assigned',exact:true})})).toContainText('npu-node / NPU 3');
+ await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'pending',exact:true})})).toContainText('未分配或位置记录不可用');
+ await expect(page.getByRole('row').filter({has:page.getByRole('cell',{name:'old-api',exact:true})})).toContainText('位置信息不可用');
+ await page.getByRole('button',{name:'部署服务实例',exact:true}).click();
+ await expect(page.getByLabel('目标机器 / 加速卡').locator('option[value="slot"]')).toHaveText('npu-node / NPU 3 · Ascend');
 });
