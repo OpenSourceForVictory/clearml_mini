@@ -134,7 +134,7 @@ def test_adapter_real_child_under_parent_coverage(tmp_path,behavior,expected):
     env={'MINI_EVAL_WORK_DIR':str(work)}
     task={'template':template(),'task_name':'demo','episodes':1,'seed':7,'endpoint':'','parameters':{}}
     adapter=HostEpisodeClient([sys.executable,'-c',source],str(tmp_path),env,False)
-    context=Context(task,tmp_path/'output')
+    context=Context(task,tmp_path/'output',_episode_output_dir=tmp_path/'output'/'episode-1',_episode_id=1)
     if expected=='process':
         with pytest.raises(RuntimeError,match='code 7'):adapter.run_episode(task,Episode(1,7),context)
         assert adapter.process_exit_code==7
