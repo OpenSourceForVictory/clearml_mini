@@ -233,3 +233,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 集合全选由 suites.tsx 的原始任务索引选择，不受搜索过滤影响；当前显示选择仍替换原选择，批量操作包含隐藏选中项。已发布/归档通过 fieldset 保持只读。回归见 suite-selection.spec.ts，操作见 docs/suite-management.md；仅前端变更，无迁移或 Worker 更新。
 
 历史功能验收索引：docs/validation/history-acceptance-20261120/README.md 关联核心行为、测试入口、真机版本及待验边界；changes.md 包含全部历史变更与未勾选条款。继续实施时按当前任务刷新台账，不能用历史通过报告或复合任务的部分实现代替当前完整验收；已撤销启动快照、已替代 ClearML 运行时和暂缓 Worker 文件转发必须保留用户决策。
+
+日志预算 0.21.11 本机界面升级与部署验收见 docs/validation/log-policy-release-20261120/README.md：数据库 b841e23、本机 GPU 节点升级、其他节点旧版、三回合日志下载及预算还原；后续操作须重新查询当前版本，不能把此记录当全节点升级。

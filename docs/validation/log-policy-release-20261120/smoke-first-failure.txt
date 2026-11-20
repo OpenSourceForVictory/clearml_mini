@@ -1,0 +1,6 @@
+batch f930ad3e-765e-4dda-8ba8-06aca70661d6
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/log-policy-release-20261120/smoke.py", line 34, in <module>
+    assert all('POLICY_RELEASE_EPISODE' in json.dumps(p) and 'POLICY_RELEASE_STDERR' in json.dumps(p) for p in pages)
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

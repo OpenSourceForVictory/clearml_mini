@@ -1,0 +1,82 @@
+[
+  {
+    "name": "ascend910b3-29",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.5",
+      "0.21.5",
+      "0.21.5",
+      "0.21.5",
+      "0.21.5",
+      "0.21.5",
+      "0.21.5",
+      "0.21.5"
+    ],
+    "log_policy_supported": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  {
+    "name": "local4090-151",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.11"
+    ],
+    "log_policy_supported": [
+      true
+    ]
+  },
+  {
+    "name": "rtx3080-182",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.5"
+    ],
+    "log_policy_supported": [
+      false
+    ]
+  },
+  {
+    "name": "rtx4090-157",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.5"
+    ],
+    "log_policy_supported": [
+      false
+    ]
+  },
+  {
+    "name": "rtx4090-183",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.5"
+    ],
+    "log_policy_supported": [
+      false
+    ]
+  },
+  {
+    "name": "rtx8000-177",
+    "enabled": true,
+    "held": 0,
+    "versions": [
+      "0.21.5"
+    ],
+    "log_policy_supported": [
+      false
+    ]
+  }
+]

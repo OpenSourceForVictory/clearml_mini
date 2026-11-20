@@ -61,3 +61,7 @@
 `PYTEST_ADDOPTS=--import-mode=importlib .venv/bin/python -m pytest backend/tests/test_host_shell_episode.py backend/tests/test_host_failure_recovery.py backend/tests/test_worker_startup_lease.py backend/tests/test_sdk_output_directories.py -q --tb=short`：**103 通过，0 跳过，0 失败**，38.74 秒。使用测试临时目录/SQLite，含真实业务子进程及故障注入，不连接生产数据库。保留 Starlette/AnyIO 弃用警告。[原始输出](targeted-python.txt)。
 
 该专项没有启用覆盖率采集，不产生新的覆盖率百分比，也不替代全量测试或 GPU/NPU 真机验收。集合前端 6 项通过、TypeScript 通过；[构建通过](frontend-build.txt)，保留大于 500 kB 的既有打包警告。未部署、未升级节点。
+
+## 后续发布更新
+
+2026-11-20 已完成上述源码的 API/前端部署、b841e23 迁移及 local4090-151 真实界面升级，日志预算回执与三回合业务/下载通过。原“未发布”描述是初始基线；最新发布边界以 [发布记录](../log-policy-release-20261120/README.md) 为准。其他节点未升级，其他历史待办未因此完成。

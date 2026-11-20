@@ -1,0 +1,17 @@
+{
+  "batch_id": "f930ad3e-765e-4dda-8ba8-06aca70661d6",
+  "cases": [
+    {
+      "job_id": "bf309438-c111-4c17-80e4-4bfca073f358",
+      "run_id": "61070f71-a32b-4ba3-a12f-b04d816e2577"
+    }
+  ],
+  "status": "SUCCEEDED",
+  "cleanup_confirmed": true,
+  "release_id": "70a673e1972097ec9cec57e2f92703989fd495bd9d2abdac33e3991489673884",
+  "worker_version": "0.21.11",
+  "database_head": "b841e23",
+  "execution_log_policy_revision": 1,
+  "restored_node_policy_revision": 2,
+  "model_evaluation": false
+}

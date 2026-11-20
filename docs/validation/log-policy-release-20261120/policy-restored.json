@@ -1,0 +1,39 @@
+{
+  "policy": {
+    "node_bytes": null,
+    "scope_bytes": 16777216,
+    "segment_bytes": 4194304,
+    "execution_bytes": 268435456
+  },
+  "revision": 2,
+  "slots": [
+    {
+      "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+      "device_index": 0,
+      "accelerator_type": "gpu",
+      "supported": true,
+      "report": {
+        "error": null,
+        "policy": {
+          "node_bytes": null,
+          "scope_bytes": 16777216,
+          "segment_bytes": 4194304,
+          "execution_bytes": 268435456
+        },
+        "status": "applied",
+        "revision": 2,
+        "reported_at": "2026-11-20T00:47:53.329337+00:00",
+        "applied_revision": 2
+      },
+      "effective": {
+        "revision": 2,
+        "policy": {
+          "node_bytes": null,
+          "scope_bytes": 16777216,
+          "segment_bytes": 4194304,
+          "execution_bytes": 268435456
+        }
+      }
+    }
+  ]
+}
