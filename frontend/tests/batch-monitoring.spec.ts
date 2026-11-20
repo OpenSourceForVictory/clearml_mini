@@ -424,6 +424,8 @@ test('parent directory returns one level and clears paging and preview',async({p
  await page.getByRole('button',{name:'查看产物',exact:true}).first().click();
  const panel=page.getByRole('region',{name:'共享存储产物',exact:true});
  await expect(panel.getByRole('button',{name:'返回上一层'})).toBeDisabled();
+ expect(await panel.getByRole('navigation',{name:'产物目录'}).evaluate(el=>getComputedStyle(el).flexDirection)).toBe('row');
+ expect(await panel.getByRole('table').evaluate(el=>getComputedStyle(el).tableLayout)).toBe('auto');
  await panel.getByRole('button',{name:'打开目录'}).click();
  await panel.getByRole('button',{name:'打开目录'}).click();
  await panel.getByRole('button',{name:'下一页文件'}).click();

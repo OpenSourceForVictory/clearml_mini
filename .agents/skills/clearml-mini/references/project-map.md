@@ -249,3 +249,5 @@ SDK 下载包完整性由 test_integration_bundle.py 校验源码一致及仓库
 产物路径展示复用 execution-location API 的 output_directory 字段：读取 SharedArtifactRoot 执行快照或唯一同尝试目录清单，无映射校验、文件I/O或写入；计划与上报区分，旧记录不从当前配置猜测。ArtifactOutputLocation独立于文件来源及读取状态。
 
 产物浏览UI：artifact-dialog为居中最大1280px原生dialog，窄屏留白并内部滚动；SharedArtifactBrowser返回父目录复用navigate清空分页/预览，根禁用。测试batch-monitoring.spec.ts覆盖居中尺寸、焦点与逐级返回。
+
+产物弹窗嵌在批次表格DOM中，artifact-dialog须覆盖全局nav列布局/低对比颜色及batch-detail-table的fixed列宽；回归检查目录导航row和表格auto。
