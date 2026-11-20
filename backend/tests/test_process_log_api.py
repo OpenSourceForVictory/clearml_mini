@@ -61,3 +61,22 @@ def test_read_admission_bounds_cross_node_and_cleaned_tombstone(env):
     assert c.post(route,headers=token,json={**registration,'root_path':'/bad/../root'}).status_code==400
     assert c.post(base,headers=auth['alice'],json={'log_id':catalog['id'],'limit_bytes':65537}).status_code==400
     assert c.post('/api/v1/worker/log-reads/'+requests[0]['id']+'/reply',headers=token,json={'claim':requests[0]['claim'],'generation':registration['generation'],'status':'ready','page':{'text':'x'*65536}}).status_code==400
+
+@pytest.mark.parametrize('direction,refresh',[('tail',True),('forward',False)])
+def test_completed_tail_refreshes_without_expiring_existing_subscriber(env,direction,refresh):
+    main,c,auth,token,job,task,registration,catalog,route=setup(env)
+    endpoint=f'/api/v1/jobs/{job}/attempts/{task["run_id"]}/log-reads'
+    query={'log_id':catalog['id'],'direction':direction}
+    first=c.post(endpoint,headers=auth['alice'],json=query).json()['read_id']
+    work=c.post('/api/v1/worker/log-reads/claim',headers=token).json()['requests'][0]
+    with main.SessionLocal() as s:
+        s.get(LogReadRequest,work['id']).expires_at=now()+timedelta(seconds=25);s.commit()
+    # Slow pending reads still coalesce, rather than allocating duplicates each tick.
+    assert c.post(endpoint,headers=auth['alice'],json=query).json()['read_id']==first
+    assert c.post('/api/v1/worker/log-reads/'+work['id']+'/reply',headers=token,json={
+        'claim':work['claim'],'generation':registration['generation'],'status':'ready','page':{'records':[]}}).status_code==200
+    second=c.post(endpoint,headers=auth['alice'],json=query).json()['read_id']
+    assert (second!=first)==refresh
+    assert c.get('/api/v1/log-reads/'+first,headers=auth['alice']).json()['status']=='ready'
+    assert c.get('/api/v1/log-reads/'+first,headers=auth['bob']).status_code==404
+    assert c.post(endpoint,headers=auth['alice'],json=query).json()['read_id']==second

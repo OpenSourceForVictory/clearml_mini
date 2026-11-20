@@ -7,7 +7,7 @@ import './process-logs.css';
 type Placement={node_name:string;accelerator_type:string;gpu_index:number};
 export type Catalog={placement?:Placement|null;id:string;execution_id:string;scope:string;episode_id:number;generation:string;status:string;path:string;next_sequence:number;truncated:boolean;dropped_bytes:number;updated_at:string};
 type Row={sequence:number;time:string;stream:string;text:string;gap:boolean};
-type Page={records:Row[];previous_cursor:string|null;next_cursor:string|null;has_more:boolean;gap:boolean;closed?:boolean;truncated?:boolean;source:string};
+type Page={next_sequence?:number;records:Row[];previous_cursor:string|null;next_cursor:string|null;has_more:boolean;gap:boolean;closed?:boolean;truncated?:boolean;source:string};
 const title=(e:Catalog)=>e.scope==='episode'?'回合 '+e.episode_id+' 日志':e.scope==='service'?'服务实例日志':e.scope==='business'?'任务公共日志':'执行诊断';
 const states:Record<string,string>={expired:'节点读取超时，请重试',busy:'日志正在轮转或清理，请重试',cleaned:'节点日志已清理',missing:'日志尚未生成或已不存在',failed:'节点日志读取失败',superseded:'日志代次已变化，请重新打开'};
 export function ProcessLogs({jobId,runId,episode}:{jobId:string;runId:string;episode?:number}){
@@ -28,7 +28,7 @@ function LogDrawer({jobId,runId,entry,close}:{jobId:string;runId:string;entry:Ca
  const [downloading,setDownloading]=useState(false);const cancelDownload=useRef(false);
  const [continuation,setContinuation]=useState<{cursor:string;until:number;part:number;gap:boolean}|null>(null);
  useEffect(()=>{alive.current=true;const previous=document.activeElement as HTMLElement;dialog.current?.showModal();return()=>{alive.current=false;serial.current++;cancelDownload.current=true;previous?.focus();};},[]);
- async function read(direction:string,cursor?:string|null,until=entry.next_sequence){
+ async function read(direction:string,cursor?:string|null,until:number|null=null){
   const ticket=await api<{read_id:string}>(`jobs/${jobId}/attempts/${runId}/log-reads`,'POST',{log_id:entry.id,direction,cursor:cursor||null,stream,limit_bytes:65536,until});
   const deadline=Date.now()+31000;
   while(alive.current&&Date.now()<deadline){
@@ -48,7 +48,7 @@ function LogDrawer({jobId,runId,entry,close}:{jobId:string;runId:string;entry:Ca
  useEffect(()=>{serial.current++;setPage(null);setError('');setContinuation(null);void load();},[stream]);
  useEffect(()=>{if(!follow)return;const timer=setInterval(()=>{if(!page?.closed)void load();},3000);return()=>clearInterval(timer);},[follow,page?.closed,stream,entry.next_sequence]);
  async function download(next=false){
-  const resume=next?continuation:null,until=resume?.until??entry.next_sequence,part=resume?.part??1;
+  const resume=next?continuation:null,until=resume?.until??Math.max(entry.next_sequence,page?.next_sequence??0),part=resume?.part??1;
   setDownloading(true);cancelDownload.current=false;setNotice('');const chunks:string[]=[];let bytes=0,cursor:string|null=resume?.cursor??null,gap=resume?.gap??false;
   function save(more:string|null){
    if(!alive.current||cancelDownload.current)throw Error('下载已取消');

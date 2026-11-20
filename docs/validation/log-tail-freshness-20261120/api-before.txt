@@ -1,0 +1,15 @@
+..F.                                                                     [100%]
+=================================== FAILURES ===================================
+_ test_completed_tail_refreshes_without_expiring_existing_subscriber[tail-True] _
+backend/tests/test_process_log_api.py:79: in test_completed_tail_refreshes_without_expiring_existing_subscriber
+    assert (second!=first)==refresh
+E   AssertionError: assert ('2d5d9e2a-712c-46f3-adcb-08f208d6f1f9' != '2d5d9e2a-712c-46f3-adcb-08f208d6f1f9') == True
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_process_log_api.py::test_completed_tail_refreshes_without_expiring_existing_subscriber[tail-True]
+1 failed, 3 passed, 1 warning in 18.83s

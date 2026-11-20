@@ -7,7 +7,7 @@ from typing import Literal
 from uuid import UUID
 from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,model_validator
-from sqlalchemy import select,delete,func
+from sqlalchemy import select,delete,func,or_
 from sqlalchemy.exc import IntegrityError
 from .core import ExecutionLogCatalog as Catalog,LogReadRequest as Read,LogReadSubscriber as Subscriber,Job,Run,Slot,User,Worker,now
 from .execution_locations import visible_run
@@ -118,7 +118,13 @@ def install(app,db,current,worker_auth):
         s.scalar(select(User.id).where(User.id==user.id).with_for_update())
         purge(s)
         query=body.model_dump();fingerprint=digest(json.dumps([row.id,row.generation,query],sort_keys=True))
-        item=s.scalar(select(Read).where(Read.fingerprint==fingerprint,Read.expires_at>now()).order_by(Read.expires_at.desc()).limit(1))
+        candidates=select(Read).where(Read.fingerprint==fingerprint,Read.expires_at>now())
+        if body.direction=='tail':
+            # Keep pending requests coalesced, but do not freeze a live tail for
+            # the full 30-second response retention period. Existing subscribers
+            # retain their immutable page until the original expiry.
+            candidates=candidates.where(or_(Read.status.in_(['queued','claimed']),Read.expires_at>now()+timedelta(seconds=27)))
+        item=s.scalar(candidates.order_by(Read.expires_at.desc()).limit(1))
         subscriber=s.get(Subscriber,(item.id,user.id)) if item else None
         if not subscriber:
             count=s.scalar(select(func.count()).select_from(Subscriber).join(Read).where(Subscriber.user_id==user.id,Read.status.in_(['queued','claimed'])))

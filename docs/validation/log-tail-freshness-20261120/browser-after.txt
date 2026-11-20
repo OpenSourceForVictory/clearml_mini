@@ -1,0 +1,11 @@
+
+Running 4 tests using 1 worker
+
+(node:1686261) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 frontend/tests/process-logs.spec.ts:2:1 › scoped log drawer filters pages, shows gaps, downloads and stops on close (5.4s)
+  ✓  2 frontend/tests/process-logs.spec.ts:41:1 › large retained logs download in bounded explicit parts with a fixed end sequence (653ms)
+  ✓  3 frontend/tests/process-logs.spec.ts:74:1 › failed download does not claim success or erase the displayed page (377ms)
+  ✓  4 frontend/tests/process-logs.spec.ts:96:1 › live tail is not frozen at stale catalog sequence while download is bounded (413ms)
+
+  4 passed (7.1s)

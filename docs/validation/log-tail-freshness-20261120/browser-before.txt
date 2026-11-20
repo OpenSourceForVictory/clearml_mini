@@ -1,0 +1,37 @@
+
+Running 1 test using 1 worker
+
+(node:1683078) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 frontend/tests/process-logs.spec.ts:96:1 › live tail is not frozen at stale catalog sequence while download is bounded (5.5s)
+
+
+  1) frontend/tests/process-logs.spec.ts:96:1 › live tail is not frozen at stale catalog sequence while download is bounded 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('dialog').locator('pre')
+    Expected substring: "line-2"
+    Received string:    "[now] [stdout] line-1"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('dialog').locator('pre') with timeout 5000ms
+      - waiting for getByRole('dialog').locator('pre')
+        14 × locator resolved to <pre>[now] [stdout] line-1</pre>
+           - unexpected value "[now] [stdout] line-1"
+
+
+      112 |  await page.goto('/#/cs/batches/a');await page.getByRole('button',{name:'查看回合',exact:true}).click();await page.getByRole('button',{name:'任务公共日志',exact:true}).click();
+      113 |  const drawer=page.getByRole('dialog');await expect(drawer.locator('pre')).toContainText('line-1');
+    > 114 |  end=2;await drawer.getByRole('button',{name:'刷新尾部'}).click();await expect(drawer.locator('pre')).toContainText('line-2');
+          |                                                                                                   ^
+      115 |  expect(queries.filter(q=>q.direction==='tail').every(q=>q.until==null)).toBe(true);
+      116 |  const download=page.waitForEvent('download');await drawer.getByRole('button',{name:'下载保留日志（最多 8 MiB）'}).click();await download;
+      117 |  expect(queries.filter(q=>q.direction==='forward').at(-1).until).toBe(2);
+        at /home/dgh/Code/clearml_mini/frontend/tests/process-logs.spec.ts:114:99
+
+    Error Context: frontend/test-results/process-logs-live-tail-is--c0cc0-e-while-download-is-bounded/error-context.md
+
+  1 failed
+    frontend/tests/process-logs.spec.ts:96:1 › live tail is not frozen at stale catalog sequence while download is bounded 

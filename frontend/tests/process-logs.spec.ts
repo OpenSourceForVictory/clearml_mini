@@ -92,3 +92,27 @@ test('failed download does not claim success or erase the displayed page',async(
  await page.getByRole('button',{name:'下载保留日志（最多 8 MiB）'}).click();await expect(drawer).toContainText('本分片未生成');
  await expect(drawer.locator('pre')).toContainText('retained preview');expect(downloads).toBe(0);
 });
+
+test('live tail is not frozen at stale catalog sequence while download is bounded',async({page})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ let end=1;const queries:any[]=[];
+ await page.route('**/api/v1/**',async route=>{
+  const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(path==='auth/me')data={id:'u',username:'u',role:'user'};
+  if(path.endsWith('/monitor'))data={id:'a',title:'实时日志',max_concurrent:1,total:1,finished:0,total_episodes:1,summary:{states:{RUNNING:1},completed_episodes:0,successes:0},cases:[{job_id:'j',case_id:'case',status:'RUNNING',run_id:'r',attempt:1,episodes:1,seed:1,progress:{completed:0},config:{}}]};
+  if(path.endsWith('/episodes'))data={planned:1,progress:{completed:0,errors:0},items:[]};
+  if(path.endsWith('/log-catalog'))data={items:[{id:'log',execution_id:'exec',scope:'business',episode_id:0,generation:'g',status:'open',path:'/logs/business',next_sequence:1,updated_at:'stale'}]};
+  if(path.endsWith('/log-reads')){queries.push(route.request().postDataJSON());data={read_id:String(queries.length-1)};}
+  if(path.startsWith('log-reads/')){
+   const q=queries[Number(path.split('/')[1])],visible=q.until==null?end:Math.min(end,q.until);
+   data={status:'ready',generation:'g',page:{records:[{sequence:visible-1,time:'now',stream:'stdout',text:'line-'+visible,gap:false}],next_sequence:visible,next_cursor:'cursor',has_more:false,closed:false,source:'node'}};
+  }
+  await route.fulfill({json:data});
+ });
+ await page.goto('/#/cs/batches/a');await page.getByRole('button',{name:'查看回合',exact:true}).click();await page.getByRole('button',{name:'任务公共日志',exact:true}).click();
+ const drawer=page.getByRole('dialog');await expect(drawer.locator('pre')).toContainText('line-1');
+ end=2;await drawer.getByRole('button',{name:'刷新尾部'}).click();await expect(drawer.locator('pre')).toContainText('line-2');
+ expect(queries.filter(q=>q.direction==='tail').every(q=>q.until==null)).toBe(true);
+ const download=page.waitForEvent('download');await drawer.getByRole('button',{name:'下载保留日志（最多 8 MiB）'}).click();await download;
+ expect(queries.filter(q=>q.direction==='forward').at(-1).until).toBe(2);
+});
