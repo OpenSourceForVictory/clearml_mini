@@ -29,6 +29,10 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   const timeoutEdited=useRef(!!launch?.rerun);
   const [importAcknowledged,setImportAcknowledged]=useState(false);
   const imported=launch?.rerun;
+  const [historicalSuite,setHistoricalSuite]=useState(false);
+  const historyOption=imported?.source.suite_id||'';
+  const sourceSuite=suites.find(s=>s.id===imported?.source.suite_id);
+  const historyLabel=sourceSuite?`${sourceSuite.name}（历史运行快照）`:`原集合 ${imported?.source.suite_id}（历史运行快照，当前不可用）`;
   useEffect(()=>{
     let active=true;setExecutionLimit(null);setLimitError('');
     api<{client_execution_max_seconds:number;client_execution_default_seconds:number}>('execution-limits').then(data=>{
@@ -60,12 +64,12 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   useEffect(()=>{if(imported&&template?.id===imported.submission.client.template_id)return;if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   function availableTemplate(s:Suite){return (s.template_ids||[s.template_id]).find(id=>allTemplates.some(t=>t.id===id))||s.template_id;}
-  useEffect(()=>{if(launch?.suite){setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
+  useEffect(()=>{if(launch?.suite){setHistoricalSuite(false);setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
   useEffect(()=>{
     if(!launch?.rerun)return;
     const input=launch.rerun.submission,c=input.client;
     timeoutEdited.current=true;addressDirty.current=true;sequence.current++;keys.current={};
-    setImportAcknowledged(false);setTrial(null);setTrialError('');setTrialCase('');setSubmitted('');setSubmittedId('');setPreview(null);setError('');setStep(0);
+    setHistoricalSuite(!!launch.rerun.source.suite_id);setImportAcknowledged(false);setTrial(null);setTrialError('');setTrialCase('');setSubmitted('');setSubmittedId('');setPreview(null);setError('');setStep(0);
     setSaveSuite(false);setSuiteId('');setSuiteDefaults({});setValues({});setTemplateId(c.template_id);setCases(input.cases);
     setDraft({...initial,title:input.title,pool_id:input.pool_id,max_concurrent:input.max_concurrent,
       environment:JSON.stringify(c.environment||{},null,2),request_timeout_seconds:c.request_timeout_seconds,
@@ -88,7 +92,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     void poll();const timer=setInterval(poll,2000);return()=>{active=false;clearInterval(timer);};
   },[trial?.id]);
   const update=(key:keyof typeof initial,value:string|number|boolean)=>setDraft(d=>({...d,[key]:value}));
-  function chooseSuite(id:string){setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
+  function chooseSuite(id:string,current=false){if(id&&id===historyOption&&imported&&!current){setHistoricalSuite(true);setSuiteId('');setSaveSuite(false);setSuiteDefaults({});setValues({});setCases(imported.submission.cases);setTemplateId(imported.submission.client.template_id);return;}setHistoricalSuite(false);setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
   function validateAddresses(){
     const keys=new Set<string>();
     for(const [i,e] of addresses.entries()){
@@ -102,7 +106,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   }
   function editAddress(index:number,change:Partial<{url:string;mode:'exclusive'|'shared'}>){addressDirty.current=true;setAddresses(old=>old.map((e,i)=>i===index?{...e,...change}:e));}
   function body(){
-    if(imported?.issues.some(i=>i.fatal))throw Error('历史配置存在无法自动恢复的问题，不能提交');
+    if(imported?.issues.some(i=>i.fatal))throw Error('历史配置存在无法自动恢复的问题，不能提交：'+imported.issues.filter(i=>i.fatal).map(i=>`${i.path}：${i.message}`).join('；'));
     if(imported?.issues.length&&!importAcknowledged)throw Error('请先核对并确认历史配置问题');
     validateTimeout();
     const environment=JSON.parse(draft.environment);
@@ -171,16 +175,17 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     </section>}
     <p className="wizard-context">{draft.title||'未命名批次'} · {cases.length} 项任务 · {stepTitles[step]}</p><form onSubmit={next} onInvalidCapture={revealInvalid}><fieldset disabled={busy} className="wizard-form">
     {step===0&&<WizardModule title="任务与集合">
-      <div className="submit-grid"><Field label="选择已保存集合"><select value={suiteId} onChange={e=>chooseSuite(e.target.value)}><option value="">自定义清单</option>{suites.map(s=><option key={s.id} value={s.id}>{s.name} / {s.version}</option>)}</select></Field>
+      <div className="submit-grid"><Field label="选择已保存集合"><select value={historicalSuite?historyOption:suiteId} onChange={e=>chooseSuite(e.target.value)}>{historicalSuite&&imported?.source.suite_id&&<option value={historyOption}>{historyLabel}</option>}<option value="">自定义清单</option>{suites.filter(s=>!historicalSuite||s.id!==historyOption).map(s=><option key={s.id} value={s.id}>{s.name} / {s.version}</option>)}</select></Field>
       <Field label="批次名称"><input value={draft.title} onChange={e=>update('title',e.target.value)} required maxLength={200}/></Field></div>
+      {historicalSuite&&<p>当前使用原集合的历史运行快照，保留本批次实际任务、参数及回合数，可直接修改；不会读取当前集合内容覆盖。选择当前集合会替换任务清单。{sourceSuite&&<button type="button" onClick={()=>chooseSuite(sourceSuite.id,true)}>使用该集合当前配置</button>}</p>}
       {!suiteId&&<><label><input type="checkbox" checked={saveSuite} onChange={e=>setSaveSuite(e.target.checked)}/>同时保存为可复用集合</label>{saveSuite&&<div className="row"><Field label="新集合名称"><input required value={suiteName} onChange={e=>setSuiteName(e.target.value)}/></Field><Field label="集合版本"><input required value={suiteVersion} onChange={e=>setSuiteVersion(e.target.value)}/></Field></div>}</>}
       {suiteId&&<button type="button" onClick={()=>{setSuiteDefaults(selectedSuite?.client_defaults||{});setSuiteName(selectedSuite?.name||'');setSuiteVersion('');setSuiteId('');setSaveSuite(true)}}>复制集合并修改</button>}
       {suiteId&&<p>使用已发布集合及关联客户端。临时修改请显式切换“自定义清单”。</p>}
       <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={ordinaryOnce&&!imported}/>
     </WizardModule>}
     {step===1&&<><WizardModule title="运行模板"><div className="submit-grid">
-      <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{allTemplates.filter(t=>!selectedSuite||(selectedSuite.template_ids||[selectedSuite.template_id]).includes(t.id)).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
-      </div><RuntimeSummary template={template}/></WizardModule><WizardModule title="执行时限"><div className="submit-grid">
+      <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{templateId&&!template&&<option value={templateId} disabled>{imported?.templates.client.id===templateId?`${imported.templates.client.name} / ${imported.templates.client.version}`:templateId}（当前不可用，请重新选择）</option>}{allTemplates.filter(t=>{const relation=historicalSuite?sourceSuite:selectedSuite;return !relation||(relation.template_ids||[relation.template_id]).includes(t.id)||(historicalSuite&&t.id===imported?.submission.client.template_id)}).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
+      </div>{templateId&&!template&&<p role="alert" className="error">原客户端模板 {imported?.templates.client.name||templateId} 当前不在可用模板列表中，可能已停用、归档、删除或无访问权限。请从原集合允许的可用客户端模板中重新选择；若没有选项，请到集合管理检查关联模板及发布状态。</p>}<RuntimeSummary template={template}/></WizardModule><WizardModule title="执行时限"><div className="submit-grid">
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <label><input type="checkbox" checked={draft.unlimited_timeout} onChange={e=>update('unlimited_timeout',e.target.checked)}/>不限制每项总执行时长</label><Field label="每项总超时秒"><input disabled={draft.unlimited_timeout} type="number" required min={1} max={executionLimit??undefined} value={draft.timeout_seconds} onChange={e=>{timeoutEdited.current=true;update('timeout_seconds',Number(e.target.value))}}/></Field></div>
       <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。选择不限仍需心跳续租，且支持取消；需要 Worker 协议 16。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
@@ -211,7 +216,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     </div>{serviceMode==='managed'&&<section className="wizard-service-resources" aria-label="服务端资源摘要"><h4>服务端资源池</h4>{serviceRows.map(row=><p key={row.key}>{row.key} · {row.instance_count} 个实例 · {pools.find(p=>p.id===(row.pool_id||draft.pool_id))?.name||'尚未选择资源池'}</p>)}<button type="button" onClick={()=>goBack(2)}>修改服务端资源</button></section>}</WizardModule>}
     {step===4&&<>
       <h3>确认运行配置</h3><p>核对以下配置；预检通过前，参数和资源仅为待解析配置。提交不会立即保证获得资源。</p>
-      <WizardModule title="任务清单确认"><button type="button" onClick={()=>goBack(0)}>修改任务清单</button><dl className="run-summary"><dt>批次名称</dt><dd>{draft.title}</dd><dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:'自定义清单'}</dd><dt>任务与回合</dt><dd>{ordinaryOnce?`${cases.length} 项任务，每项启动一次`: `${cases.length} 项任务，${cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合`}</dd></dl>
+      <WizardModule title="任务清单确认"><button type="button" onClick={()=>goBack(0)}>修改任务清单</button><dl className="run-summary"><dt>批次名称</dt><dd>{draft.title}</dd><dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:historicalSuite?historyLabel:'自定义清单'}</dd><dt>任务与回合</dt><dd>{ordinaryOnce?`${cases.length} 项任务，每项启动一次`: `${cases.length} 项任务，${cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合`}</dd></dl>
       <details><summary>逐项任务与参数</summary>{cases.map(c=><section key={c.case_id}><h4>{c.task_name} · {c.case_id}</h4><p>{ordinaryOnce?'执行一次':`${c.episodes} 回合`} · 种子 {c.seed}</p><ValueTable value={c.parameters}/>{c.resources&&<ValueTable value={c.resources}/>}<p>服务关联：{c.service_keys?.join('、')||'兼容服务'}</p></section>)}</details></WizardModule>
       <WizardModule title="客户端配置确认"><button type="button" onClick={()=>goBack(1)}>修改客户端</button><p>{template?.name} / {template?.version}</p><RuntimeSummary template={template}/><p>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.unlimited_timeout?'不限':draft.timeout_seconds+' 秒'}（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</p><details><summary>模板与集合参数默认值</summary><h4>模板默认</h4><ValueTable value={Object.fromEntries(Object.entries(template?.parameter_schema?.fields||{}).filter(([,v])=>v.default!==undefined).map(([k,v])=>[k,v.default]))}/><h4>集合公共参数</h4><ValueTable value={suiteDefaults}/></details><h4>本次公共参数覆盖</h4><ValueTable value={values}/><p className="hint">未输入的参数继承模板或集合；单项覆盖以预检最终值为准。</p><h4>本次启动变量覆盖</h4><pre>{draft.environment}</pre></WizardModule>
       <WizardModule title="服务端配置确认"><button type="button" onClick={()=>goBack(2)}>修改服务端</button>{serviceMode==='managed'?serviceRows.map(row=><section className="wizard-service-card" key={row.key}><h4>{row.key} · {servers.find(t=>t.id===row.template_id)?.name} / {servers.find(t=>t.id===row.template_id)?.version}</h4><dl className="run-summary"><dt>服务实例数</dt><dd>{row.instance_count}</dd><dt>资源池</dt><dd>{pools.find(p=>p.id===(row.pool_id||draft.pool_id))?.name||'未选择'}{!row.pool_id?'（跟随客户端）':''}</dd><dt>服务访问方式</dt><dd>{row.mode==='shared'?'多个客户端共享服务':'每实例同时一个客户端'}</dd><dt>服务地址</dt><dd>启动后由平台分配，等待就绪检查</dd><dt>固定槽位</dt><dd>{row.slot_id||'自动选择'}</dd></dl><h4>模板参数默认值</h4><ValueTable value={Object.fromEntries(Object.entries(servers.find(t=>t.id===row.template_id)?.parameter_schema?.fields||{}).filter(([,v])=>v.default!==undefined).map(([k,v])=>[k,v.default]))}/><h4>本次业务参数覆盖</h4><ValueTable value={row.imported_parameters??row.parameters}/><h4>本次运行变量</h4><pre>{row.environment}</pre><h4>资源申请</h4><ValueTable value={preview?.service_plan?.find(s=>s.key===row.key)?.resources||row.resource_overrides||{cpus:row.cpus||'待解析',ram_gb:row.ram_gb||'待解析',cpu_unlimited:!!row.cpu_unlimited,memory_unlimited:!!row.memory_unlimited,gpu_mode:row.gpu_mode,requested_vram_gb:row.requested_vram_gb}} sources={preview?.service_plan?.find(s=>s.key===row.key)?.resource_sources}/></section>):serviceMode==='none'?<p>无需服务</p>:addresses.map(e=><p key={e.url}>{e.url} · {e.mode==='shared'?'共享':'独占'}</p>)}{serviceMode==='managed'&&<p>结束策略：{stopAfter?'批次结束且客户端清理完成后停止服务':'保留服务运行'}</p>}</WizardModule>

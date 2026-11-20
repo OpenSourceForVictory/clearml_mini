@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-async function setup(page:Page){
+async function setup(page:Page,availableSuite=true){
  let fail=false,delay=0,lose=false;const requests:any[]=[];
  const template={id:'t',name:'Historical client',version:'1',execution_mode:'host',host_runtime:{episode_launch:'whole_task',overridable_env:['MODE']},enabled:true,protocols:['ws'],task_type:'evaluation',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true}}}};
  const server={id:'s',name:'Historical server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{count:{type:'integer'}}}};
@@ -10,6 +10,7 @@ async function setup(page:Page){
   if(p==='auth/me')data={id:'user',username:'user',role:'user'};
   if(p==='execution-limits'){await new Promise(r=>setTimeout(r,100));data={client_execution_max_seconds:7200,client_execution_default_seconds:300};}
   if(p==='client-templates')data=[template];if(p==='runtime-templates/server')data=[server];if(p==='pools')data=[{id:'pool',name:'历史池'}];
+  if(p==='suites')data=availableSuite?[{id:'changed-suite',name:'原评测集合',version:'2',template_id:'t',cases:[{case_id:'current',task_name:'new-task',episodes:1,seed:99}]}]:[];
   if(p==='suites/manage')data={items:[],total:0};
   if(p==='batches')data=[{id:'old',title:'历史批次',status:'SUCCEEDED',total:2,finished:2,succeeded:2,total_episodes:10,cases:[]}];
   if(p.endsWith('/monitor'))data={id:'old',title:'历史批次',max_concurrent:2,total:2,finished:2,total_episodes:10,cases:[],summary:{states:{},completed_episodes:0,successes:0}};
@@ -25,7 +26,7 @@ async function setup(page:Page){
 test('list import preserves overrides, edit, fresh preflight and idempotent new submission',async({page})=>{
  const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  const w=page.getByRole('region',{name:'集合运行向导'});await expect(w.getByRole('region',{name:'历史批次来源'})).toContainText('历史批次');
- await expect(w.getByLabel('选择已保存集合')).toHaveValue('');await expect(w.getByLabel('第 2 项回合数')).toHaveValue('7');
+ await expect(w.getByLabel('选择已保存集合')).toHaveValue('changed-suite');await expect(w.getByLabel('第 2 项回合数')).toHaveValue('7');
  await w.getByText('任务 1 详细配置',{exact:true}).click();
  await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":9}');await w.getByLabel('第 1 项任务名').click();
  await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('不限制每项总执行时长')).toBeChecked();
@@ -69,7 +70,7 @@ test('reimport starts clean, stale response ignored and fatal issue never prefli
  await expect(w.getByLabel('批次名称',{exact:true})).toHaveValue('历史批次（再次运行）');
  await expect(w).toContainText('无法恢复，禁止提交');
  await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');for(let i=0;i<2;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();
- await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('alert')).toContainText('不能提交');expect(c.requests).toHaveLength(0);
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('alert')).toContainText('不能提交');await expect(w.getByRole('alert')).toContainText('client：不能合并不同客户端');expect(c.requests).toHaveLength(0);
 });
 
 test('missing API route differs from missing batch and retry clears error',async({page})=>{
@@ -81,4 +82,21 @@ test('missing API route differs from missing batch and retry clears error',async
  await page.getByRole('button',{name:'重试导入'}).click();
  await expect(page.getByRole('region',{name:'历史批次导入'})).toContainText('原批次不存在、已删除或当前账号无权访问');
  await expect(page.getByRole('region',{name:'历史批次导入'})).not.toContainText('请管理员更新 API');
+});
+
+for(const available of [true,false])test(`historical suite defaults to snapshot and supports explicit switching available=${available}`,async({page})=>{
+ const c=await setup(page,available);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'}),select=w.getByLabel('选择已保存集合');
+ await expect(select).toHaveValue('changed-suite');await expect(select.locator('option:checked')).toContainText(available?'原评测集合（历史运行快照）':'当前不可用');await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await expect(w.getByLabel('第 2 项任务名')).toHaveValue('second');
+ await select.selectOption('');await expect(select).toHaveValue('');await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');
+ if(available){await select.selectOption('changed-suite');await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await w.getByRole('button',{name:'使用该集合当前配置'}).click();await expect(w.getByRole('region',{name:'集合任务摘要'})).toContainText('new-task');}
+ await page.evaluate(()=>{location.hash='/cs/results';});await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await expect(w.getByLabel('第 2 项任务名')).toHaveValue('second');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await expect(w.getByLabel('客户端模板',{exact:true})).toHaveValue('t');for(let i=0;i<2;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);
+ expect(c.requests[0].body.suite_id).toBeNull();expect(c.requests[0].body.cases.map((x:any)=>x.task_name)).toEqual(['first','second']);await expect(w.getByRole('region',{name:'任务清单确认'})).toContainText('历史运行快照');
+});
+test('batch with no source suite remains custom',async({page})=>{const c=await setup(page);c.draft.source.suite_id=null;await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByLabel('选择已保存集合')).toHaveValue('');await expect(page.getByRole('option',{name:/历史运行快照/})).toHaveCount(0);});
+test('missing historical client is named and explicit suite-compatible selection restores navigation',async({page})=>{
+ const c=await setup(page);c.draft.submission.client.template_id='gone';c.draft.templates.client={id:'gone',name:'已停用客户端',version:'old'};c.draft.issues=[{path:'client.template_id',code:'template_unavailable',message:'原模板不可用，请重新选择',fatal:false}];
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'});await w.getByRole('button',{name:'下一步',exact:true}).click();
+ const select=w.getByLabel('客户端模板',{exact:true});await expect(select).toHaveValue('gone');await expect(select.locator('option:checked')).toContainText('已停用客户端 / old');await expect(w.getByRole('region',{name:'运行模板',exact:true}).getByRole('alert')).toContainText('不在可用模板列表');
+ await select.selectOption('t');await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('服务来源')).toBeVisible();await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('checkbox',{name:'我已重新选择',exact:false}).check();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);expect(c.requests[0].body.client.template_id).toBe('t');expect(c.requests[0].body.cases[1].parameters.speed).toBe(5);
 });

@@ -1,0 +1,90 @@
+
+Running 8 tests using 1 worker
+
+(node:1246539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 frontend/tests/batch-rerun.spec.ts:26:1 › list import preserves overrides, edit, fresh preflight and idempotent new submission (660ms)
+  ✓  2 frontend/tests/batch-rerun.spec.ts:45:1 › detail entry, failed import retry and explicit issue acknowledgement (692ms)
+  ✓  3 frontend/tests/batch-rerun.spec.ts:58:1 › reimport starts clean, stale response ignored and fatal issue never preflights (1.0s)
+  ✓  4 frontend/tests/batch-rerun.spec.ts:76:1 › missing API route differs from missing batch and retry clears error (331ms)
+  ✘  5 frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=true (45.0s)
+(node:1250880) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  6 frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=false (45.0s)
+(node:1254422) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  7 frontend/tests/batch-rerun.spec.ts:96:1 › batch with no source suite remains custom (230ms)
+  ✘  8 frontend/tests/batch-rerun.spec.ts:97:1 › missing historical client is named and explicit suite-compatible selection restores navigation (311ms)
+
+
+  1) frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=true
+
+    Test timeout of 45000ms exceeded.
+
+    Error: locator.click: Test timeout of 45000ms exceeded.
+    Call log:
+      - waiting for getByRole('region', { name: '集合运行向导' }).getByRole('button', { name: '检查并确认', exact: true })
+
+
+      91 |  if(available){await select.selectOption('changed-suite');await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await w.getByRole('button',{name:'使用该集合当前配置'}).click();await expect(w.getByRole('region',{name:'集合任务摘要'})).toContainText('new-task');}
+      92 |  await page.evaluate(()=>{location.hash='/cs/results';});await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await expect(w.getByLabel('第 2 项任务名')).toHaveValue('second');
+    > 93 |  for(let i=0;i<3;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);
+         |                                                                                                                                        ^
+      94 |  expect(c.requests[0].body.suite_id).toBeNull();expect(c.requests[0].body.cases.map((x:any)=>x.task_name)).toEqual(['first','second']);await expect(w.getByRole('region',{name:'任务清单确认'})).toContainText('历史运行快照');
+      95 | });
+      96 | test('batch with no source suite remains custom',async({page})=>{const c=await setup(page);c.draft.source.suite_id=null;await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByLabel('选择已保存集合')).toHaveValue('');await expect(page.getByRole('option',{name:/历史运行快照/})).toHaveCount(0);});
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-rerun.spec.ts:93:136
+
+    Error Context: frontend/test-results/batch-rerun-historical-sui-7fe02-it-switching-available-true/error-context.md
+
+  2) frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=false
+
+    Test timeout of 45000ms exceeded.
+
+    Error: locator.click: Test timeout of 45000ms exceeded.
+    Call log:
+      - waiting for getByRole('region', { name: '集合运行向导' }).getByRole('button', { name: '检查并确认', exact: true })
+
+
+      91 |  if(available){await select.selectOption('changed-suite');await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await w.getByRole('button',{name:'使用该集合当前配置'}).click();await expect(w.getByRole('region',{name:'集合任务摘要'})).toContainText('new-task');}
+      92 |  await page.evaluate(()=>{location.hash='/cs/results';});await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(w.getByLabel('第 1 项任务名')).toHaveValue('first');await expect(w.getByLabel('第 2 项任务名')).toHaveValue('second');
+    > 93 |  for(let i=0;i<3;i++)await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);
+         |                                                                                                                                        ^
+      94 |  expect(c.requests[0].body.suite_id).toBeNull();expect(c.requests[0].body.cases.map((x:any)=>x.task_name)).toEqual(['first','second']);await expect(w.getByRole('region',{name:'任务清单确认'})).toContainText('历史运行快照');
+      95 | });
+      96 | test('batch with no source suite remains custom',async({page})=>{const c=await setup(page);c.draft.source.suite_id=null;await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();await expect(page.getByLabel('选择已保存集合')).toHaveValue('');await expect(page.getByRole('option',{name:/历史运行快照/})).toHaveCount(0);});
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-rerun.spec.ts:93:136
+
+    Error Context: frontend/test-results/batch-rerun-historical-sui-05186-t-switching-available-false/error-context.md
+
+  3) frontend/tests/batch-rerun.spec.ts:97:1 › missing historical client is named and explicit suite-compatible selection restores navigation
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '集合运行向导' }).getByRole('alert')
+    Expected substring: "不在可用模板列表"
+    Error: strict mode violation: getByRole('region', { name: '集合运行向导' }).getByRole('alert') resolved to 2 elements:
+        1) <p role="alert" class="error">原客户端模板 已停用客户端 当前不在可用模板列表中，可能已停用、归档、删除或无访问权限。请从原集合…</p> aka getByText('原客户端模板 已停用客户端 当前不在可用模板列表中，可能已停用、归档、删除或无访问权限。请从原集合允许的可用客户端模板中重新选择；若没有选项，请到集合管理检查关')
+        2) <p role="alert" class="error">模板不允许覆盖：MODE。请删除这些键或重新选择兼容模板。</p> aka getByText('模板不允许覆盖：MODE。请删除这些键或重新选择兼容模板。')
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '集合运行向导' }).getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('region', { name: '集合运行向导' }).getByRole('alert')
+
+
+       98 |  const c=await setup(page);c.draft.submission.client.template_id='gone';c.draft.templates.client={id:'gone',name:'已停用客户端',version:'old'};c.draft.issues=[{path:'client.template_id',code:'template_unavailable',message:'原模板不可用，请重新选择',fatal:false}];
+       99 |  await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'});await w.getByRole('button',{name:'下一步',exact:true}).click();
+    > 100 |  const select=w.getByLabel('客户端模板',{exact:true});await expect(select).toHaveValue('gone');await expect(select.locator('option:checked')).toContainText('已停用客户端 / old');await expect(w.getByRole('alert')).toContainText('不在可用模板列表');
+          |                                                                                                                                                                                                           ^
+      101 |  await select.selectOption('t');await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w.getByLabel('服务来源')).toBeVisible();await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('checkbox',{name:'我已重新选择',exact:false}).check();await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect.poll(()=>c.requests.length).toBe(1);expect(c.requests[0].body.client.template_id).toBe('t');expect(c.requests[0].body.cases[1].parameters.speed).toBe(5);
+      102 | });
+      103 |
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-rerun.spec.ts:100:203
+
+    Error Context: frontend/test-results/batch-rerun-missing-histor-ac308-lection-restores-navigation/error-context.md
+
+  3 failed
+    frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=true
+    frontend/tests/batch-rerun.spec.ts:87:37 › historical suite defaults to snapshot and supports explicit switching available=false
+    frontend/tests/batch-rerun.spec.ts:97:1 › missing historical client is named and explicit suite-compatible selection restores navigation
+  5 passed (1.6m)
