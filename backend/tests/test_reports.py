@@ -113,6 +113,17 @@ def test_csv_roundtrip_and_numbers(env):
     assert row['seed'] == '-12' and row['success_rate'] == ''
 
 
+def test_csv_includes_task_result_without_merging_exit_status():
+    from backend.app.reports import export_csv
+    raw=export_csv({'schema_version':1,'generated_at':'now','batch':{'id':'id','title':'task result'},
+        'cases':[{'case_id':'case','outcomes':{'task_result_state':'failure','task_result_data':{
+            'success':False,'metrics':{'score':.2},'summary':'=user text'}}}]})
+    row=next(csv.DictReader(io.StringIO(raw.decode('utf-8-sig'))))
+    assert row['task_result_state']=='failure' and row['task_result_success']=='False'
+    assert json.loads(row['task_result_metrics'])=={'score':.2}
+    assert row['task_result_summary']=="'=user text"
+
+
 def test_report_100_cases_query_budget(env):
     main, c, auth = env; body, _ = setup(env)
     body['cases'] = [{**body['cases'][0], 'case_id': str(i)} for i in range(100)]

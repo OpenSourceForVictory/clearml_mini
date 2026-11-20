@@ -3,6 +3,7 @@ import argparse
 import base64
 import tempfile
 import fcntl
+import hashlib
 import json
 import logging
 import os
@@ -404,6 +405,29 @@ class Worker:
                 self.save()
         return False
 
+    def send_task_result(self, execution):
+        template = (self.state or {}).get('task', {}).get('client_spec', {}).get('template', {})
+        if template.get('integration_mode') != 'sdk-task-result':
+            return True
+        path = execution_dirs(self.workspace, execution) / 'work' / 'task-result.json'
+        if not path.exists():
+            return True
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 16 * 1024:
+            raise RuntimeError('task result file is invalid or exceeds 16 KiB')
+        from runner.task_result_contract import validate
+        result = validate(json.loads(path.read_text()))
+        digest = hashlib.sha256(json.dumps(result, ensure_ascii=False, allow_nan=False,
+            separators=(',', ':')).encode()).hexdigest()
+        previous = self.state.get('task_result_sha256')
+        if previous and previous != digest:
+            raise RuntimeError('task result changed after it was reported')
+        if previous == digest:
+            return True
+        self.api.post(f'worker/executions/{execution}/task-result', result)
+        self.state['task_result_sha256'] = digest
+        self.save()
+        return True
+
     def send_logs(self, execution, output):
         # Persist the exact pending chunk before sending; response loss cannot change a retry's body.
         output = output.encode()[:MAX_LOG_BYTES].decode(errors='ignore')
@@ -644,7 +668,11 @@ class Worker:
                     err = docker('logs', '--tail', '30', self.name(execution), timeout=5).stderr
                 try:
                     if task.get('benchmark') == 'cs-client':
-                        if sender:
+                        integration = task.get('client_spec', {}).get('template', {}).get('integration_mode')
+                        if integration == 'sdk-task-result':
+                            if not self.send_task_result(execution):
+                                continue
+                        elif sender:
                             if not self.send_protocol_events(execution, protocol_root/'events.jsonl'):continue
                         elif task['client_spec']['template'].get('episode_reporting'):
                             if not self.send_episode_journal(execution):

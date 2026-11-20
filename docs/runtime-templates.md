@@ -6,7 +6,7 @@
 
 ## 端到端业务接入选择
 
-客户端模板的四个维度要分开选择：任务类型（评测 / 普通命令）、接入方式（direct / sdk-command）、执行位置（宿主机 / Docker）、宿主机回合启动（整任务 / 每回合）。普通命令只按退出码判定，不产生业务成功率；评测任务需要 SDK 或直接协议结果。SDK + 业务命令由适配器逐回合调用并读取 `MINI_EVAL_RESULT`；Python SDK 使用 `runner.sdk module:ClientClass`；直接协议读 `MINI_EVAL_INPUT` 并输出事件及 final。Docker 与整任务宿主机通常由单进程处理全部回合，宿主机逐回合选项则由平台每次以单回合输入启动业务进程。
+客户端模板的维度要分开选择：任务类型（评测 / 普通命令）、接入方式（direct / sdk-command / sdk-task-result）、执行位置（宿主机 / Docker）、宿主机回合启动（整任务 / 每回合）。普通命令默认只按退出码显示程序状态；评测任务需要 SDK 或直接协议结果。`sdk-task-result` 是普通整任务程序的可选单次业务结果上报：程序调用 `runner.sdk.report_task_result(success, metrics, summary)`，Worker 从执行专属工作目录转发，业务程序不接触平台凭据。它与逐回合报告互斥。SDK + 业务命令由适配器逐回合调用并读取 `MINI_EVAL_RESULT`；Python 回合 SDK 使用 `runner.sdk module:ClientClass`；直接协议读 `MINI_EVAL_INPUT` 并输出事件及 final。Docker 与整任务宿主机通常由单进程处理全部回合，宿主机逐回合选项则由平台每次以单回合输入启动业务进程。
 
 可下载接入包和完整可复制样例见[业务接入指南](../examples/integration/README.md)。指南覆盖模板 UI 设置、输入 JSON 的 `task/business/platform` 结构、命令行/环境变量映射、服务地址、事件格式、回合种子、退出状态与评测成功的差异，以及自检范围。包中的 `self_test.py` 只验证协议，不代表模型或仿真质量。
 
@@ -62,7 +62,7 @@ SDK 校验结果并生成原有 STARTED/COMPLETED/ERROR 回合事件，最终生
 
 ## 普通命令任务注册
 
-客户端模板注册页可选择“任务类型”：评测任务或普通命令。普通命令使用直接执行；默认关闭逐回合上报，宿主机选择逐回合启动时由平台上报回合完成。成功依据退出码（0成功、非零失败），无需SDK、结果JSON或回合事件。运行环境仍支持Docker和已批准的宿主机环境；命令按argv执行，不隐式解释Shell管道。业务程序与依赖必须预先准备。
+客户端模板注册页可选择“任务类型”：评测任务或普通命令。普通命令默认按退出码显示程序状态，也可启用任务级 SDK 结果上报。业务程序在结束时调用 `runner.sdk.report_task_result(success=True, metrics={'score': score})`，结果由 Worker 转发，不需要 token。平台分别展示退出码与业务结果；报告缺失显示“未上报”，不会推断业务成功或把退出码 0 改成执行失败。宿主机逐回合启动仍按每个进程的退出码记录，不产生评测成功率。运行环境支持 Docker 和已批准的宿主机环境；命令按 argv 执行，不隐式解释 Shell 管道。业务程序与依赖必须预先准备。任务级 SDK 需要 Worker 协议 18（0.21.13）及以上；旧模板保持原行为。
 
 查看配置和复制版本保留任务类型；切回评测任务会恢复表单中的评测接入选择。服务端模板不提供该选项，仍按服务生命周期与健康检查管理。
 

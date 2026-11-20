@@ -57,6 +57,10 @@ ENV PYTHONPATH=/app:/app/client
 
 SDK 客户端成功收尾必须有全部计划回合的完成记录，且最终成功率与记录一致。普通命令客户端可继续使用，但不承诺逐回合进度。自定义指标只保存逐回合有限数值（最多 64 个），不自动把不同指标取平均。产物仍遵守每次最多 8 文件、每文件 8 MiB、总计 32 MiB；引用文件不等于已上传，文件在退出后回收。
 
+### 整任务业务结果 SDK
+
+无需逐回合明细的已有程序可注册为普通命令并启用任务级 SDK 结果。程序导入 `runner.sdk.report_task_result`，在业务评测完成处调用一次：`report_task_result(success=passed, metrics={'score': score}, summary='可选说明')`。结果保存在本次执行专属工作目录，由 Worker 以自身凭据转发；业务进程不持有平台 token。业务成功/失败与进程退出码独立统计。未调用时界面显示“业务结果未上报”。完整样例见[SDK 下载包说明](../examples/integration/README.md)。该模式只支持整任务普通命令，不拆分或生成回合。
+
 ## 用户代码提交与构建
 
 CS 页“提交仿真客户端代码”接受 Python、requirements.txt、JSON/YAML 等文本文件；API `POST /api/v1/client-builds` 接受 `{name,version,entrypoint,files}`，files 为相对路径到文本的映射，支持包目录。代码包最多 100 文件/1 MiB，单用户最多 5 个未完成构建。仿真大资产通过派生基础镜像或用户镜像提供，不放入代码包。禁止覆盖平台 runner、Dockerfile 或路径穿越。源码 SHA256、版本、状态和最终构建日志持久化；构建失败不登记模板。

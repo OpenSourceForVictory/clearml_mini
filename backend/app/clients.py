@@ -19,7 +19,7 @@ class TemplateCreate(BaseModel):
     version: str = Field(min_length=1, max_length=100)
     image: str = Field(default='', min_length=0, max_length=500, pattern=r'^([A-Za-z0-9][A-Za-z0-9_./:@-]*)?$')
     execution_mode: Literal['docker','host'] = 'docker'
-    integration_mode: Literal['direct','sdk-command'] = 'direct'
+    integration_mode: Literal['direct','sdk-command','sdk-task-result'] = 'direct'
     task_type: Literal['evaluation','command'] = 'evaluation'
     platform_bindings: list[dict] = Field(default_factory=list, max_length=32)
     result_directory: str | None = Field(default=None,max_length=2000)
@@ -39,8 +39,12 @@ class TemplateCreate(BaseModel):
         from runner.template_contract import host_config
         from runner.task_input import validate_combined
         validate_combined(self.parameter_schema,self.platform_bindings)
-        if self.task_type=='command' and self.integration_mode!='direct':
-            raise ValueError('ordinary commands use direct command execution')
+        if self.task_type=='command' and self.integration_mode not in ('direct','sdk-task-result'):
+            raise ValueError('ordinary commands use direct or task-result SDK execution')
+        if self.integration_mode=='sdk-task-result' and self.task_type!='command':
+            raise ValueError('task-result SDK is only available for ordinary whole-task commands')
+        if self.integration_mode=='sdk-task-result' and self.episode_reporting:
+            raise ValueError('task-result SDK cannot be combined with episode reporting')
         if (self.platform_bindings or self.task_type=='command') and self.execution_mode=='docker' and self.runtime is None:
             self.runtime={}
         if self.parameter_schema is not None:
@@ -58,6 +62,8 @@ class TemplateCreate(BaseModel):
             self.episode_reporting = True
             if self.execution_mode == 'docker' and self.runtime is None: self.runtime = {}
         host_episodes=self.execution_mode=='host' and self.host_runtime.get('episode_launch')=='per_episode'
+        if self.integration_mode=='sdk-task-result' and host_episodes:
+            raise ValueError('task-result SDK cannot be combined with per-episode launch')
         if self.task_type=='command':
             if self.episode_reporting and not host_episodes:
                 raise ValueError('ordinary commands do not use episode reporting without host per-episode launch')

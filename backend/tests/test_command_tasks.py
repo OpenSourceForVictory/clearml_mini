@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from sqlalchemy import select
@@ -71,6 +72,24 @@ def test_real_command_entry_receives_normalized_input_and_exit_code(tmp_path,cod
     result=subprocess.run([sys.executable,'-m','runner.cs_entry'],env={**os.environ,'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_OUTPUT_DIR':str(tmp_path/'output')},capture_output=True,text=True,timeout=5)
     assert result.returncode==code,result.stderr
     assert 'connecting' not in result.stdout
+
+
+def test_task_result_sdk_call_writes_execution_scoped_file(tmp_path):
+    script=tmp_path/'business.py'
+    script.write_text('from runner.sdk import report_task_result\n'
+                      'report_task_result(False, {"quality": 0.25}, "not accepted")\n')
+    work=tmp_path/'work';work.mkdir()
+    c={'contract_version':1,'service_mode':'none','task_name':'plain task','episodes':1,'seed':0,
+       'parameters':{},'template':{'task_type':'command','integration_mode':'sdk-task-result',
+       'execution_mode':'host','command':[sys.executable,str(script)]},
+       '_resolved_environment':{'MINI_EVAL_WORK_DIR':str(work)}}
+    inp=tmp_path/'input.json';inp.write_text(json.dumps(c))
+    result=subprocess.run([sys.executable,'-m','runner.cs_entry'],env={**os.environ,
+        'MINI_EVAL_INPUT':str(inp),'MINI_EVAL_OUTPUT_DIR':str(tmp_path/'output'),
+        'PYTHONPATH':str(Path(__file__).resolve().parents[2])},capture_output=True,text=True,timeout=5)
+    assert result.returncode==0,result.stderr
+    assert json.loads((work/'task-result.json').read_text())=={
+        'success':False,'metrics':{'quality':.25},'summary':'not accepted'}
 
 
 def test_command_supervisor_timeout(tmp_path):

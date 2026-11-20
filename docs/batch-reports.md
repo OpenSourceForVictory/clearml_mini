@@ -13,6 +13,7 @@
 - `partial=true`：至少一项未完整成功执行、未声明上报、完成回合数与计划不符或有回合异常。取消、排队中等状态保留已上报的部分结果，不把未执行回合计作目标失败。
 - `job_id/run_id/attempt`：所统计的执行尝试；`parameters_digest/definition_digest`：规范化 JSON 的 SHA-256 摘要。
 - `config`：保存的客户端名称/版本/镜像、资源需求、推理地址及环境摘要。参数、环境原值、命令、宿主路径、自由文本错误均不导出。报告不打包二进制产物。
+- 普通命令可选择 `sdk-task-result` 并报告一次整任务业务结果。`outcomes.task_result` 统计 success/failure/unreported/not_applicable，单项还包含 `task_result_state` 与 `task_result_data`。不按回合展开，也不改变程序退出状态。
 
 每次导出使用独立只读一致事务。两个批次也在同一事务读取；并发重试不会导致状态、尝试和回合统计来自不同时刻。导出不锁定调度器、不创建任务、不保存报告文件到服务端。
 
@@ -40,6 +41,6 @@ CSV 使用 UTF-8 BOM，可由常用表格工具识别中文；标准 CSV 引号�
 
 ## 独立结果统计
 
-JSON 报告增加 `outcomes.execution`（normal/abnormal/running/unknown/not_started）和 `outcomes.protocol`（planned/success/failure/invalid/errors/unreported/not_applicable_tasks/valid/success_rate）；每项及批次使用相同分类。每项另有 process_scope、wrapper_exit_code。CSV 追加 program_*、protocol_*、process_scope、wrapper_exit_code 列，不删除原有字段，schema_version 保持 1。
+JSON 报告包含 `outcomes.execution`（normal/abnormal/running/unknown/not_started）、`outcomes.protocol`（planned/success/failure/invalid/errors/unreported/not_applicable_tasks/valid/success_rate）和 `outcomes.task_result`（success/failure/unreported/not_applicable）；每项及批次使用相同分类。每项另有 process_scope、wrapper_exit_code，任务级 SDK 单项结果含状态、数值指标和可选摘要。CSV 追加 program_*、protocol_*、task_result_*、process_scope、wrapper_exit_code 列，不删除原有字段，schema_version 保持 1。
 
 新界面和新消费方使用 outcomes；原 summary/progress 为兼容旧消费方保留。普通命令在协议统计中不适用，比较返回 protocol_not_applicable，不再对 null 成功率相减；没有有效结果返回 missing_valid_results。结果异常不自动视为业务失败，异常和未上报计数必须与有效结果成功率同时解释。批次比较仍要求完整、可比的协议结果。

@@ -135,7 +135,9 @@ CSV_COLUMNS = ['schema_version', 'generated_at', 'batch_id', 'batch_title', 'cas
                'parameters_digest', 'definition_digest', 'endpoint', 'endpoint_mode', 'endpoint_candidates',
                'program_normal', 'program_abnormal', 'program_running', 'program_unknown', 'program_not_started',
                'protocol_success', 'protocol_failure', 'protocol_invalid', 'protocol_errors', 'protocol_unreported',
-               'protocol_not_applicable_tasks', 'protocol_valid', 'protocol_planned', 'protocol_success_rate', 'process_scope', 'wrapper_exit_code']
+               'protocol_not_applicable_tasks', 'protocol_valid', 'protocol_planned', 'protocol_success_rate',
+               'task_result_state', 'task_result_success', 'task_result_metrics', 'task_result_summary',
+               'process_scope', 'wrapper_exit_code']
 
 
 def csv_text(value):
@@ -157,6 +159,11 @@ def export_csv(value):
         row.update({'program_'+k:v for k,v in outcomes.get('execution',{}).items()})
         row.update({'protocol_'+k:v for k,v in outcomes.get('protocol',{}).items()})
         row.update({k:outcomes.get(k) for k in ('process_scope','wrapper_exit_code')})
+        task_result=outcomes.get('task_result_data') or {}
+        row['task_result_state']=outcomes.get('task_result_state')
+        row['task_result_success']=task_result.get('success')
+        row['task_result_metrics']=json.dumps(task_result.get('metrics'),ensure_ascii=False) if task_result.get('metrics') is not None else None
+        row['task_result_summary']=task_result.get('summary')
         row['endpoint_candidates'] = json.dumps(row.get('endpoint_candidates', []), ensure_ascii=False)
         writer.writerow({k: csv_text(row.get(k)) for k in CSV_COLUMNS})
     return ('\ufeff' + stream.getvalue()).encode('utf-8')

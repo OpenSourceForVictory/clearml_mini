@@ -128,3 +128,7 @@ Worker/Runner 0.21.5 增加回合结果受控诊断：程序退出 0 与协议�
 先更新 API，再升级实际 Runner/SDK。SDK 使用回合输出目录及宿主逐回合包装器会登记目录归属；旧显式 artifacts 引用优先。无需新增数据库迁移；无元数据的旧任务不回填，不根据目录名推断。详见 [共享产物](shared-storage-artifacts.md)。尚未部署，当前线上本机仍为 0.21.11。
 
 0.21.12 的回合产物目录索引已通过管理界面升级本机 GPU 节点及宿主 SDK 三回合验证，见 [发布证据](validation/artifact-manifest-release-20261120/README.md)。业务镜像中的 SDK 不会被节点升级自动替换；镜像由维护者更新。验证 SDK 时应使用独立业务目录，避免仓库当前目录遮蔽已安装的 runner 包。
+
+## 0.21.13 任务级 SDK 结果
+
+新增 Worker 协议 18 能力 `task_result_reporting_v1`。新建模板使用 `integration_mode=sdk-task-result` 时，先发布兼容 API/前端，再升级承接任务的 Worker；旧 Worker 不应领取此模式任务。无需数据库迁移，模板复用 `integration_mode`，任务结果复用 Run JSON。Worker 从本次 execution 的工作目录读取 `task-result.json` 并转发；业务程序没有平台凭据。Docker 业务镜像需包含更新 SDK 包；平台注入 Runner 的宿主机进程随 Worker 包更新。退出码与业务结果分别呈现，缺少结果显示未上报，不改变退出码所对应的程序状态。此记录说明升级要求，不表示现场已部署。

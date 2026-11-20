@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-const outcomes={execution:{normal:3,abnormal:0,running:0,unknown:0,not_started:0},protocol:{planned:3,success:0,failure:0,invalid:3,errors:0,unreported:0,not_applicable_tasks:0,valid:0,success_rate:null}};
+const outcomes={execution:{normal:3,abnormal:0,running:0,unknown:0,not_started:0},protocol:{planned:3,success:0,failure:0,invalid:3,errors:0,unreported:0,not_applicable_tasks:0,valid:0,success_rate:null},task_result:{success:1,failure:1,unreported:1,not_applicable:1}};
 async function setup(page:Page,detailMode?:'execution'|'episodes'){
   let offline=false,run='r1',lose=false,delay=false;const requests:any[]=[];
   const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({outcomes:{...outcomes,detail_mode:detailMode},job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
@@ -32,6 +32,7 @@ async function setup(page:Page,detailMode?:'execution'|'episodes'){
 test('direct navigation, refresh, draft preservation, filtering and offline recovery',async({page})=>{
   const ctl=await setup(page);await page.reload();await expect(page.getByRole('region',{name:'程序执行统计'})).toContainText('正常结束 3 次');
   await expect(page.getByRole('region',{name:'平台协议回合结果统计'})).toContainText('结果校验异常 3');
+  await expect(page.getByRole('region',{name:'任务级 SDK 业务结果'})).toContainText('业务成功 1 · 业务失败 1');
   await page.getByRole('button',{name:'返回批次列表'}).click();await page.getByRole('button',{name:'业务评测向导',exact:true}).click();await page.getByLabel('批次名称',{exact:true}).fill('保留草稿');await page.getByRole('button',{name:'评测运行与结果',exact:true}).click();
   await page.getByRole('button',{name:'查看批次',exact:true}).click();
   await page.getByLabel('任务状态',{exact:true}).selectOption('PENDING');await expect(page.locator('td p').filter({hasText:'GPU 已占用'})).toBeVisible();
@@ -143,14 +144,15 @@ test('whole command hides rounds even with reporting flag and preserves exit dia
  mode='episodes';await expect(panel).toHaveCount(0);await expect(page.getByRole('table',{name:'逐回合状态'})).toBeVisible();
 });
 
-test('result summaries use two separate cards and stack on narrow screens',async({page})=>{
+test('program, episode and task-result summaries use separate cards and stack on narrow screens',async({page})=>{
  await setup(page);
  for(const width of [1440,1024,390]){
   await page.setViewportSize({width,height:1000});
   const execution=(await page.getByRole('region',{name:'程序执行统计'}).boundingBox())!;
   const protocol=(await page.getByRole('region',{name:'平台协议回合结果统计'}).boundingBox())!;
-  if(width>700){expect(protocol.x).toBeGreaterThanOrEqual(execution.x+execution.width);expect(Math.abs(protocol.width-execution.width)).toBeLessThan(2);}
-  else expect(protocol.y).toBeGreaterThanOrEqual(execution.y+execution.height);
+  const taskResult=(await page.getByRole('region',{name:'任务级 SDK 业务结果'}).boundingBox())!;
+  if(width>700){expect(protocol.x).toBeGreaterThanOrEqual(execution.x+execution.width);expect(taskResult.x).toBeGreaterThanOrEqual(protocol.x+protocol.width);expect(Math.abs(protocol.width-execution.width)).toBeLessThan(2);}
+  else{expect(protocol.y).toBeGreaterThanOrEqual(execution.y+execution.height);expect(taskResult.y).toBeGreaterThanOrEqual(protocol.y+protocol.height);}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }
 });

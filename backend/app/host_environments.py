@@ -48,6 +48,8 @@ def desired(worker):return {'revision':worker.host_revision,'environments':worke
 
 def blockers(worker,slot,spec,at):
     template=(spec or {}).get('template',{})
+    if template.get('integration_mode')=='sdk-task-result' and slot.protocol_version<18:
+        return ['任务级 SDK 结果上报需要 Worker 协议 18，请升级节点 Worker']
     if template.get('execution_mode','docker')!='host':return []
     settings=template.get('host_runtime') or {}
     if slot.protocol_version<17 and settings.get('episode_error_policy')=='continue':

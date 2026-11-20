@@ -74,7 +74,24 @@ def summarize_attempt(job, run, rows):
     valid = protocol['success']+protocol['failure']
     protocol['valid'] = valid
     protocol['success_rate'] = protocol['success']/valid if valid else None
-    return dict(execution=execution, protocol=protocol,
+    stored_result = getattr(run, 'result_json', None)
+    result_json = stored_result if isinstance(stored_result, dict) and stored_result.get('kind') == 'task' else None
+    reports_task = template.get('integration_mode') == 'sdk-task-result'
+    task_result = dict(success=0, failure=0, unreported=0, not_applicable=0)
+    if not reports_task:
+        task_result['not_applicable'] = 1
+        task_result_state = 'not_applicable'
+    elif result_json is None:
+        task_result['unreported'] = 1
+        task_result_state = 'unreported'
+    elif result_json.get('success') is True:
+        task_result['success'] = 1
+        task_result_state = 'success'
+    else:
+        task_result['failure'] = 1
+        task_result_state = 'failure'
+    return dict(execution=execution, protocol=protocol, task_result=task_result,
+                task_result_state=task_result_state, task_result_data=result_json,
                 process_scope='per_episode' if per_process else 'single_process',
                 wrapper_exit_code=run.exit_code,
                 detail_mode='execution' if single_command(template) else 'episodes')
@@ -84,9 +101,11 @@ def aggregate(values):
     values = list(values)
     execution = {key:sum(v['execution'][key] for v in values) for key in PROCESS_KEYS}
     protocol = {key:sum(v['protocol'][key] for v in values) for key in PROTOCOL_KEYS}
+    task_result = {key:sum(v.get('task_result', {}).get(key, 0) for v in values)
+                   for key in ('success', 'failure', 'unreported', 'not_applicable')}
     valid = protocol['success']+protocol['failure']
     protocol.update(valid=valid, success_rate=protocol['success']/valid if valid else None)
-    return dict(execution=execution, protocol=protocol)
+    return dict(execution=execution, protocol=protocol, task_result=task_result)
 
 
 def load_records(s, run_ids):

@@ -83,6 +83,8 @@ def ready(worker, slot, at):
 
 def blockers(worker, slot, spec, at):
     template=(spec or {}).get('template',{})
+    if template.get('integration_mode')=='sdk-task-result' and slot.protocol_version<18:
+        return ['任务级 SDK 结果上报需要 Worker 协议 18，请升级节点 Worker']
     if slot.protocol_version<12 and any(b.get('source')=='platform.listen.health_port' for b in template.get('platform_bindings',[])):
         return ['健康端口映射需要 Worker v12，请升级目标节点']
     settings=template.get('host_runtime') or template.get('runtime') or {}
@@ -110,7 +112,7 @@ def blockers(worker, slot, spec, at):
     if (spec or {}).get('template', {}).get('execution_mode') == 'host':
         from .host_environments import blockers as host_blockers
         return host_blockers(worker, slot, spec, at)
-    if (spec or {}).get('template', {}).get('integration_mode') == 'sdk-command' and slot.protocol_version < 7:
+    if (spec or {}).get('template', {}).get('integration_mode') in ('sdk-command','sdk-task-result') and slot.protocol_version < 7:
         return ['SDK 命令模式需要 Worker v7']
     runtime = (spec or {}).get('template', {}).get('runtime')
     if runtime is None:

@@ -33,7 +33,7 @@ class Register(BaseModel):
     vram_gb: int = Field(ge=0, le=10000)
     vram_mb: Optional[int] = Field(default=None, ge=0, le=10240000)
     software: worker_upgrades.Software | None = None
-    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] = 1
+    protocol_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] = 1
     client_images: list[str] = Field(default_factory=list, max_length=100)
     execution_modes: list[Literal['docker','host']] = Field(default=['docker'],min_length=1,max_length=2)
 
@@ -78,6 +78,13 @@ class Finish(BaseModel):
     status: Literal['SUCCEEDED', 'FAILED', 'CANCELLED']
     metrics: Optional[Metrics] = None
     error: Optional[str] = Field(default=None, max_length=1000)
+
+
+class TaskResult(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    success: bool = Field(strict=True)
+    metrics: dict = Field(default_factory=dict)
+    summary: str | None = Field(default=None, max_length=500)
 
 
 class LogBody(BaseModel):
@@ -550,13 +557,38 @@ def install(app, db, current):
             if not logs:
                 logs = RunLogState(run_id=run.id); s.add(logs)
             logs.truncated = True
-        run.result_json = body.metrics.model_dump() if status == 'SUCCEEDED' and body.metrics else None
+        if status == 'SUCCEEDED' and body.metrics:
+            run.result_json = body.metrics.model_dump()
+        elif not (isinstance(run.result_json, dict) and run.result_json.get('kind') == 'task'):
+            run.result_json = None
         run.exit_code = body.exit_code
         run.cleanup_confirmed = True
         transition(s, run, status, body.error)
         memberships.reconcile(s)
         s.commit()
         return {'status': status}
+
+    @app.post('/api/v1/worker/executions/{execution_id}/task-result')
+    def task_result(execution_id: str, body: TaskResult, worker=Depends(worker_auth), s: Session = Depends(db)):
+        lock(s)
+        run = run_for(s, execution_id, worker)
+        live(run)
+        job = s.get(Job, run.job_id)
+        template = (job.client_spec or {}).get('template', {})
+        if template.get('integration_mode') != 'sdk-task-result' or template.get('task_type') != 'command':
+            raise HTTPException(400, 'execution does not use task-result SDK reporting')
+        from runner.task_result_contract import validate
+        try:
+            result = {'kind': 'task', **validate(body.model_dump(exclude_none=True))}
+        except (ValueError, TypeError, OverflowError) as exc:
+            raise HTTPException(400, str(exc)) from None
+        if run.result_json is not None:
+            if run.result_json != result:
+                raise HTTPException(409, 'conflicting task result for execution')
+            return {'accepted': True, 'duplicate': True}
+        run.result_json = result
+        s.commit()
+        return {'accepted': True, 'duplicate': False}
 
     @app.post('/api/v1/worker/executions/{execution_id}/cleanup')
     def cleanup(execution_id: str, worker=Depends(worker_auth), s: Session = Depends(db)):

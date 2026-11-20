@@ -4,7 +4,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT/'frontend/public/integration/mini-eval-sdk.zip'
-MODULES = ('sdk command_sdk task_input cs_contract episode_contract parameter_contract '
+MODULES = ('sdk command_sdk task_input cs_contract episode_contract task_result_contract parameter_contract '
            'template_contract image_runtime mount_contract resource_contract readiness_contract '
            'cs_entry service_entry supervise process_command host_episode '
            'process_log_contract process_log_capture process_log_store process_log_run artifact_manifest').split()

@@ -20,6 +20,13 @@ def test_download_matches_sources_and_runs_without_repository(tmp_path):
         archive.extractall(extracted)
     env = dict(os.environ)
     env.pop('PYTHONPATH', None)
+    work=extracted/'task-work';work.mkdir()
+    env['MINI_EVAL_WORK_DIR']=str(work)
+    report=subprocess.run([sys.executable,'-c',"from runner.sdk import report_task_result; report_task_result(False, {'score': 0.25})"],
+                          cwd=extracted,env=env,capture_output=True,text=True,timeout=15)
+    assert report.returncode==0,report.stdout+report.stderr
+    assert __import__('json').loads((work/'task-result.json').read_text())=={'success':False,'metrics':{'score':.25}}
+    env.pop('MINI_EVAL_WORK_DIR')
     result = subprocess.run([sys.executable, 'self_test.py'], cwd=extracted, env=env,
                             capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr

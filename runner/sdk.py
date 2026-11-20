@@ -116,6 +116,67 @@ def emit(event):
     print(EVENT_PREFIX + encoded, flush=True)
 
 
+def report_task_result(success, metrics=None, summary=None):
+    """Report one task-level business result through this execution's work directory.
+
+    The Worker reads the private, execution-scoped file and forwards it with its
+    own credentials. The business process never receives platform credentials.
+    """
+    from .task_result_contract import validate
+    import fcntl
+    import os
+    import tempfile
+
+    work_dir = os.environ.get('MINI_EVAL_WORK_DIR')
+    if not work_dir:
+        raise RuntimeError('MINI_EVAL_WORK_DIR is not configured')
+    root = Path(work_dir)
+    if root.is_symlink() or not root.is_dir():
+        raise RuntimeError('task result work directory is unavailable')
+    result = validate({'success': success, 'metrics': {} if metrics is None else metrics,
+                       **({'summary': summary} if summary is not None else {})})
+    path = root / 'task-result.json'
+    lock_path = root / '.task-result.lock'
+    flags = os.O_CREAT | os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(lock_path, flags, 0o600)
+    try:
+        with os.fdopen(fd, 'r+') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if path.exists():
+                if path.is_symlink():
+                    raise RuntimeError('task result path must not be a symbolic link')
+                existing = validate(json.loads(path.read_text()))
+                if existing != result:
+                    raise RuntimeError('a different task result was already reported')
+                return existing
+            encoded = json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
+            temp_fd, temporary = tempfile.mkstemp(prefix='.task-result-', dir=root)
+            try:
+                with os.fdopen(temp_fd, 'w') as stream:
+                    os.fchmod(stream.fileno(), 0o600)
+                    stream.write(encoded)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.replace(temporary, path)
+                directory = os.open(root, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+                try:
+                    os.fsync(directory)
+                finally:
+                    os.close(directory)
+            finally:
+                try:
+                    os.unlink(temporary)
+                except FileNotFoundError:
+                    pass
+    finally:
+        # fdopen above owns and closes fd when entered.
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+    return result
+
+
 def run(client, config, output_dir=None):
     context = Context(config, Path(output_dir or os.environ.get('MINI_EVAL_OUTPUT_DIR', '/tmp/mini-eval-output')))
     context.output_dir.mkdir(parents=True, exist_ok=True)

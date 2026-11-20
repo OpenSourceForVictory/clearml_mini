@@ -1,7 +1,7 @@
 import React from 'react';
 import './result-outcomes.css';
 
-export type Outcomes={execution:{normal:number;abnormal:number;running:number;unknown:number;not_started:number};protocol:{planned:number;success:number;failure:number;invalid:number;errors:number;unreported:number;not_applicable_tasks:number;valid:number;success_rate:number|null};detail_mode?:'execution'|'episodes';process_scope?:string;wrapper_exit_code?:number|null};
+export type Outcomes={execution:{normal:number;abnormal:number;running:number;unknown:number;not_started:number};protocol:{planned:number;success:number;failure:number;invalid:number;errors:number;unreported:number;not_applicable_tasks:number;valid:number;success_rate:number|null};task_result?:{success:number;failure:number;unreported:number;not_applicable:number};task_result_state?:string;task_result_data?:{success:boolean;metrics:Record<string,number>;summary?:string}|null;detail_mode?:'execution'|'episodes';process_scope?:string;wrapper_exit_code?:number|null};
 export const executionLabels:Record<string,string>={normal:'正常结束',abnormal:'异常退出',running:'运行中',unknown:'退出码未上报',not_started:'未启动',not_applicable:'不适用（无独立回合进程）'};
 export const protocolLabels:Record<string,string>={success:'业务成功',failure:'业务失败',invalid:'结果校验异常',error:'回合异常（未分类）',unreported:'结果未上报',not_applicable:'不适用'};
 
@@ -36,6 +36,14 @@ export function ExecutionOutcome({value}:{value?:Outcomes}){
 export function ProtocolOutcome({value}:{value?:Outcomes}){
  return <div className="outcome-cell"><ProtocolSummary value={value}/><details><summary>查看回合结果详情</summary><ProtocolDetails value={value}/></details></div>;
 }
+export function TaskResult({value,aggregate=false}:{value?:Outcomes;aggregate?:boolean}){
+ if(!value)return <span>任务级业务结果未上报</span>;
+ if(aggregate){const x=value.task_result;if(!x)return <span>未启用任务级 SDK</span>;if(x.not_applicable===0&&x.success+x.failure+x.unreported===0)return <span>暂无任务级结果</span>;if(x.not_applicable===x.not_applicable+x.success+x.failure+x.unreported)return <span>未启用任务级 SDK</span>;return <span className="outcome-summary"><strong>业务成功 {x.success} · 业务失败 {x.failure}</strong><small>结果未上报 {x.unreported} 项</small></span>;}
+ if(value.task_result_state==='not_applicable')return <span>未启用任务级 SDK</span>;
+ if(!value.task_result_state)return <span>未启用任务级 SDK</span>;
+ const result=value.task_result_data;
+ return <span className="outcome-summary"><strong>{value.task_result_state==='success'?'业务成功':value.task_result_state==='failure'?'业务失败':'业务结果未上报'}</strong>{result?.summary&&<small>{result.summary}</small>}{!!result&&Object.keys(result.metrics||{}).length>0&&<small>指标：{Object.entries(result.metrics).map(([key,n])=>`${key}=${n}`).join(' · ')}</small>}</span>;
+}
 export function ResultOutcomes({value}:{value?:Outcomes}){
- return <div className="result-outcomes" aria-label="程序执行与回合结果"><section aria-label="程序执行统计"><h4>程序执行</h4><ExecutionOutcome value={value}/></section><section aria-label="平台协议回合结果统计"><h4>回合结果（平台协议）</h4><ProtocolOutcome value={value}/></section></div>;
+ return <div className="result-outcomes" aria-label="程序执行与业务结果"><section aria-label="程序执行统计"><h4>程序执行</h4><ExecutionOutcome value={value}/></section><section aria-label="平台协议回合结果统计"><h4>回合结果（平台协议）</h4><ProtocolOutcome value={value}/></section><section aria-label="任务级 SDK 业务结果"><h4>任务级业务结果（SDK）</h4><TaskResult value={value} aggregate/></section></div>;
 }

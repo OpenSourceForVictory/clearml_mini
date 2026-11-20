@@ -170,6 +170,20 @@ test('artifact output is a platform parameter and saves as output-dir mapping',a
  expect(writes[0].body.platform_bindings).toEqual([{source:'platform.paths.output',target:'argv',name:'--output-dir',encoding:'literal'}]);
 });
 
+test('ordinary task template can enable a task-level SDK result without changing exit-code semantics',async({page})=>{
+ const writes=await setup(page);
+ await page.getByRole('tab',{name:'注册新模板',exact:true}).click();
+ await page.getByLabel('模板名称',{exact:true}).fill('task-result');
+ await page.getByLabel('版本',{exact:true}).fill('1');
+ await page.getByLabel('Docker 镜像').fill('demo:1');
+ await page.getByLabel('任务类型',{exact:true}).selectOption('command');
+ await page.getByLabel('业务程序通过 SDK 上报一次任务结果').check();
+ await expect(page.getByText(/业务结果与程序退出码分别显示/)).toBeVisible();
+ await page.getByRole('button',{name:'注册此版本',exact:true}).click();
+ await expect.poll(()=>writes.length).toBe(1);
+ expect(writes[0].body).toMatchObject({task_type:'command',integration_mode:'sdk-task-result',episode_reporting:false});
+});
+
 
 test('custom browse directory is retained by copy and submitted without changing runtime output',async({page})=>{
  const writes=await setup(page,false,{...template,result_directory:'${mounts:shared}/${business.scene}'});

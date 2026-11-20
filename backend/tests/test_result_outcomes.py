@@ -59,6 +59,21 @@ def test_execution_and_result_are_orthogonal():
     assert summary(native,rows,code=0)['execution']['normal']==1
 
 
+@pytest.mark.parametrize('business,state', [
+    ({'kind':'task','success':True,'metrics':{}},'success'),
+    ({'kind':'task','success':False,'metrics':{}},'failure'),
+    (None,'unreported'),
+])
+def test_task_level_result_is_separate_from_command_exit(business,state):
+    template={'task_type':'command','integration_mode':'sdk-task-result'}
+    run=NS(status='SUCCEEDED',exit_code=0,result_json=business)
+    job=NS(client_spec={'template':template},episodes=1)
+    value=summarize_attempt(job,run,[])
+    assert value['execution']['normal']==1
+    assert value['task_result_state']==state
+    assert value['protocol']['not_applicable_tasks']==1
+
+
 @pytest.mark.parametrize('code,started,ended,terminal,expected',[
     (0,True,True,True,'normal'),(-9,True,True,True,'abnormal'),(None,True,False,False,'running'),
     (None,True,False,True,'unknown'),(None,False,True,True,'unknown'),(None,False,False,True,'not_started'),

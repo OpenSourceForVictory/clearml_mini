@@ -94,6 +94,8 @@ def telemetry_fresh(slot, at):
 def runtime_mismatch(slot, job):
     """Explain the exact client/server execution requirement that this slot lacks."""
     template=(job.client_spec or {}).get('template',{})
+    if template.get('integration_mode')=='sdk-task-result' and slot.protocol_version<18:
+        return '任务级 SDK 结果上报需要 Worker 协议 18（当前 '+str(slot.protocol_version)+'）'
     side='服务端' if getattr(job,'benchmark',None)=='inference-service' else '客户端'
     mode=template.get('execution_mode','docker')
     label=(f'{side}宿主机环境「{(template.get("host_runtime") or {}).get("environment_name","未指定") }」'
@@ -116,7 +118,7 @@ def runtime_mismatch(slot, job):
         return f'{label}的业务参数需要 Worker 协议 8（当前 {slot.protocol_version}）'
     if mode not in (slot.execution_modes or ['docker']):
         return f'{label}未就绪：该设备未启用{"宿主机" if mode=="host" else "容器"}执行'
-    if job.client_spec and (job.client_spec['template'].get('execution_mode') == 'host' or job.client_spec['template'].get('integration_mode') == 'sdk-command') and slot.protocol_version < 7:
+    if job.client_spec and (job.client_spec['template'].get('execution_mode') == 'host' or job.client_spec['template'].get('integration_mode') in ('sdk-command','sdk-task-result')) and slot.protocol_version < 7:
         return f'{label}需要 Worker 协议 7（当前 {slot.protocol_version}）'
     return None
 
