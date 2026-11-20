@@ -27,5 +27,6 @@ def test_endpoint_backfill_constraint_and_downgrade_guard(monkeypatch):
         with pytest.raises(IntegrityError):
             with s.begin_nested():s.execute(text("UPDATE evaluation_runs SET assigned_endpoint_mode='bad' WHERE status='RUNNING'"))
         j=s.scalar(select(Job).where(Job.title=='PENDING'));j.client_spec={'endpoints':[{'url':'http://inference:8000','mode':'shared'}]};s.commit()
+    with factory() as s: current_revision=s.execute(text('SELECT version_num FROM alembic_version')).scalar()
     with pytest.raises(RuntimeError,match='Drain multi-address'):command.downgrade(cfg,'h841c23')
-    with factory() as s:assert s.execute(text('SELECT version_num FROM alembic_version')).scalar()=='i952d34'
+    with factory() as s:assert s.execute(text('SELECT version_num FROM alembic_version')).scalar()==current_revision
