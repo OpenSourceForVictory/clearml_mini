@@ -32,3 +32,5 @@
 - [x] 6.1 修复服务端资源摘要误套导航栏 fixed 样式形成长条、资源契约与高级约束被挤入半列及底栏遮挡的问题；验证1440/1024/390像素、GPU/NPU、模板锁定与可修改、返回草稿及预检参数，保留修复前失败证据并同步指南。
 
 资源布局修复证据：docs/validation/wizard-resource-layout-20261120/README.md；50项浏览器通过，构建/严格校验通过。纯前端，无迁移或Worker升级，尚未部署。
+
+资源布局补丁已发布：mini-eval-api:wizard-resources-20261120，真实平台三屏宽托管服务草稿及返回修改通过，六节点恢复接纳。仅替换前端，API/Worker/SDK和数据库版本保持不变；证据同上deployment.json及browser.log。

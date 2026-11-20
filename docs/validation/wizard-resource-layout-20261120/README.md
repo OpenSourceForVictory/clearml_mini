@@ -9,3 +9,9 @@
 TypeScript 检查、Vite 构建通过；保留已有500kB打包提示，见 [构建](build.txt)。OpenSpec严格验证通过。界面指南、资源要求操作文档、Skill参考已同步。
 
 本次只改前端，不涉及数据库迁移或Worker/Runner升级；未部署。浏览器使用模拟API，不创建真实任务、不作真机业务验收。前端未插桩，不将50项通过数称为代码覆盖率；本轮不重跑Python全量测试。
+
+## 已发布
+
+按用户要求发布到本机平台18000端口。镜像 mini-eval-api:wizard-resources-20261120，以现有 log-policy-02111 镜像为基础仅替换前端；保留原SDK下载包/API/Worker，未发布此前0.21.12产物manifest后端修改。保留所有既有Compose覆盖文件及共享挂载，仅追加界面镜像覆盖。部署前六节点均无活动执行，短暂暂停接纳，容器健康后恢复六节点enabled=true；数据库仍b841e23，无迁移。
+
+真实平台草稿核查：使用既有集合与服务模板，设置两个实例，在1440/1024/390屏宽核验摘要为static、无横向溢出、返回服务步骤保留实例数；无请求数据模拟、未提交任务。见 [部署结果](deployment.json)、[浏览器输出](browser.log)、[线上桌面截图](deployed-1440.png)、[线上窄屏截图](deployed-390.png)。修复前镜像 mini-eval-api:log-policy-02111-20261120 保留，可使用原Compose覆盖文件恢复。

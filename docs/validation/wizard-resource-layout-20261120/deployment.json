@@ -1,0 +1,39 @@
+{
+  "image": "mini-eval-api:wizard-resources-20261120",
+  "previous_image": "mini-eval-api:log-policy-02111-20261120",
+  "frontend_commit": "ef64d28",
+  "api_worker_sdk_unchanged": true,
+  "migration": false,
+  "nodes": [
+    {
+      "name": "ascend910b3-29",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "local4090-151",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx3080-182",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-157",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx4090-183",
+      "enabled": true,
+      "held": 0
+    },
+    {
+      "name": "rtx8000-177",
+      "enabled": true,
+      "held": 0
+    }
+  ]
+}
