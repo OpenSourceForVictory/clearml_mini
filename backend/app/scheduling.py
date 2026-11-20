@@ -268,15 +268,12 @@ def tick(factory, at=None):
                 if counts.get(owner, 0) >= seconds('MAX_ACTIVE_PER_USER', 2):
                     continue
                 candidates = [j for j in pending if j.owner_id == owner]
-                rotation = s.get(SchedulerState, 'batch:'+owner)
-                if not rotation:
-                    rotation = SchedulerState(key='batch:'+owner, value={})
-                    s.add(rotation)
-                groups = sorted({j.batch_id or 'standalone' for j in candidates})
-                previous = rotation.value.get('group', '')
-                groups = [g for g in groups if g > previous] + [g for g in groups if g <= previous]
-                order = {g: i for i, g in enumerate(groups)}
-                candidates.sort(key=lambda j: order[j.batch_id or 'standalone'])
+                # Batch priority reorders only this owner's queue. Owner-level
+                # round robin above remains the cross-user fairness boundary.
+                candidates.sort(key=lambda j: (
+                    -(batches[j.batch_id].priority if j.batch_id in batches else 0),
+                    utc(batches[j.batch_id].created_at) if j.batch_id in batches else utc(j.created_at),
+                    utc(j.created_at), j.id))
                 for job in candidates:
                     if job.batch_id and batches[job.batch_id].scheduling_paused:
                         continue
@@ -316,7 +313,6 @@ def tick(factory, at=None):
                         if allocated in pending:pending.remove(allocated)
                         admitted+=1
                     cursor.value={'owner':owner}
-                    rotation.value={'group':job.batch_id or 'standalone'}
                     made_progress = True
                     break
             if not made_progress:

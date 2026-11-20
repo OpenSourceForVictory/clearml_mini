@@ -4,6 +4,8 @@ const errors: Record<string, string> = {
   "unmanage the node before re-enrolling": "请先解除原机器纳管，再重新接入",
   "finish re-enrollment before upgrading": "请先完成重新纳管，再发起在线升级",
   "batch control changed; refresh before retrying": "批次控制已变化，本次操作未执行，请核对最新状态",
+  "batch changed; refresh before retrying": "批次状态已变化，请刷新后重新设置优先级",
+  "batch has no queued tasks; priority can no longer be changed": "批次已没有排队任务，不能再修改优先级",
   "suite not found": "评测集合不存在或无权访问",
   "suite must be published and not archived": "请选择已发布且未归档的集合",
   "suite run must use saved cases and client template": "集合运行必须使用其已保存清单和关联客户端",

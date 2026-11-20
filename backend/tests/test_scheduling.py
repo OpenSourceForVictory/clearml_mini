@@ -1,7 +1,7 @@
 from datetime import timedelta
 import pytest
 from sqlalchemy import select
-from backend.app.core import Base, Event, Job, Pool, Run, Slot, User, Worker, now, session_factory
+from backend.app.core import Base, EvaluationBatch, Event, Job, Pool, Run, Slot, User, Worker, now, session_factory
 from backend.app.scheduling import tick, transition
 
 
@@ -48,6 +48,28 @@ def test_round_robin_fifo_across_ticks(farm, monkeypatch):
             transition(s, r, 'SUCCEEDED')
             s.commit()
     assert admitted == ['a', 'b', 'c'] * 3
+
+
+def test_batch_priority_then_creation_time_within_owner(farm, monkeypatch):
+    monkeypatch.setenv('MAX_ACTIVE_GLOBAL', '1')
+    with farm() as s:
+        old = EvaluationBatch(owner_id='a', title='old', priority=0, created_at=now()-timedelta(minutes=2))
+        new = EvaluationBatch(owner_id='a', title='new', priority=4, created_at=now()-timedelta(minutes=1))
+        equal_later = EvaluationBatch(owner_id='a', title='later', priority=4, created_at=now())
+        s.add_all([old, new, equal_later]); s.flush()
+        ids=[]
+        for batch in (old, new, equal_later):
+            item=Job(owner_id='a',pool_id='large',title=batch.title,benchmark='mock',model_ref='test',episodes=1,batch_id=batch.id)
+            s.add(item);s.flush();s.add(Run(job_id=item.id,attempt=1));ids.append((batch.id,item.id))
+        s.commit()
+    ordered=[]
+    for _ in range(3):
+        assert tick(farm)==1
+        with farm() as s:
+            run=s.scalar(select(Run).where(Run.status=='RESERVED'))
+            item=s.get(Job,run.job_id);ordered.append(item.batch_id)
+            transition(s,run,'SUCCEEDED');run.cleanup_confirmed=True;s.commit()
+    assert ordered==[ids[1][0],ids[2][0],ids[0][0]]
 
 
 def test_heterogeneous_slots_node_caps_and_user_caps(farm, monkeypatch):

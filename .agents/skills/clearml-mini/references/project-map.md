@@ -20,6 +20,8 @@
 宿主机执行的控制端短时忙碌：`worker/client.py` 在执行心跳 HTTP 503 时保留正在运行的单元并重试，租约 watchdog 仍生效；其他 HTTP 拒绝不按瞬时故障吞掉。定位时对照 `backend/tests/test_worker_execution_recovery.py` 与 `docs/host-execution.md`。
 | 运行结果 | frontend/src/batch-history.tsx、batch-detail.tsx；backend/app/batch_deletion.py；docs/batch-monitoring.md、batch-reports.md、interface-pages.md | 重试历史、真实回合分母、取消与删除语义；删除批次会清理其任务/运行数据并保留删除墓碑与审计 |
 
+批次排队优先级：`EvaluationBatch.priority` 为 0–9，批次所有者可在运行记录里修改仍有 PENDING 项的批次；调度仅在用户内部按优先级降序、创建时间升序，跨用户公平轮转保留。API、迁移和回归见 `backend/app/batch_priority.py`、`backend/alembic/versions/aa741b2_batch_priority.py`、`backend/tests/test_batch_priority.py`；操作说明见 `docs/batch-controls.md`。
+
 CPU/内存预算：资源池 cpu_per_job、ram_gb_per_job 是缺省申请而非上限；0 表示未申请的任务不预约该轴，Worker 不设置相应运行额度。模板或提交的明确申请按节点配置容量、Agent host 样本和现有预约准入。Agent host 心跳有 cpu_count、cpu_utilization、memory_total_mb、memory_available_mb；没有“剩余 CPU 核数”。验证见 test_unlimited_cpu_memory.py、test_pair_capacity_diagnostics.py、test_resource_reporting.py，说明见 docs/template-resource-requirements.md 和 docs/node-resource-reporting.md。
 
 非平台资源占用准入：scheduling.eligibility_codes 与 node_resources.host_codes 分别以设备显存、主机内存的总量及最新实测剩余量限制新申请加全部未清理平台预约。没有按任务实际用量归因时，此规则会重复计入已运行任务的实际占用，偏向安全；不要将 `total-free-reserved` 解释成精确的非平台用量。待分配任务在 PENDING 队列中，尚无具体卡位预约。预检和调度共用准入，Worker 启动前仍复查设备剩余量。见 docs/gpu-scheduling.md、docs/template-resource-requirements.md；回归 test_gpu_sharing.py、test_accelerator_resources.py、test_resource_reporting.py。

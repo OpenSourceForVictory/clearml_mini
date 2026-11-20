@@ -380,7 +380,8 @@ class RunArtifact(Base):
 class EvaluationBatch(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     __tablename__ = 'evaluation_batches'
-    __table_args__ = (UniqueConstraint('owner_id', 'idempotency_key'),)
+    __table_args__ = (UniqueConstraint('owner_id', 'idempotency_key'),
+                      CheckConstraint('priority >= 0 AND priority <= 9', name='ck_evaluation_batch_priority_range'))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
     suite_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_suites.id'))
@@ -388,6 +389,7 @@ class EvaluationBatch(Base):
     control_revision: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     control_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     max_concurrent: Mapped[int] = mapped_column(Integer, default=1, server_default='1')
+    priority: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     title: Mapped[str] = mapped_column(String(200))
     idempotency_key: Mapped[Optional[str]] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -1,17 +1,26 @@
 import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page,outcomes?:any){
- let reject=false;const deleted:string[]=[];
+ let reject=false;const deleted:string[]=[],priorityUpdates:any[]=[];
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
   if(path==='auth/me')data={id:'u',username:'user',role:'user'};
-  if(path==='batches')data=[{id:'done',title:'完成批次',status:'SUCCEEDED',total:3,finished:3,succeeded:3,total_episodes:30,max_concurrent:2,created_at:'2026-11-16T01:00:00Z',cases:[{episode_reporting:true,progress:{completed:12}}]},{id:'active',title:'运行批次'+'long'.repeat(100),status:'RUNNING',total:3,finished:1,succeeded:1,total_episodes:30,cases:[]}].filter(b=>!deleted.includes(b.id)).map(b=>({...b,outcomes}));
+  if(path==='batches')data=[{id:'done',title:'完成批次',status:'SUCCEEDED',total:3,finished:3,succeeded:3,total_episodes:30,max_concurrent:2,created_at:'2026-11-16T01:00:00Z',cases:[{episode_reporting:true,progress:{completed:12}}]},{id:'active',title:'运行批次'+'long'.repeat(100),status:'RUNNING',total:3,finished:1,succeeded:1,total_episodes:30,pending_count:2,priority:0,control_revision:0,cases:[]}].filter(b=>!deleted.includes(b.id)).map(b=>({...b,outcomes}));
+  if(path==='batches/active/priority'&&route.request().method()==='PATCH'){priorityUpdates.push(route.request().postDataJSON());data={id:'active',priority:7,pending_count:2,control_revision:1};}
   if(path==='batches/done'&&route.request().method()==='DELETE'){if(reject){await route.fulfill({status:409,json:{detail:'batch services must be stopped and cleaned before deletion'}});return;}deleted.push('done');data={deleted:true};}
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/results');await expect(page.getByRole('row',{name:'批次 完成批次',exact:true})).toBeVisible();
- return {deleted,reject:()=>{reject=true;},allow:()=>{reject=false;}};
+ return {deleted,priorityUpdates,reject:()=>{reject=true;},allow:()=>{reject=false;}};
 }
+test('queued batch priority is editable and saved with the current revision',async({page})=>{
+ const ctl=await setup(page);const row=page.getByRole('row',{name:/^批次 运行批次/});
+ await expect(row.getByText('待运行 2 项')).toBeVisible();
+ await row.getByRole('combobox',{name:/批次优先级/}).selectOption('7');
+ await row.getByRole('button',{name:'保存'}).click();
+ await expect(row.getByRole('combobox')).toHaveValue('7');
+ expect(ctl.priorityUpdates).toEqual([{priority:7,expected_revision:0}]);
+});
 test('scoped filters, reported progress, responsive long titles and active deletion disabled',async({page})=>{
  await setup(page);
  const done=page.getByRole('row',{name:'批次 完成批次',exact:true});
@@ -85,7 +94,7 @@ test('outcome text stays within separate columns at desktop and narrow widths',a
  await setup(page,outcomes);
  for(const width of [1440,1024,390]){
   await page.setViewportSize({width,height:1000});
-  const cells=page.getByRole('row',{name:'批次 完成批次',exact:true}).locator('td:nth-child(7),td:nth-child(8),td:nth-child(9)');
+  const cells=page.getByRole('row',{name:'批次 完成批次',exact:true}).locator('td:nth-child(8),td:nth-child(9),td:nth-child(10)');
   expect(await cells.evaluateAll(elements=>elements.every(cell=>{
    const box=cell.getBoundingClientRect(),walker=document.createTreeWalker(cell,NodeFilter.SHOW_TEXT);
    let node;while((node=walker.nextNode())){if(!node.textContent?.trim())continue;const range=document.createRange();range.selectNodeContents(node);
