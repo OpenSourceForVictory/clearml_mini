@@ -114,3 +114,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 全量之后按条件补跑新增记录：Docker 通用命令矩阵 24 项、真实 Docker 进程日志/服务日志 89 项、存储探测镜像 1 项、模板样例镜像 1 项，以及隔离 PostgreSQL 迁移和并发测试 7 项，均通过。这些是独立补跑，不回写 2331/126 的全量统计。补跑发现 endpoint 迁移测试把受保护降级后的版本写死为旧 revision；改成比较操作前后的 Alembic revision 后，7 项 PostgreSQL 测试全部通过。首次补跑中其余失败来自迁移子进程未继承 `PYTHONPATH`、race 数据库未预先迁移；使用正确隔离库初始化后通过。systemd user manager 在当前会话不可用，root 专用纳管和特权 mount namespace 条件未启用。详见[条件跳过续查](validation/batch-priority-skip-recheck-20261120/README.md)。
 
 2026-11-20 任务级 SDK 业务结果上报的定向回归：后端 73 项、前端 53 项通过，Vite/TypeScript 构建通过。该次用户要求不运行全量套件，统一覆盖率进程约 17% 时中止；定向覆盖率不代表全仓或功能组门槛。详见[定向验证记录](validation/task-level-sdk-report-20261120/README.md)。
+
+2026-11-23 Worker 0.21.14 当前版本全量：Python 2369 通过 / 126 条件跳过 / 0 失败，整体 92.02% 行 / 83.16% 分支，全部目录与关键功能组门槛通过。前端首轮指南定位歧义 1 项失败，修正断言后完整复测 243 通过 / 10 条件跳过；前端未插桩。使用一次性 PostgreSQL，未部署节点或补做真机验收。详见[本轮记录](validation/full-regression-20261123/README.md)。
