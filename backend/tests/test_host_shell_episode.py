@@ -42,12 +42,12 @@ def test_login_environment_timeout_has_no_values(monkeypatch):
     assert 'SECRET=' not in str(error.value)
 
 
-def client(tmp_path,script,*,episodes=3,ordinary=False,mode='host',launch='per_episode',env=None,template_extra=None):
+def client(tmp_path,script,*,episodes=3,ordinary=False,mode='host',launch='per_episode',env=None,template_extra=None,timing=False):
     work=tmp_path/'work';work.mkdir();output=tmp_path/'output';output.mkdir()
     template={'execution_mode':mode,'integration_mode':'direct','task_type':'command' if ordinary else 'evaluation',
               'host_runtime':{'command_mode':'exec','episode_launch':launch},'command':[sys.executable,str(script)]}
     template.update(template_extra or {})
-    config={'contract_version':1,'service_mode':'none','endpoint':'','task_name':'case','episodes':episodes,'seed':7,
+    config={'_episode_timing_v1':timing,'contract_version':1,'service_mode':'none','endpoint':'','task_name':'case','episodes':episodes,'seed':7,
             'parameters':{'scene':'test'},'template':template,'_resolved_command':template['command'],
             '_resolved_environment':{'MINI_EVAL_WORK_DIR':str(work),'MINI_EVAL_OUTPUT_DIR':str(output),**(env or {})},
             '_resolved_cwd':str(tmp_path)}

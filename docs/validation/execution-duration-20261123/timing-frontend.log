@@ -1,0 +1,73 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test execution-timing.spec.ts batch-monitoring.spec.ts batch-reports.spec.ts
+
+
+Running 38 tests using 1 worker
+
+  ✓   1 tests/batch-monitoring.spec.ts:32:1 › direct navigation, refresh, draft preservation, filtering and offline recovery (4.8s)
+  ✓   2 tests/batch-monitoring.spec.ts:44:1 › selected expected attempts survive polling and lost response; goal failures excluded (2.3s)
+  ✓   3 tests/batch-monitoring.spec.ts:50:1 › history stays selected; delayed route responses cannot overwrite next batch; private hidden (6.2s)
+  ✓   4 tests/batch-monitoring.spec.ts:58:1 › detail tabs preserve filtering and retry selection and contain narrow tables (360ms)
+  ✓   5 tests/batch-monitoring.spec.ts:76:1 › client placement is a separate column with GPU zero and unassigned states (178ms)
+  ✓   6 tests/batch-monitoring.spec.ts:83:1 › episode expansion separates protocol results, process exits and unreported rounds (6.7s)
+  ✓   7 tests/batch-monitoring.spec.ts:112:1 › zero exits and invalid protocol are separate at batch task and episode levels (255ms)
+  ✓   8 tests/batch-monitoring.spec.ts:130:1 › whole command hides rounds even with reporting flag and preserves exit diagnostics (6.6s)
+  ✓   9 tests/batch-monitoring.spec.ts:147:1 › program, episode and task-result summaries use separate cards and stack on narrow screens (210ms)
+  ✓  10 tests/batch-monitoring.spec.ts:160:1 › summary details are collapsed, expandable and preserved across polling (2.2s)
+  ✓  11 tests/batch-monitoring.spec.ts:172:1 › task row opens local execution and protocol counts without opening another task (229ms)
+  ✓  12 tests/batch-monitoring.spec.ts:179:1 › artifact drawer opens from task with grouping and closes without losing filters (336ms)
+  ✓  13 tests/batch-monitoring.spec.ts:203:1 › artifact errors do not claim an empty result and history stays separate (2.6s)
+  ✓  14 tests/batch-monitoring.spec.ts:242:1 › artifact JSON renders folded objects and invalid JSON shows safe original text (425ms)
+  ✓  15 tests/batch-monitoring.spec.ts:255:1 › artifact CSV handles quoted newlines and bounds table rendering (604ms)
+  ✓  16 tests/batch-monitoring.spec.ts:268:1 › artifact preview truncates ignored Range and handles empty files and errors (453ms)
+  ✓  17 tests/batch-monitoring.spec.ts:281:1 › artifact active content is download only (288ms)
+  ✓  18 tests/batch-monitoring.spec.ts:288:1 › artifact text uses server total for truncation and renders UTF-8 safely (378ms)
+  ✓  19 tests/batch-monitoring.spec.ts:298:1 › artifact switching cancels pending preview and does not show stale text (343ms)
+  ✓  20 tests/batch-monitoring.spec.ts:317:1 › shared artifacts browse directories and preview through API without upload (438ms)
+  ✓  21 tests/batch-monitoring.spec.ts:340:1 › shared storage failure is explicit and never silently switches to legacy (258ms)
+  ✓  22 tests/batch-monitoring.spec.ts:353:1 › disabled shared storage preserves source choice and can recover after configuration (366ms)
+  ✓  23 tests/batch-monitoring.spec.ts:378:2 › output directory remains visible independently of artifact access: disabled (260ms)
+  ✓  24 tests/batch-monitoring.spec.ts:378:2 › output directory remains visible independently of artifact access: failed (247ms)
+  ✓  25 tests/batch-monitoring.spec.ts:378:2 › output directory remains visible independently of artifact access: planned (240ms)
+  ✓  26 tests/batch-monitoring.spec.ts:378:2 › output directory remains visible independently of artifact access: missing (237ms)
+  ✓  27 tests/batch-monitoring.spec.ts:398:2 › artifact modal is centered and bounded at 1440px (291ms)
+  ✓  28 tests/batch-monitoring.spec.ts:398:2 › artifact modal is centered and bounded at 390px (300ms)
+  ✓  29 tests/batch-monitoring.spec.ts:415:1 › parent directory returns one level and clears paging and preview (656ms)
+  ✓  30 tests/batch-monitoring.spec.ts:447:1 › custom browse source keeps namespace in media grants and resets preview when switching (294ms)
+  ✓  31 tests/batch-monitoring.spec.ts:470:1 › shared browse retries a transient busy response and stops retrying after source switch (2.8s)
+  ✓  32 tests/batch-monitoring.spec.ts:489:1 › shared browse retains final busy error after bounded retries (2.5s)
+  ✓  33 tests/batch-reports.spec.ts:33:1 › cross-page selection limit, back preserves draft/page and direct refresh (721ms)
+  ✓  34 tests/batch-reports.spec.ts:43:1 › authenticated JSON CSV downloads and failed download creates no file (362ms)
+  ✓  35 tests/batch-reports.spec.ts:53:1 › manual refresh preserves snapshot on error, no overlapping refresh (4.0s)
+  ✓  36 tests/batch-reports.spec.ts:59:1 › switching comparison rejects stale response and private batch clears data (1.7s)
+  ✘  37 tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal (177ms)
+  ✘  38 tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results (206ms)
+
+
+  1) tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal
+
+    Error: page.evaluate: TypeError: createRoot is not a function
+        at eval (eval at evaluate (:370:30), <anonymous>:11:18)
+        at async <anonymous>:396:30
+        at eval (eval at evaluate (:370:30), <anonymous>:11:18)
+        at async <anonymous>:396:30
+        at /home/dgh/Code/clearml_mini/frontend/tests/execution-timing.spec.ts:5:14
+
+    Error Context: test-results/execution-timing-duration--83cbd-reeze-recovery-and-terminal/error-context.md
+
+  2) tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results
+
+    Error: page.evaluate: TypeError: createRoot is not a function
+        at eval (eval at evaluate (:370:30), <anonymous>:11:5)
+        at async <anonymous>:396:30
+        at eval (eval at evaluate (:370:30), <anonymous>:11:5)
+        at async <anonymous>:396:30
+        at /home/dgh/Code/clearml_mini/frontend/tests/execution-timing.spec.ts:41:14
+
+    Error Context: test-results/execution-timing-episode-t-1948b-ss-retains-protocol-results/error-context.md
+
+  2 failed
+    tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal
+    tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results
+  36 passed (52.5s)

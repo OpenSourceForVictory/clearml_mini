@@ -1,0 +1,39 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test execution-timing.spec.ts
+
+
+Running 2 tests using 1 worker
+
+  ✓  1 tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal (8.8s)
+  ✘  2 tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results (5.2s)
+
+
+  1) tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('columnheader', { name: '回合耗时' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('columnheader', { name: '回合耗时' }) with timeout 5000ms
+      - waiting for getByRole('columnheader', { name: '回合耗时' })
+
+
+      44 |     createRoot(el).render(React.createElement(EpisodeList,{jobId:'j',runId:'r'}));
+      45 |   });
+    > 46 |   await expect(page.getByRole('columnheader',{name:'回合耗时'})).toBeVisible();
+         |                                                              ^
+      47 |   await expect(page.getByRole('cell',{name:'123毫秒'})).toBeVisible();await expect(page.getByText('已中断，完整耗时未记录')).toBeVisible();
+      48 |   independent=false;await expect(page.getByRole('columnheader',{name:'回合耗时'})).toHaveCount(0);
+      49 |   await expect(page.getByRole('table',{name:'逐回合状态'})).toBeVisible();
+        at /home/dgh/Code/clearml_mini/frontend/tests/execution-timing.spec.ts:46:62
+
+    Error Context: test-results/execution-timing-episode-t-1948b-ss-retains-protocol-results/error-context.md
+
+  1 failed
+    tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results
+  1 passed (14.4s)

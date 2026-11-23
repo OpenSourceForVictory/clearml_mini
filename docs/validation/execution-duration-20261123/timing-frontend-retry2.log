@@ -1,0 +1,29 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test execution-timing.spec.ts
+
+
+Running 2 tests using 1 worker
+
+  ✘  1 tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal (139ms)
+  ✓  2 tests/execution-timing.spec.ts:30:1 › episode time column follows process mode; whole process retains protocol results (2.6s)
+
+
+  1) tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal
+
+    Error: page.evaluate: Execution context was destroyed, most likely because of a navigation
+
+      3 | test('duration formatting, monotonic live clock, stale freeze, recovery and terminal',async({page})=>{
+      4 |   await page.goto('/');
+    > 5 |   await page.evaluate(async()=>{
+        |              ^
+      6 |     const React=(await import('/node_modules/.vite/deps/react.js')).default;
+      7 |     const {createRoot}=(await import('/node_modules/.vite/deps/react-dom_client.js')).default;
+      8 |     const mod=await import('/src/execution-timing.tsx');
+        at /home/dgh/Code/clearml_mini/frontend/tests/execution-timing.spec.ts:5:14
+
+    Error Context: test-results/execution-timing-duration--83cbd-reeze-recovery-and-terminal/error-context.md
+
+  1 failed
+    tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal
+  1 passed (3.5s)

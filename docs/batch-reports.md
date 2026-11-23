@@ -44,3 +44,7 @@ CSV 使用 UTF-8 BOM，可由常用表格工具识别中文；标准 CSV 引号�
 JSON 报告包含 `outcomes.execution`（normal/abnormal/running/unknown/not_started）、`outcomes.protocol`（planned/success/failure/invalid/errors/unreported/not_applicable_tasks/valid/success_rate）和 `outcomes.task_result`（success/failure/unreported/not_applicable）；每项及批次使用相同分类。每项另有 process_scope、wrapper_exit_code，任务级 SDK 单项结果含状态、数值指标和可选摘要。CSV 追加 program_*、protocol_*、task_result_*、process_scope、wrapper_exit_code 列，不删除原有字段，schema_version 保持 1。
 
 新界面和新消费方使用 outcomes；原 summary/progress 为兼容旧消费方保留。普通命令在协议统计中不适用，比较返回 protocol_not_applicable，不再对 null 成功率相减；没有有效结果返回 missing_valid_results。结果异常不自动视为业务失败，异常和未上报计数必须与有效结果成功率同时解释。批次比较仍要求完整、可比的协议结果。
+
+## 时间导出
+
+JSON 保留 schema_version=1，新增顶层 timing（批次 elapsed）及 cases[].timing（当前尝试 execution/waiting），统一 generated_at/as_of；与监控页使用相同投影。CSV 追加 batch_elapsed_seconds、execution_seconds、waiting_seconds、execution_time_state。原始单位秒，未知为空，不将历史缺失当作 0。运行中导出是该次快照；与稍后打开的页面可以存在时间差。详见[执行时间口径](batch-monitoring.md#执行时间execution-duration-display)。

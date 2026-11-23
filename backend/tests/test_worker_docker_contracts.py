@@ -97,3 +97,10 @@ def test_unlimited_time_bypasses_image_timer(container,runtime):
     assert 'runner.supervise' not in create and '--timeout' not in create
     assert '-m' in create and 'runner.cs_entry' in create
     assert inputs[0]['timeout_seconds']==0
+
+@pytest.mark.parametrize('enabled',[True,False])
+def test_negotiated_episode_timing_enters_runner_input(container,enabled):
+    worker,task,_,inputs=container
+    task['episode_timing_v1']=enabled
+    worker.create(task)
+    assert inputs[0]['_episode_timing_v1'] is enabled

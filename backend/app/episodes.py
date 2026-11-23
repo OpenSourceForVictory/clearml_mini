@@ -2,7 +2,8 @@
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from .core import EpisodeRecord, Job, Run
+from .core import EpisodeRecord, Job, Run, now
+from . import execution_timing as timing
 from runner.episode_contract import validate_event
 from runner.sdk import episode_seed
 
@@ -18,15 +19,17 @@ def record(s, run, event):
     row = s.get(EpisodeRecord, (run.id, event['episode_id']))
     if event['status'] == 'STARTED':
         if row:
-            if row.started != event:
+            if timing.original(row.started) != event:
                 raise HTTPException(409, 'conflicting episode start')
             return
-        s.add(EpisodeRecord(run_id=run.id, episode_id=event['episode_id'], seed=event['seed'], started=event))
+        s.add(EpisodeRecord(run_id=run.id, episode_id=event['episode_id'], seed=event['seed'], started={**event,timing.RECEIVED:now().isoformat()}))
     else:
         if not row:
             raise HTTPException(409, 'episode start is missing')
         if row.result is not None and row.result != event:
             raise HTTPException(409, 'conflicting episode result')
+        if event.get("timing") and (row.started or {}).get("timing") and event["timing"]["started_at"] != row.started["timing"]["started_at"]:
+            raise HTTPException(409, "conflicting episode timing start")
         row.result = event
     s.flush()
 
@@ -51,6 +54,7 @@ def install(app, db, current):
         job, run = s.get(Job, job_id), s.get(Run, run_id)
         if not job or (job.owner_id != user.id and user.role != 'admin') or not run or run.job_id != job_id:
             raise HTTPException(404, 'attempt not found')
+        at=now()
         template=(job.client_spec or {}).get('template',{})
         from .result_views import load_records, summarize_attempt, episode_view
         all_rows=load_records(s,[run.id])[run.id]
@@ -60,11 +64,11 @@ def install(app, db, current):
         query=(query.where(EpisodeRecord.episode_id>=start,EpisodeRecord.episode_id<start+100)
                if include_planned else query.order_by(EpisodeRecord.episode_id).offset((page-1)*100).limit(100))
         rows=list(s.scalars(query.order_by(EpisodeRecord.episode_id)))
-        items={r.episode_id:{'episode_id':r.episode_id,'seed':r.seed,'started':r.started,'result':r.result,'updated_at':r.updated_at, **episode_view(template,r,run.status)} for r in rows}
+        items={r.episode_id:{'episode_id':r.episode_id,'seed':r.seed,'timing':timing.episode(template,r,run.status,at),'started':timing.original(r.started),'result':r.result,'updated_at':r.updated_at, **episode_view(template,r,run.status)} for r in rows}
         if include_planned and outcomes['detail_mode'] != 'execution':
             for i in range(start,min(start+100,job.episodes+1)):
-                items.setdefault(i,{'episode_id':i,'seed':episode_seed((job.client_spec or {}).get('seed',0),i),'started':None,'result':None,'updated_at':None, **episode_view(template,None,run.status)})
-        return {'outcomes':outcomes,'planned':job.episodes,'progress':summarize(all_rows),'page':page,
+                items.setdefault(i,{'episode_id':i,'seed':episode_seed((job.client_spec or {}).get('seed',0),i),'timing':timing.episode(template,None,run.status,at),'started':None,'result':None,'updated_at':None, **episode_view(template,None,run.status)})
+        return {'timing':timing.attempt(job,run,at,timing.pending_starts(s,[run.id]).get(run.id)), 'outcomes':outcomes,'planned':job.episodes,'progress':summarize(all_rows),'page':page,
                 'exit_code':run.exit_code,'run_status':run.status,'run_error':run.error,'episode_reporting':bool(template.get('episode_reporting')),
                 'result_source':'exit_code' if template.get('task_type')=='command' else 'protocol',
                 'items':[items[i] for i in sorted(items)]}

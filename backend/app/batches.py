@@ -86,6 +86,10 @@ def batch_view(s, batch, jobs=None, progresses=None, result_rows=None):
     jobs = jobs if jobs is not None else s.scalars(select(Job).options(selectinload(Job.runs)).where(Job.batch_id == batch.id)
                      .order_by(Job.created_at, Job.id)).all()
     from .episodes import summarize
+    from . import execution_timing
+    from .core import now
+    at = now()
+    starts = execution_timing.pending_starts(s, [j.runs[-1].id for j in jobs])
     from .result_views import load_records, summarize_attempt, aggregate
     result_rows = load_records(s,[j.runs[-1].id for j in jobs]) if result_rows is None else result_rows
     if progresses is None:progresses = {j.runs[-1].id:summarize(result_rows[j.runs[-1].id]) for j in jobs}
@@ -106,10 +110,10 @@ def batch_view(s, batch, jobs=None, progresses=None, result_rows=None):
         status = 'FAILED'
     else:
         status = 'CANCELLED'
-    return {'outcomes':aggregate(outcomes.values()),'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'priority': batch.priority, 'pending_count': sum(j.status == 'PENDING' for j in jobs), 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
+    return {'timing':execution_timing.batch(batch, [j.runs[-1] for j in jobs], at), 'outcomes':aggregate(outcomes.values()),'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'priority': batch.priority, 'pending_count': sum(j.status == 'PENDING' for j in jobs), 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command' or j.client_spec['template'].get('episode_reporting')),
-            'cases': [{'outcomes':outcomes[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
+            'cases': [{'timing':execution_timing.attempt(j,j.runs[-1],at,starts.get(j.runs[-1].id)), 'outcomes':outcomes[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
                        'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' and not j.client_spec['template'].get('episode_reporting') else j.episodes, 'status': j.status,
                        'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,

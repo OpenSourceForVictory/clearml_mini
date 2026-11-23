@@ -193,7 +193,9 @@ def run(client, config, output_dir=None):
         for i in range(1, config['episodes'] + 1):
             episode = Episode(i, episode_seed(config['seed'], i))
             base = {'episode_id': i, 'seed': episode.seed}
-            emit({**base, 'status': 'STARTED'})
+            from .episode_timing import Timer, independent
+            timer = Timer() if config.get('_episode_timing_v1') and independent(template) else None
+            emit({**base, 'status': 'STARTED', **({'timing':timer.event()} if timer else {})})
             client.process_exit_code = None
             begin = time.monotonic()
             try:
@@ -209,13 +211,14 @@ def run(client, config, output_dir=None):
                       'metrics': result.metrics, 'artifacts': result.artifacts,
                       'runtime': time.monotonic()-begin,
                       **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})}
+                if timer:event['timing']=timer.event(final=True)
                 try:validate_event(event)
                 except (ValueError, TypeError, OverflowError):raise EpisodeResultError('invalid_episode_result') from None
                 emit(event)
                 successes += int(result.success)
             except Exception as exc:
                 # User exception details go to stderr; progress does not expose remote payloads.
-                emit({**base, 'status': 'ERROR', 'error': str(exc) if isinstance(exc, EpisodeResultError) else 'simulation episode raised an exception',
+                emit({**base, 'status': 'ERROR', **({'timing':timer.event(final=True)} if timer else {}), 'error': str(exc) if isinstance(exc, EpisodeResultError) else 'simulation episode raised an exception',
                       **({'exit_code':client.process_exit_code} if client.process_exit_code is not None else {})})
                 if isinstance(exc, EpisodeResultError):
                     print(str(exc), file=sys.stderr, flush=True)

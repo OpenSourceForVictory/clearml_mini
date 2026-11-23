@@ -12,7 +12,7 @@
 
 **Goals:** 三层时间语义一致；普通命令和失败也有整次时间；独立回合自动计时；使用现有持久化及转发；重试、旧记录、混合节点版本可解释；界面与导出复用投影。
 
-**Non-Goals:** 不做资源计费或 GPU 核时；不根据日志推断时刻；不更改执行时限、续租、调度顺序、退出码或协议结果；不新增精确的进程级整任务监控服务；不把服务常驻时长纳入客户端批次完成条件。本次仅规划，未实现。按用户最新决定，批次不增加累计执行耗时或区间并集统计，只保留整体历时。
+**Non-Goals:** 不做资源计费或 GPU 核时；不根据日志推断时刻；不更改执行时限、续租、调度顺序、退出码或协议结果；不新增精确的进程级整任务监控服务；不把服务常驻时长纳入客户端批次完成条件。按用户最新决定，批次不增加累计执行耗时或区间并集统计，只保留整体历时。
 
 ## Decisions
 
@@ -48,7 +48,7 @@
 }
 ```
 
-回合 timing 添加 duration_seconds、phase（running/finished/interrupted/not_started/unknown）、source（runner_monotonic/legacy_reported）、起止 UTC 及质量。批次使用 elapsed 字段而非 execution，防止误解。服务端统一取一次 as_of，分页结果不能各行使用不同当前时点。
+回合原事件 timing 使用 duration_seconds；API 投影统一使用 seconds、state（running/finished/interrupted/not_started/unknown）、source（runner_monotonic/legacy_reported/platform_received）、起止 UTC 及质量。批次使用 elapsed 字段而非 execution，防止误解。服务端统一取一次 as_of，分页结果不能各行使用不同当前时点。
 
 当前任务行默认最新尝试；历史选择器对应 run_id 查询独立时间。分页批量取 Event 的最早 PENDING 时间，不逐行查询；已核对 job_events 的 run_id/new_status 无覆盖索引。增加 (run_id, new_status, created_at) 复合索引迁移，针对按 run_id 批量取 PENDING 起点的查询；用 EXPLAIN 和大批次用例验证，避免每次刷新扫描历史事件。
 

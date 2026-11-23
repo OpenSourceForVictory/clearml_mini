@@ -454,6 +454,9 @@ def install(app, db, current):
                 and (template.get('execution_mode') == 'host' or template.get('runtime'))):
             task['log_protocol'] = 2
             if 'process_logs_v1' in (slot.software or {}).get('capabilities',[]):task['process_logs_v1']=True
+        if ('episode_timing_v1' in (slot.software or {}).get('capabilities', [])
+                and (template.get('execution_mode') == 'host' or template.get('runtime'))):
+            task['episode_timing_v1'] = True
         if task.get('process_logs_v1'):
             from .log_policy import snapshot as log_snapshot
             value=log_snapshot(s,run,slot)

@@ -130,3 +130,9 @@ docker build -f Dockerfile.templates -t mini-eval-template-examples:v1 .
 配套 API 和 Worker/Runner 0.21.12 支持回合目录归属。原生 SDK 在 `run_episode` 中使用 `context.episode_output_dir / 'result.json'` 写文件，会懒创建目录并登记当前回合；`context.output_dir` 保留公共目录语义。目录内的文件可按回合查看，不强制逐文件返回 `artifacts`；显式返回的 `artifacts` 引用优先。嵌套 SDK 保持父回合编号，不额外嵌套目录。不读取该属性的旧业务不增加空目录或元数据。目录登记失败不改变业务结果，未登记文件仍可按任务浏览。
 
 `.mini-eval-artifacts` 是平台隐藏元数据，不应作为业务产物编辑或引用；它不授予目录权限。旧 API 不会自动显示新归属；先更新 API，再更新实际 Runner/SDK。单进程直接协议仍由业务显式声明文件归属，平台不按文件夹名称推测。
+
+## 在平台查看执行耗时
+
+批次、任务尝试的耗时由平台记录，无需业务代码上报。SDK 命令与宿主机逐回合模式由平台 Runner 自动记录每次调用的成功/失败耗时；业务继续按既有方式返回结果即可。native Python SDK 或单进程直接协议的回合结果不等同于独立进程时长。原 runtime 仍是业务上报字段，不用它推断进程是否成功。
+
+`episode_timing_v1` 是 API/Worker 协商能力，不要在业务配置中手工开启 `_episode_timing_v1`。旧版本不发送新增 timing 字段；下载包包含独立运行所需的 episode_timing 模块。部署及升级顺序参见项目 docs/worker-upgrades.md，展示口径参见 docs/batch-monitoring.md。

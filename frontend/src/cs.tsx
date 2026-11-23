@@ -1,3 +1,4 @@
+import {AttemptTiming,DurationValue,type Timing} from './execution-timing';
 import {ArtifactBrowser} from './artifact-browser';
 import {ProcessLogs} from './process-logs';
 import type {RerunDraft,WizardLaunch} from './batch-rerun';
@@ -97,7 +98,7 @@ export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
   function state(r:any){
     return executionLabels[r.execution_state] || (r.result?.exit_code===0?'正常结束':r.result?.exit_code!=null?'异常退出':r.started&&!terminal&&!r.result?'运行中':'退出码未上报');
   }
-  if(data&&single)return <section aria-label="整次执行状态"><h3>整次执行状态</h3><ProcessLogs jobId={jobId} runId={runId}/>
+  if(data&&single)return <section aria-label="整次执行状态"><h3>整次执行状态</h3><AttemptTiming value={data.timing} failed={!!error}/><ProcessLogs jobId={jobId} runId={runId}/>
     {error&&<p role="alert">执行状态读取失败：{error}</p>}
     <p>普通命令只启动一次，配置回合数 {data.planned}；平台不解析程序内部回合，不显示逐回合状态。</p>
     <p>任务生命周期：{statusLabels[data.run_status]||data.run_status} · 平台执行进程退出码：{data.exit_code??'未上报'}</p>
@@ -107,12 +108,12 @@ export function EpisodeList({jobId,runId}:{jobId:string;runId:string}) {
     <p>输出见本次执行公共日志；退出正常不代表内部回合评测成功。</p>
   </section>;
   return <><h3>回合状态与结果</h3><ProcessLogs jobId={jobId} runId={runId}/>{error&&<p role="alert">回合状态读取失败：{error}</p>}{!data&&!error&&<p>正在读取回合状态…</p>}{data&&<>
-    <p>判定来源：{command?'普通命令退出码（0 为执行成功）':'平台协议业务结果（success）'}。{single?'此命令只启动一次，显示整次执行结果。':`已上报完成 ${data.progress.completed}/${data.planned}，异常回合 ${data.progress.errors}。`}</p>
+    <AttemptTiming value={data.timing} failed={!!error}/><p>判定来源：{command?'普通命令退出码（0 为执行成功）':'平台协议业务结果（success）'}。{single?'此命令只启动一次，显示整次执行结果。':`已上报完成 ${data.progress.completed}/${data.planned}，异常回合 ${data.progress.errors}。`}</p>
     <ResultOutcomes value={data.outcomes}/>
     <p>平台执行进程退出码：{data.exit_code ?? '未上报'}（整次执行，不等同于每回合业务子进程退出码）</p>
     {data.run_error&&<p className="error">任务诊断：{data.run_error}</p>}
     {terminal&&!command&&data.items.some((r:any)=>!r.result)&&<p>缺少协议回合结果；退出码 0 不能代替协议成功上报。</p>}
-    <div className="table-scroll"><table aria-label="逐回合状态"><thead><tr><th>回合</th><th>种子</th><th>程序执行状态</th><th>回合结果（平台协议）</th><th>业务进程退出码</th><th>指标 / 异常</th></tr></thead><tbody>{(single?data.items.slice(0,1):data.items).map((r:any)=><tr key={r.episode_id}><td>{single?'整次执行':r.episode_id}</td><td>{single?'—':r.seed}</td><td>{single?(data.outcomes?.execution.normal?'正常结束':data.outcomes?.execution.abnormal?'异常退出':'参见程序执行统计'):state(r)}</td><td>{command?'不适用':protocolLabels[r.protocol_state]||(r.result?.status==='COMPLETED'?(r.result.success?'业务成功':'业务失败'):r.result?.status==='ERROR'?'回合异常（未分类）':'结果未上报')}</td><td>{r.execution_state==='not_applicable'?'不适用':r.result?.exit_code??'未上报'}</td><td>{JSON.stringify(r.result?.metrics||r.result?.error||(single?data.run_error:null)||{})}<ArtifactBrowser jobId={jobId} runId={runId} episode={r.episode_id}/></td></tr>)}</tbody></table></div>
+    <div className="table-scroll"><table aria-label="逐回合状态"><thead><tr><th>回合</th><th>种子</th><th>程序执行状态</th><th>回合结果（平台协议）</th><th>业务进程退出码</th>{data.timing?.mode==='per_episode'&&<th>回合耗时</th>}<th>指标 / 异常</th></tr></thead><tbody>{(single?data.items.slice(0,1):data.items).map((r:any)=><tr key={r.episode_id}><td>{single?'整次执行':r.episode_id}</td><td>{single?'—':r.seed}</td><td>{single?(data.outcomes?.execution.normal?'正常结束':data.outcomes?.execution.abnormal?'异常退出':'参见程序执行统计'):state(r)}</td><td>{command?'不适用':protocolLabels[r.protocol_state]||(r.result?.status==='COMPLETED'?(r.result.success?'业务成功':'业务失败'):r.result?.status==='ERROR'?'回合异常（未分类）':'结果未上报')}</td><td>{r.execution_state==='not_applicable'?'不适用':r.result?.exit_code??'未上报'}</td>{data.timing?.mode==='per_episode'&&<td><DurationValue value={r.timing} anchor={data.timing} failed={!!error}/></td>}<td>{JSON.stringify(r.result?.metrics||r.result?.error||(single?data.run_error:null)||{})}<ArtifactBrowser jobId={jobId} runId={runId} episode={r.episode_id}/></td></tr>)}</tbody></table></div>
     <button disabled={page===1} onClick={()=>setPage(p=>p-1)}>上一页回合</button><span>第 {page} 页</span><button disabled={single||page*100>=data.planned} onClick={()=>setPage(p=>p+1)}>下一页回合</button>
   </>}</>;
 }

@@ -116,3 +116,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 2026-11-20 任务级 SDK 业务结果上报的定向回归：后端 73 项、前端 53 项通过，Vite/TypeScript 构建通过。该次用户要求不运行全量套件，统一覆盖率进程约 17% 时中止；定向覆盖率不代表全仓或功能组门槛。详见[定向验证记录](validation/task-level-sdk-report-20261120/README.md)。
 
 2026-11-23 Worker 0.21.14 当前版本全量：Python 2369 通过 / 126 条件跳过 / 0 失败，整体 92.02% 行 / 83.16% 分支，全部目录与关键功能组门槛通过。前端首轮指南定位歧义 1 项失败，修正断言后完整复测 243 通过 / 10 条件跳过；前端未插桩。使用一次性 PostgreSQL，未部署节点或补做真机验收。详见[本轮记录](validation/full-regression-20261123/README.md)。
+
+执行时间功能将 backend/app/execution_timing.py、episodes.py 纳入“业务执行与结果”关键分组；runner/episode_timing.py 已由 runner/*.py 计入。门槛不变，新增采集与投影代码均计入目录分母。

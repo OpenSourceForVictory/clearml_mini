@@ -1,0 +1,12 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test execution-timing.spec.ts
+
+
+Running 3 tests using 1 worker
+
+  ✓  1 tests/execution-timing.spec.ts:3:1 › duration formatting, monotonic live clock, stale freeze, recovery and terminal (8.8s)
+  ✓  2 tests/execution-timing.spec.ts:31:1 › episode time column follows process mode; whole process retains protocol results (2.5s)
+  ✓  3 tests/execution-timing.spec.ts:55:1 › many timing rows share one ticker and release it on unmount (211ms)
+
+  3 passed (11.9s)

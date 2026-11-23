@@ -1,0 +1,172 @@
+{
+  "retry": {
+    "batch_id": "ce286300-8b3e-493b-b39b-1ccceeb1d082",
+    "job_id": "ab956644-88bc-4626-a781-74064a5e42eb",
+    "attempts": [
+      {
+        "id": "70bff83b-42f8-441e-a1db-a91d075af825",
+        "execution_id": "df5a92de-fb21-42c5-ac53-92a22a8acc9f",
+        "attempt": 1,
+        "status": "FAILED",
+        "timing": {
+          "as_of": "2026-11-23T03:51:08.689052+00:00",
+          "mode": "per_episode",
+          "execution": {
+            "state": "finished",
+            "started_at": "2026-11-23T03:47:57.284680+00:00",
+            "finished_at": "2026-11-23T03:48:02.327776+00:00",
+            "seconds": 5.043096,
+            "source": "platform_lifecycle",
+            "quality": "recorded"
+          },
+          "waiting": {
+            "state": "finished",
+            "started_at": "2026-11-23T03:47:56.671646+00:00",
+            "finished_at": "2026-11-23T03:47:57.284680+00:00",
+            "seconds": 0.613034,
+            "source": "platform_lifecycle",
+            "quality": "recorded"
+          },
+          "running_started_at": "2026-11-23T03:47:57.631170+00:00"
+        }
+      },
+      {
+        "id": "caf11ea2-a367-46c2-81b6-f6b586e6f5b5",
+        "execution_id": "7027ac65-0e00-4b7e-b7d0-bda497498371",
+        "attempt": 2,
+        "status": "FAILED",
+        "timing": {
+          "as_of": "2026-11-23T03:51:08.689052+00:00",
+          "mode": "per_episode",
+          "execution": {
+            "state": "finished",
+            "started_at": "2026-11-23T03:51:02.895150+00:00",
+            "finished_at": "2026-11-23T03:51:08.516905+00:00",
+            "seconds": 5.621755,
+            "source": "platform_lifecycle",
+            "quality": "recorded"
+          },
+          "waiting": {
+            "state": "finished",
+            "started_at": "2026-11-23T03:51:00.614853+00:00",
+            "finished_at": "2026-11-23T03:51:02.895150+00:00",
+            "seconds": 2.280297,
+            "source": "platform_lifecycle",
+            "quality": "recorded"
+          },
+          "running_started_at": "2026-11-23T03:51:03.284813+00:00"
+        }
+      }
+    ]
+  },
+  "stops": [
+    {
+      "batch_id": "97135dea-9e99-4b66-a781-407f05dfa078",
+      "job_id": "7eb8e981-a4b8-468c-a3ec-9edaab364077",
+      "status": "CANCELLED",
+      "timing": {
+        "as_of": "2026-11-23T03:51:16.295819+00:00",
+        "mode": "per_episode",
+        "execution": {
+          "state": "finished",
+          "started_at": "2026-11-23T03:51:11.002335+00:00",
+          "finished_at": "2026-11-23T03:51:16.013392+00:00",
+          "seconds": 5.011057,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "waiting": {
+          "state": "finished",
+          "started_at": "2026-11-23T03:51:08.705213+00:00",
+          "finished_at": "2026-11-23T03:51:11.002335+00:00",
+          "seconds": 2.297122,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "running_started_at": "2026-11-23T03:51:11.325812+00:00"
+      },
+      "episodes": [
+        {
+          "episode_id": 1,
+          "timing": {
+            "as_of": "2026-11-23T03:51:16.295819+00:00",
+            "started_at": null,
+            "finished_at": null,
+            "seconds": null,
+            "source": "runner_monotonic",
+            "quality": "unknown",
+            "state": "interrupted",
+            "clock_adjusted": false
+          }
+        }
+      ]
+    },
+    {
+      "batch_id": "ae2c5c85-96d7-4adb-a612-849c55792c05",
+      "job_id": "fe82aa3c-4fae-4b69-a273-518ed8357961",
+      "status": "FAILED",
+      "timing": {
+        "as_of": "2026-11-23T03:51:34.489805+00:00",
+        "mode": "per_episode",
+        "execution": {
+          "state": "finished",
+          "started_at": "2026-11-23T03:51:21.127607+00:00",
+          "finished_at": "2026-11-23T03:51:34.135558+00:00",
+          "seconds": 13.007951,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "waiting": {
+          "state": "finished",
+          "started_at": "2026-11-23T03:51:18.314919+00:00",
+          "finished_at": "2026-11-23T03:51:21.127607+00:00",
+          "seconds": 2.812688,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "running_started_at": "2026-11-23T03:51:21.477735+00:00"
+      },
+      "episodes": [
+        {
+          "episode_id": 1,
+          "timing": {
+            "as_of": "2026-11-23T03:51:34.489805+00:00",
+            "started_at": null,
+            "finished_at": null,
+            "seconds": null,
+            "source": "runner_monotonic",
+            "quality": "unknown",
+            "state": "interrupted",
+            "clock_adjusted": false
+          }
+        }
+      ]
+    }
+  ],
+  "legacy": {
+    "batch_id": "66df442d-167e-40c7-b735-ad405861e824",
+    "job_id": "6a9f57a0-c79b-4823-9e57-486e5b43907b",
+    "timing": {
+      "as_of": "2026-11-23T03:52:00.838352+00:00",
+      "mode": "whole_task",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:51:59.456721+00:00",
+        "finished_at": "2026-11-23T03:52:00.396839+00:00",
+        "seconds": 0.940118,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:51:56.797633+00:00",
+        "finished_at": "2026-11-23T03:51:59.456721+00:00",
+        "seconds": 2.659088,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:52:00.026420+00:00"
+    },
+    "embedded_episode_timing": false
+  }
+}

@@ -53,6 +53,9 @@ def report(s, batch, at):
         func.sum(case((EpisodeRecord.result['status'].as_string() == 'ERROR', 1), else_=0)))
         .where(EpisodeRecord.run_id.in_([run.id for _, run in rows])).group_by(EpisodeRecord.run_id))}
     result_rows = load_records(s,[run.id for _,run in rows])
+    from . import execution_timing as timing
+    from fastapi.encoders import jsonable_encoder
+    starts=timing.pending_starts(s,[run.id for _,run in rows])
     cases = []
     for job, run in rows:
         spec = job.client_spec
@@ -68,7 +71,7 @@ def report(s, batch, at):
                       image=template['image'], environment_digest=digest({
                           'runtime': (template.get('runtime') or {}).get('environment', {}),
                           'overrides': spec.get('environment', {})}))
-        cases.append(dict(outcomes=summarize_attempt(job,run,result_rows[run.id]),job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,task_type=template.get('task_type','evaluation'),
+        cases.append(dict(timing=jsonable_encoder(timing.attempt(job,run,at,starts.get(run.id))),outcomes=summarize_attempt(job,run,result_rows[run.id]),job_id=job.id, case_id=job.case_id, run_id=run.id, attempt=run.attempt,task_type=template.get('task_type','evaluation'),
                           status=job.status, **definition, definition_digest=digest(definition), config=config,
                           episode_reporting=reporting, completed_episodes=done, successes=successes,
                           goal_failures=0 if command else done-successes, episode_errors=errors,
@@ -88,7 +91,7 @@ def report(s, batch, at):
               'RUNNING' if any(x in ACTIVE for x in states) else
               'PENDING' if any(x not in TERMINAL for x in states) else
               'FAILED' if any(x in ('FAILED', 'TIMED_OUT') for x in states) else 'CANCELLED')
-    return dict(outcomes=aggregate(c['outcomes'] for c in cases),schema_version=1, generated_at=at, batch=dict(id=batch.id, title=batch.title,
+    return dict(timing=jsonable_encoder(timing.batch(batch,[run for _,run in rows],at)),outcomes=aggregate(c['outcomes'] for c in cases),schema_version=1, generated_at=at, batch=dict(id=batch.id, title=batch.title,
                 suite_id=batch.suite_id, status=status, scheduling_paused=batch.scheduling_paused, model_version_verified=False), summary=summary, cases=cases)
 
 
@@ -137,7 +140,7 @@ CSV_COLUMNS = ['schema_version', 'generated_at', 'batch_id', 'batch_title', 'cas
                'protocol_success', 'protocol_failure', 'protocol_invalid', 'protocol_errors', 'protocol_unreported',
                'protocol_not_applicable_tasks', 'protocol_valid', 'protocol_planned', 'protocol_success_rate',
                'task_result_state', 'task_result_success', 'task_result_metrics', 'task_result_summary',
-               'process_scope', 'wrapper_exit_code']
+               'process_scope', 'wrapper_exit_code', 'batch_elapsed_seconds', 'execution_seconds', 'waiting_seconds', 'execution_time_state']
 
 
 def csv_text(value):
@@ -155,6 +158,11 @@ def export_csv(value):
         row = dict(item, schema_version=value['schema_version'], generated_at=value['generated_at'],
                    batch_id=value['batch']['id'], batch_title=value['batch']['title'])
         row.update(item.get('config', {}))
+        timing=item.get('timing',{})
+        row.update(batch_elapsed_seconds=value.get('timing',{}).get('elapsed',{}).get('seconds'),
+                   execution_seconds=timing.get('execution',{}).get('seconds'),
+                   waiting_seconds=timing.get('waiting',{}).get('seconds'),
+                   execution_time_state=timing.get('execution',{}).get('state'))
         outcomes=item.get('outcomes',{})
         row.update({'program_'+k:v for k,v in outcomes.get('execution',{}).items()})
         row.update({'protocol_'+k:v for k,v in outcomes.get('protocol',{}).items()})

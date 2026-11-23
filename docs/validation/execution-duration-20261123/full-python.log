@@ -1,0 +1,92 @@
+ss.....sss...........sssssssss....ssss....ssssssss...................... [  2%]
+........................................................................ [  5%]
+............s........................................................... [  8%]
+.................................................s...................... [ 11%]
+........................................................................ [ 14%]
+........................................................................ [ 16%]
+.................ss..................................................... [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+..............................ssssssssssssssssssssssss.................s [ 33%]
+ss...................................................................... [ 36%]
+........................................................................ [ 39%]
+.............ssss....................................................... [ 42%]
+....................sssss............................................... [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+......s.s.s.s.s.s.s.s.s.s.s.s.s.s.s....s....s....s....s....s............ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 76%]
+................................................................s.s.s.s. [ 78%]
+..ssssssssssssssssssssssssssssssssss.................................... [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 87%]
+......................................................s................. [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+................s...................                                     [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/integration/test_orchestration_race.py::test_joint_reservation_and_submission_race
+backend/tests/test_service_instance_claim_identity.py::test_same_slot_two_service_claims
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'exclude' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'exclude' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+backend/tests/test_process_log_concurrency.py::test_parallel_scope_writes_share_one_execution_budget
+backend/tests/test_process_log_concurrency.py::test_parallel_scope_writes_share_one_execution_budget
+backend/tests/test_process_log_concurrency.py::test_parallel_scope_writes_share_one_execution_budget
+backend/tests/test_process_log_concurrency.py::test_parallel_scope_writes_share_one_execution_budget
+backend/tests/test_process_log_concurrency.py::test_actual_writer_crash_recovers_pending_rotation[before-index]
+backend/tests/test_process_log_concurrency.py::test_actual_writer_crash_recovers_pending_rotation[after-index]
+backend/tests/test_process_log_concurrency.py::test_actual_writer_crash_recovers_pending_rotation[after-unlink]
+backend/tests/test_worker_retention.py::test_cross_process_lock_and_offline_receipt
+  /opt/anaconda3/lib/python3.13/multiprocessing/popen_fork.py:67: DeprecationWarning: This process (pid=140760) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/.runtime/execution-timing-20261123/python/tests.xml -
+2430 passed, 126 skipped, 11 warnings in 1907.48s (0:31:47)
+Wrote JSON report to /home/dgh/Code/clearml_mini/.runtime/execution-timing-20261123/python/coverage.json
+Wrote XML report to /home/dgh/Code/clearml_mini/.runtime/execution-timing-20261123/python/coverage.xml
+Wrote HTML report to /home/dgh/Code/clearml_mini/.runtime/execution-timing-20261123/python/html/index.html
+# Python 代码覆盖率
+
+Python only; frontend and uninstrumented subprocesses excluded from claims
+
+| 目录 / 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 全部 Python | 177 | 92.09% | 83.30% |
+| backend/app | 54 | 96.05% | 84.44% |
+| worker | 29 | 92.26% | 82.80% |
+| node_agent | 8 | 91.67% | 84.29% |
+| runner | 32 | 95.11% | 86.94% |
+| onboarding | 9 | 97.49% | 84.15% |
+| scripts | 45 | 80.82% | 78.20% |
+
+## 功能视图（可重叠，不相加）
+
+| 功能 | 文件数 | 行覆盖率 | 分支覆盖率 |
+| --- | ---: | ---: | ---: |
+| 调度与资源 | 4 | 97.62% | 88.54% |
+| 节点纳管与升级 | 18 | 95.67% | 83.65% |
+| 业务执行与结果 | 53 | 96.37% | 89.55% |
+| 节点监控 | 8 | 91.67% | 84.29% |
+| 运行模板注册管理 | 5 | 94.12% | 77.48% |
+| 评测结果与批次管理 | 4 | 97.74% | 90.70% |
+| 任务集合与编排 | 5 | 96.17% | 81.71% |
+
+## 门槛检查
+
+通过。测试是否成功需单独查看 tests.xml / test-exit.json。

@@ -1,0 +1,12 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test command-authoring.spec.ts
+
+
+Running 3 tests using 1 worker
+
+  ✓  1 tests/command-authoring.spec.ts:2:37 › ordinary command template registration docker (503ms)
+  ✓  2 tests/command-authoring.spec.ts:2:37 › ordinary command template registration host (438ms)
+  ✓  3 tests/command-authoring.spec.ts:21:1 › command collection normalizes episodes and wizard submits without inference address (673ms)
+
+  3 passed (2.0s)

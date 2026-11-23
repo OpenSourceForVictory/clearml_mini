@@ -1,0 +1,380 @@
+[
+  {
+    "name": "host-command-whole_task-success",
+    "batch_id": "2c29c2a2-fddf-48c9-9e43-85ec759d938d",
+    "job_id": "4a6083cb-273b-450b-ac17-c807336c9637",
+    "execution_id": "d00823dd-de5c-4cec-be3b-5adea8a0dad7",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:47:43.986560+00:00",
+      "mode": "whole_task",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:41.041259+00:00",
+        "finished_at": "2026-11-23T03:47:43.947062+00:00",
+        "seconds": 2.905803,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:39.437244+00:00",
+        "finished_at": "2026-11-23T03:47:41.041259+00:00",
+        "seconds": 1.604015,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:47:41.400891+00:00"
+    },
+    "episodes": []
+  },
+  {
+    "name": "host-command-per_episode-success",
+    "batch_id": "fca496cd-637e-47cd-9d35-ac9210ed346d",
+    "job_id": "4c96edcd-a6af-4088-a19b-074b8174d0de",
+    "execution_id": "361f1251-cd27-431e-a180-d147825be393",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:47:50.569121+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:45.108995+00:00",
+        "finished_at": "2026-11-23T03:47:50.202149+00:00",
+        "seconds": 5.093154,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:44.006646+00:00",
+        "finished_at": "2026-11-23T03:47:45.108995+00:00",
+        "seconds": 1.102349,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:47:45.490913+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T03:47:50.571567+00:00",
+          "started_at": "2026-11-23T03:47:45.525539+00:00",
+          "finished_at": "2026-11-23T03:47:45.835491+00:00",
+          "seconds": 0.30995252006687224,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T03:47:50.571567+00:00",
+          "started_at": "2026-11-23T03:47:45.853910+00:00",
+          "finished_at": "2026-11-23T03:47:46.176421+00:00",
+          "seconds": 0.32251805788837373,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      }
+    ]
+  },
+  {
+    "name": "host-direct-per_episode-success",
+    "batch_id": "34586162-8300-4d7f-9c78-89b7d891dd59",
+    "job_id": "70b589e6-6584-460f-b3f1-7d95944a456a",
+    "execution_id": "79bd920e-f51b-4cf1-93ef-42c304701689",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:47:56.653550+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:51.198129+00:00",
+        "finished_at": "2026-11-23T03:47:56.289410+00:00",
+        "seconds": 5.091281,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:50.598179+00:00",
+        "finished_at": "2026-11-23T03:47:51.198129+00:00",
+        "seconds": 0.59995,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:47:51.576145+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T03:47:56.656328+00:00",
+          "started_at": "2026-11-23T03:47:51.610545+00:00",
+          "finished_at": "2026-11-23T03:47:51.952342+00:00",
+          "seconds": 0.3417953550815582,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T03:47:56.656328+00:00",
+          "started_at": "2026-11-23T03:47:51.971991+00:00",
+          "finished_at": "2026-11-23T03:47:52.327428+00:00",
+          "seconds": 0.35543825407512486,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      }
+    ]
+  },
+  {
+    "name": "host-direct-per_episode-missing",
+    "batch_id": "ce286300-8b3e-493b-b39b-1ccceeb1d082",
+    "job_id": "ab956644-88bc-4626-a781-74064a5e42eb",
+    "execution_id": "df5a92de-fb21-42c5-ac53-92a22a8acc9f",
+    "status": "FAILED",
+    "error": "runner exited with code 2",
+    "timing": {
+      "as_of": "2026-11-23T03:48:02.726181+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:57.284680+00:00",
+        "finished_at": "2026-11-23T03:48:02.327776+00:00",
+        "seconds": 5.043096,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:47:56.671646+00:00",
+        "finished_at": "2026-11-23T03:47:57.284680+00:00",
+        "seconds": 0.613034,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:47:57.631170+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T03:48:02.729124+00:00",
+          "started_at": "2026-11-23T03:47:57.663223+00:00",
+          "finished_at": "2026-11-23T03:47:58.003674+00:00",
+          "seconds": 0.3404522789642215,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "ERROR",
+        "exit_code": 0
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T03:48:02.729124+00:00",
+          "started_at": "2026-11-23T03:47:58.022683+00:00",
+          "finished_at": "2026-11-23T03:47:58.373447+00:00",
+          "seconds": 0.3507915970403701,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "ERROR",
+        "exit_code": 0
+      }
+    ]
+  },
+  {
+    "name": "host-sdk-command-whole_task-success",
+    "batch_id": "c5c0eb55-3770-46a8-8c06-4d306fcfb480",
+    "job_id": "44398bba-8ae7-4081-a2d0-658b0d03c734",
+    "execution_id": "212340ca-30eb-49a3-abaa-1af638e0482e",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:48:08.804274+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:03.372811+00:00",
+        "finished_at": "2026-11-23T03:48:08.463814+00:00",
+        "seconds": 5.091003,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:02.745571+00:00",
+        "finished_at": "2026-11-23T03:48:03.372811+00:00",
+        "seconds": 0.62724,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:48:03.744244+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T03:48:08.806756+00:00",
+          "started_at": "2026-11-23T03:48:03.796999+00:00",
+          "finished_at": "2026-11-23T03:48:04.073895+00:00",
+          "seconds": 0.27689669001847506,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T03:48:08.806756+00:00",
+          "started_at": "2026-11-23T03:48:04.083001+00:00",
+          "finished_at": "2026-11-23T03:48:04.366231+00:00",
+          "seconds": 0.28322949819266796,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      }
+    ]
+  },
+  {
+    "name": "docker-sdk-command-whole_task-success",
+    "batch_id": "19545a33-1ed3-4357-b6e3-922c84447b72",
+    "job_id": "e959c11e-4b5b-4b1f-96c0-4ddf957457b8",
+    "execution_id": "e634ded2-43c4-4daa-9e89-16486171593e",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:48:15.385250+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:09.462132+00:00",
+        "finished_at": "2026-11-23T03:48:15.066639+00:00",
+        "seconds": 5.604507,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:08.819603+00:00",
+        "finished_at": "2026-11-23T03:48:09.462132+00:00",
+        "seconds": 0.642529,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:48:10.257987+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T03:48:15.389114+00:00",
+          "started_at": "2026-11-23T03:48:10.302096+00:00",
+          "finished_at": "2026-11-23T03:48:10.601212+00:00",
+          "seconds": 0.2991158359218389,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T03:48:15.389114+00:00",
+          "started_at": "2026-11-23T03:48:10.619182+00:00",
+          "finished_at": "2026-11-23T03:48:10.916206+00:00",
+          "seconds": 0.29702470102347434,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        },
+        "status": "COMPLETED",
+        "exit_code": 0
+      }
+    ]
+  },
+  {
+    "name": "docker-direct-whole_task-success",
+    "batch_id": "df25989f-e564-4dd7-a2d0-829e885f5247",
+    "job_id": "e5b88c24-07c0-4fbe-9262-22953e1958f3",
+    "execution_id": "2f5c567c-d5d5-4dea-8fe6-062f99cbbd7d",
+    "status": "SUCCEEDED",
+    "error": null,
+    "timing": {
+      "as_of": "2026-11-23T03:48:22.977150+00:00",
+      "mode": "whole_task",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:17.561507+00:00",
+        "finished_at": "2026-11-23T03:48:22.859895+00:00",
+        "seconds": 5.298388,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T03:48:15.410579+00:00",
+        "finished_at": "2026-11-23T03:48:17.561507+00:00",
+        "seconds": 2.150928,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T03:48:18.200826+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": null,
+        "status": null,
+        "exit_code": null
+      },
+      {
+        "episode_id": 2,
+        "timing": null,
+        "status": null,
+        "exit_code": null
+      }
+    ]
+  }
+]

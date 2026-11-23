@@ -321,6 +321,7 @@ class Worker:
             # No bind mount or shell expansion. The file lives inside the container.
             config = {**task['client_spec'], 'job_id': task['job_id'], 'execution_id': task['execution_id'],
                       'episodes': task['episodes'], 'timeout_seconds': task['timeout_seconds']}
+            config['_episode_timing_v1'] = bool(task.get('episode_timing_v1'))
             config.update(runner_config('/tmp/mini-eval-artifacts' if artifact_root else None))
             if process_log_config:config['_process_logs']=process_log_config
             if is_service(task):
@@ -459,7 +460,7 @@ class Worker:
     def execute(self, task):
         # Existing execution journals keep their negotiated protocol across upgrades.
         if self.state is not None:
-            task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False)}
+            task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False), 'episode_timing_v1':self.state.get('task',{}).get('episode_timing_v1',False)}
         sender = collector = None
         log_gap = False
         log_drain_started = None

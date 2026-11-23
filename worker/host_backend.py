@@ -104,6 +104,7 @@ class HostBackend:
         artifact_output=output(w.config,task,directory)
         inp=directory/'input.json'
         config={**task['client_spec'],'job_id':task['job_id'],'execution_id':task['execution_id'],'episodes':task['episodes'],'timeout_seconds':task['timeout_seconds']}
+        config['_episode_timing_v1'] = bool(task.get('episode_timing_v1'))
         config.update(runner_config(artifact_root))
         if task.get('process_logs_v1'):
             from .process_logs import prepare as prepare_logs

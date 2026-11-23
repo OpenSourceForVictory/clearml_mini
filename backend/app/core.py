@@ -268,6 +268,7 @@ class RunLogChunk(Base):
 
 class Event(Base):
     __tablename__ = 'job_events'
+    __table_args__ = (Index('ix_job_events_run_status_created', 'run_id', 'new_status', 'created_at'),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     job_id: Mapped[str] = mapped_column(ForeignKey('evaluation_jobs.id'))
     run_id: Mapped[Optional[str]] = mapped_column(ForeignKey('evaluation_runs.id'))

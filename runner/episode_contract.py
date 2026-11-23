@@ -7,7 +7,7 @@ from .cs_contract import artifact_name
 def validate_event(event):
     if not isinstance(event, dict):
         raise ValueError('episode event must be an object')
-    allowed = {'episode_id', 'seed', 'status', 'success', 'metrics', 'artifacts', 'runtime', 'error', 'exit_code'}
+    allowed = {'episode_id', 'seed', 'status', 'success', 'metrics', 'artifacts', 'runtime', 'error', 'exit_code', 'timing'}
     if set(event) - allowed:
         raise ValueError('unknown episode event fields')
     for key, lower, upper in [('episode_id', 1, 10000), ('seed', 0, 2147483647)]:
@@ -37,6 +37,10 @@ def validate_event(event):
             raise ValueError('invalid error')
     elif status != 'STARTED':
         raise ValueError('invalid episode status')
+    if 'timing' in event:
+        from .episode_timing import validate
+        validate(event['timing'], status)
+        required.add('timing')
     if 'exit_code' in event:
         if status == 'STARTED' or type(event['exit_code']) is not int or not -255 <= event['exit_code'] <= 255:
             raise ValueError('invalid episode exit_code')

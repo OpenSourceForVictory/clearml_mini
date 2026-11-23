@@ -101,7 +101,13 @@ def visible(job: Job, user: User):
     return job
 
 
-def detail(job: Job):
+def detail(job: Job, *, at=None, pending=None):
+    from sqlalchemy.orm import object_session
+    from . import execution_timing
+    at = at or datetime.now(timezone.utc)
+    if pending is None:
+        session = object_session(job)
+        pending = execution_timing.pending_starts(session, [r.id for r in job.runs]) if session else {}
     return {'id': job.id, 'owner_id': job.owner_id, 'owner_name': job.owner.username, 'title': job.title, 'benchmark': job.benchmark,
             'client_spec': job.client_spec, 'batch_id': job.batch_id, 'case_id': job.case_id,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
@@ -110,8 +116,16 @@ def detail(job: Job):
             'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
             'finished_at': job.finished_at, 'error': job.error,
             'attempts': [{'id': r.id, 'execution_id': r.execution_id, 'attempt': r.attempt, 'status': r.status,
-            'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
+            'timing': execution_timing.attempt(job, r, at, pending.get(r.id)), 'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
             'log_bytes': r.log_bytes, **endpoints.view(r, job.client_spec)} for r in job.runs]}
+
+
+def details(session, jobs):
+    from . import execution_timing
+    jobs = list(jobs)
+    at = datetime.now(timezone.utc)
+    pending = execution_timing.pending_starts(session, [r.id for j in jobs for r in j.runs])
+    return [detail(j, at=at, pending=pending) for j in jobs]
 
 
 @app.get('/healthz')
@@ -257,7 +271,7 @@ def jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), s
     q = select(Job).options(selectinload(Job.runs), selectinload(Job.owner)).where(Job.owner_id == user.id).order_by(Job.created_at.desc())
     if status:
         q = q.where(Job.status == status)
-    return [detail(j) for j in s.scalars(q.offset((page-1)*page_size).limit(page_size))]
+    return details(s, s.scalars(q.offset((page-1)*page_size).limit(page_size)))
 
 
 @app.get('/api/v1/jobs/{job_id}')
@@ -302,7 +316,7 @@ def admin_jobs(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=1
     query = select(Job).options(selectinload(Job.runs), selectinload(Job.owner)).order_by(Job.created_at.desc(), Job.id)
     if status:
         query = query.where(Job.status == status)
-    return [detail(j) for j in s.scalars(query.offset((page-1)*page_size).limit(page_size))]
+    return details(s, s.scalars(query.offset((page-1)*page_size).limit(page_size)))
 
 
 @app.get('/api/v1/jobs/{job_id}/logs')

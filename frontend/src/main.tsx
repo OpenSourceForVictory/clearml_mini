@@ -1,3 +1,4 @@
+import {AttemptTiming,DurationValue,type Timing} from './execution-timing';
 import {ProcessLogs} from './process-logs';
 import {ExecutionLocation} from './execution-location';
 import {clearLogin, rememberLogin, watchSession} from "./login-session";
@@ -27,6 +28,7 @@ type Pool = {
   max_gpu_utilization: number;
 };
 type Attempt = {
+  timing?: Timing;
   endpoint?: string | null;
   endpoint_mode?: string | null;
   id: string;
@@ -561,7 +563,7 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
                 ))}
               </select>
             </Field>
-            {run&&<><ExecutionLocation jobId={id} runId={run.id}/><ProcessLogs jobId={id} runId={run.id}/></>}
+            {run&&<><AttemptTiming value={run.timing}/><ExecutionLocation jobId={id} runId={run.id}/><ProcessLogs jobId={id} runId={run.id}/></>}
             {job.client_spec && <p>本次尝试推理服务：{run?.endpoint||'未分配'} {run?.endpoint_mode==='exclusive'?'独占':run?.endpoint_mode==='shared'?'共享':''}</p>}
             {run?.metrics && (
               <div className="stats metrics">
@@ -576,8 +578,8 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
                   <strong>{run.metrics.episode_count}</strong>
                 </div>
                 <div>
-                  <small>耗时</small>
-                  <strong>{run.metrics.runtime.toFixed(1)}s</strong>
+                  <small>业务上报耗时</small>
+                  <strong>{typeof run.metrics.runtime==='number'?run.metrics.runtime.toFixed(1)+'s':'未上报'}</strong>
                 </div>
               </div>
             )}
