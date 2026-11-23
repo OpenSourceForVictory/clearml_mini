@@ -112,6 +112,22 @@ def test_claim_rechecks_candidate_after_lock(env, monkeypatch):
     assert response.json() == {'task': None, 'cleanup': []}
 
 
+def test_job_lookup_errors_and_admin_health_permissions(env):
+    _, client, auth = env
+    missing = '00000000-0000-0000-0000-000000000000'
+    assert client.get(f'/api/v1/jobs/{missing}', headers=auth['alice']).status_code == 404
+    assert client.post(f'/api/v1/jobs/{missing}/cancel', headers=auth['alice']).status_code == 404
+    assert client.post(f'/api/v1/jobs/{missing}/retry', headers=auth['alice']).status_code == 404
+    assert client.get(f'/api/v1/jobs/{missing}/logs', headers=auth['alice']).status_code == 404
+    assert client.get('/api/v1/admin/health', headers=auth['alice']).status_code == 403
+    health = client.get('/api/v1/admin/health', headers=auth['admin'])
+    assert health.status_code == 200
+    assert health.json()['quarantined_slots'] == 0
+    job_id = submit(env)
+    assert client.get(f'/api/v1/jobs/{job_id}/logs', headers=auth['alice'],
+                      params={'run_id': missing}).status_code == 404
+
+
 def test_worker_protocol_and_permissions(env):
     main, c, auth = env
     token, slots = node(env)

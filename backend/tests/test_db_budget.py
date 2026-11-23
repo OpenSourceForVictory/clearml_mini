@@ -291,15 +291,20 @@ def test_real_row_lock_times_out_without_connection_leak(online):
     assert client.post('/api/v1/worker/heartbeat', headers=headers, json={'slot_id': 's'}).status_code == 200
 
 
-def test_claim_does_not_queue_behind_scheduler(online):
+def test_claim_defers_without_queueing_behind_scheduler(online):
     main, client, headers = online
     from backend.app.scheduling import lock
     with main.ControlSessionLocal() as holder:
         lock(holder)
         start = time.monotonic()
         response = client.post('/api/v1/worker/slots/s/claim', headers=headers, json={})
-        assert response.status_code == 503, response.text
+        assert response.status_code == 200, response.text
+        assert response.json() == {'task': None, 'cleanup': []}
         assert time.monotonic() - start < .7
+        idle = client.post('/api/v1/worker/slots/s/claim', headers=headers,
+                           json={'known_execution_ids': ['e']})
+        assert idle.status_code == 200
+        assert idle.json() == {'task': None, 'cleanup': []}
         assert main.SessionLocal.kw['bind'].pool.checkedout() == 0
 
 

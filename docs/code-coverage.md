@@ -124,3 +124,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 执行时间功能将 backend/app/execution_timing.py、episodes.py 纳入“业务执行与结果”关键分组；runner/episode_timing.py 已由 runner/*.py 计入。门槛不变，新增采集与投影代码均计入目录分母。
 
 2026-11-23 控制面五类预算专项：按用户要求暂不运行全量；使用同一 `backend/tests/project.coveragerc` 对相关测试采集分支覆盖率。仅可报告对应模块的专项覆盖情况，不可替代全目录或关键功能组门槛。首次扩大专项包含 1 个旧观察存储断言失败，已保留失败与复测记录，见 `docs/validation/control-plane-backpressure-20261123/README.md`。
+
+2026-11-24 双进程部署与空闲领取优化后统一全量：使用隔离 PostgreSQL 完整运行 `python -m scripts.test_coverage`，Python 2656 通过 / 132 条件跳过 / 0 失败，总体行 92.29%、分支 83.67%，全部目录和关键功能组门槛通过。`backend/app/main.py` 为 97.07% 行 / 84.88% 分支。原有两次未通过证据保留：第一次在旧 503 重试断言处中断；第二次完整运行发现旧领取接口测试仍期待 503，修正后最终轮次通过。132 条跳过保留真实 Docker/systemd/root 等环境条件，不宣称这些场景已由模拟或本机 GPU 演示任务覆盖。完整测试和现场范围见[双进程验证](validation/split-control-api-process-20261123/README.md)。

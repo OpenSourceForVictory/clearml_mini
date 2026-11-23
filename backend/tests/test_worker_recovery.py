@@ -149,7 +149,10 @@ def test_rejected_completion_fails_permanently_but_outages_keep_journal(tmp_path
             if path.endswith('/heartbeat'):return {'lease_seconds':30,'cancel':False}
             if path.endswith('/complete'):
                 completions.append(data)
-                if data['status']=='SUCCEEDED':raise APIError(status,'episode results missing')
+                if data['status']=='SUCCEEDED' and (status != 503 or len(completions) == 1):
+                    if status == 503:
+                        assert w.state is not None and removed == []
+                    raise APIError(status,'episode results missing')
             return {}
     w.api=API()
     monkeypatch.setattr(w,'inspect',lambda _: {'State':{'Running':False,'Status':'exited','ExitCode':0}})
@@ -158,8 +161,9 @@ def test_rejected_completion_fails_permanently_but_outages_keep_journal(tmp_path
     from types import SimpleNamespace
     monkeypatch.setattr('worker.client.docker',lambda *a,**kw:SimpleNamespace(stdout='{"final":{"success_rate":1,"episode_count":2,"runtime":0.1}}\n',stderr=''))
     if status==503:
-        with pytest.raises(APIError):w.execute(task)
-        assert w.state is not None and removed==[] and len(completions)==1
+        w.execute(task)
+        assert len(completions)==2 and completions[0]==completions[1]
+        assert removed==[execution] and w.state is None
     else:
         w.execute(task)
         assert [c['status'] for c in completions]==['SUCCEEDED','FAILED']
