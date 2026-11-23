@@ -1,0 +1,2 @@
+{"workers": 5, "passed": true, "requests": {"200": 190}}
+{"workers": 50, "passed": false, "requests": {"503": 349, "200": 1521}}

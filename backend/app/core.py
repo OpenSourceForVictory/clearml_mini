@@ -109,6 +109,14 @@ class Worker(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class AgentObservation(Base):
+    """Latest Agent report; independent of desired Worker configuration writes."""
+    __tablename__ = 'node_agent_observations'
+    worker_id: Mapped[str] = mapped_column(ForeignKey('workers.id', ondelete='CASCADE'), primary_key=True)
+    session: Mapped[Optional[str]] = mapped_column(String(32))
+    payload: Mapped[dict] = mapped_column(JSON_TYPE, default=dict, server_default='{}')
+
+
 class Slot(Base):
     accelerator_type: Mapped[str] = mapped_column(String(10),default='gpu',server_default='gpu')
     accelerator_backends: Mapped[list] = mapped_column(JSON_TYPE,default=list,server_default='[]')

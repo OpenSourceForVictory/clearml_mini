@@ -98,10 +98,12 @@ def test_failed_exit_code_is_persisted_before_completion(execution, monkeypatch)
     original = worker.api.post
     def post(path, body=None):
         if path.endswith('/complete'):
-            raise APIError(503, 'busy')
+            # Completion is now retried while heartbeats succeed. Model a
+            # process crash to inspect the journal before ACK instead.
+            raise InterruptedLaunch()
         return original(path, body)
     worker.api.post = post
-    with pytest.raises(APIError):
+    with pytest.raises(InterruptedLaunch):
         worker.execute(task)
     failure = json.loads(worker.path.read_text())['terminal_failure']
     assert failure['status'] == 'FAILED' and failure['exit_code'] == 7
@@ -256,15 +258,18 @@ def test_local_startup_oserror_keeps_first_cause_across_reload(execution, monkey
 def test_host_control_plane_transport_failure_is_still_retryable(execution, monkeypatch, fault):
     worker, task, events = execution
     task['client_spec'] = {'template': {'execution_mode': 'host'}}
-    def offline(*args):
-        raise fault
-    worker.api.post = offline
-    monkeypatch.setattr(worker, 'create', lambda _: pytest.fail('heartbeat failed before creation'))
-    with pytest.raises(type(fault)):
-        worker.execute(task)
-    saved = json.loads(worker.path.read_text())
-    assert saved['created'] is False and 'terminal_failure' not in saved
-    assert not any(p.endswith('/complete') for p, _ in events)
+    original = worker.api.post
+    calls = []
+    def temporarily_offline(path, body=None):
+        calls.append(path)
+        if len(calls) == 1:
+            raise fault
+        return original(path, body)
+    worker.api.post = temporarily_offline
+    worker.execute(task)
+    assert calls[:2] == ['worker/heartbeat', 'worker/heartbeat']
+    assert not any(p == 'stop' for p, _ in events)
+    assert worker.state is None
 
 
 def test_docker_creation_oserror_keeps_existing_recovery_policy(execution, monkeypatch):

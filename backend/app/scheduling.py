@@ -74,6 +74,19 @@ def reconcile(s, at):
         overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
         startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
+            # Renewals no longer take the global scheduling lock. Never act on
+            # the pre-lock lease snapshot. Busy executions can be checked on
+            # the next tick instead of holding up all resource allocation.
+            run = s.scalar(select(Run).where(Run.id == run.id, Run.status.in_(ACTIVE))
+                           .with_for_update(skip_locked=True)
+                           .execution_options(populate_existing=True))
+            if run is None:
+                continue
+            expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
+            overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
+            startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
+            if not (expired or overrun or startup):
+                continue
             if overrun:
                 message = f'客户端执行总时限已到（{execution_timeout(s.get(Job, run.job_id))} 秒，全部回合共用）'
             elif startup:

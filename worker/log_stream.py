@@ -9,6 +9,7 @@ import subprocess
 import threading
 import time
 from runner.log_capture import Ring, read_ring, atomic, BLOCK
+from .backpressure import Backoff, transient
 
 LOG = logging.getLogger('mini-eval-worker')
 
@@ -119,6 +120,7 @@ class Sender:
 
     def run(self):
         delay=2
+        retry=Backoff()
         while not self.stop.is_set():
             try:
                 if not self.state['pending'] and not self.prepare():
@@ -134,12 +136,15 @@ class Sender:
                     self.state['offset']=self.state.pop('pending_offset')
                     self.state['sequence']=result['next_sequence']
                     self.state['pending']=None
-                self.save();delay=2
+                self.save();delay=2;retry.reset()
             except Exception as exc:
                 if getattr(exc,'status',None) in (400,401,403,404,409,413,422):
                     LOG.warning('execution log upload stopped: HTTP %s',exc.status)
                     return
                 LOG.warning('execution log upload deferred: %s',type(exc).__name__)
+                if transient(exc):
+                    retry.wait(exc,self.stop)
+                    continue
                 delay=min(30,delay*2)
             self.stop.wait(delay)
 

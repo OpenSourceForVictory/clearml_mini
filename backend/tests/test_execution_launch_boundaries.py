@@ -147,7 +147,7 @@ def test_artifact_upload_renews_before_each_file(container,monkeypatch,deadline_
         events.append((path,body));return {'lease_seconds':30}
     w.api=SimpleNamespace(post=post)
     monkeypatch.setattr('worker.client.time.monotonic',lambda:100)
-    deadline=[0] if deadline_set else None
+    deadline=[120] if deadline_set else None
     w.upload_artifacts(task,deadline)
     assert [p.rsplit('/',1)[-1] for p,_ in events]==['heartbeat','artifacts','heartbeat','artifacts']
     assert base64.b64decode(events[3][1]['content_base64'])==b'\x00\xff'

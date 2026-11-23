@@ -47,9 +47,9 @@ GPU/NPU 共享与双执行环境纳管：frontend/src/ssh-onboarding.tsx 新纳�
 
 新机共享选择入口：SSH 表单的加速卡区域排在认证字段之前；手动接入由 administration.tsx 收集设备类型和共享选择，node-enrollment.tsx 将其写入下载凭据，scripts/install_system_node.py 读取对应字段。重新生成凭据前后的选择不可混用。回归 ssh-onboarding.spec.ts、memberships.spec.ts；界面步骤见 docs/root-managed-host.md。
 
-Agent JSON 并发维护：所有修改 Worker.connection 的管理路径（Agent、单卡目录、纳管、SSH 清理、updater 回执）须先获取 Worker 行锁并刷新，再读取/合并；已有全局锁的路径保持全局锁→行锁顺序，心跳不取全局锁。不能用旧 ORM JSON 覆盖新样本；回归 integration/test_node_agent_race.py 在一次性 PostgreSQL 控制事务交错，SQLite 测试不能证明行锁有效。
+Agent 配置与观察并发维护：修改 Worker.connection 的管理路径（Agent 配置、单卡目录、纳管、SSH 清理、updater 回执）须先获取 Worker 行锁并刷新再合并；已有全局锁的路径保持全局锁→行锁顺序。Agent 心跳只更新独立观察记录，管理写不能复制旧观察快照回配置；读取最新样本使用 agent_state.record。回归 integration/test_node_agent_race.py 在一次性 PostgreSQL 控制事务交错，SQLite 测试不能证明行锁有效。
 
-心跳连接池争用：backend/app/execution.py 空闲心跳、node_agents.py 采样和 services.py 健康探测更新最新数据库状态，不排队等待 scheduling.py 全局锁；同节点/服务通过数据库行锁保护序号与配置。携带执行租约的心跳用 fast_lock 快速失败 503，保留状态转换互斥；探测会话启动仍用全局锁。见 docs/operations.md 和 docs/validation/heartbeat-db-contention/README.md；回归 test_heartbeat_contention.py、test_service_readiness.py、test_node_agents.py。
+心跳连接池争用：backend/app/execution.py 空闲心跳、node_agents.py 采样和 services.py 健康探测更新最新数据库状态，不排队等待 scheduling.py 全局锁；同节点/服务通过数据库行锁保护序号与配置。运行中执行续租使用执行/设备局部锁，STARTING 转换仍用 fast_lock 快速失败 503，保留状态转换互斥；探测会话启动仍用全局锁。见 docs/operations.md 和 docs/validation/heartbeat-db-contention/README.md；回归 test_heartbeat_contention.py、test_service_readiness.py、test_node_agents.py。进行中的 worker-control-plane-backpressure 使用 worker/backpressure.py 分类暂时过载、解析 Retry-After 并在租约内退避；client.py 可靠上报失败后回续租循环，禁止在通用 HTTP 客户端无限重放。test_worker_backpressure.py 和 test_worker_overload_execution.py 是边界故障注入，不代表真实数据库容量或真机模型验收；backend/app/db_budget.py 提供默认关闭的普通/执行控制/Agent观察/可靠结果/后台调度五类池、全 HTTP 入口并发和在线 SQL 预算，main.db 将鉴权和处理绑定同类 Session；claim 开启时使用 fast_lock。连接上限按 API 进程数累加，先升级 Worker 再启用 DB_BACKPRESSURE_ENABLED。test_db_budget.py 包含真实 PostgreSQL 超时、死锁和 HTTP 提前断开；backend/tests/control_plane_load.py 只新建并删除独立数据库，通过真实 HTTP 做阶梯负载，保留首次失败档，不代表真实模型或调度分配吞吐。当前容量与全量门槛以 docs/validation/control-plane-backpressure-20261123 的记录为准。
 
 独立解释器与业务目录的可载入样例：frontend/public/template-examples/catalog.json 中三个 `-cwd` 样例；机器环境 `template_demo_cwd` 指定 Python 与 code_root，模板 working_directory 指向 examples/runtime_templates。准备说明通过注册模板页面下载 README.md（源 examples/runtime_templates/README.md）。
 
@@ -153,7 +153,7 @@ Worker0.20.5：client.execute初始握手后使用专用线程发送started=fals
 
 批次删除外键回归：batch_deletion.remove 每层删除显式 flush，确保服务任务先于 ServiceInstance 删除，保持事务回滚；test_batch_deletion_records.py 必须先 tick 生成真实数据库服务记录，不能只提交编排定义后取消。SQLite 外键验证不等于现场 PostgreSQL 验收，见 docs/validation/batch-delete-foreign-keys/README.md。
 
-日志 v2 API：backend/app/execution_logs.py、core.RunLogState/RunLogChunk、迁移 y518b90；256 KiB/256 块滚动窗口、Run 行锁、ACK 摘要与游标缺口；旧 run_logs 不改写。Worker 0.21.0 按 bounded_logs_v2 协商；runner/log_capture.py 与 worker/log_stream.py 提供有界采集、独立协议记录和上传，旧 journal 不切换。只有所选节点升级后新执行才启用，不能声称已自动修复其他部署。见 docs/execution-logs.md，专项及 PostgreSQL 竞态测试 test_execution_logs_v2/test_execution_logs_postgres。
+日志 v2 API：backend/app/execution_logs.py、core.RunLogState/RunLogChunk、迁移 y518b90；256 KiB/256 块滚动窗口、RunLogState 行锁及执行专属终态事务锁、ACK 摘要与游标缺口；旧 run_logs 不改写。v2 写入仅对 Run 取 KEY SHARE，运行中心跳取 NO KEY UPDATE；旧 `/logs` 仍更新 Run.log_bytes 并与心跳争行锁。Worker 0.21.0 按 bounded_logs_v2 协商；runner/log_capture.py 与 worker/log_stream.py 提供有界采集、独立协议记录和上传，旧 journal 不切换。只有所选节点升级后新执行才启用，不能声称已自动修复其他部署。见 docs/execution-logs.md，专项及 PostgreSQL 竞态测试 test_execution_logs_v2/test_execution_logs_postgres。
 
 Worker 0.21.14 在 host create/start 调用边界将本地 OSError 转为可持久化的启动失败，避免与控制面通信故障混淆；硬中断/状态盘不可写仍拒绝不确定重启。中断点矩阵与首错失败证据见 docs/validation/host-missing-20261123/README.md。
 
@@ -282,3 +282,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 执行耗时：`backend/app/execution_timing.py` 统一批次/尝试/回合投影，批量读取 Event 最早 PENDING；迁移 ab852c3 仅加覆盖索引。`runner/episode_timing.py` 在 sdk.run 独立回合边界用 monotonic，`episode_contract` 验证可选 timing/schema=1；`execution.py` 按 episode_timing_v1 能力协商，Worker 恢复沿用快照。`episodes.py` 私有 `_platform_received_at` 不对外输出，原事件幂等比较须用 original helper，禁止业务输入私有键。前端 `execution-timing.tsx` 共用 tick，6 秒无新响应冻结。计时不改变调度/成功判据，不以缺时间触发重复启动。详见 docs/batch-monitoring.md、docs/worker-upgrades.md。
 
 模板说明：`TemplateCreate.description` 为可选 2000 字符纯文本；客户端列/服务端 definition JSON 存储，迁移 ac963d4。注册、草稿复制编辑及向导当前选项展示，不参与运行参数；历史快照不回填。见 [运行模板](../../../../docs/runtime-templates.md)。
+
+执行锁范围：运行中续租按 Run → Slot 行锁，不修改 Worker JSON；非执行配置确认仍锁 Worker。日志/回合/旧产物/任务结果按 Run 串行化，首次启动转换及资源分配/释放仍用全局调度锁。超时回收取行锁后刷新租约并复核，忙执行留到下次 tick。回归见 `backend/tests/test_execution_lock_scope.py`；运维边界见 `docs/operations.md`。
+
+控制面预算新增 DB_OBSERVATION_POOL_SIZE / DB_RESULT_POOL_SIZE / DB_SCHEDULER_POOL_SIZE，完成与清理属于控制池，Agent 监控不借控制预留。AgentObservation/agent_state.py 与 ad074e5 迁移分离期望配置和最新观察；旧 API 不可混写，发布前检查迁移及同节点竞争专项。断联继续执行和终态补传目前仅完成设计，不能用当前重试代码宣称已实现。

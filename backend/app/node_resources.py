@@ -6,8 +6,7 @@ from .core import Slot, now
 from .freshness import RESOURCE_SAMPLE_SECONDS
 
 
-def record(w):
-    return (w.connection or {}).get('agent', {})
+from .agent_state import record
 
 
 def fresh(r):

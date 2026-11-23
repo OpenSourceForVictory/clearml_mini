@@ -1,0 +1,41 @@
+..............................F                                          [100%]
+=================================== FAILURES ===================================
+________ test_http_client_timeout_does_not_leave_sql_running_unbounded _________
+
+online = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient object at 0x714254937490>, {'Authorization': 'Bearer <redacted>
+
+    def test_http_client_timeout_does_not_leave_sql_running_unbounded(online):
+        import socket
+        import httpx
+        import uvicorn
+        from fastapi import Depends
+        main, _, _ = online
+        entered = threading.Event()
+        @main.app.get('/api/v1/test-budget-slow')
+        def slow(s=Depends(main.db)):
+            entered.set()
+            s.execute(text('SELECT pg_sleep(10)'))
+            return {'ok': True}
+        sock = socket.socket()
+        sock.bind(('127.0.0.1', 0))
+        server = uvicorn.Server(uvicorn.Config(main.app, log_level='critical', lifespan='off'))
+        thread = threading.Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
+        thread.start()
+        try:
+            until = time.monotonic() + 5
+            while not server.started and time.monotonic() < until:
+                time.sleep(.01)
+            assert server.started
+>           with pytest.raises(httpx.ReadTimeout):
+E           Failed: DID NOT RAISE <class 'httpx.ReadTimeout'>
+
+backend/tests/test_db_budget.py:239: Failed
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_db_budget.py::test_http_client_timeout_does_not_leave_sql_running_unbounded
+1 failed, 30 passed, 1 warning in 11.06s

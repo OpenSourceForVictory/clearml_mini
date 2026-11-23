@@ -1,10 +1,10 @@
-"""Bounded v2 logs. Lock order: optional scheduling lock -> Run -> log state."""
+"""Bounded v2 logs. The log cursor is serialized independently of renewals."""
 import hashlib
 import json
 from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 from .core import Run, RunLog, RunLogChunk, RunLogState, Slot, now
 from .scheduling import TERMINAL, utc
 
@@ -33,16 +33,31 @@ def digest(body):
                                     sort_keys=True).encode()).hexdigest()
 
 
+def terminal_log_lock(s, run_id):
+    """Serialize v2 log writes with terminal transitions for this run only."""
+    if s.bind.dialect.name == 'postgresql':
+        # Negative namespace cannot alias the positive global scheduling key.
+        key = (int.from_bytes(hashlib.sha256(('mini-eval-log:' + run_id).encode()).digest()[:8],
+                              'big') | (1 << 63)) - (1 << 64)
+        s.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': key})
+
+
 def append(s, execution_id, worker, body):
-    run = s.scalar(select(Run).where(Run.execution_id == execution_id).with_for_update())
+    # KEY SHARE prevents deletion without blocking a heartbeat's NO KEY UPDATE.
+    # The per-run advisory lock orders append against complete/cleanup, including
+    # the first chunk when RunLogState does not exist yet.
+    run = s.scalar(select(Run).where(Run.execution_id == execution_id)
+                   .with_for_update(read=True, key_share=True))
     if not run:
         raise HTTPException(404, 'execution not found')
     slot = s.get(Slot, run.slot_id)
     if not slot or slot.worker_id != worker.id:
         raise HTTPException(404, 'execution not found')
+    terminal_log_lock(s, run.id)
+    s.refresh(run)
     if run.status not in ('STARTING', 'RUNNING', 'CANCEL_REQUESTED') or not run.lease_expires_at or utc(run.lease_expires_at) <= now():
         raise HTTPException(409, 'execution lease is no longer valid')
-    state = s.get(RunLogState, run.id)
+    state = s.scalar(select(RunLogState).where(RunLogState.run_id == run.id).with_for_update())
     if not state:
         state = RunLogState(run_id=run.id, next_sequence=0, first_sequence=0,
                             retained_bytes=0, truncated=False)

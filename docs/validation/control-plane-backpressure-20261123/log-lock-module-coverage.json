@@ -1,0 +1,37 @@
+{
+  "scope": "test_execution_logs_postgres.py + test_execution_logs_v2.py; project source/branch config; not full group coverage",
+  "files": {
+    "backend/app/execution_logs.py": {
+      "covered_lines": 90,
+      "num_statements": 91,
+      "percent_covered": 96.7479674796748,
+      "percent_covered_display": "96.75",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 98.9010989010989,
+      "percent_statements_covered_display": "98.90",
+      "num_branches": 32,
+      "num_partial_branches": 3,
+      "covered_branches": 29,
+      "missing_branches": 3,
+      "percent_branches_covered": 90.625,
+      "percent_branches_covered_display": "90.62"
+    },
+    "backend/app/execution.py": {
+      "covered_lines": 354,
+      "num_statements": 529,
+      "percent_covered": 60.4551920341394,
+      "percent_covered_display": "60.46",
+      "missing_lines": 175,
+      "excluded_lines": 0,
+      "percent_statements_covered": 66.91871455576559,
+      "percent_statements_covered_display": "66.92",
+      "num_branches": 174,
+      "num_partial_branches": 57,
+      "covered_branches": 71,
+      "missing_branches": 103,
+      "percent_branches_covered": 40.804597701149426,
+      "percent_branches_covered_display": "40.80"
+    }
+  }
+}

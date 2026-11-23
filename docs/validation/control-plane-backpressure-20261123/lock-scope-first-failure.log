@@ -1,0 +1,42 @@
+F...................                                                     [100%]
+=================================== FAILURES ===================================
+______ test_execution_reports_ignore_unrelated_scheduler_lock[heartbeat] _______
+
+online = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient object at 0x70c68adbd400>, {'Authorization': 'Bearer <redacted>
+operation = 'heartbeat'
+
+    @pytest.mark.parametrize('operation', ['heartbeat', 'logs', 'episodes', 'artifacts', 'task-result'])
+    def test_execution_reports_ignore_unrelated_scheduler_lock(online, operation):
+        main, client, headers = online
+        with main.SessionLocal() as s:
+            job = s.get(Job, 'j')
+            job.client_spec = {'seed': 1, 'template': {'integration_mode': 'sdk-task-result', 'task_type': 'command'}}
+            s.commit()
+        requests = {
+            'heartbeat': ('/api/v1/worker/heartbeat', {'slot_id': 's', 'execution_id': 'e', 'started': True}),
+            'logs': ('/api/v1/worker/executions/e/logs', {'sequence': 0, 'content': 'hello'}),
+            'episodes': ('/api/v1/worker/executions/e/episodes', {'episode_id': 1, 'seed': 1, 'status': 'STARTED'}),
+            'artifacts': ('/api/v1/worker/executions/e/artifacts', {'name': 'result.txt', 'content_base64': base64.b64encode(b'ok').decode()}),
+            'task-result': ('/api/v1/worker/executions/e/task-result', {'success': True}),
+        }
+        with main.ControlSessionLocal() as holder:
+            lock(holder)
+            path, body = requests[operation]
+            response = client.post(path, headers=headers, json=body)
+>           assert response.status_code == 200, response.text
+E           AssertionError: {"detail":"database busy; retry shortly","reason":"connection_pool"}
+E           assert 503 == 200
+E            +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+backend/tests/test_execution_lock_scope.py:32: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  backend.app.db_budget:main.py:65 database request rejected category=control reason=connection_pool
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_execution_lock_scope.py::test_execution_reports_ignore_unrelated_scheduler_lock[heartbeat]
+1 failed, 19 passed, 1 warning in 57.85s

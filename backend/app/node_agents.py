@@ -82,12 +82,7 @@ class Permit(Strict):
     revision: int = Field(ge=0)
 
 
-def record(w):
-    return (w.connection or {}).get('agent', {})
-
-
-def save(w, value):
-    w.connection = {**(w.connection or {}), 'agent': value}
+from .agent_state import record, save_config as save, observation, reset
 
 
 def fresh(r):
@@ -162,6 +157,7 @@ def install(app, db, admin, worker_auth):
              'revision': r.get('revision', 0), 'desired': r.get('desired', Settings().model_dump()),
              'config_status': 'waiting', 'applied_revision': -1}
         save(w, r)
+        reset(s, w, r)
         for slot in s.scalars(select(Slot).where(Slot.worker_id == w.id)):
             slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         s.commit()
@@ -169,8 +165,10 @@ def install(app, db, admin, worker_auth):
 
     @app.post('/api/v1/agent/heartbeat')
     def heartbeat(body: Heartbeat, w=Depends(worker_auth), s=Depends(db)):
-        s.refresh(w, with_for_update=True); r = record(w)
-        if r.get('session') != body.session: raise HTTPException(409, 'agent session superseded')
+        row = observation(s, w)
+        s.refresh(w)  # Read current configuration, never lock it for monitoring.
+        r = record(w)
+        if row is None or row.session != body.session or r.get('session') != body.session: raise HTTPException(409, 'agent session superseded')
         if body.sequence <= r.get('sequence', 0): return response(s, w, r)
         if body.applied_revision > r['revision']: raise HTTPException(409, 'unknown configuration revision')
         # No unbounded arbitrary metrics strings or raw command output.
@@ -182,7 +180,8 @@ def install(app, db, admin, worker_auth):
                 events.append(e.model_dump()); ack = e.sequence
         r = {**r, **body.model_dump(exclude={'session', 'events'}), 'events': events[-64:],
              'event_ack': ack, 'seen_at': now().isoformat()}
-        save(w, r)
+        from .agent_state import OBSERVED
+        row.payload = {k:v for k,v in r.items() if k in OBSERVED}
         apply_resources(s, w)
         s.commit()
         return response(s, w, r)

@@ -11,14 +11,14 @@ def test_pg_upgrade_invalid_index_retry_old_writer_and_downgrade(pg,monkeypatch)
     command.upgrade(cfg,'aa741b2');factory=seed(engine,create=False)
     with factory() as s:
         s.add(Event(id='old-event',job_id='j',run_id='r',new_status='PENDING'));s.commit()
-    command.upgrade(cfg,'head')
+    command.upgrade(cfg,'ab852c3')
     with engine.connect() as c:
         assert c.execute(text("SELECT indisvalid FROM pg_index WHERE indexrelid='ix_job_events_run_status_created'::regclass")).scalar() is True
     # Recreate the catalog state left by an interrupted concurrent index build.
     with engine.begin() as c:
         c.execute(text("UPDATE pg_index SET indisvalid=false WHERE indexrelid='ix_job_events_run_status_created'::regclass"))
         c.execute(text("UPDATE alembic_version SET version_num='aa741b2'"))
-    command.upgrade(cfg,'head');command.upgrade(cfg,'head')
+    command.upgrade(cfg,'ab852c3');command.upgrade(cfg,'ab852c3')
     with factory() as s:
         # Old application inserts remain valid; no timing columns are mandatory.
         s.add(Event(id='after-upgrade',job_id='j',run_id='r',new_status='PENDING'));s.commit()
@@ -31,7 +31,7 @@ def test_pg_upgrade_invalid_index_retry_old_writer_and_downgrade(pg,monkeypatch)
     with engine.connect() as c:
         assert c.execute(text("SELECT to_regclass('ix_job_events_run_status_created')")).scalar() is None
         assert c.execute(text('SELECT count(*) FROM job_events')).scalar()==2
-    command.upgrade(cfg,'head')
+    command.upgrade(cfg,'ab852c3')
 
 
 def test_thousand_attempts_wait_lookup_uses_three_queries(pg):

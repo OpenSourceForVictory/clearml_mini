@@ -197,7 +197,10 @@ def install(app, db, current):
         return slot
 
     def run_for(s, execution_id, worker):
-        run = s.scalar(select(Run).where(Run.execution_id == execution_id).with_for_update())
+        # Execution identity is immutable. NO KEY UPDATE still serializes state
+        # changes, while allowing log chunk FK checks to run during renewal.
+        run = s.scalar(select(Run).where(Run.execution_id == execution_id)
+                       .with_for_update(key_share=True))
         if not run:
             raise HTTPException(404, 'execution not found')
         slot_for(s, run.slot_id, worker)
@@ -328,15 +331,21 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
-        if body.execution_id:
+        # Pure renewal does not change resource ownership. Only the initial
+        # STARTING transition participates in global scheduling serialization.
+        if body.execution_id and s.scalar(select(Run.status).where(
+                Run.execution_id == body.execution_id)) == 'STARTING':
             from .scheduling import fast_lock
-            fast_lock(s)  # Lease and run status still participate in scheduling transitions.
-        s.refresh(worker, with_for_update=True)
+            fast_lock(s)
+        # Execution reports never modify Worker configuration JSON. Lock Run
+        # before Slot, matching completion/reclamation; an ordinary heartbeat
+        # still locks Worker before merging configuration acknowledgements.
+        run = run_for(s, body.execution_id, worker) if body.execution_id else None
+        s.refresh(worker, with_for_update=not bool(body.execution_id))
         slot = slot_for(s, body.slot_id, worker)
         s.refresh(slot, with_for_update=True)
         cancel = False
         if body.execution_id:
-            run = run_for(s, body.execution_id, worker)
             if run.slot_id != slot.id:
                 raise HTTPException(409, 'execution belongs to another slot')
             live(run)
@@ -374,7 +383,11 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
-        lock(s)
+        if os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1':
+            from .scheduling import fast_lock
+            fast_lock(s)
+        else:
+            lock(s)
         slot = slot_for(s, slot_id, worker)
         cleanup = list(s.scalars(select(Run.execution_id).where(Run.slot_id == slot.id, Run.cleanup_confirmed.is_(False), Run.status.in_(TERMINAL))))
         if cleanup:
@@ -477,7 +490,6 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/executions/{execution_id}/logs')
     def logs(execution_id: str, body: LogBody, worker=Depends(worker_auth), s: Session = Depends(db)):
-        lock(s)
         run = run_for(s, execution_id, worker)
         live(run)
         previous = s.get(RunLog, (run.id, body.sequence))
@@ -499,7 +511,6 @@ def install(app, db, current):
     @app.post('/api/v1/worker/executions/{execution_id}/episodes')
     def episode(execution_id: str, body: dict, worker=Depends(worker_auth), s: Session = Depends(db)):
         from .episodes import record
-        lock(s)
         run = run_for(s, execution_id, worker)
         live(run)
         record(s, run, body)
@@ -508,9 +519,6 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/executions/{execution_id}/artifacts')
     def upload_artifact(execution_id: str, body: ArtifactUpload, worker=Depends(worker_auth), s: Session = Depends(db)):
-        lock(s)
-        run = run_for(s, execution_id, worker)
-        live(run)
         if not artifact_name(body.name):
             raise HTTPException(400, 'invalid artifact name')
         try:
@@ -520,6 +528,8 @@ def install(app, db, current):
         if len(data) > MAX_ARTIFACT_BYTES:
             raise HTTPException(413, 'artifact size limit exceeded')
         digest = hashlib.sha256(data).hexdigest()
+        run = run_for(s, execution_id, worker)
+        live(run)
         old = s.scalar(select(RunArtifact).where(RunArtifact.run_id == run.id, RunArtifact.name == body.name))
         if old:
             if old.sha256 != digest:
@@ -537,6 +547,8 @@ def install(app, db, current):
     def complete(execution_id: str, body: Finish, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
         run = run_for(s, execution_id, worker)
+        from .execution_logs import terminal_log_lock
+        terminal_log_lock(s, run.id)
         if run.status in TERMINAL:
             if run.cleanup_confirmed and run.status == body.status:
                 return {'status': run.status}
@@ -573,7 +585,6 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/executions/{execution_id}/task-result')
     def task_result(execution_id: str, body: TaskResult, worker=Depends(worker_auth), s: Session = Depends(db)):
-        lock(s)
         run = run_for(s, execution_id, worker)
         live(run)
         job = s.get(Job, run.job_id)
@@ -597,6 +608,8 @@ def install(app, db, current):
     def cleanup(execution_id: str, worker=Depends(worker_auth), s: Session = Depends(db)):
         lock(s)
         run = run_for(s, execution_id, worker)
+        from .execution_logs import terminal_log_lock
+        terminal_log_lock(s, run.id)
         if run.status not in TERMINAL:
             transition(s, run, 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else 'FAILED', 'worker confirmed container stopped')
         run.cleanup_confirmed = True

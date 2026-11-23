@@ -256,7 +256,8 @@ def test_mixed_vendor_inventory_preserved_without_admitting_npu_as_gpu(env):
     assert r.status_code==200,r.text
     with main.SessionLocal() as s:
         slot=s.get(Slot,slots[0]);w=s.get(Worker,slot.worker_id)
-        stored=w.connection['agent']['devices']
+        from backend.app.agent_state import record
+        stored=record(w)['devices']
         assert {d['kind'] for d in stored}=={'gpu','npu'}
         npu=next(d for d in stored if d['kind']=='npu')
         assert npu['memory_total_mb']==65536 and not npu['execution_ready']

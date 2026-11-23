@@ -75,14 +75,30 @@ def test_api_rejection_cleanup_and_retry_journal(execution,status):
     assert events[0][0]=='stop'
 
 
-@pytest.mark.parametrize('failure',[TimeoutError('offline'),urllib.error.URLError('offline'),OSError('disk')])
-def test_transport_failure_stops_execution_but_retains_recovery_journal(execution,failure):
+def test_local_os_failure_stops_execution_but_retains_recovery_journal(execution):
     worker,task,events=execution
+    failure=OSError('disk')
     def post(*a,**kw):raise failure
     worker.api.post=post
     with pytest.raises(type(failure)):worker.execute(task)
     assert worker.state['task']==task and json.loads(worker.path.read_text())['task']==task
     assert events==[('stop',task['execution_id'])]
+
+
+@pytest.mark.parametrize('failure',[TimeoutError('offline'),urllib.error.URLError('offline')])
+def test_initial_transport_failure_retries_with_existing_lease(execution,failure):
+    worker,task,events=execution
+    original=worker.api.post
+    calls=[]
+    def post(path,body=None):
+        calls.append(path)
+        if len(calls)==1:raise failure
+        return original(path,body)
+    worker.api.post=post
+    worker.execute(task)
+    assert calls[:2]==['worker/heartbeat','worker/heartbeat']
+    assert not any(path=='stop' for path,body in events)
+    assert worker.state is None
 
 
 def test_transient_control_busy_heartbeat_keeps_existing_execution(execution,monkeypatch):

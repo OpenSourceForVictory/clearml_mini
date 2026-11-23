@@ -1,0 +1,347 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 1,
+  "pool_ordinary": 10,
+  "pool_control": 5,
+  "pool_observation": 2,
+  "pool_result": 2,
+  "pool_scheduler": 1,
+  "cards_per_node": 1,
+  "seconds_per_grade": 30,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": false,
+  "scope": "real HTTP/PostgreSQL, simulated running services; excludes scheduler allocation, Agent and real business processes",
+  "grades": [
+    {
+      "requests": {
+        "200": 3657,
+        "503": 93
+      },
+      "busy_reasons": {
+        "scheduler_lock": 93
+      },
+      "requests_by_kind": {
+        "heartbeat": {
+          "200": 750
+        },
+        "health": {
+          "200": 750
+        },
+        "logs": {
+          "200": 750
+        },
+        "artifact": {
+          "200": 750
+        },
+        "claim": {
+          "200": 657,
+          "503": 93
+        }
+      },
+      "busy_by_kind": {
+        "claim": {
+          "scheduler_lock": 93
+        }
+      },
+      "successful_latency_seconds": {
+        "heartbeat": {
+          "p95": 0.059201247058808804,
+          "p99": 0.07374304882250726,
+          "max": 0.0870256619527936
+        },
+        "health": {
+          "p95": 0.04894821997731924,
+          "p99": 0.06071430700831115,
+          "max": 0.06937989010475576
+        },
+        "logs": {
+          "p95": 0.03277261881157756,
+          "p99": 0.039288747822865844,
+          "max": 0.04884079401381314
+        },
+        "artifact": {
+          "p95": 0.02476240205578506,
+          "p99": 0.030172724975273013,
+          "max": 0.04502680595032871
+        },
+        "claim": {
+          "p95": 0.02596441307105124,
+          "p99": 0.029394629877060652,
+          "max": 0.041230194037780166
+        }
+      },
+      "latency_seconds": {
+        "heartbeat": {
+          "p95": 0.05920144007541239,
+          "p99": 0.07374322786927223,
+          "max": 0.08702583098784089
+        },
+        "health": {
+          "p95": 0.04894842696376145,
+          "p99": 0.06071466184221208,
+          "max": 0.06938016321510077
+        },
+        "logs": {
+          "p95": 0.03277278691530228,
+          "p99": 0.03928892593830824,
+          "max": 0.048841316951438785
+        },
+        "artifact": {
+          "p95": 0.024762629065662622,
+          "p99": 0.030172982020303607,
+          "max": 0.045027032028883696
+        },
+        "claim": {
+          "p95": 0.025916900020092726,
+          "p99": 0.029198004864156246,
+          "max": 0.041230452014133334
+        }
+      },
+      "max_heartbeat_gap_seconds": 3.2365528349764645,
+      "max_final_sample_age_seconds": 3.2365528349764645,
+      "initial_checkout_wait_ms": {
+        "p95": 0.046,
+        "p99": 0.055
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 50,
+      "executions": 50,
+      "passed": true
+    },
+    {
+      "requests": {
+        "200": 6863,
+        "503": 521
+      },
+      "busy_reasons": {
+        "scheduler_lock": 444,
+        "request_concurrency": 77
+      },
+      "requests_by_kind": {
+        "heartbeat": {
+          "200": 1471,
+          "503": 29
+        },
+        "health": {
+          "200": 1431,
+          "503": 40
+        },
+        "logs": {
+          "200": 1468,
+          "503": 3
+        },
+        "artifact": {
+          "200": 1468,
+          "503": 3
+        },
+        "claim": {
+          "200": 1025,
+          "503": 446
+        }
+      },
+      "busy_by_kind": {
+        "claim": {
+          "scheduler_lock": 444,
+          "request_concurrency": 2
+        },
+        "health": {
+          "request_concurrency": 40
+        },
+        "heartbeat": {
+          "request_concurrency": 29
+        },
+        "artifact": {
+          "request_concurrency": 3
+        },
+        "logs": {
+          "request_concurrency": 3
+        }
+      },
+      "successful_latency_seconds": {
+        "heartbeat": {
+          "p95": 0.2002229259815067,
+          "p99": 0.26203007088042796,
+          "max": 0.29593592300079763
+        },
+        "health": {
+          "p95": 0.1815836620517075,
+          "p99": 0.20972509984858334,
+          "max": 0.2723748041316867
+        },
+        "logs": {
+          "p95": 0.04325764090754092,
+          "p99": 0.04857206903398037,
+          "max": 0.0763561159837991
+        },
+        "artifact": {
+          "p95": 0.0340919578447938,
+          "p99": 0.040915347170084715,
+          "max": 0.07116297306492925
+        },
+        "claim": {
+          "p95": 0.03418450802564621,
+          "p99": 0.04040427622385323,
+          "max": 0.06143439910374582
+        }
+      },
+      "latency_seconds": {
+        "heartbeat": {
+          "p95": 0.20011527393944561,
+          "p99": 0.26203033491037786,
+          "max": 0.29593609482981265
+        },
+        "health": {
+          "p95": 0.18114769202657044,
+          "p99": 0.20972530380822718,
+          "max": 0.2723751061130315
+        },
+        "logs": {
+          "p95": 0.04325790097936988,
+          "p99": 0.04857226018793881,
+          "max": 0.07635637396015227
+        },
+        "artifact": {
+          "p95": 0.03409224282950163,
+          "p99": 0.040915596997365355,
+          "max": 0.07116316305473447
+        },
+        "claim": {
+          "p95": 0.03331480920314789,
+          "p99": 0.03998342901468277,
+          "max": 0.06143464497290552
+        }
+      },
+      "max_heartbeat_gap_seconds": 3.857278333976865,
+      "max_final_sample_age_seconds": 3.857278333976865,
+      "initial_checkout_wait_ms": {
+        "p95": 0.047,
+        "p99": 0.052
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 100,
+      "executions": 100,
+      "passed": true
+    },
+    {
+      "requests": {
+        "200": 8515,
+        "503": 3047
+      },
+      "busy_reasons": {
+        "request_concurrency": 2220,
+        "scheduler_lock": 827
+      },
+      "requests_by_kind": {
+        "heartbeat": {
+          "200": 2032,
+          "503": 1402
+        },
+        "health": {
+          "503": 790,
+          "200": 1242
+        },
+        "logs": {
+          "200": 2023,
+          "503": 9
+        },
+        "artifact": {
+          "200": 2025,
+          "503": 7
+        },
+        "claim": {
+          "503": 839,
+          "200": 1193
+        }
+      },
+      "busy_by_kind": {
+        "heartbeat": {
+          "request_concurrency": 1402
+        },
+        "health": {
+          "request_concurrency": 790
+        },
+        "logs": {
+          "request_concurrency": 9
+        },
+        "artifact": {
+          "request_concurrency": 7
+        },
+        "claim": {
+          "request_concurrency": 12,
+          "scheduler_lock": 827
+        }
+      },
+      "successful_latency_seconds": {
+        "heartbeat": {
+          "p95": 0.26601621601730585,
+          "p99": 0.28796742600388825,
+          "max": 0.31124651501886547
+        },
+        "health": {
+          "p95": 0.24378908588550985,
+          "p99": 0.2641656259074807,
+          "max": 0.28919452615082264
+        },
+        "logs": {
+          "p95": 0.04936108994297683,
+          "p99": 0.055038249120116234,
+          "max": 0.07448581489734352
+        },
+        "artifact": {
+          "p95": 0.041960537899285555,
+          "p99": 0.050397189101204276,
+          "max": 0.07231468195095658
+        },
+        "claim": {
+          "p95": 0.04083574004471302,
+          "p99": 0.04750491492450237,
+          "max": 0.06792291696183383
+        }
+      },
+      "latency_seconds": {
+        "heartbeat": {
+          "p95": 0.25861870404332876,
+          "p99": 0.278592242160812,
+          "max": 0.3112466970924288
+        },
+        "health": {
+          "p95": 0.2386941760778427,
+          "p99": 0.25531504093669355,
+          "max": 0.2891947051975876
+        },
+        "logs": {
+          "p95": 0.049361397977918386,
+          "p99": 0.05503843096084893,
+          "max": 0.07448606588877738
+        },
+        "artifact": {
+          "p95": 0.04196074488572776,
+          "p99": 0.05039738491177559,
+          "max": 0.07231492805294693
+        },
+        "claim": {
+          "p95": 0.03880744404159486,
+          "p99": 0.04537600907497108,
+          "max": 0.06792317586950958
+        }
+      },
+      "max_heartbeat_gap_seconds": 17.14909182395786,
+      "max_final_sample_age_seconds": 17.14909182395786,
+      "initial_checkout_wait_ms": {
+        "p95": 0.047,
+        "p99": 0.052
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 200,
+      "executions": 200,
+      "passed": false
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Agent JSON writers share row locks; admission retains its separate global lock."""
+"""Desired configuration and latest observations survive concurrent reports."""
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -7,12 +7,20 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from backend.app.core import User,Worker,Run,session_factory
+from backend.app.core import Base,User,Worker,Run,session_factory
+from backend.app.agent_state import record
+from backend.tests.test_execution_logs_postgres import pg
 from backend.app.scheduling import tick
 from backend.tests.test_execution import env
 
 
-@pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'),reason='dedicated PostgreSQL required')
+
+@pytest.fixture(autouse=True)
+def isolated_database(pg,monkeypatch):
+    Base.metadata.create_all(pg[0])
+    monkeypatch.setenv('TEST_DATABASE_URL',pg[1])
+
+
 @pytest.mark.parametrize("resource_protocol", [0, 1])
 def test_agent_configuration_heartbeat_and_claim_are_serialized(env,monkeypatch,resource_protocol):
     main,_,_=env;factory=session_factory(os.environ['TEST_DATABASE_URL']);monkeypatch.setattr(main,'SessionLocal',factory)
@@ -50,10 +58,10 @@ def test_agent_configuration_heartbeat_and_claim_are_serialized(env,monkeypatch,
     c.post('/api/v1/jobs/'+job+'/cancel',headers=auth)
 
 
-@pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'),reason='dedicated PostgreSQL required')
+
 @pytest.mark.parametrize('operation',['configure','storage','updater','register'])
-def test_connection_writer_waits_for_latest_agent_snapshot(env,monkeypatch,operation):
-    """Hold a real heartbeat transaction, then force a management read behind it."""
+def test_configuration_writer_does_not_wait_for_observation(env,monkeypatch,operation):
+    """Hold a real observation transaction; configuration must commit independently."""
     from threading import Event
     from sqlalchemy import event
     from backend.app import node_agents
@@ -78,18 +86,15 @@ def test_connection_writer_waits_for_latest_agent_snapshot(env,monkeypatch,opera
         s.commit()
     body={'session':session,'sequence':2,'applied_revision':0,'config_status':'applied',
           'samples':{'host':{'status':'ok','sampled_at':1,'values':{'cpu_count':8}}}}
-    entered,release,locking=Event(),Event(),Event()
-    original=node_agents.save
-    def paused_save(worker,value):
-        original(worker,value)
-        if worker.id==w['id'] and value.get('sequence')==2:
+    entered,release=Event(),Event()
+    original=node_agents.apply_resources
+    def paused_apply(db,worker):
+        original(db,worker)
+        if worker.id==w['id']:
             entered.set()
-            assert release.wait(10),'test did not release heartbeat transaction'
-    monkeypatch.setattr(node_agents,'save',paused_save)
+            assert release.wait(10),'test did not release observation transaction'
+    monkeypatch.setattr(node_agents,'apply_resources',paused_apply)
     engine=factory.kw['bind']
-    def observe(_conn,_cursor,statement,_params,_ctx,_many):
-        if entered.is_set() and 'FOR UPDATE' in statement.upper():locking.set()
-    event.listen(engine,'before_cursor_execute',observe)
     prefix='/api/v1/admin/nodes/'+w['id']
     def mutate():
         if operation=='configure':return c.put(prefix+'/agent',headers=auth,json={'expected_revision':0,'programs':'stopped'})
@@ -102,16 +107,17 @@ def test_connection_writer_waits_for_latest_agent_snapshot(env,monkeypatch,opera
             try:
                 assert entered.wait(5),'heartbeat did not acquire row lock'
                 mutation=executor.submit(mutate)
-                assert locking.wait(5),'management did not read under a row lock'
+                assert mutation.result(timeout=5).status_code==200
             finally:release.set()
             assert heartbeat.result(timeout=10).status_code==200
             assert mutation.result(timeout=10).status_code==200
     finally:
-        event.remove(engine,'before_cursor_execute',observe)
+        release.set()
     with factory() as s:
-        connection=s.get(Worker,w['id']).connection
-        assert connection['agent']['sequence']==2
-        assert connection['agent']['samples']==body['samples']
+        worker=s.get(Worker,w['id'])
+        connection=worker.connection
+        assert record(worker)['sequence']==2
+        assert record(worker)['samples']==body['samples']
         assert connection['enrollment']['marker']=='preserved'
         if operation=='configure':assert connection['agent']['revision']==1
         if operation=='storage':assert connection['slot_storage_overrides'][slot]==CONFIG
@@ -119,5 +125,5 @@ def test_connection_writer_waits_for_latest_agent_snapshot(env,monkeypatch,opera
     # A duplicate or stale report cannot replace the latest sample.
     assert c.post('/api/v1/agent/heartbeat',headers=token,json={**body,'sequence':1,'samples':{}}).status_code==200
     assert c.post('/api/v1/agent/heartbeat',headers=token,json={**body,'session':'f'*32}).status_code==409
-    with factory() as s:assert s.get(Worker,w['id']).connection['agent']['samples']==body['samples']
+    with factory() as s:assert record(s.get(Worker,w['id']))['samples']==body['samples']
     engine.dispose()

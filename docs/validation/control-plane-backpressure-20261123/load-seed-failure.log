@@ -1,0 +1,122 @@
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UniqueViolation: duplicate key value violates unique constraint "gpu_slots_queue_name_key"
+DETAIL:  Key (queue_name)=(load) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/dgh/Code/clearml_mini/backend/tests/control_plane_load.py", line 170, in <module>
+    if __name__ == '__main__':main()
+                              ~~~~^^
+  File "/home/dgh/Code/clearml_mini/backend/tests/control_plane_load.py", line 131, in main
+    identities = seed(engine, count)
+  File "/home/dgh/Code/clearml_mini/backend/tests/control_plane_load.py", line 38, in seed
+    s.flush()
+    ~~~~~~~^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.IntegrityError: (psycopg.errors.UniqueViolation) duplicate key value violates unique constraint "gpu_slots_queue_name_key"
+DETAIL:  Key (queue_name)=(load) already exists.
+[SQL: INSERT INTO gpu_slots (accelerator_type, accelerator_backends, deleted_at, id, node_name, gpu_index, gpu_uuid, pool_id, desired_pool_id, membership_revision, membership_applied_revision, membership_updated_at, queue_name, agent_id, heartbeat_at, last_seen_at, enabled, worker_id, quarantined, gpu_model, vram_mb, client_images, protocol_version, execution_modes, free_vram_mb, gpu_utilization, disk_free_mb, disk_min_free_mb, disk_at, storage_applied_revision, host_reported_at, runtime_reported_at, storage_reported_at, telemetry_at) VALUES (%(accelerator_type)s::VARCHAR, %(accelerator_backends)s::JSONB, %(deleted_at)s::TIMESTAMP WITH TIME ZONE, %(id)s::VARCHAR, %(node_name)s::VARCHAR, %(gpu_index)s::INTEGER, %(gpu_uuid)s::VARCHAR, %(pool_id)s::VARCHAR, %(desired_pool_id)s::VARCHAR, %(membership_revision)s::INTEGER, %(membership_applied_revision)s::INTEGER, %(membership_updated_at)s::TIMESTAMP WITH TIME ZONE, %(queue_name)s::VARCHAR, %(agent_id)s::VARCHAR, %(heartbeat_at)s::TIMESTAMP WITH TIME ZONE, %(last_seen_at)s::TIMESTAMP WITH TIME ZONE, %(enabled)s, %(worker_id)s::VARCHAR, %(quarantined)s, %(gpu_model)s::VARCHAR, %(vram_mb)s::INTEGER, %(client_images)s::JSONB, %(protocol_version)s::INTEGER, %(execution_modes)s::JSONB, %(free_vram_mb)s::INTEGER, %(gpu_utilization)s::INTEGER, %(disk_free_mb)s::INTEGER, %(disk_min_free_mb)s::INTEGER, %(disk_at)s::TIMESTAMP WITH TIME ZONE, %(storage_applied_revision)s::INTEGER, %(host_reported_at)s::TIMESTAMP WITH TIME ZONE, %(runtime_reported_at)s::TIMESTAMP WITH TIME ZONE, %(storage_reported_at)s::TIMESTAMP WITH TIME ZONE, %(telemetry_at)s::TIMESTAMP WITH TIME ZONE)]
+[parameters: {'accelerator_type': 'gpu', 'accelerator_backends': Jsonb([]), 'deleted_at': None, 'id': '880fb4553b8e45af80a848637b727396', 'node_name': 'load-1', 'gpu_index': 0, 'gpu_uuid': 'mock:880fb4553b8e45af80a848637b727396', 'pool_id': 'p', 'desired_pool_id': None, 'membership_revision': 0, 'membership_applied_revision': 0, 'membership_updated_at': None, 'queue_name': 'load', 'agent_id': None, 'heartbeat_at': None, 'last_seen_at': None, 'enabled': True, 'worker_id': '880fb4553b8e45af80a848637b727396', 'quarantined': False, 'gpu_model': 'virtual', 'vram_mb': 1024, 'client_images': Jsonb([]), 'protocol_version': 1, 'execution_modes': Jsonb(['docker']), 'free_vram_mb': None, 'gpu_utilization': None, 'disk_free_mb': None, 'disk_min_free_mb': None, 'disk_at': None, 'storage_applied_revision': 0, 'host_reported_at': None, 'runtime_reported_at': None, 'storage_reported_at': None, 'telemetry_at': None}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

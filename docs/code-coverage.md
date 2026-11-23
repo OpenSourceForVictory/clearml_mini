@@ -12,6 +12,8 @@
 | 调度与资源、节点纳管与升级、业务执行与结果 | ≥90% | ≥80% |
 | 其他功能分组 | ≥80% | ≥70% |
 
+控制面背压变更把 `backend/app/db_budget.py` 纳入“调度与资源”，把 `worker/backpressure.py` 及执行 API `backend/app/execution.py` 纳入“业务执行与结果”；它们同时保留在目录总量中，关键功能仍按 90% / 80% 验证，不降低门槛。
+
 配置在 `backend/tests/coverage-floors.json`，CI 与本地使用相同规则。任何测试失败或任一门槛未达到均返回非零；既有代码未达标也不会自动豁免。新增功能必须随代码提供正常、边界和失败路径测试。不得通过排除未测文件、mock 掉需要验证的行为或降低门槛凑数字；调整统计范围/门槛需有明确需求和评审说明。
 
 ## 运行
@@ -22,6 +24,8 @@
 pip install -r backend/requirements.txt -r backend/tests/requirements-coverage.txt
 python -m scripts.test_coverage
 ```
+
+如果测试收集报告同名文件 `import file mismatch`（例如单元与 integration 目录均有 `test_bundled_onboarding.py`），使用 `PYTEST_ADDOPTS=--import-mode=importlib python -m scripts.test_coverage`，保留首次收集失败证据；不要为绕过冲突而排除整个测试目录。真实 PostgreSQL 专项另需隔离数据库环境变量，见各专项验证记录。
 
 报告输出到 `coverage-artifacts/python/`（Git 忽略）：
 
@@ -118,3 +122,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 2026-11-23 Worker 0.21.14 当前版本全量：Python 2369 通过 / 126 条件跳过 / 0 失败，整体 92.02% 行 / 83.16% 分支，全部目录与关键功能组门槛通过。前端首轮指南定位歧义 1 项失败，修正断言后完整复测 243 通过 / 10 条件跳过；前端未插桩。使用一次性 PostgreSQL，未部署节点或补做真机验收。详见[本轮记录](validation/full-regression-20261123/README.md)。
 
 执行时间功能将 backend/app/execution_timing.py、episodes.py 纳入“业务执行与结果”关键分组；runner/episode_timing.py 已由 runner/*.py 计入。门槛不变，新增采集与投影代码均计入目录分母。
+
+2026-11-23 控制面五类预算专项：按用户要求暂不运行全量；使用同一 `backend/tests/project.coveragerc` 对相关测试采集分支覆盖率。仅可报告对应模块的专项覆盖情况，不可替代全目录或关键功能组门槛。首次扩大专项包含 1 个旧观察存储断言失败，已保留失败与复测记录，见 `docs/validation/control-plane-backpressure-20261123/README.md`。

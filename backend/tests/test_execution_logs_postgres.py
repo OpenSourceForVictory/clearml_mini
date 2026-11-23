@@ -1,6 +1,7 @@
 """Opt-in against disposable PostgreSQL only; never touches platform databases."""
 import os
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -9,7 +10,7 @@ from sqlalchemy import create_engine, text, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import make_url
 from backend.app.core import Base, User, Pool, Worker, Slot, Job, Run, RunLogState, RunLogChunk, now
-from backend.app.execution_logs import append, LogChunk
+from backend.app.execution_logs import append, LogChunk, terminal_log_lock
 from backend.app.batch_deletion import remove
 
 
@@ -51,6 +52,81 @@ def seed(engine, create=True):
         s.add(Run(id='r', job_id='j', attempt=1, slot_id='s', execution_id='e', status='RUNNING', cleanup_confirmed=False, lease_expires_at=now()+timedelta(minutes=2)))
         s.commit()
     return factory
+
+
+@pytest.fixture
+def api(pg, monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setenv('JWT_SECRET', 'local-log-test-only')
+    from backend.app import main
+    from backend.app.execution import token_hash
+    factory = seed(pg[0])
+    monkeypatch.setattr(main, 'SessionLocal', factory)
+    with factory() as s:
+        s.get(Worker, 'w').token_hash = token_hash('wk_local_log_test')
+        s.commit()
+    with TestClient(main.app) as client:
+        yield client, {'Authorization': 'Bearer wk_local_log_test'}, factory
+
+
+def test_log_upload_does_not_wait_for_heartbeat_run_lock(api):
+    client, headers, factory = api
+    with factory() as heartbeat:
+        heartbeat.scalar(select(Run).where(Run.id == 'r').with_for_update(key_share=True))
+        response = client.post('/api/v1/worker/executions/e/logs-v2', headers=headers,
+                               json={'sequence': 0, 'content': 'during renewal'})
+        assert response.status_code == 200, response.text
+
+
+def test_heartbeat_does_not_wait_for_log_cursor_lock(api):
+    client, headers, factory = api
+    path = '/api/v1/worker/executions/e/logs-v2'
+    assert client.post(path, headers=headers, json={'sequence': 0, 'content': 'first'}).status_code == 200
+    with factory() as logger, ThreadPoolExecutor(1) as pool:
+        logger.scalar(select(RunLogState).where(RunLogState.run_id == 'r').with_for_update())
+        pending = pool.submit(client.post, path, headers=headers,
+                              json={'sequence': 1, 'content': 'second'})
+        time.sleep(.05)
+        assert not pending.done()
+        heartbeat = client.post('/api/v1/worker/heartbeat', headers=headers,
+                                json={'slot_id': 's', 'execution_id': 'e', 'started': True})
+        assert heartbeat.status_code == 200, heartbeat.text
+        logger.commit()
+        assert pending.result(timeout=5).status_code == 200
+
+
+def test_completion_waits_for_inflight_log_then_rejects_late_chunk(api):
+    client, headers, factory = api
+    path = '/api/v1/worker/executions/e/logs-v2'
+    with factory() as logger, ThreadPoolExecutor(1) as pool:
+        terminal_log_lock(logger, 'r')
+        pending = pool.submit(client.post, '/api/v1/worker/executions/e/complete',
+                              headers=headers, json={'status': 'FAILED'})
+        time.sleep(.05)
+        assert not pending.done()
+        assert append(logger, 'e', logger.get(Worker, 'w'),
+                      LogChunk(sequence=0, content='last'))['accepted']
+        logger.commit()
+        assert pending.result(timeout=5).status_code == 200
+    response = client.post(path, headers=headers, json={'sequence': 1, 'content': 'late'})
+    assert response.status_code == 409
+
+
+def test_log_waiting_behind_completion_is_rejected(api):
+    client, headers, factory = api
+    with factory() as finisher, ThreadPoolExecutor(1) as pool:
+        run = finisher.scalar(select(Run).where(Run.id == 'r').with_for_update(key_share=True))
+        terminal_log_lock(finisher, run.id)
+        pending = pool.submit(client.post, '/api/v1/worker/executions/e/logs-v2',
+                              headers=headers, json={'sequence': 0, 'content': 'too late'})
+        time.sleep(.05)
+        assert not pending.done()
+        run.status = 'FAILED'
+        run.cleanup_confirmed = True
+        finisher.commit()
+        assert pending.result(timeout=5).status_code == 409
+    with factory() as s:
+        assert not s.scalars(select(RunLogChunk)).all()
 
 
 def test_concurrent_replay_and_delete(pg):
@@ -154,7 +230,7 @@ def test_api_upload_cost_and_no_global_lock(pg, monkeypatch, tmp_path):
         s.get(Worker,'w').token_hash=token_hash('wk_local_log_test');s.commit()
     client=TestClient(main.app);headers={'Authorization':'Bearer wk_local_log_test'}
     statements=[]
-    def record(conn,cursor,sql,params,context,many):statements.append(sql)
+    def record(conn,cursor,sql,params,context,many):statements.append((sql,params))
     event.listen(pg[0],'before_cursor_execute',record)
     metrics={}
     try:
@@ -166,7 +242,8 @@ def test_api_upload_cost_and_no_global_lock(pg, monkeypatch, tmp_path):
                               headers=headers,json={'sequence':i,'content':'x'*(2048 if version==1 else 16384)})
                 assert r.status_code==200,r.text
             metrics[str(version)]={'requests':count,'sql_statements':len(statements),
-                                  'global_lock_calls':sum('pg_advisory' in sql for sql in statements),
+                'global_lock_calls':sum('pg_advisory' in sql and params.get('key') == 82510401
+                                        for sql,params in statements if isinstance(params,dict)),
                                   'elapsed_ms':round(1000*(time.monotonic()-started),2)}
         assert metrics['2']['sql_statements'] < metrics['1']['sql_statements']
         assert metrics['2']['global_lock_calls']==0

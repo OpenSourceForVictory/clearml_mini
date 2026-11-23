@@ -23,6 +23,7 @@ from .resource_limits import execution_pids_limit
 from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
 from .storage import Storage
 from .retention import Retention
+from .backpressure import APIError, Backoff, transient
 from .image_runtime import Runtime
 from .host_environments import HostEnvironments
 from .host_backend import HostBackend
@@ -37,12 +38,6 @@ class StartupCancelled(Exception):
     """Control plane cancelled the execution during startup preparation."""
 
 
-class APIError(Exception):
-    def __init__(self, status, message):
-        self.status = status
-        super().__init__(f'API {status}: {message}')
-
-
 class Client:
     def __init__(self, config):
         self.config = config
@@ -55,7 +50,8 @@ class Client:
             with urllib.request.urlopen(request, timeout=5) as response:
                 return json.load(response)
         except urllib.error.HTTPError as exc:
-            raise APIError(exc.code, exc.read(2048).decode(errors='replace')) from exc
+            raise APIError(exc.code, exc.read(2048).decode(errors='replace'),
+                           exc.headers.get('Retry-After') if exc.headers else None) from exc
 
 
 def docker(*args, timeout=15, check=True):
@@ -180,7 +176,7 @@ class Worker:
             self.state = None
             self.save()
 
-    def register_shared_artifacts(self, task):
+    def register_shared_artifacts(self, task, *, retry_transient=False):
         if task.get('artifact_transport') != 'shared':
             return
         try:
@@ -189,7 +185,9 @@ class Worker:
             body={'output_root':str(root or self.workspace/'runs'/task['execution_id']/'output')}
             if root:body['layout']='batch-v1'
             self.api.post(f"worker/executions/{task['execution_id']}/shared-artifacts",body)
-        except Exception:
+        except Exception as exc:
+            if retry_transient and transient(exc):
+                raise
             logging.getLogger(__name__).warning('shared artifact directory registration deferred', exc_info=False)
 
     def create(self, task):
@@ -338,14 +336,20 @@ class Worker:
     def upload_artifacts(self, task, deadline=None):
         execution = task['execution_id']
         if task.get('artifact_transport') == 'shared':
-            self.register_shared_artifacts(task)
+            self.register_shared_artifacts(task, retry_transient=True)
             return
         artifacts = HostBackend(self).artifacts(execution) if self.host_mode() else read_artifacts(self.name(execution))
         for name, data in artifacts:
             requested = time.monotonic()
+            if self.stop_event.is_set() or (deadline is not None and requested >= deadline[0]):
+                raise RuntimeError('worker stopped or lease expired during artifact upload')
             reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
             if deadline is not None:
+                if time.monotonic() >= deadline[0]:
+                    raise RuntimeError('lease expired during artifact upload')
                 deadline[0] = requested + reply['lease_seconds'] - 2
+            if reply.get('cancel'):
+                return False  # Main loop observes cancellation and owns cleanup.
             self.api.post(f'worker/executions/{execution}/artifacts',
                           {'name': name, 'content_base64': base64.b64encode(data).decode()})
 
@@ -474,6 +478,15 @@ class Worker:
         done, lease_lost = threading.Event(), threading.Event()
         startup_done, startup_abort = threading.Event(), threading.Event()
         startup_error = []
+        heartbeat_backoff, report_backoff = Backoff(), Backoff()
+
+        def defer(error, backoff):
+            if not transient(error):
+                raise error
+            # Return to the heartbeat loop after waiting; never advance a
+            # reliable delivery cursor or pretend this wait renewed the lease.
+            if not backoff.wait(error, self.stop_event, deadline[0]):
+                raise RuntimeError('worker stopped or lease expired') from error
 
         def check_startup():
             if startup_error:
@@ -483,6 +496,7 @@ class Worker:
 
         def renew_startup():
             interval = min(2, max(.2, (deadline[0] - time.monotonic()) / 4))
+            retry = Backoff()
             while not startup_done.wait(interval):
                 try:
                     check_startup()
@@ -494,10 +508,12 @@ class Worker:
                     if reply['cancel']:
                         raise StartupCancelled()
                     deadline[0] = requested + reply['lease_seconds'] - 2
+                    retry.reset()
                 except (urllib.error.URLError, TimeoutError):
                     continue
                 except APIError as exc:
-                    if exc.status == 503:
+                    if transient(exc):
+                        retry.wait(exc, startup_done, deadline[0])
                         continue
                     startup_error.append(exc)
                     startup_abort.set()
@@ -533,11 +549,11 @@ class Worker:
                 try:
                     initial = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution, 'started': False})
                     break
-                except APIError as exc:
-                    if exc.status != 503:
-                        raise
+                except (APIError, urllib.error.URLError, TimeoutError) as exc:
                     # A busy control plane does not renew the original lease.
-                    self.stop_event.wait(min(.5, max(0, deadline[0] - time.monotonic())))
+                    defer(exc, heartbeat_backoff)
+            check_startup()
+            heartbeat_backoff.reset()
             deadline[0] = requested_at + initial['lease_seconds'] - 2
             if initial['cancel']:
                 self.stop_container(execution)
@@ -613,8 +629,10 @@ class Worker:
                         except (urllib.error.URLError, TimeoutError):
                             pass
                         except APIError as exc:
-                            if exc.status != 503:
+                            if not transient(exc):
                                 raise
+                            defer(exc, report_backoff)
+                            continue
                         self.stop_event.wait(.5)
             finally:
                 startup_done.set()
@@ -645,19 +663,16 @@ class Worker:
                     limit=task['client_spec']['service']['readiness']['startup_timeout']
                     if not self.state.get('service_was_ready') and time.time()-self.state['service_started_at']>limit:
                         raise RuntimeError('service startup health deadline exceeded')
-                if self.stop_event.is_set() or lease_lost.is_set():
+                if self.stop_event.is_set() or lease_lost.is_set() or time.monotonic() >= deadline[0]:
                     raise RuntimeError('worker stopped or lease expired')
                 requested_at = time.monotonic()
                 try:
                     reply = self.api.post('worker/heartbeat', {'slot_id': self.slot_id, 'execution_id': execution})
-                except (urllib.error.URLError, TimeoutError):
-                    time.sleep(.5)
-                    continue  # Watchdog enforces the existing deadline during transient outages.
-                except APIError as exc:
-                    if exc.status != 503:
-                        raise
-                    time.sleep(.5)
-                    continue  # Control-plane lock contention is transient; keep the live unit.
+                except (APIError, urllib.error.URLError, TimeoutError) as exc:
+                    defer(exc, heartbeat_backoff)
+                    continue
+                check_startup()  # A late response cannot resurrect an expired lease.
+                heartbeat_backoff.reset()
                 deadline[0] = requested_at + reply['lease_seconds'] - 2
                 if reply['cancel']:
                     self.stop_container(execution)
@@ -693,21 +708,24 @@ class Worker:
                         elif not self.send_episodes(execution, output):
                             continue
                     logs_done = True if sender else self.send_logs(execution, output + ('\n'+err if not container['State']['Running'] and err else ''))
-                except (urllib.error.URLError, TimeoutError):
+                except (APIError, urllib.error.URLError, TimeoutError) as exc:
+                    defer(exc, report_backoff)
                     continue
                 if is_service(task) and not probe_runner and container['State']['Running'] and not reply['cancel']:
                     probe = service_health(task['client_spec']['service'])
+                    if (not probe['ready'] and not self.state.get('service_was_ready') and
+                        time.time() - self.state.get('service_started_at', time.time()) > task['client_spec']['service']['startup_timeout']):
+                        raise RuntimeError('service startup health deadline exceeded')
                     try:
                         self.api.post(f'worker/executions/{execution}/service-health', probe)
-                    except (urllib.error.URLError, TimeoutError):
+                    except (APIError, urllib.error.URLError, TimeoutError) as exc:
                         # A lost health report must not kill a leased service. The
                         # watchdog still stops it if heartbeats cannot renew.
-                        time.sleep(.5)
+                        defer(exc, report_backoff)
+                        continue
                     if probe['ready']:
                         if not self.state.get('service_was_ready'):
                             self.state['service_was_ready'] = True; self.save()
-                    elif not self.state.get('service_was_ready') and time.time() - self.state.get('service_started_at', time.time()) > task['client_spec']['service']['startup_timeout']:
-                        raise RuntimeError('service startup health deadline exceeded')
                 if not container['State']['Running']:
                     if not logs_done:
                         continue
@@ -743,13 +761,19 @@ class Worker:
                     if sender:body['log_gap'] = log_gap
                     if status == 'FAILED':
                         body = remember_failure(body)
-                    if task.get('benchmark') == 'cs-client':
-                        self.upload_artifacts(task, deadline)
-                    self.api.post(f'worker/executions/{execution}/complete', body)
+                    try:
+                        if task.get('benchmark') == 'cs-client' and not reply['cancel']:
+                            if self.upload_artifacts(task, deadline) is False:
+                                continue
+                        self.api.post(f'worker/executions/{execution}/complete', body)
+                    except (APIError, urllib.error.URLError, TimeoutError) as exc:
+                        defer(exc, report_backoff)
+                        continue
                     self.remove(execution)
                     self.state = None
                     self.save()
                     return
+                report_backoff.reset()
                 time.sleep(min(2, max(.2, task['lease_seconds']/4)))
         except StartupCancelled:
             self.stop_container(execution)
@@ -896,6 +920,7 @@ class Worker:
         from .process_logs import LogService
         self.process_logs=LogService(self);self.process_logs.start()
         had_task = bool(self.children)
+        retry = Backoff()
         while True:
             try:
                 for execution, child in list(self.children.items()):
@@ -942,8 +967,13 @@ class Worker:
                     self.launch(child, task)
                     had_task = True
                 self.control.refresh(reply)
-            except (APIError, urllib.error.URLError, TimeoutError, OSError, RuntimeError):
+                retry.reset()
+            except (APIError, urllib.error.URLError, TimeoutError, OSError, RuntimeError) as exc:
                 LOG.exception('worker iteration failed; retrying')
+                if transient(exc):
+                    if not retry.wait(exc, self.stop_event):
+                        return
+                    continue
             time.sleep(2)
 
 

@@ -1,0 +1,30 @@
+........................................................................ [ 47%]
+........................................................F............... [ 94%]
+.........                                                                [100%]
+=================================== FAILURES ===================================
+______ test_mixed_vendor_inventory_preserved_without_admitting_npu_as_gpu ______
+
+env = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient ...b2IiLCJzZXNzaW9uX3N0YXJ0ZWRfYXQiOjE3OTU0MzU2MDMsImV4cCI6MTc5NTQzNzQwM30.h4Kao588UnROAhBqQuIm_eIgh5ZJfui4dQ92TQLNIc4'}})
+
+    def test_mixed_vendor_inventory_preserved_without_admitting_npu_as_gpu(env):
+        from node_agent.devices import inventory
+        main,c,a=env;_,slots,tokens=setup_gpu(env,1);token=tokens[0];session=register(c,token)
+        values=samples();values['npu']=sample(ascend_sample())
+        devices=inventory(values)
+        r=c.post('/api/v1/agent/heartbeat',headers=token,json={'session':session,'sequence':1,'applied_revision':0,'config_status':'applied','samples':values,'devices':devices})
+        assert r.status_code==200,r.text
+        with main.SessionLocal() as s:
+            slot=s.get(Slot,slots[0]);w=s.get(Worker,slot.worker_id)
+>           stored=w.connection['agent']['devices']
+E           KeyError: 'devices'
+
+backend/tests/test_resource_reporting.py:259: KeyError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_resource_reporting.py::test_mixed_vendor_inventory_preserved_without_admitting_npu_as_gpu
+1 failed, 152 passed, 1 warning in 147.25s (0:02:27)

@@ -1,0 +1,13 @@
+
+> mini-eval-ui@0.1.0 test:e2e
+> playwright test user-guide.spec.ts worker-upgrades.spec.ts
+
+
+Running 4 tests using 1 worker
+
+  ✓  1 tests/user-guide.spec.ts:12:1 › guide search, SDK download and role filtering (459ms)
+  ✓  2 tests/user-guide.spec.ts:33:1 › context help preserves template draft and does not submit (347ms)
+  ✓  3 tests/user-guide.spec.ts:40:1 › admin help and narrow screen have no horizontal overflow (216ms)
+  ✓  4 tests/worker-upgrades.spec.ts:2:1 › version management distinguishes protocol, software and drain upgrade (415ms)
+
+  4 passed (1.8s)

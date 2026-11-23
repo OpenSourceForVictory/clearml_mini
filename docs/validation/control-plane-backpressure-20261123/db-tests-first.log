@@ -1,0 +1,125 @@
+.........................FF                                              [100%]
+=================================== FAILURES ===================================
+__________________ test_claim_does_not_queue_behind_scheduler __________________
+
+online = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient object at 0x7798aa926ad0>, {'Authorization': 'Bearer <redacted>
+
+    def test_claim_does_not_queue_behind_scheduler(online):
+        main, client, headers = online
+        from backend.app.scheduling import lock
+        with main.ControlSessionLocal() as holder:
+            lock(holder)
+            start = time.monotonic()
+>           response = client.post('/api/v1/worker/slots/s/claim', headers=headers, json={})
+
+backend/tests/test_db_budget.py:119:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.13/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1144: in post
+    return self.request(
+.venv/lib/python3.13/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+.venv/lib/python3.13/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/opt/anaconda3/lib/python3.13/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/opt/anaconda3/lib/python3.13/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1054: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+backend/app/db_budget.py:122: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:76: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/starlette/routing.py:73: in app
+    response = await f(request)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:301: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:214: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+.venv/lib/python3.13/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+.venv/lib/python3.13/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+slot_id = 's', body = Claim(known_execution_ids=[])
+worker = <backend.app.core.Worker object at 0x7798aa9279d0>
+s = <sqlalchemy.orm.session.Session object at 0x7798aed3da90>
+
+    @app.post('/api/v1/worker/slots/{slot_id}/claim')
+    def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
+        if os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1':
+>           fast_lock(s)
+E           NameError: name 'fast_lock' is not defined
+
+backend/app/execution.py:378: NameError
+_______ test_statement_and_cumulative_deadline_do_not_leak_to_background _______
+
+online = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient object at 0x7798ac6c68b0>, {'Authorization': 'Bearer <redacted>
+
+    def test_statement_and_cumulative_deadline_do_not_leak_to_background(online):
+        main, _, _ = online
+        factory = main.SessionLocal
+        token = budget.request_budget.set(time.monotonic() + .1)
+        try:
+            with pytest.raises(DBAPIError) as raised, factory() as s:
+                s.execute(text('SELECT pg_sleep(1)'))
+            assert budget.busy_reason(raised.value) == 'statement_timeout'
+>           with pytest.raises(budget.DatabaseBusy), factory() as s:
+E           Failed: DID NOT RAISE <class 'backend.app.db_budget.DatabaseBusy'>
+
+backend/tests/test_db_budget.py:133: Failed
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_db_budget.py::test_claim_does_not_queue_behind_scheduler
+FAILED backend/tests/test_db_budget.py::test_statement_and_cumulative_deadline_do_not_leak_to_background
+2 failed, 25 passed, 1 warning in 6.76s

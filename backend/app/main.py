@@ -2,13 +2,14 @@ from __future__ import annotations
 from . import endpoints
 import os
 import threading
+import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Literal, Optional
 import jwt
 from argon2 import PasswordHasher
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,13 +27,26 @@ from .batches import install as install_batches
 from .episodes import install as install_episodes
 from .builds import install as install_builds
 
-SessionLocal = session_factory()
+from . import db_budget
+
+DB_BACKPRESSURE_ENABLED = os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1'
+if DB_BACKPRESSURE_ENABLED:
+    db_settings = db_budget.Settings.environment()
+    DatabaseSessions = db_budget.factories(
+        os.getenv('DATABASE_URL', 'sqlite:///./eval.db'), db_settings, isolated=True)
+    SessionLocal = DatabaseSessions['ordinary']
+    ControlSessionLocal = DatabaseSessions['control']
+    SchedulerSessionLocal = DatabaseSessions['scheduler']
+else:
+    SessionLocal = ControlSessionLocal = SchedulerSessionLocal = session_factory()
+    DatabaseSessions = {}
+_online_session_factory = SessionLocal
 @asynccontextmanager
 async def lifespan(app):
     stop = threading.Event()
     thread = None
     if os.getenv('SCHEDULER_ENABLED', '1') == '1':
-        thread = threading.Thread(target=loop, args=(SessionLocal, stop), daemon=True)
+        thread = threading.Thread(target=loop, args=(SchedulerSessionLocal if SessionLocal is _online_session_factory else SessionLocal, stop), daemon=True)
         thread.start()
     yield
     stop.set()
@@ -41,7 +55,20 @@ async def lifespan(app):
 
 
 app = FastAPI(title='Mini Eval Platform', lifespan=lifespan)
+if DB_BACKPRESSURE_ENABLED:
+    app.add_middleware(db_budget.Admission, settings=db_settings)
 bearer = HTTPBearer(auto_error=False)
+
+
+@app.exception_handler(db_budget.DatabaseBusy)
+@app.exception_handler(SQLAlchemyError)
+def database_error(request, exc):
+    reason = db_budget.busy_reason(exc)
+    if reason is None or not DB_BACKPRESSURE_ENABLED:
+        raise exc
+    db_budget.LOG.warning('database request rejected category=%s reason=%s',
+                         getattr(request.state, 'db_category', 'ordinary'), reason)
+    return db_budget.busy_response(reason)
 
 
 @app.exception_handler(RequestValidationError)
@@ -57,8 +84,21 @@ if not SECRET:
     raise RuntimeError('JWT_SECRET is required')
 
 
-def db():
-    with SessionLocal() as s:
+def db(request: Request):
+    # Explicit SessionLocal overrides (tests/embedded deployments) remain one
+    # database; never authenticate against a different, cached production DB.
+    factory = (DatabaseSessions.get(getattr(request.state, 'db_category', 'ordinary'), SessionLocal)
+               if SessionLocal is _online_session_factory else SessionLocal)
+    with factory() as s:
+        if DB_BACKPRESSURE_ENABLED:
+            began = time.monotonic()
+            try:
+                s.connection()
+            finally:
+                pool = factory.kw['bind'].pool
+                db_budget.LOG.debug('database checkout category=%s wait_ms=%.3f checked_out=%s',
+                    getattr(request.state, 'db_category', 'ordinary'), (time.monotonic()-began)*1000,
+                    pool.checkedout() if hasattr(pool, 'checkedout') else 'unavailable')
         yield s
 
 
@@ -129,7 +169,7 @@ def details(session, jobs):
 
 
 @app.get('/healthz')
-def health():
+async def health():
     return {'status': 'ok'}
 
 

@@ -3,7 +3,7 @@ import uuid
 from datetime import timedelta
 import pytest
 from backend.tests.test_execution import env,node,submit,claim
-from backend.app.core import Worker,Run,now
+from backend.app.core import Worker,Run,now,AgentObservation
 from sqlalchemy import select
 from backend.app.node_agents import admission
 
@@ -84,7 +84,8 @@ def test_connection_merge_and_offline_admission(env):
     beat(c,t,session)
     with main.SessionLocal() as s:
         w=s.get(Worker,identity);assert w.connection['enrollment']['state']=='COMPLETE';assert admission(w)
-        w.connection={**w.connection,'agent':{**w.connection['agent'],'seen_at':(now()-timedelta(seconds=46)).isoformat()}}
+        observed=s.get(AgentObservation,w.id)
+        observed.payload={**observed.payload,'seen_at':(now()-timedelta(seconds=46)).isoformat()}
         assert not admission(w)
         w.connection=None;assert admission(w)
 
@@ -138,7 +139,8 @@ def test_offline_agent_blocks_new_claim_but_not_existing_execution_heartbeat(env
     submit(env);task=claim(env,t,slots[0]);assert task
     with main.SessionLocal() as s:
         w=s.get(Worker,identity)
-        w.connection={**w.connection,'agent':{**w.connection['agent'],'seen_at':(now()-timedelta(seconds=46)).isoformat()}}
+        observed=s.get(AgentObservation,w.id)
+        observed.payload={**observed.payload,'seen_at':(now()-timedelta(seconds=46)).isoformat()}
         s.commit()
     assert c.get('/api/v1/admin/nodes/'+identity+'/agent',headers=a['admin']).json()['status']=='offline'
     ex=task['execution_id']
@@ -153,7 +155,8 @@ def test_duplicate_heartbeat_does_not_revive_expired_agent(env):
     with main.SessionLocal() as s:
         w=s.get(Worker,identity)
         old=(now()-timedelta(seconds=46)).isoformat()
-        w.connection={**w.connection,'agent':{**w.connection['agent'],'seen_at':old}};s.commit()
+        observed=s.get(AgentObservation,w.id)
+        observed.payload={**observed.payload,'seen_at':old};s.commit()
     assert beat(c,t,session,5).status_code==200
     r=c.get('/api/v1/admin/nodes/'+identity+'/agent',headers=a['admin']).json()
     assert r['status']=='offline' and r['seen_at']==old
