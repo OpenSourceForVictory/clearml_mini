@@ -5,8 +5,14 @@ services:
     ports: !reset []
     environment:
       DB_BACKPRESSURE_ENABLED: "1"
+      DB_ADMISSION_ENABLED: "0"
       API_ROUTE_GROUP: ordinary
       API_DB_PROCESS_COUNT: "2"
+      DB_POOL_SIZE: ${DB_SPLIT_ORDINARY_POOL_SIZE:-10}
+      DB_CONTROL_POOL_SIZE: "1"
+      DB_OBSERVATION_POOL_SIZE: ${DB_SPLIT_OBSERVATION_POOL_SIZE:-4}
+      DB_RESULT_POOL_SIZE: ${DB_SPLIT_RESULT_POOL_SIZE:-3}
+      DB_SCHEDULER_POOL_SIZE: "1"
 
   control-api:
     extends:
@@ -15,9 +21,15 @@ services:
     ports: !reset []
     environment:
       DB_BACKPRESSURE_ENABLED: "1"
+      DB_ADMISSION_ENABLED: "0"
       API_ROUTE_GROUP: control
       API_DB_PROCESS_COUNT: "2"
       SCHEDULER_ENABLED: "0"
+      DB_POOL_SIZE: "1"
+      DB_CONTROL_POOL_SIZE: ${DB_SPLIT_CONTROL_POOL_SIZE:-8}
+      DB_OBSERVATION_POOL_SIZE: "1"
+      DB_RESULT_POOL_SIZE: "1"
+      DB_SCHEDULER_POOL_SIZE: "1"
 
   api-gateway:
     image: m.daocloud.io/docker.io/library/nginx:1.27-alpine

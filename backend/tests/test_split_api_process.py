@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 
-from backend.app.db_budget import Admission, Settings, request_category
+from backend.app.db_budget import Admission, RouteGroup, Settings, request_category
 
 
 GATEWAY = Path(__file__).resolve().parents[2] / 'deploy' / 'split-api-nginx.conf'
@@ -94,3 +94,37 @@ def test_route_group_rejects_mismatch_before_handler(group, path, method, accept
 def test_invalid_route_group_rejected():
     with pytest.raises(ValueError, match='API route group'):
         Admission(None, Settings(), route_group='all')
+    with pytest.raises(ValueError, match='API route group'):
+        RouteGroup(None, route_group='all')
+
+
+@pytest.mark.parametrize('group,path,accepted', [
+    ('control', '/api/v1/worker/heartbeat', True),
+    ('control', '/api/v1/agent/heartbeat', False),
+    ('ordinary', '/api/v1/worker/heartbeat', False),
+    ('ordinary', '/api/v1/agent/heartbeat', True),
+    ('ordinary', '/api/v1/worker/executions/e/logs-v2', True),
+    ('control', '/healthz', True),
+    ('ordinary', '/healthz', True),
+])
+def test_route_group_without_admission_does_not_limit_requests(group, path, accepted):
+    called, messages = [], []
+
+    async def app(scope, receive, send):
+        called.append(scope['path'])
+        await send({'type': 'http.response.start', 'status': 200, 'headers': []})
+        await send({'type': 'http.response.body', 'body': b'OK'})
+
+    async def send(message):
+        messages.append(message)
+
+    async def receive():
+        return {'type': 'http.request', 'body': b'', 'more_body': False}
+
+    router = RouteGroup(app, group)
+    for _ in range(3):
+        asyncio.run(router({'type': 'http', 'path': path, 'method': 'GET' if path == '/healthz' else 'POST'},
+                           receive, send))
+    assert len(called) == (3 if accepted else 0)
+    assert [message['status'] for message in messages if message['type'] == 'http.response.start'] == [
+        200 if accepted else 404] * 3

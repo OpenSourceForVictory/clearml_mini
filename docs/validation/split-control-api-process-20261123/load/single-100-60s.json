@@ -1,0 +1,218 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 1,
+  "pool_ordinary": 10,
+  "pool_control": 5,
+  "pool_observation": 2,
+  "pool_result": 2,
+  "pool_scheduler": 1,
+  "cards_per_node": 1,
+  "seconds_per_grade": 60,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": false,
+  "log_interval_seconds": 2,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "trace_http_phases": true,
+  "client_per_worker": true,
+  "agent_telemetry": true,
+  "scope": "real HTTP/PostgreSQL, simulated running services and Agent telemetry; excludes scheduler allocation and real business processes",
+  "grades": [
+    {
+      "requests": {
+        "503": 1402,
+        "200": 14722
+      },
+      "busy_reasons": {
+        "request_concurrency": 637,
+        "scheduler_lock": 765
+      },
+      "requests_by_kind": {
+        "agent": {
+          "503": 243,
+          "200": 1151
+        },
+        "logs": {
+          "503": 178,
+          "200": 3000
+        },
+        "heartbeat": {
+          "200": 2874,
+          "503": 56
+        },
+        "health": {
+          "503": 37,
+          "200": 2837
+        },
+        "artifact": {
+          "200": 2816,
+          "503": 58
+        },
+        "claim": {
+          "503": 830,
+          "200": 2044
+        }
+      },
+      "busy_by_kind": {
+        "agent": {
+          "request_concurrency": 243
+        },
+        "logs": {
+          "request_concurrency": 178
+        },
+        "health": {
+          "request_concurrency": 37
+        },
+        "heartbeat": {
+          "request_concurrency": 56
+        },
+        "artifact": {
+          "request_concurrency": 58
+        },
+        "claim": {
+          "request_concurrency": 65,
+          "scheduler_lock": 765
+        }
+      },
+      "successful_latency_seconds": {
+        "agent": {
+          "p95": 0.06597293098457158,
+          "p99": 0.08036881196312606,
+          "max": 0.11066507105715573
+        },
+        "heartbeat": {
+          "p95": 0.24462688295170665,
+          "p99": 0.28745032008737326,
+          "max": 0.3244712338782847
+        },
+        "logs": {
+          "p95": 0.06577928410843015,
+          "p99": 0.07945140893571079,
+          "max": 0.13498337497003376
+        },
+        "health": {
+          "p95": 0.22936322004534304,
+          "p99": 0.2740201400592923,
+          "max": 0.3104342280421406
+        },
+        "artifact": {
+          "p95": 0.04050188884139061,
+          "p99": 0.053298849845305085,
+          "max": 0.08352389396168292
+        },
+        "claim": {
+          "p95": 0.04162316699512303,
+          "p99": 0.049534851917997,
+          "max": 0.06603588699363172
+        }
+      },
+      "latency_seconds": {
+        "agent": {
+          "p95": 0.06371831893920898,
+          "p99": 0.0800847269129008,
+          "max": 0.11066543101333082
+        },
+        "logs": {
+          "p95": 0.06551862391643226,
+          "p99": 0.07909811800345778,
+          "max": 0.1349835628643632
+        },
+        "heartbeat": {
+          "p95": 0.2461567099671811,
+          "p99": 0.2858159861061722,
+          "max": 0.3244714729953557
+        },
+        "health": {
+          "p95": 0.23096068995073438,
+          "p99": 0.2740207021124661,
+          "max": 0.31043471000157297
+        },
+        "artifact": {
+          "p95": 0.04043926717713475,
+          "p99": 0.05329950386658311,
+          "max": 0.08352414891123772
+        },
+        "claim": {
+          "p95": 0.04002615693025291,
+          "p99": 0.048289950005710125,
+          "max": 0.06603613100014627
+        }
+      },
+      "max_heartbeat_gap_seconds": 4.568536490900442,
+      "max_final_sample_age_seconds": 4.092032606014982,
+      "max_final_agent_age_seconds": 7.303710349835455,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.0010047589894384146,
+        "p99": 0.001067552948370576,
+        "max": 0.03939425898715854
+      },
+      "http_phases_seconds": {
+        "client_before_transport": {
+          "p95": 0.0005144721362739801,
+          "p99": 0.0008621870074421167,
+          "max": 0.10211992496624589,
+          "samples": 16124
+        },
+        "tcp_connect": {
+          "p95": 0.001885710982605815,
+          "p99": 0.0037966331001371145,
+          "max": 0.004338816972449422,
+          "samples": 354
+        },
+        "response_headers_wait": {
+          "p95": 0.18749770196154714,
+          "p99": 0.2561136910226196,
+          "max": 0.3232514229603112,
+          "samples": 16124
+        }
+      },
+      "progress": [
+        {
+          "elapsed_seconds": 30.85,
+          "max_current_heartbeat_age_seconds": 2.0484815479721874,
+          "worst_heartbeat_gap_seconds": 4.568536490900442,
+          "log_generated": 1500,
+          "log_accepted": 1500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 56,
+          "log_admission_rejections": 119,
+          "agent_admission_rejections": 194
+        },
+        {
+          "elapsed_seconds": 60.0,
+          "max_current_heartbeat_age_seconds": 2.050994399935007,
+          "worst_heartbeat_gap_seconds": 4.568536490900442,
+          "log_generated": 3000,
+          "log_accepted": 2999,
+          "log_pending": 1,
+          "oldest_pending_log_seconds": 0.4665886959992349,
+          "heartbeat_admission_rejections": 56,
+          "log_admission_rejections": 178,
+          "agent_admission_rejections": 243
+        }
+      ],
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 3000,
+        "accepted": 3000,
+        "max_pending_chunks_per_worker": 2,
+        "final_pending_chunks": 0,
+        "max_pending_age_seconds": 2.750198381021619
+      },
+      "initial_checkout_wait_ms": {
+        "p95": 0.048,
+        "p99": 0.053
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 100,
+      "executions": 100,
+      "passed": true
+    }
+  ]
+}

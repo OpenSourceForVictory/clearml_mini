@@ -91,6 +91,21 @@ def control_path(path):
     return request_category(path) == 'control'
 
 
+class RouteGroup:
+    """Keep process routing independent from optional database backpressure."""
+    def __init__(self, app, route_group):
+        if route_group not in ('ordinary', 'control'):
+            raise ValueError('API route group must be ordinary or control')
+        self.app, self.route_group = app, route_group
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] == 'http' and not (scope.get('path') == '/healthz' and scope.get('method') == 'GET'):
+            category = request_category(scope.get('path', ''), scope.get('method', 'GET'))
+            if (category == 'control') != (self.route_group == 'control'):
+                return await JSONResponse({'detail': 'API route group mismatch'}, status_code=404)(scope, receive, send)
+        return await self.app(scope, receive, send)
+
+
 def busy_reason(error):
     if isinstance(error, DatabaseBusy):
         return 'request_budget'
@@ -139,11 +154,12 @@ def factories(url, settings, *, isolated=False):
 
 class Admission:
     """Reject before authentication, DB checkout and synchronous thread dispatch."""
-    def __init__(self, app, settings, route_group=None):
+    def __init__(self, app, settings, route_group=None, admission_enabled=True):
         self.app, self.settings = app, settings
         if route_group not in (None, 'ordinary', 'control'):
             raise ValueError('API route group must be ordinary or control')
         self.route_group = route_group
+        self.admission_enabled = admission_enabled
         self.gates = {name: threading.BoundedSemaphore(size) for name, size in settings.pool_sizes.items()
                       if name != 'scheduler'}
         self.thread_capacity = sum(size for name, size in settings.pool_sizes.items() if name != 'scheduler') + 4
@@ -192,7 +208,7 @@ class Admission:
             limiter.total_tokens = self.thread_capacity
         gate = self.gates[category]
         started = time.monotonic()
-        if not await self.acquire(category):
+        if self.admission_enabled and not await self.acquire(category):
             LOG.warning('database admission rejected category=%s reason=concurrency', category)
             return await busy_response('request_concurrency')(scope, receive, send)
         scope.setdefault('state', {})['db_category'] = category
@@ -201,6 +217,7 @@ class Admission:
             await self.app(scope, receive, send)
         finally:
             request_budget.reset(token)
-            gate.release()
+            if self.admission_enabled:
+                gate.release()
             LOG.debug('database request finished category=%s elapsed_ms=%.1f', category,
                       (time.monotonic() - started) * 1000)

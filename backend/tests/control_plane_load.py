@@ -2,7 +2,7 @@
 import argparse
 import asyncio
 from collections import Counter, defaultdict, deque
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, ExitStack
 from datetime import timedelta
 import hashlib
 import json
@@ -60,6 +60,36 @@ def seed(engine, count, *, agent_telemetry=False):
 
 def percentile(values, fraction):
     return sorted(values)[min(len(values)-1, int(len(values)*fraction))] if values else None
+
+
+def render_gateway_config(template, ordinary_port, control_port, gateway_port):
+    markers = ('listen 8000;', 'set $control_backend control-api:8000;',
+               'set $ordinary_backend api:8000;')
+    if any(marker not in template for marker in markers):
+        raise ValueError('split API gateway template is missing a required route marker')
+    return (template.replace('listen 8000;', f'listen 127.0.0.1:{gateway_port};')
+            .replace('set $control_backend control-api:8000;',
+                     f'set $control_backend 127.0.0.1:{control_port};')
+            .replace('set $ordinary_backend api:8000;',
+                     f'set $ordinary_backend 127.0.0.1:{ordinary_port};'))
+
+
+def api_log_names(count, split_api):
+    return ([f'api-ordinary-{count}.log', f'api-control-{count}.log'] if split_api
+            else [f'api-{count}.log'])
+
+
+def pool_profiles(ordinary, control, observation, *, split_api=False, role_aware=False):
+    if role_aware and not split_api:
+        raise ValueError('role-aware pools require split API')
+    common = {'ordinary': ordinary, 'control': control, 'observation': observation,
+              'result': 2, 'scheduler': 1}
+    if role_aware:
+        return {'ordinary': {'ordinary': ordinary, 'control': 1, 'observation': observation,
+                             'result': 3, 'scheduler': 1},
+                'control': {'ordinary': 1, 'control': control, 'observation': 1,
+                            'result': 1, 'scheduler': 1}}
+    return {'ordinary': common, **({'control': common.copy()} if split_api else {})}
 
 
 async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0,
@@ -300,15 +330,33 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--ordinary-pool', type=int, default=10)
     parser.add_argument('--control-pool', type=int, default=5)
+    parser.add_argument('--observation-pool', type=int, default=2)
     parser.add_argument('--independent-logs', action='store_true')
     parser.add_argument('--drain-seconds', type=int, default=5)
     parser.add_argument('--trace-http-phases', action='store_true')
     parser.add_argument('--client-per-worker', action='store_true')
     parser.add_argument('--agent-telemetry', action='store_true')
     parser.add_argument('--progress-every-30s', action='store_true')
+    parser.add_argument('--split-api', action='store_true',
+                        help='run two isolated API processes behind the production Nginx routing config')
+    parser.add_argument('--role-aware-pools', action='store_true',
+                        help='use the split Compose role-specific pool profile')
+    parser.add_argument('--no-backpressure', action='store_true',
+                        help='use legacy DB sessions without category admission for comparison')
+    parser.add_argument('--no-admission', action='store_true',
+                        help='retain bounded DB pools and deadlines but do not reject at category entrance')
     args = parser.parse_args()
     grades = [int(x) for x in args.grades.split(',')]
-    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or min(args.ordinary_pool, args.control_pool) < 1 or args.ordinary_pool + args.control_pool + 5 > 80:
+    if args.role_aware_pools and not args.split_api:
+        parser.error('--role-aware-pools requires --split-api')
+    if args.role_aware_pools and args.no_backpressure:
+        parser.error('--role-aware-pools requires database backpressure')
+    if args.no_backpressure and args.no_admission:
+        parser.error('--no-admission requires database backpressure')
+    profiles = pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
+                             split_api=args.split_api, role_aware=args.role_aware_pools)
+    process_count = len(profiles)
+    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or any(sum(p.values()) * process_count > 80 for p in profiles.values()):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
@@ -316,7 +364,14 @@ def main():
     output = Path(args.output);output.mkdir(parents=True, exist_ok=True)
     admin = create_engine(url, isolation_level='AUTOCOMMIT')
     summary = {'hardware': {'machine':platform.machine(), 'cpu_count':os.cpu_count()},
-               'api_processes':1, 'pool_ordinary':args.ordinary_pool, 'pool_control':args.control_pool, 'pool_observation':2, 'pool_result':2, 'pool_scheduler':1, 'cards_per_node':1,
+               'api_processes':2 if args.split_api else 1,
+               'gateway':'nginx host-network test container' if args.split_api else None,
+               'pool_ordinary':args.ordinary_pool, 'pool_control':args.control_pool,
+               'pool_observation':args.observation_pool, 'pool_result':2, 'pool_scheduler':1,
+               'pool_by_process':profiles if not args.no_backpressure else None,
+               'db_backpressure_enabled':not args.no_backpressure,
+               'db_admission_enabled':not (args.no_admission or args.no_backpressure),
+               'cards_per_node':1,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'target_cycle_seconds':2, 'scheduler_enabled':False,
                'log_interval_seconds':args.log_interval,
@@ -334,25 +389,63 @@ def main():
             with admin.connect() as c:c.execute(text('CREATE DATABASE '+database))
             target = url.set(database=database)
             engine = create_engine(target)
-            process = None
+            processes = []
+            gateway = None
             try:
                 identities = seed(engine, count, agent_telemetry=args.agent_telemetry)
                 with engine.begin() as c:
                     c.execute(text("UPDATE evaluation_runs SET lease_expires_at=now()+interval '30 seconds'"))
-                with socket.socket() as sock:
-                    sock.bind(('127.0.0.1',0));port = sock.getsockname()[1]
-                with (output/f'api-{count}.log').open('w') as log:
+                def free_port():
+                    with socket.socket() as sock:
+                        sock.bind(('127.0.0.1', 0))
+                        return sock.getsockname()[1]
+                ordinary_port = free_port()
+                control_port = free_port() if args.split_api else None
+                port = free_port() if args.split_api else ordinary_port
+                with ExitStack() as stack:
                     env = {**os.environ, 'DATABASE_URL':target.render_as_string(hide_password=False), 'JWT_SECRET':uuid.uuid4().hex,
-                           'SCHEDULER_ENABLED':'0', 'DB_BACKPRESSURE_ENABLED':'1', 'DB_POOL_SIZE':str(args.ordinary_pool), 'DB_CONTROL_POOL_SIZE':str(args.control_pool),
-                           'DB_OBSERVATION_POOL_SIZE':'2', 'DB_RESULT_POOL_SIZE':'2', 'DB_SCHEDULER_POOL_SIZE':'1',
-                           'API_DB_PROCESS_COUNT':'1', 'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
-                    process = subprocess.Popen([sys.executable,'-m','uvicorn','backend.app.main:app','--host','127.0.0.1',
-                                                '--port',str(port),'--no-access-log'], env=env, stdout=log, stderr=log)
+                           'SCHEDULER_ENABLED':'0',
+                           'DB_BACKPRESSURE_ENABLED':'0' if args.no_backpressure else '1',
+                           'DB_ADMISSION_ENABLED':'0' if args.no_admission else '1',
+                           'API_DB_PROCESS_COUNT':str(process_count),
+                           'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
+                    def launch(role, api_port):
+                        profile = profiles[role]
+                        api_env = {**env, **{name: str(profile[key]) for name, key in (
+                            ('DB_POOL_SIZE', 'ordinary'), ('DB_CONTROL_POOL_SIZE', 'control'),
+                            ('DB_OBSERVATION_POOL_SIZE', 'observation'),
+                            ('DB_RESULT_POOL_SIZE', 'result'),
+                            ('DB_SCHEDULER_POOL_SIZE', 'scheduler'))}}
+                        if args.split_api:
+                            api_env['API_ROUTE_GROUP'] = role
+                        log_name = (f'api-{role}-{count}.log' if args.split_api else f'api-{count}.log')
+                        log = stack.enter_context((output/log_name).open('w'))
+                        process = subprocess.Popen([sys.executable,'-m','uvicorn','backend.app.main:app',
+                                                    '--host','127.0.0.1','--port',str(api_port),'--no-access-log'],
+                                                   env=api_env, stdout=log, stderr=log)
+                        processes.append(process)
+                    launch('ordinary', ordinary_port)
+                    if args.split_api:
+                        launch('control', control_port)
+                        deploy = Path(__file__).resolve().parents[2] / 'deploy'
+                        config = render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
+                                                       ordinary_port, control_port, port)
+                        gateway_config = output/f'gateway-{count}.conf'
+                        gateway_config.write_text(config)
+                        gateway = 'mini-eval-load-gateway-'+uuid.uuid4().hex[:12]
+                        subprocess.run(['docker','run','-d','--rm','--network','host','--name',gateway,
+                                        '-v',f'{gateway_config.resolve()}:/etc/nginx/conf.d/default.conf:ro',
+                                        '-v',f'{(deploy/"proxy-common.inc").resolve()}:/etc/nginx/conf.d/proxy-common.inc:ro',
+                                        'm.daocloud.io/docker.io/library/nginx:1.27-alpine'],
+                                       check=True, stdout=subprocess.DEVNULL)
                     base = f'http://127.0.0.1:{port}'
                     for _ in range(100):
-                        if process.poll() is not None:raise RuntimeError('isolated API exited; inspect API log')
+                        if any(process.poll() is not None for process in processes):
+                            raise RuntimeError('isolated API exited; inspect API log')
                         try:
-                            if httpx.get(base+'/openapi.json',timeout=1,trust_env=False).status_code == 200:break
+                            if (httpx.get(base+'/openapi.json',timeout=1,trust_env=False).status_code == 200 and
+                                    httpx.get(base+'/healthz',timeout=1,trust_env=False).status_code == 200):
+                                break
                         except httpx.TransportError:pass
                         time.sleep(.1)
                     else:raise RuntimeError('isolated API did not become ready')
@@ -364,7 +457,8 @@ def main():
                                                   agent_telemetry=args.agent_telemetry,
                                                   progress_path=output/f'progress-{count}.jsonl' if args.progress_every_30s else None,
                                                   log_interval=args.log_interval))
-                checkouts = [float(v) for v in re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/f'api-{count}.log').read_text())]
+                checkouts = [float(v) for name in api_log_names(count, args.split_api) for v in
+                             re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
                     result['expired_leases'] = c.scalar(text('SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now()'))
@@ -386,7 +480,10 @@ def main():
                 print(json.dumps({'workers':count,'passed':result['passed'],'requests':result['requests']}),flush=True)
                 if not result['passed']:break
             finally:
-                if process is not None:
+                if gateway:
+                    subprocess.run(['docker','stop',gateway], check=False, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL)
+                for process in processes:
                     process.terminate()
                     try:process.wait(timeout=10)
                     except subprocess.TimeoutExpired:process.kill();process.wait()

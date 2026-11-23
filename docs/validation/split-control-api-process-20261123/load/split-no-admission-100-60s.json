@@ -1,0 +1,185 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 2,
+  "gateway": "nginx host-network test container",
+  "pool_ordinary": 10,
+  "pool_control": 8,
+  "pool_observation": 4,
+  "pool_result": 2,
+  "pool_scheduler": 1,
+  "pool_by_process": {
+    "ordinary": {
+      "ordinary": 10,
+      "control": 1,
+      "observation": 4,
+      "result": 3,
+      "scheduler": 1
+    },
+    "control": {
+      "ordinary": 1,
+      "control": 8,
+      "observation": 1,
+      "result": 1,
+      "scheduler": 1
+    }
+  },
+  "db_backpressure_enabled": true,
+  "db_admission_enabled": false,
+  "cards_per_node": 1,
+  "seconds_per_grade": 60,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": false,
+  "log_interval_seconds": 2,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "trace_http_phases": false,
+  "client_per_worker": true,
+  "agent_telemetry": true,
+  "scope": "real HTTP/PostgreSQL, simulated running services and Agent telemetry; excludes scheduler allocation and real business processes",
+  "grades": [
+    {
+      "requests": {
+        "200": 15025,
+        "503": 839
+      },
+      "busy_reasons": {
+        "scheduler_lock": 743,
+        "connection_pool": 96
+      },
+      "requests_by_kind": {
+        "agent": {
+          "200": 1200,
+          "503": 35
+        },
+        "heartbeat": {
+          "200": 2901
+        },
+        "logs": {
+          "200": 3000,
+          "503": 25
+        },
+        "health": {
+          "200": 2901
+        },
+        "artifact": {
+          "200": 2875,
+          "503": 26
+        },
+        "claim": {
+          "200": 2148,
+          "503": 753
+        }
+      },
+      "busy_by_kind": {
+        "claim": {
+          "scheduler_lock": 743,
+          "connection_pool": 10
+        },
+        "agent": {
+          "connection_pool": 35
+        },
+        "logs": {
+          "connection_pool": 25
+        },
+        "artifact": {
+          "connection_pool": 26
+        }
+      },
+      "successful_latency_seconds": {
+        "agent": {
+          "p95": 0.09601366380229592,
+          "p99": 0.32844931608997285,
+          "max": 0.7773329128976911
+        },
+        "heartbeat": {
+          "p95": 0.08741277293302119,
+          "p99": 0.12633508699946105,
+          "max": 0.38164139608852565
+        },
+        "logs": {
+          "p95": 0.060815681936219335,
+          "p99": 0.14423265377990901,
+          "max": 0.8834253938402981
+        },
+        "health": {
+          "p95": 0.07592056808061898,
+          "p99": 0.10766100697219372,
+          "max": 0.1861447801347822
+        },
+        "artifact": {
+          "p95": 0.046191856963559985,
+          "p99": 0.17288515204563737,
+          "max": 0.7410675270948559
+        },
+        "claim": {
+          "p95": 0.035203647101297975,
+          "p99": 0.12045556190423667,
+          "max": 0.6374670548830181
+        }
+      },
+      "latency_seconds": {
+        "agent": {
+          "p95": 0.20592262502759695,
+          "p99": 0.5948151249904186,
+          "max": 0.7773333250079304
+        },
+        "heartbeat": {
+          "p95": 0.0874131319578737,
+          "p99": 0.12633539899252355,
+          "max": 0.38164165196940303
+        },
+        "logs": {
+          "p95": 0.07512958790175617,
+          "p99": 0.5074429151136428,
+          "max": 0.8834255950059742
+        },
+        "health": {
+          "p95": 0.07592092803679407,
+          "p99": 0.10766150988638401,
+          "max": 0.1861452371813357
+        },
+        "artifact": {
+          "p95": 0.06099159410223365,
+          "p99": 0.5601040769834071,
+          "max": 0.7410679201129824
+        },
+        "claim": {
+          "p95": 0.05364099005237222,
+          "p99": 0.32206768286414444,
+          "max": 0.6374673319514841
+        }
+      },
+      "max_heartbeat_gap_seconds": 3.8542170769069344,
+      "max_final_sample_age_seconds": 3.8542170769069344,
+      "max_final_agent_age_seconds": 5.8407094408757985,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.0010427739471197128,
+        "p99": 0.0012981228064745665,
+        "max": 0.0056759947910904884
+      },
+      "http_phases_seconds": {},
+      "progress": [],
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 3000,
+        "accepted": 3000,
+        "max_pending_chunks_per_worker": 1,
+        "final_pending_chunks": 0,
+        "max_pending_age_seconds": 1.8438708949834108
+      },
+      "initial_checkout_wait_ms": {
+        "p95": 32.784,
+        "p99": 131.52
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 100,
+      "executions": 100,
+      "passed": true
+    }
+  ]
+}

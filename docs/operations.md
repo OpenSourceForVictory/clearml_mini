@@ -29,7 +29,7 @@ Compose 保持原启动方式。背压开关 `DB_BACKPRESSURE_ENABLED` 默认 `0
 
 `deploy/split-api-compose.yml` 在基础 Compose 之上增加独立控制 API 和 Nginx 网关。两个 API 容器各自在内部监听 8000，只有网关绑定原 `API_BIND_HOST:API_BIND_PORT`；浏览器和 Worker 的平台地址不变。控制进程只接收执行控制 POST（续租、服务状态/探测、完成/清理、停止许可、取消/服务控制），普通进程处理 Agent 监控、领取、结果、日志、产物和 Web。两个进程的 FastAPI 同步线程池独立，普通进程运行调度器，控制进程设置 `SCHEDULER_ENABLED=0`。误路由在鉴权和数据库访问前返回 404；网关不会在控制进程故障时回退到普通进程。
 
-启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程强制启用 `DB_BACKPRESSURE_ENABLED=1` 和 `API_DB_PROCESS_COUNT=2`。默认池配置每进程最多 20 个连接、两进程最多 40 个，仍须为 PostgreSQL 管理/备份连接留余量。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
+启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程启用 `DB_BACKPRESSURE_ENABLED=1`、`DB_ADMISSION_ENABLED=0` 和 `API_DB_PROCESS_COUNT=2`。`DB_ADMISSION_ENABLED=0` 取消新增的分类入口并发闸门；数据库连接池仍有界，连接等待超时仍会返回可重试 503。双进程覆盖配置按职责分配默认池：普通 API 的普通/控制/观察/结果/调度为 10/1/4/3/1（最多 19 个连接），控制 API 为 1/8/1/1/1（最多 12 个），两者合计最多 31 个，仍须为 PostgreSQL 管理/备份连接留余量。普通、观察、结果和控制主要预算可分别用 `DB_SPLIT_ORDINARY_POOL_SIZE`、`DB_SPLIT_OBSERVATION_POOL_SIZE`、`DB_SPLIT_RESULT_POOL_SIZE`、`DB_SPLIT_CONTROL_POOL_SIZE` 覆盖；改动后用 Compose 展开结果核对两个进程的总预算。池大小是同时持有的数据库连接上限，并非 Worker 数或同类 HTTP 入口并发上限；同步线程额度另由 AnyIO 管理，仍共享主机 CPU。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
 
 ```bash
 docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/split-api-compose.yml config --quiet
@@ -38,6 +38,8 @@ docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/spli
 ```
 
 若本机原来使用 `scripts/control.py` 或其他覆盖配置启动，应在同一环境文件、项目名和覆盖顺序下切换；`scripts/control.py` 当前只管理基础 Compose，不能用于双进程启动/停止。回退到基础 Compose 时移除双进程覆盖文件，按现有发布流程重建 API；回退前应确认控制进程已停止且普通进程是唯一调度器。网关 `/healthz` 同时检查两组 API；控制进程故障时该健康检查失败，但普通接口仍可用。此隔离不解决 PostgreSQL 全局负载、同一行锁、主机 CPU/磁盘竞争；当前不作为 Worker 容量承诺。
+
+隔离混合负载可用 `backend/tests/control_plane_load.py --split-api --role-aware-pools --no-admission --ordinary-pool 10 --control-pool 8 --observation-pool 4 --client-per-worker --agent-telemetry --independent-logs` 复现；它会新建并删除独立测试数据库，在随机本机端口启动两个 API 和临时 Nginx，**不得指向生产数据库**。60 秒模拟测试中只拆进程、沿用旧数据库会话的 100 Worker 档未通过；取消入口闸门但保留有界数据库连接池的 100 Worker 档通过，最长心跳间隔 3.85 秒，全部 3000 条日志最终确认，仍有 96 次连接池 503 和 743 次领取调度锁 503。观察池大小是同进程观察类数据库连接上限，并非可接入节点数；双进程下 Agent 只进入普通 API。不要按短测宣称生产 100/200 Worker 容量；具体失败、强制日志积压和提前停止的长测见[双进程混合负载专项](validation/split-control-api-process-20261123/load/README.md)。
 
 排查期间可临时设置 `DB_BUDGET_DIAGNOSTICS=1` 并重建 API，输出每请求首次借连接的 `wait_ms`、池内 `checked_out` 和请求 `elapsed_ms`，不输出 SQL 参数或业务内容。该诊断会增加日志量，平时默认关闭；commit 后再次借连接仍受池预算限制，但不计入首次借连接指标。
 

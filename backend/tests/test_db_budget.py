@@ -467,3 +467,24 @@ def test_liveness_is_independent_of_saturated_admission():
         finally:admission.gates['ordinary'].release()
         assert calls==['/healthz']
     asyncio.run(scenario())
+
+
+def test_disabled_admission_preserves_category_and_deadline_without_entry_limit():
+    async def scenario():
+        calls = []
+        async def app(scope, receive, send):
+            calls.append((scope['state']['db_category'], budget.request_budget.get()))
+
+        admission = budget.Admission(app, budget.Settings(ordinary=1, request_timeout=1),
+                                     admission_enabled=False)
+        assert admission.gates['ordinary'].acquire(blocking=False)
+        try:
+            scope = {'type': 'http', 'method': 'POST', 'path': '/api/v1/worker/slots/s/claim'}
+            await asyncio.gather(*(admission(dict(scope), None, None) for _ in range(3)))
+            assert len(calls) == 3
+            assert all(category == 'ordinary' and deadline is not None for category, deadline in calls)
+            assert budget.request_budget.get() is None
+            assert not admission.gates['ordinary'].acquire(blocking=False)
+        finally:
+            admission.gates['ordinary'].release()
+    asyncio.run(scenario())
