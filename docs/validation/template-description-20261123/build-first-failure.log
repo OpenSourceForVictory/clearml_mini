@@ -1,0 +1,7 @@
+
+> mini-eval-ui@0.1.0 build
+> tsc --noEmit && vite build
+
+src/managed-services.tsx(24,23): error TS2322: Type 'ServerTemplate | undefined' is not assignable to type '{ description?: string | undefined; } | null | undefined'.
+  Type 'ServerTemplate' is not assignable to type '{ description?: string | undefined; } | null | undefined'.
+    Type 'ServerTemplate' has no properties in common with type '{ description?: string | undefined; }'.

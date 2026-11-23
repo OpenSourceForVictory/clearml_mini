@@ -1,0 +1,18 @@
+
+Running 13 tests using 1 worker
+
+  ✓   1 frontend/tests/run-wizard.spec.ts:45:1 › preflight names client environment and per-card server blockers (501ms)
+  ✓   2 frontend/tests/run-wizard.spec.ts:59:1 › draft survives navigation and polling; queued submit and independent trial preserve full suite (2.6s)
+  ✓   3 frontend/tests/run-wizard.spec.ts:85:1 › preflight failure is actionable and rechecking allows submission (543ms)
+  ✓   4 frontend/tests/run-wizard.spec.ts:98:1 › capacity diagnosis from preflight is visible without node access (408ms)
+  ✓   5 frontend/tests/run-wizard.spec.ts:107:1 › late inspection from a previous suite handoff is discarded (2.1s)
+  ✓   6 frontend/tests/run-wizard.spec.ts:129:39 › lost response reuses idempotency key; native UUID=true (516ms)
+  ✓   7 frontend/tests/run-wizard.spec.ts:129:39 › lost response reuses idempotency key; native UUID=false (526ms)
+  ✓   8 frontend/tests/run-wizard.spec.ts:140:1 › trial without episode reporting does not claim a completed episode (578ms)
+  ✓   9 frontend/tests/run-wizard.spec.ts:150:1 › multiple addresses validate duplicates and preserve modes in trial and formal submission (724ms)
+  ✓  10 frontend/tests/run-wizard.spec.ts:171:1 › editing address invalidates inspection and removing a row preserves the remaining draft (671ms)
+  ✓  11 frontend/tests/run-wizard.spec.ts:189:1 › execution limit is dynamic, validates inputs and keeps user value on refresh failure (780ms)
+  ✓  12 frontend/tests/run-wizard.spec.ts:212:1 › unlimited execution keeps finite draft and positive resource reservations (855ms)
+  ✓  13 frontend/tests/run-wizard.spec.ts:231:1 › template limits reserve the minimum and respect locked CPU (482ms)
+
+  13 passed (11.7s)

@@ -15,6 +15,7 @@ from pydantic import model_validator
 
 class TemplateCreate(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    description: str = Field(default='', max_length=2000, pattern=r'^[^\x00]*$')
     name: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
     image: str = Field(default='', min_length=0, max_length=500, pattern=r'^([A-Za-z0-9][A-Za-z0-9_./:@-]*)?$')
@@ -157,7 +158,7 @@ class ClientRequest(BaseModel):
 
 
 def template_view(t):
-    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements','result_directory')}
+    return {key: getattr(t, key) for key in ('id', 'name', 'version', 'description', 'image', 'command', 'protocols', 'enabled', 'episode_reporting', 'endpoint_exclusive', 'runtime', 'owner_id', 'execution_mode', 'integration_mode', 'host_runtime', 'archived', 'parameter_schema', 'task_type', 'platform_bindings','status','revision','resource_requirements','result_directory')}
 
 
 def host_episode_launch(template):

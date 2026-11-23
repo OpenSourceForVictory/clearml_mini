@@ -11,11 +11,12 @@ test('register both template kinds with Docker and host execution',async({page})
   for(const mode of ['docker','host']){
    await page.getByRole('button',{name:'注册模板',exact:true}).click();await page.getByLabel('模板名称',{exact:true}).fill(kind+'-'+mode);await page.getByLabel('版本',{exact:true}).fill('v1');await page.getByLabel('执行方式',{exact:true}).selectOption(mode);
    if(mode==='docker')await page.getByLabel('Docker 镜像').fill('test:1');else{await expect(page.getByLabel('Docker 镜像')).toHaveCount(0);await page.getByLabel('节点环境名称').fill('simulation')}
+   await page.getByLabel('模板说明',{exact:true}).fill(kind+'用途\n准备依赖');
    if(kind==='客户端')await page.getByLabel('协议接入方式').selectOption('sdk-command');
    await page.getByRole('button',{name:'注册此版本'}).click();await expect(page.getByRole('button',{name:'注册此版本'})).toHaveCount(0);
   }
  }
- expect(sent).toHaveLength(4);expect(sent[1]).toMatchObject({execution_mode:'host',integration_mode:'sdk-command',host_runtime:{environment_name:'simulation'}});expect(sent[1].image).toBeUndefined();expect(sent[2]).toMatchObject({path:'admin/server-templates',port:8000,health_type:'http'});
+ expect(sent).toHaveLength(4);expect(sent.map(x=>x.description)).toEqual(['客户端用途\n准备依赖','客户端用途\n准备依赖','服务端用途\n准备依赖','服务端用途\n准备依赖']);expect(sent[1]).toMatchObject({execution_mode:'host',integration_mode:'sdk-command',host_runtime:{environment_name:'simulation'}});expect(sent[1].image).toBeUndefined();expect(sent[2]).toMatchObject({path:'admin/server-templates',port:8000,health_type:'http'});
 });
 
 test('cloning a typed template preserves its parameter schema',async({page})=>{

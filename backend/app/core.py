@@ -339,6 +339,7 @@ class EpisodeRecord(Base):
 
 
 class ClientTemplate(Base):
+    description: Mapped[str] = mapped_column(String(2000), default='', server_default='')
     result_directory: Mapped[Optional[str]] = mapped_column(String(2000))
     resource_requirements: Mapped[Optional[dict]] = mapped_column(JSON_TYPE)
     status: Mapped[str] = mapped_column(String(20), default='published', server_default='published')

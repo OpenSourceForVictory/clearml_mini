@@ -1,5 +1,5 @@
 import {test,expect,Page} from '@playwright/test';
-const template={id:'existing',name:'demo',version:'1',enabled:true,image:'demo:1',execution_mode:'docker',integration_mode:'sdk-command',command:['python3','/app/episode.py'],protocols:['http'],episode_reporting:true,endpoint_exclusive:true,platform_bindings:[{source:'task.task_name',target:'argv',name:'--task'}],parameter_schema:{version:1,fields:{scene:{type:'string',default:'room',overridable:true,binding:{target:'env',name:'SCENE'}}}},runtime:{environment:{LOG_LEVEL:'info'},overridable_env:[],assets:{dataset:'/datasets'},mounts:{shared:{source:'directories:shared',target:'/shared',read_only:true,required:true}}}};
+const template={description:'用于评测\n注意准备模型',id:'existing',name:'demo',version:'1',enabled:true,image:'demo:1',execution_mode:'docker',integration_mode:'sdk-command',command:['python3','/app/episode.py'],protocols:['http'],episode_reporting:true,endpoint_exclusive:true,platform_bindings:[{source:'task.task_name',target:'argv',name:'--task'}],parameter_schema:{version:1,fields:{scene:{type:'string',default:'room',overridable:true,binding:{target:'env',name:'SCENE'}}}},runtime:{environment:{LOG_LEVEL:'info'},overridable_env:[],assets:{dataset:'/datasets'},mounts:{shared:{source:'directories:shared',target:'/shared',read_only:true,required:true}}}};
 async function setup(page:Page,fail=false,clientTemplate:any=template){
  const writes:any[]=[];await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -21,10 +21,10 @@ test('guidance, tabs and rejected copy preserve draft; failed registration keeps
 });
 test('structured read-only view and copy retain mappings, assets and protocol restrictions',async({page})=>{
  const writes=await setup(page);await page.getByRole('button',{name:'查看配置',exact:true}).click();const view=page.getByRole('region',{name:'模板配置详情'});
- await expect(view.getByLabel('字段名称',{exact:true})).toBeVisible();await expect(view.locator('input[value="/datasets"]')).toBeVisible();expect(writes).toHaveLength(0);
+ await expect(view.getByLabel('字段名称',{exact:true})).toBeVisible();await expect(view.locator('input[value="/datasets"]')).toBeVisible();await expect(view.getByLabel('模板说明',{exact:true})).toHaveValue(template.description);expect(writes).toHaveLength(0);
  await page.screenshot({path:'test-results/template-config-desktop.png',fullPage:true});
  await page.getByRole('button',{name:'以此配置创建新版本'}).click();await page.getByLabel('版本',{exact:true}).fill('2');await page.getByRole('button',{name:'注册此版本'}).click();
- await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body).toMatchObject({platform_bindings:template.platform_bindings,parameter_schema:template.parameter_schema,endpoint_exclusive:true,protocols:['http'],runtime:{assets:template.runtime.assets,mounts:template.runtime.mounts}});
+ await expect.poll(()=>writes.length).toBe(1);expect(writes[0].body).toMatchObject({description:template.description,platform_bindings:template.platform_bindings,parameter_schema:template.parameter_schema,endpoint_exclusive:true,protocols:['http'],runtime:{assets:template.runtime.assets,mounts:template.runtime.mounts}});
  await expect(page.getByRole('tab',{name:'已注册模板',exact:true})).toHaveAttribute('aria-selected','true');
  await page.getByRole('tab',{name:'服务端模板',exact:true}).click();await page.getByRole('button',{name:'查看配置',exact:true}).click();await expect(page.getByRole('region',{name:'模板配置详情'}).getByLabel('健康检查路径')).toBeVisible();
 });

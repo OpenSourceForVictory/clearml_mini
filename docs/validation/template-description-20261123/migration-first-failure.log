@@ -1,0 +1,48 @@
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.venv/bin/alembic", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/config.py", line 636, in main
+    CommandLine(prog=prog).main(argv=argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/config.py", line 626, in main
+    self.run_cmd(cfg, options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/config.py", line 603, in run_cmd
+    fn(
+    ~~^
+        config,
+        ^^^^^^^
+        *[getattr(options, k, None) for k in positional],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        **{k: getattr(options, k, None) for k in kwarg},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1027, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/dgh/Code/clearml_mini/backend/alembic/env.py", line 5, in <module>
+    from backend.app.core import Base
+ModuleNotFoundError: No module named 'backend'
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/template-description/migrate.py", line 8, in <module>
+    migrate('ab852c3')
+    ~~~~~~~^^^^^^^^^^^
+  File "/home/dgh/Code/clearml_mini/.runtime/template-description/migrate.py", line 7, in migrate
+    subprocess.run(['.venv/bin/alembic','-c','backend/alembic.ini',action,version],env=env,check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['.venv/bin/alembic', '-c', 'backend/alembic.ini', 'upgrade', 'ab852c3']' returned non-zero exit status 1.

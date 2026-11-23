@@ -1,3 +1,4 @@
+import {TemplateDescription} from './template-description';
 import {WizardModule,EnvironmentEditor,RuntimeSummary,ValueTable,JsonDraft} from './wizard-fields';
 import type {WizardLaunch} from './batch-rerun';
 import {requestId} from './request-id';
@@ -8,7 +9,7 @@ import {BusinessValues,ParameterSchema,ValuesDraft,parseValues} from './business
 import {ManagedServices,ServerTemplate,newService,servicePayload} from './managed-services';
 import {TemplateCopy,CopyTemplate} from './template-copy';
 
-export type Template = {resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;integration_mode?:string;host_runtime?:{episode_launch?:string;episode_error_policy?:string;overridable_env?:string[]}|null;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
+export type Template = {description?:string;resource_requirements?:ResourceContract|null;task_type?:string;execution_mode?:string;integration_mode?:string;host_runtime?:{episode_launch?:string;episode_error_policy?:string;overridable_env?:string[]}|null;parameter_schema?:ParameterSchema|null;id:string;name:string;version:string;image:string;command:string[];protocols:string[];enabled:boolean;episode_reporting?:boolean;endpoint_exclusive?:boolean;runtime?:{overridable_env:string[]}|null};
 export type Case = {case_id:string;task_name:string;episodes:number;seed:number;parameters?:Record<string,unknown>;service_keys?:string[];resources?:Record<string,unknown>};
 export type Suite = {id:string;name:string;version:string;template_id:string;template_ids?:string[];cases:Case[];client_defaults?:Record<string,unknown>};
 type Reason = {code:string;category:string;message:string;action:string};
@@ -191,6 +192,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     </WizardModule>}
     {step===1&&<><WizardModule title="运行模板"><div className="submit-grid">
       <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{templateId&&!template&&<option value={templateId} disabled>{imported?.templates.client.id===templateId?`${imported.templates.client.name} / ${imported.templates.client.version}`:templateId}（当前不可用，请重新选择）</option>}{allTemplates.filter(t=>{const relation=historicalSuite?sourceSuite:selectedSuite;return !relation||(relation.template_ids||[relation.template_id]).includes(t.id)||(historicalSuite&&t.id===imported?.submission.client.template_id)}).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
+      <TemplateDescription template={template} label="客户端模板说明"/>
       </div>{templateId&&!template&&<p role="alert" className="error">原客户端模板 {imported?.templates.client.name||templateId} 当前不在可用模板列表中，可能已停用、归档、删除或无访问权限。请从原集合允许的可用客户端模板中重新选择；若没有选项，请到集合管理检查关联模板及发布状态。</p>}<RuntimeSummary template={template}/></WizardModule><WizardModule title="执行时限"><div className="submit-grid">
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
       <label><input type="checkbox" checked={draft.unlimited_timeout} onChange={e=>update('unlimited_timeout',e.target.checked)}/>不限制每项总执行时长</label><Field label="每项总超时秒"><input disabled={draft.unlimited_timeout} type="number" required min={1} max={executionLimit??undefined} value={draft.timeout_seconds} onChange={e=>{timeoutEdited.current=true;update('timeout_seconds',Number(e.target.value))}}/></Field></div>

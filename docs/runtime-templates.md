@@ -4,6 +4,14 @@
 
 客户端注册 API 为 `/api/v1/admin/client-templates`，服务端为 `/api/v1/admin/server-templates`。注册使用 POST，启停 PATCH `/{id}`，归档 DELETE `/{id}`，复制 POST `/{id}/clone` 带 name（可选）和 version。宿主机模板只能由管理员注册，使用 `host_runtime.environment_name` 指向节点批准环境，不填 image/runtime；Docker 使用 image 和 runtime。环境准备/实例部署由后续同一 OpenSpec 任务实现，模板注册不代表已经可以执行。
 
+## 模板说明
+
+客户端和服务端模板的“基础信息”可填写“模板说明”：用途、适用场景、依赖与注意事项，选填，最多 2000 字符，支持换行，按纯文本显示。比如“用于 RoboTwin demo_clean；需先准备模型权重；客户端使用 eef 控制模式”。说明不会转换为命令参数或环境变量。
+
+业务评测向导选中客户端或每个托管服务模板后，在选择区域显示对应说明；自动选中集合模板时同样显示，切换模板即更新。没有填写的旧模板显示“暂无模板说明”。模板查看、复制新版本、成员草稿编辑均保留说明；已发布模板仍通过复制新版本修改，既有执行快照不回填。
+
+本功能需要迁移至 ac963d4 并发布 API/前端，不需要更新 Worker/Runner。说明不表示节点环境已经批准或通过预检。
+
 ## 端到端业务接入选择
 
 客户端模板的维度要分开选择：任务类型（评测 / 普通命令）、接入方式（direct / sdk-command / sdk-task-result）、执行位置（宿主机 / Docker）、宿主机回合启动（整任务 / 每回合）。普通命令默认只按退出码显示程序状态；评测任务需要 SDK 或直接协议结果。`sdk-task-result` 是普通整任务程序的可选单次业务结果上报：程序调用 `runner.sdk.report_task_result(success, metrics, summary)`，Worker 从执行专属工作目录转发，业务程序不接触平台凭据。它与逐回合报告互斥。SDK + 业务命令由适配器逐回合调用并读取 `MINI_EVAL_RESULT`；Python 回合 SDK 使用 `runner.sdk module:ClientClass`；直接协议读 `MINI_EVAL_INPUT` 并输出事件及 final。Docker 与整任务宿主机通常由单进程处理全部回合，宿主机逐回合选项则由平台每次以单回合输入启动业务进程。

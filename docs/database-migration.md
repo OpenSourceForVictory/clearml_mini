@@ -16,6 +16,8 @@
 
 当前执行时间功能新增迁移 **ab852c3**（前驱 aa741b2），仅增加 `job_events(run_id,new_status,created_at)` 索引，不新增时间表或回填历史数据。PostgreSQL 并发建索引，失败重试时会移除未完成的无效索引再建；不要把迁移版本手动改为 head。执行 `upgrade head` 后核对目标镜像 heads/current 均为 ab852c3。旧 API 可继续写入；降级只移除新增索引，不删除事件及已有 timing JSON。2026-11-23 本机已迁移至 ab852c3，见[上线记录](validation/execution-duration-20261123/README.md)；其他部署仍须自行核对 heads/current。
 
+模板说明新增迁移 **ac963d4**（前驱 ab852c3），为 client_templates 增加默认空字符串的 description 列；服务端沿用 definition JSON，旧定义缺字段按空说明读取。先迁移后更新 API/前端；Worker/Runner 无需更新。历史任务快照不回填，降级移除列会丢失客户端模板说明，优先保留列回退应用。此项为待部署变更，不代表现场已经升级。
+
 ## 执行前核对（另一台部署机器）
 
 先进入那台机器存放本项目的目录，确认存在 `deploy/compose.yml`。不需要使用开发机器目录或连接 29 节点。
