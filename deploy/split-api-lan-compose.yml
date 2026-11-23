@@ -1,0 +1,5 @@
+# Apply after split-api-compose.yml when the Worker uses a second private IP.
+services:
+  api-gateway:
+    ports:
+      - "${WORKER_BIND_HOST:?set the private Worker-facing IP}:${API_BIND_PORT:-8000}:8000"

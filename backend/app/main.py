@@ -30,6 +30,9 @@ from .builds import install as install_builds
 from . import db_budget
 
 DB_BACKPRESSURE_ENABLED = os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1'
+API_ROUTE_GROUP = os.getenv('API_ROUTE_GROUP') or None
+if API_ROUTE_GROUP and not DB_BACKPRESSURE_ENABLED:
+    raise RuntimeError('API_ROUTE_GROUP requires DB_BACKPRESSURE_ENABLED=1')
 if DB_BACKPRESSURE_ENABLED:
     db_settings = db_budget.Settings.environment()
     DatabaseSessions = db_budget.factories(
@@ -56,7 +59,7 @@ async def lifespan(app):
 
 app = FastAPI(title='Mini Eval Platform', lifespan=lifespan)
 if DB_BACKPRESSURE_ENABLED:
-    app.add_middleware(db_budget.Admission, settings=db_settings)
+    app.add_middleware(db_budget.Admission, settings=db_settings, route_group=API_ROUTE_GROUP)
 bearer = HTTPBearer(auto_error=False)
 
 

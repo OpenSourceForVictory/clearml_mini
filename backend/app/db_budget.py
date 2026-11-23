@@ -79,7 +79,8 @@ def request_category(path, method='POST'):
             r'/api/v1/worker/executions/[^/]+/(?:service-health|service-probe-session|complete|cleanup)', path):
         return 'control'
     if re.fullmatch(r'/api/v1/jobs/[^/]+/cancel', path) or re.fullmatch(
-            r'/api/v1/(?:batches|admin/services)/[^/]+/control', path):
+            r'/api/v1/(?:batches|admin/services)/[^/]+/control', path) or re.fullmatch(
+            r'/api/v1/orchestrations/[^/]+/services/[^/]+/control', path):
         return 'control'
     if re.fullmatch(r'/api/v1/worker/executions/[^/]+/(?:episodes|task-result)', path):
         return 'result'
@@ -138,8 +139,11 @@ def factories(url, settings, *, isolated=False):
 
 class Admission:
     """Reject before authentication, DB checkout and synchronous thread dispatch."""
-    def __init__(self, app, settings):
+    def __init__(self, app, settings, route_group=None):
         self.app, self.settings = app, settings
+        if route_group not in (None, 'ordinary', 'control'):
+            raise ValueError('API route group must be ordinary or control')
+        self.route_group = route_group
         self.gates = {name: threading.BoundedSemaphore(size) for name, size in settings.pool_sizes.items()
                       if name != 'scheduler'}
         self.thread_capacity = sum(size for name, size in settings.pool_sizes.items() if name != 'scheduler') + 4
@@ -177,13 +181,15 @@ class Admission:
         # Liveness is a constant async response: no thread/DB consumption.
         if scope['type'] != 'http' or (scope.get('path') == '/healthz' and scope.get('method') == 'GET'):
             return await self.app(scope, receive, send)
+        category = request_category(scope.get('path', ''), scope.get('method', 'GET'))
+        if self.route_group is not None and (category == 'control') != (self.route_group == 'control'):
+            return await JSONResponse({'detail': 'API route group mismatch'}, status_code=404)(scope, receive, send)
         # Bound every HTTP request, including static/SPA routes, before sync
         # dispatch. Non-control admissions cannot consume the thread allowance
         # reserved for admitted control work. This does not isolate CPU or I/O.
         limiter = anyio.to_thread.current_default_thread_limiter()
         if limiter.total_tokens < self.thread_capacity:
             limiter.total_tokens = self.thread_capacity
-        category = request_category(scope.get('path', ''), scope.get('method', 'GET'))
         gate = self.gates[category]
         started = time.monotonic()
         if not await self.acquire(category):

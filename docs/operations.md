@@ -25,6 +25,20 @@ Compose 保持原启动方式。背压开关 `DB_BACKPRESSURE_ENABLED` 默认 `0
 
 普通请求拥塞不会借用控制池，但数据库整体资源不足、同一行锁竞争仍能影响续租。日志中的 `category` 和 `reason` 可区分入口并发、连接池、行锁及语句预算；不要把连接数换算成可支持 Worker 数。真实混合负载上限尚未验证。
 
+### 可选双进程 API 隔离（隔离环境已验证，生产未启用）
+
+`deploy/split-api-compose.yml` 在基础 Compose 之上增加独立控制 API 和 Nginx 网关。两个 API 容器各自在内部监听 8000，只有网关绑定原 `API_BIND_HOST:API_BIND_PORT`；浏览器和 Worker 的平台地址不变。控制进程只接收执行控制 POST（续租、服务状态/探测、完成/清理、停止许可、取消/服务控制），普通进程处理 Agent 监控、领取、结果、日志、产物和 Web。两个进程的 FastAPI 同步线程池独立，普通进程运行调度器，控制进程设置 `SCHEDULER_ENABLED=0`。误路由在鉴权和数据库访问前返回 404；网关不会在控制进程故障时回退到普通进程。
+
+启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程强制启用 `DB_BACKPRESSURE_ENABLED=1` 和 `API_DB_PROCESS_COUNT=2`。默认池配置每进程最多 20 个连接、两进程最多 40 个，仍须为 PostgreSQL 管理/备份连接留余量。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
+
+```bash
+docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/split-api-compose.yml config --quiet
+docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/split-api-compose.yml up -d --wait
+docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/split-api-compose.yml ps
+```
+
+若本机原来使用 `scripts/control.py` 或其他覆盖配置启动，应在同一环境文件、项目名和覆盖顺序下切换；`scripts/control.py` 当前只管理基础 Compose，不能用于双进程启动/停止。回退到基础 Compose 时移除双进程覆盖文件，按现有发布流程重建 API；回退前应确认控制进程已停止且普通进程是唯一调度器。网关 `/healthz` 同时检查两组 API；控制进程故障时该健康检查失败，但普通接口仍可用。此隔离不解决 PostgreSQL 全局负载、同一行锁、主机 CPU/磁盘竞争；当前不作为 Worker 容量承诺。
+
 排查期间可临时设置 `DB_BUDGET_DIAGNOSTICS=1` 并重建 API，输出每请求首次借连接的 `wait_ms`、池内 `checked_out` 和请求 `elapsed_ms`，不输出 SQL 参数或业务内容。该诊断会增加日志量，平时默认关闭；commit 后再次借连接仍受池预算限制，但不计入首次借连接指标。
 
 现有平台升级、数据库备份、Compose 自动迁移及失败处理见 [数据库迁移与 Compose 升级指南](database-migration.md)。可在其他部署机器按该文档执行，须沿用该机器的环境文件、项目名与覆盖配置。

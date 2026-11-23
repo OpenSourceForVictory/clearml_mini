@@ -45,6 +45,7 @@ def test_config_environment_and_multiple_process_budget(monkeypatch):
     ('/api/v1/worker/executions/e/service-health/extra', False),
     ('/api/v1/worker/executions/e/logs', False),
     ('/api/v1/worker/slots/s/claim', False),
+    ('/api/v1/orchestrations/o/services/s/control', True),
     ('/api/v1/admin/health', False),
 ])
 def test_exact_control_paths(path, control):
