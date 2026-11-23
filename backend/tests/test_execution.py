@@ -57,6 +57,61 @@ def claim(env, token, slot):
     return r.json()['task']
 
 
+def test_idle_claim_does_not_take_scheduler_lock(env, monkeypatch):
+    from backend.app import execution
+    _, client, _ = env
+    token, slots = node(env)
+    monkeypatch.setenv('DB_BACKPRESSURE_ENABLED', '1')
+    monkeypatch.setattr(execution, 'lock', lambda *args, **kwargs: pytest.fail('idle claim took scheduler lock'))
+    response = client.post(f'/api/v1/worker/slots/{slots[0]}/claim', headers=token)
+    assert response.status_code == 200
+    assert response.json() == {'task': None, 'cleanup': []}
+
+
+def test_claim_lock_busy_defers_without_losing_reservation(env, monkeypatch):
+    from backend.app import execution
+    main, client, _ = env
+    token, slots = node(env)
+    job_id = submit(env)
+    assert tick(main.SessionLocal) == 1
+    monkeypatch.setenv('DB_BACKPRESSURE_ENABLED', '1')
+    monkeypatch.setattr(execution, 'lock', lambda session, wait=False: False)
+    path = f'/api/v1/worker/slots/{slots[0]}/claim'
+    deferred = client.post(path, headers=token)
+    assert deferred.status_code == 200
+    assert deferred.json() == {'task': None, 'cleanup': []}
+    with main.SessionLocal() as session:
+        run = session.scalar(select(Run).where(Run.job_id == job_id))
+        assert run.status == 'RESERVED'
+    monkeypatch.setattr(execution, 'lock', lambda session, wait=False: True)
+    task = client.post(path, headers=token).json()['task']
+    assert task['job_id'] == job_id
+    assert client.post(path, headers=token).json()['task']['execution_id'] == task['execution_id']
+    assert client.post(path, headers=token,
+                       json={'known_execution_ids': [task['execution_id']]}).json() == {'task': None, 'cleanup': []}
+
+
+def test_claim_rechecks_candidate_after_lock(env, monkeypatch):
+    from backend.app import execution
+    main, client, _ = env
+    token, slots = node(env)
+    job_id = submit(env)
+    assert tick(main.SessionLocal) == 1
+    monkeypatch.setenv('DB_BACKPRESSURE_ENABLED', '1')
+
+    def reservation_was_cancelled(session, wait=False):
+        run = session.scalar(select(Run).where(Run.job_id == job_id))
+        run.status = 'CANCELLED'
+        run.cleanup_confirmed = True
+        session.flush()
+        return True
+
+    monkeypatch.setattr(execution, 'lock', reservation_was_cancelled)
+    response = client.post(f'/api/v1/worker/slots/{slots[0]}/claim', headers=token)
+    assert response.status_code == 200
+    assert response.json() == {'task': None, 'cleanup': []}
+
+
 def test_worker_protocol_and_permissions(env):
     main, c, auth = env
     token, slots = node(env)

@@ -46,10 +46,12 @@ class Backoff:
     and apply its lifecycle rules. It must renew the lease between attempts or
     have an independent renewal thread; waiting never renews a lease.
     """
-    def __init__(self, base=.25, maximum=2.0):
+    def __init__(self, base=.25, maximum=2.0, max_total=None):
         if not (math.isfinite(base) and math.isfinite(maximum) and 0 < base <= maximum):
             raise ValueError('invalid backoff bounds')
-        self.base, self.maximum = base, maximum
+        if max_total is not None and (not math.isfinite(max_total) or max_total <= 0):
+            raise ValueError('invalid total backoff bound')
+        self.base, self.maximum, self.max_total = base, maximum, max_total
         self.attempt = 0
 
     def reset(self):
@@ -67,6 +69,8 @@ class Backoff:
         # every early retry when the server returns the same one-second hint.
         # The local exponential component is capped, not the server minimum.
         delay = (hint or 0) + random.uniform(ceiling / 2, ceiling)
+        if self.max_total is not None:
+            delay = min(delay, self.max_total)
         if deadline is not None:
             delay = min(delay, max(0, deadline - time.monotonic()))
         if stop.wait(delay):

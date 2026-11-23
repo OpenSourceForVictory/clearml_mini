@@ -920,7 +920,7 @@ class Worker:
         from .process_logs import LogService
         self.process_logs=LogService(self);self.process_logs.start()
         had_task = bool(self.children)
-        retry = Backoff()
+        retry = Backoff(max_total=3.0)
         while True:
             try:
                 for execution, child in list(self.children.items()):

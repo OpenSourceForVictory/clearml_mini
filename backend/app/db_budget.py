@@ -41,12 +41,24 @@ class Settings:
     pool_timeout: float = .25
     lock_timeout: float = .5
     request_timeout: float = 4
+    route_group: str | None = None
+    scheduler_enabled: bool = True
 
     def __post_init__(self):
         for value in (*self.pool_sizes.values(), self.processes, self.connection_budget):
             if type(value) is not int or value < 1:
                 raise ValueError('database connection budgets must be positive integers')
-        if sum(self.pool_sizes.values()) * self.processes > self.connection_budget:
+        if self.route_group not in (None, 'ordinary', 'control'):
+            raise ValueError('API route group must be ordinary or control')
+        if self.route_group is not None and self.processes != 2:
+            raise ValueError('split API requires exactly two processes')
+        if self.route_group == 'control' and self.scheduler_enabled:
+            raise ValueError('control API must not run the scheduler')
+        # Both split processes receive the same configured category sizes. Each
+        # creates only its own pools; sum the union once, not five pools twice.
+        maximum = (sum(self.pool_sizes.values()) if self.route_group else
+                   sum(self.pool_sizes.values()) * self.processes)
+        if maximum > self.connection_budget:
             raise ValueError('API database pools exceed total connection budget')
         if not all(math.isfinite(v) and v > 0 for v in (self.pool_timeout, self.lock_timeout, self.request_timeout)):
             raise ValueError('database wait budgets must be finite and positive')
@@ -58,16 +70,32 @@ class Settings:
         return {name: getattr(self, name) for name in
                 ('ordinary', 'control', 'observation', 'result', 'scheduler')}
 
+    @property
+    def active_pool_sizes(self):
+        if self.route_group == 'control':
+            return {'control': self.control}
+        if self.route_group is None:
+            # Preserve the existing single-process pool contract, including
+            # tests and embedded deployments that invoke the scheduler.
+            return self.pool_sizes
+        names = ('ordinary', 'observation', 'result')
+        active = {name: getattr(self, name) for name in names}
+        if self.scheduler_enabled:
+            active['scheduler'] = self.scheduler
+        return active
+
     @classmethod
     def environment(cls):
-        return cls(**{key: cast(os.environ[name]) for key, name, cast in (
+        values = {key: cast(os.environ[name]) for key, name, cast in (
             ('ordinary', 'DB_POOL_SIZE', int), ('control', 'DB_CONTROL_POOL_SIZE', int),
             ('observation', 'DB_OBSERVATION_POOL_SIZE', int), ('result', 'DB_RESULT_POOL_SIZE', int),
             ('scheduler', 'DB_SCHEDULER_POOL_SIZE', int),
             ('processes', 'API_DB_PROCESS_COUNT', int), ('connection_budget', 'DB_CONNECTION_BUDGET', int),
             ('pool_timeout', 'DB_POOL_TIMEOUT_SECONDS', float), ('lock_timeout', 'DB_LOCK_TIMEOUT_SECONDS', float),
             ('request_timeout', 'DB_REQUEST_TIMEOUT_SECONDS', float),
-        ) if name in os.environ})
+        ) if name in os.environ}
+        return cls(**values, route_group=os.getenv('API_ROUTE_GROUP') or None,
+                   scheduler_enabled=os.getenv('SCHEDULER_ENABLED', '1') == '1')
 
 
 def request_category(path, method='POST'):
@@ -125,9 +153,11 @@ def busy_response(reason):
 
 def factories(url, settings, *, isolated=False):
     """All pools have zero overflow, including the background scheduler."""
+    if settings.route_group is not None and not isolated:
+        raise ValueError('split API requires isolated role-specific pools')
     if url.startswith('sqlite:'):
         factory = sessionmaker(create_engine(url), expire_on_commit=False)
-        return ({name: factory for name in settings.pool_sizes} if isolated else (factory, factory))
+        return ({name: factory for name in settings.active_pool_sizes} if isolated else (factory, factory))
     def make(size):
         engine = create_engine(url, pool_size=size, max_overflow=0, pool_timeout=settings.pool_timeout,
                                connect_args={'connect_timeout': 1})
@@ -148,7 +178,7 @@ def factories(url, settings, *, isolated=False):
                            "set_config('lock_timeout', %s, true)", (str(millis), str(lock_ms)))
         return sessionmaker(engine, expire_on_commit=False)
     if isolated:
-        return {name: make(size) for name, size in settings.pool_sizes.items()}
+        return {name: make(size) for name, size in settings.active_pool_sizes.items()}
     return make(settings.ordinary), make(settings.control)
 
 
@@ -160,9 +190,12 @@ class Admission:
             raise ValueError('API route group must be ordinary or control')
         self.route_group = route_group
         self.admission_enabled = admission_enabled
-        self.gates = {name: threading.BoundedSemaphore(size) for name, size in settings.pool_sizes.items()
+        self.gates = {name: threading.BoundedSemaphore(size) for name, size in settings.active_pool_sizes.items()
                       if name != 'scheduler'}
-        self.thread_capacity = sum(size for name, size in settings.pool_sizes.items() if name != 'scheduler') + 4
+        # A split process has the same 40-token default as its DB allowance;
+        # do not silently enlarge the synchronous thread pool beyond it.
+        self.thread_capacity = (sum(settings.active_pool_sizes.values()) if settings.route_group else
+                                sum(size for name, size in settings.active_pool_sizes.items() if name != 'scheduler') + 4)
         self.waiters = deque()
         self.waiter_lock = threading.Lock()
 
@@ -199,6 +232,8 @@ class Admission:
             return await self.app(scope, receive, send)
         category = request_category(scope.get('path', ''), scope.get('method', 'GET'))
         if self.route_group is not None and (category == 'control') != (self.route_group == 'control'):
+            return await JSONResponse({'detail': 'API route group mismatch'}, status_code=404)(scope, receive, send)
+        if category not in self.gates:
             return await JSONResponse({'detail': 'API route group mismatch'}, status_code=404)(scope, receive, send)
         # Bound every HTTP request, including static/SPA routes, before sync
         # dispatch. Non-control admissions cannot consume the thread allowance

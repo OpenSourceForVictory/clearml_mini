@@ -82,6 +82,25 @@ def test_bounded_jitter_reset_and_lease(monkeypatch):
     assert len(stop.delays) == before
 
 
+def test_claim_retry_caps_total_wait_but_keeps_retrying(monkeypatch):
+    stop = ClockStop()
+    monkeypatch.setattr(bp.time, 'monotonic', lambda: stop.now)
+    monkeypatch.setattr(bp.random, 'uniform', lambda low, high: high)
+    retry = bp.Backoff(max_total=3)
+    for _ in range(20):
+        assert retry.wait(APIError(503, 'busy', '60'), stop)
+    assert stop.delays == [3] * 20
+    assert retry.attempt == 16
+    assert retry.wait(APIError(503, 'busy'), stop)
+    assert stop.delays[-1] == 2
+
+
+@pytest.mark.parametrize('limit', [0, -1, float('nan'), float('inf')])
+def test_invalid_total_backoff_bound(limit):
+    with pytest.raises(ValueError):
+        bp.Backoff(max_total=limit)
+
+
 def test_cancel_during_wait():
     stop = ClockStop()
     stop.wait = lambda delay: True

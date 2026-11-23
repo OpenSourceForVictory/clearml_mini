@@ -221,9 +221,11 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 按本文的原部署 Compose 数组构建同版本镜像、排空、备份、恢复演练后运行 `"${DC[@]}" run --rm --no-deps migrate`。核对目标镜像 heads 和数据库 current 均为 c952f34，再启动新 API。无需为了这个 API 字段重装 Worker/Runner。仅更新代码、不重建镜像不能完成升级；不要使用 stamp 跳过迁移。回退应用优先保留新增表；downgrade b841e23 将删除自定义目录元数据和模板字段，但不会删除共享文件。
 
 
-## 开发中的 Agent 观察状态分表（ad074e5，尚未发布）
+## Agent 观察状态分表（ad074e5）
 
 此迁移前置版本为 `ac963d4`，新增 `node_agent_observations` 保存 Agent 最新序号、采样及应用回执；期望配置仍在 Worker。不是历史采样逐条落库。升级时先按本文备份并停止所有旧 API 写入，再执行迁移、部署同一版本 API，不能混跑新旧 API。Worker 上报正文不因该分表改变。
+
+2026-11-23 本机平台先用生产备份在隔离 PostgreSQL 验证恢复和升级，再停止旧 API、完成最终备份并迁移到 `ad074e5`；升级后 13 个卡位回连，随后启用双进程。其他部署仍须按自己的目标镜像 `heads` 与数据库 `current` 核对，不能据此认为已完成迁移。
 
 升降级回归使用一次性 PostgreSQL，覆盖历史值回填、空库、当前会话值合并降级、旧会话不覆盖新配置及迁移失败事务回滚。升级失败不能手动篡改 alembic_version；应保留错误，修复原因后重试。降级必须暂停 API 写入，把当前会话最新观察合并回 Worker JSON 后再移除表，不能直接 DROP TABLE。
 

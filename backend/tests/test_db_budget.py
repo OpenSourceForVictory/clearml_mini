@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError, TimeoutError as PoolTimeout
 
@@ -19,6 +20,8 @@ from backend.tests.test_execution_logs_postgres import pg, seed
     {'ordinary': 0}, {'control': -1}, {'observation': 0}, {'result': 0}, {'scheduler': 0}, {'processes': True},
     {'processes': 6}, {'pool_timeout': 0}, {'lock_timeout': float('nan')},
     {'request_timeout': 5}, {'request_timeout': .2}, {'lock_timeout': 4},
+    {'route_group': 'unknown'}, {'route_group': 'ordinary'},
+    {'route_group': 'control', 'processes': 2},
 ])
 def test_invalid_config(kwargs):
     with pytest.raises(ValueError):
@@ -35,6 +38,92 @@ def test_config_environment_and_multiple_process_budget(monkeypatch):
     monkeypatch.setenv('DB_CONNECTION_BUDGET', '31')
     with pytest.raises(ValueError):
         budget.Settings.environment()
+
+
+def test_split_processes_create_only_their_role_pools(pg, monkeypatch):
+    common = dict(ordinary=10, control=8, observation=4, result=3, scheduler=1,
+                  processes=2, connection_budget=26)
+    ordinary = budget.Settings(**common, route_group='ordinary')
+    control = budget.Settings(**common, route_group='control', scheduler_enabled=False)
+    with pytest.raises(ValueError, match='isolated role-specific pools'):
+        budget.factories(pg[1], control)
+    assert ordinary.active_pool_sizes == {'ordinary': 10, 'observation': 4, 'result': 3, 'scheduler': 1}
+    assert control.active_pool_sizes == {'control': 8}
+    assert set(ordinary.active_pool_sizes).isdisjoint(control.active_pool_sizes)
+    ordinary_factories = budget.factories(pg[1], ordinary, isolated=True)
+    control_factories = budget.factories(pg[1], control, isolated=True)
+    try:
+        assert set(ordinary_factories) == set(ordinary.active_pool_sizes)
+        assert set(control_factories) == {'control'}
+        assert sum(factory.kw['bind'].pool.size() for factory in
+                   (*ordinary_factories.values(), *control_factories.values())) == 26
+    finally:
+        for factory in (*ordinary_factories.values(), *control_factories.values()):
+            factory.kw['bind'].dispose()
+    with pytest.raises(ValueError, match='exceed total connection budget'):
+        budget.Settings(**{**common, 'connection_budget': 25}, route_group='control',
+                        scheduler_enabled=False)
+    monkeypatch.setenv('API_ROUTE_GROUP', 'control')
+    monkeypatch.setenv('SCHEDULER_ENABLED', '0')
+    monkeypatch.setenv('API_DB_PROCESS_COUNT', '2')
+    assert budget.Settings.environment().active_pool_sizes == {'control': 5}
+
+
+def test_split_40_connection_pool_does_not_raise_thread_limit(pg):
+    common = dict(ordinary=23, control=40, observation=9, result=7, scheduler=1,
+                  processes=2, connection_budget=80)
+    ordinary = budget.Settings(**common, route_group='ordinary')
+    control = budget.Settings(**common, route_group='control', scheduler_enabled=False)
+    assert sum(ordinary.active_pool_sizes.values()) == 40
+    assert sum(control.active_pool_sizes.values()) == 40
+    assert budget.Admission(None, ordinary).thread_capacity == 40
+    assert budget.Admission(None, control).thread_capacity == 40
+    ordinary_factories = budget.factories(pg[1], ordinary, isolated=True)
+    control_factories = budget.factories(pg[1], control, isolated=True)
+    try:
+        assert sum(factory.kw['bind'].pool.size() for factory in ordinary_factories.values()) == 40
+        assert sum(factory.kw['bind'].pool.size() for factory in control_factories.values()) == 40
+    finally:
+        for factory in (*ordinary_factories.values(), *control_factories.values()):
+            factory.kw['bind'].dispose()
+    with pytest.raises(ValueError, match='exceed total connection budget'):
+        budget.Settings(**{**common, 'connection_budget': 79}, route_group='ordinary')
+
+
+def test_split_sqlite_role_keeps_scheduler_disabled_and_only_its_sessions():
+    ordinary = budget.Settings(route_group='ordinary', processes=2, scheduler_enabled=False)
+    control = budget.Settings(route_group='control', processes=2, scheduler_enabled=False)
+    ordinary_factories = budget.factories('sqlite:///:memory:', ordinary, isolated=True)
+    control_factories = budget.factories('sqlite:///:memory:', control, isolated=True)
+    assert set(ordinary_factories) == {'ordinary', 'observation', 'result'}
+    assert set(control_factories) == {'control'}
+    # The legacy single-process factory still supports both sessions.
+    default, protected = budget.factories('sqlite:///:memory:', budget.Settings())
+    assert default is protected
+
+
+def test_database_deadline_exhaustion_has_retryable_busy_reason():
+    assert budget.busy_reason(budget.DatabaseBusy()) == 'request_budget'
+
+
+def test_role_specific_admission_rejects_unallocated_category():
+    called, responses = [], []
+    async def app(scope, receive, send):
+        called.append(scope['path'])
+    async def send(message):
+        responses.append(message)
+    async def receive():
+        return {'type': 'http.request', 'body': b''}
+
+    settings = budget.Settings(route_group='control', processes=2, scheduler_enabled=False)
+    admission = budget.Admission(app, settings, admission_enabled=False)
+    asyncio.run(admission({'type': 'http', 'method': 'POST',
+                           'path': '/api/v1/agent/heartbeat'}, receive, send))
+    assert called == []
+    assert responses[0]['status'] == 404
+    asyncio.run(admission({'type': 'http', 'method': 'POST',
+                           'path': '/api/v1/worker/heartbeat'}, receive, send))
+    assert called == ['/api/v1/worker/heartbeat']
 
 
 @pytest.mark.parametrize('path,control', [
@@ -125,6 +214,53 @@ def online(pg, monkeypatch):
         client.close()
         for factory in main.DatabaseSessions.values():
             factory.kw['bind'].dispose()
+
+
+def test_main_db_binds_auth_and_handler_to_selected_category(online):
+    main, _, _ = online
+    for category, factory in main.DatabaseSessions.items():
+        request = Request({'type': 'http', 'method': 'POST', 'path': '/api/v1/test',
+                           'state': {'db_category': category}})
+        session = main.db(request)
+        try:
+            assert next(session).get_bind() is factory.kw['bind']
+        finally:
+            session.close()
+
+
+def test_main_db_missing_role_pool_fails_closed(online, monkeypatch):
+    main, _, _ = online
+    monkeypatch.setattr(main, 'DatabaseSessions', {'control': main.ControlSessionLocal})
+    request = Request({'type': 'http', 'method': 'POST', 'path': '/api/v1/agent/heartbeat',
+                       'state': {'db_category': 'observation'}})
+    with pytest.raises(KeyError, match='observation'):
+        next(main.db(request))
+
+
+def test_main_db_without_backpressure_uses_legacy_session(online, monkeypatch):
+    main, _, _ = online
+    legacy_factory = main.SessionLocal
+    monkeypatch.setattr(main, 'DB_BACKPRESSURE_ENABLED', False)
+    monkeypatch.setattr(main, 'DatabaseSessions', {})
+    request = Request({'type': 'http', 'method': 'GET', 'path': '/api/v1/jobs', 'state': {}})
+    session = main.db(request)
+    try:
+        assert next(session).get_bind() is legacy_factory.kw['bind']
+    finally:
+        session.close()
+
+
+def test_main_db_explicit_factory_override_remains_compatible(online, monkeypatch):
+    main, _, _ = online
+    override = main.ControlSessionLocal
+    monkeypatch.setattr(main, 'SessionLocal', override)
+    request = Request({'type': 'http', 'method': 'POST', 'path': '/api/v1/agent/heartbeat',
+                       'state': {'db_category': 'observation'}})
+    session = main.db(request)
+    try:
+        assert next(session).get_bind() is override.kw['bind']
+    finally:
+        session.close()
 
 
 def test_control_auth_and_heartbeat_work_while_ordinary_pool_exhausted(online):

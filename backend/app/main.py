@@ -38,9 +38,9 @@ if DB_BACKPRESSURE_ENABLED:
     db_settings = db_budget.Settings.environment()
     DatabaseSessions = db_budget.factories(
         os.getenv('DATABASE_URL', 'sqlite:///./eval.db'), db_settings, isolated=True)
-    SessionLocal = DatabaseSessions['ordinary']
-    ControlSessionLocal = DatabaseSessions['control']
-    SchedulerSessionLocal = DatabaseSessions['scheduler']
+    SessionLocal = DatabaseSessions.get('ordinary') or DatabaseSessions['control']
+    ControlSessionLocal = DatabaseSessions.get('control')
+    SchedulerSessionLocal = DatabaseSessions.get('scheduler')
 else:
     SessionLocal = ControlSessionLocal = SchedulerSessionLocal = session_factory()
     DatabaseSessions = {}
@@ -94,8 +94,8 @@ if not SECRET:
 def db(request: Request):
     # Explicit SessionLocal overrides (tests/embedded deployments) remain one
     # database; never authenticate against a different, cached production DB.
-    factory = (DatabaseSessions.get(getattr(request.state, 'db_category', 'ordinary'), SessionLocal)
-               if SessionLocal is _online_session_factory else SessionLocal)
+    factory = (DatabaseSessions[getattr(request.state, 'db_category', 'ordinary')]
+               if DB_BACKPRESSURE_ENABLED and SessionLocal is _online_session_factory else SessionLocal)
     with factory() as s:
         if DB_BACKPRESSURE_ENABLED:
             began = time.monotonic()

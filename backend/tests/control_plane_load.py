@@ -79,16 +79,17 @@ def api_log_names(count, split_api):
             else [f'api-{count}.log'])
 
 
-def pool_profiles(ordinary, control, observation, *, split_api=False, role_aware=False):
+def pool_profiles(ordinary, control, observation, *, split_api=False, role_aware=False,
+                  scheduler_enabled=True, result=None):
     if role_aware and not split_api:
         raise ValueError('role-aware pools require split API')
     common = {'ordinary': ordinary, 'control': control, 'observation': observation,
-              'result': 2, 'scheduler': 1}
-    if role_aware:
-        return {'ordinary': {'ordinary': ordinary, 'control': 1, 'observation': observation,
-                             'result': 3, 'scheduler': 1},
-                'control': {'ordinary': 1, 'control': control, 'observation': 1,
-                            'result': 1, 'scheduler': 1}}
+              'result': result if result is not None else (3 if role_aware else 2)}
+    if scheduler_enabled or not role_aware:
+        common['scheduler'] = 1
+    if split_api and role_aware:
+        return {'ordinary': {name: size for name, size in common.items() if name != 'control'},
+                'control': {'control': control}}
     return {'ordinary': common, **({'control': common.copy()} if split_api else {})}
 
 
@@ -331,6 +332,7 @@ def main():
     parser.add_argument('--ordinary-pool', type=int, default=10)
     parser.add_argument('--control-pool', type=int, default=5)
     parser.add_argument('--observation-pool', type=int, default=2)
+    parser.add_argument('--result-pool', type=int, default=None)
     parser.add_argument('--independent-logs', action='store_true')
     parser.add_argument('--drain-seconds', type=int, default=5)
     parser.add_argument('--trace-http-phases', action='store_true')
@@ -354,7 +356,8 @@ def main():
     if args.no_backpressure and args.no_admission:
         parser.error('--no-admission requires database backpressure')
     profiles = pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
-                             split_api=args.split_api, role_aware=args.role_aware_pools)
+                             split_api=args.split_api, role_aware=args.role_aware_pools,
+                             scheduler_enabled=False, result=args.result_pool)
     process_count = len(profiles)
     if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or any(sum(p.values()) * process_count > 80 for p in profiles.values()):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
@@ -367,7 +370,9 @@ def main():
                'api_processes':2 if args.split_api else 1,
                'gateway':'nginx host-network test container' if args.split_api else None,
                'pool_ordinary':args.ordinary_pool, 'pool_control':args.control_pool,
-               'pool_observation':args.observation_pool, 'pool_result':2, 'pool_scheduler':1,
+               'pool_observation':args.observation_pool,
+               'pool_result':args.result_pool if args.result_pool is not None else (3 if args.role_aware_pools else 2),
+               'pool_scheduler':1,
                'pool_by_process':profiles if not args.no_backpressure else None,
                'db_backpressure_enabled':not args.no_backpressure,
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
@@ -410,13 +415,13 @@ def main():
                            'API_DB_PROCESS_COUNT':str(process_count),
                            'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
                     def launch(role, api_port):
-                        profile = profiles[role]
-                        api_env = {**env, **{name: str(profile[key]) for name, key in (
-                            ('DB_POOL_SIZE', 'ordinary'), ('DB_CONTROL_POOL_SIZE', 'control'),
-                            ('DB_OBSERVATION_POOL_SIZE', 'observation'),
-                            ('DB_RESULT_POOL_SIZE', 'result'),
-                            ('DB_SCHEDULER_POOL_SIZE', 'scheduler'))}}
-                        if args.split_api:
+                        api_env = {**env, 'DB_POOL_SIZE': str(args.ordinary_pool),
+                                   'DB_CONTROL_POOL_SIZE': str(args.control_pool),
+                                   'DB_OBSERVATION_POOL_SIZE': str(args.observation_pool),
+                                   'DB_RESULT_POOL_SIZE': str(args.result_pool if args.result_pool is not None else
+                                                              (3 if args.role_aware_pools else 2)),
+                                   'DB_SCHEDULER_POOL_SIZE': '1'}
+                        if args.split_api and args.role_aware_pools:
                             api_env['API_ROUTE_GROUP'] = role
                         log_name = (f'api-{role}-{count}.log' if args.split_api else f'api-{count}.log')
                         log = stack.enter_context((output/log_name).open('w'))

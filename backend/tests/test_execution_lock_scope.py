@@ -53,6 +53,25 @@ def test_start_transition_still_uses_global_lock(online):
         engine.dispose()
 
 
+def test_idle_claim_skips_global_lock_but_candidate_defers(online, pg):
+    main, client, headers = online
+    with main.SessionLocal() as session:
+        session.get(Slot, 's').last_seen_at = now()
+        session.commit()
+    path = '/api/v1/worker/slots/s/claim'
+    with Session(pg[0]) as holder:
+        lock(holder)
+        idle = client.post(path, headers=headers, json={'known_execution_ids': ['e']})
+        assert idle.status_code == 200
+        assert idle.json() == {'task': None, 'cleanup': []}
+        busy = client.post(path, headers=headers)
+        assert busy.status_code == 200
+        assert busy.json() == {'task': None, 'cleanup': []}
+    claimed = client.post(path, headers=headers)
+    assert claimed.status_code == 200
+    assert claimed.json()['task']['execution_id'] == 'e'
+
+
 def test_reconcile_skips_locked_run_and_reclaims_after_release(pg):
     factory = seed(pg[0])
     at = now()

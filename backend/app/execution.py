@@ -383,16 +383,29 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
+        slot = slot_for(s, slot_id, worker)
+        known = body.known_execution_ids if body else []
+        # Idle polling only reads the assigned slot. A reservation committed
+        # after this check is seen on the next poll; no state is changed here.
+        candidate = s.scalar(select(Run.id).where(
+            Run.slot_id == slot.id,
+            or_(
+                (Run.cleanup_confirmed.is_(False) & Run.status.in_(TERMINAL)),
+                (Run.status.in_(ACTIVE) & Run.execution_id.not_in(known)),
+            ),
+        ).limit(1))
+        if candidate is None:
+            return {'task': None, 'cleanup': []}
         if os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1':
-            from .scheduling import fast_lock
-            fast_lock(s)
+            if not lock(s, wait=False):
+                return {'task': None, 'cleanup': []}
         else:
             lock(s)
-        slot = slot_for(s, slot_id, worker)
+        # Read committed sees changes made while we waited for the lock.
+        s.refresh(slot)
         cleanup = list(s.scalars(select(Run.execution_id).where(Run.slot_id == slot.id, Run.cleanup_confirmed.is_(False), Run.status.in_(TERMINAL))))
         if cleanup:
             return {'task': None, 'cleanup': cleanup}
-        known = body.known_execution_ids if body else []
         run = s.scalar(select(Run).where(Run.slot_id == slot.id, Run.status.in_(ACTIVE),
             or_(Run.waiting_service.is_(False),Run.status!='RESERVED'),
             Run.execution_id.not_in(known)).order_by(Run.reserved_at, Run.id).limit(1))

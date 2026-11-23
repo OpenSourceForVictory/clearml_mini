@@ -1,7 +1,10 @@
 from pathlib import Path
+import re
 
 import pytest
+import yaml
 
+from backend.app.db_budget import Settings
 from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config
 
 
@@ -26,10 +29,52 @@ def test_split_gateway_rejects_incomplete_template():
 
 def test_role_aware_pools_preserve_control_and_observation_capacity():
     profiles = pool_profiles(10, 8, 4, split_api=True, role_aware=True)
-    assert profiles['ordinary'] == {'ordinary': 10, 'control': 1, 'observation': 4,
-                                    'result': 3, 'scheduler': 1}
-    assert profiles['control'] == {'ordinary': 1, 'control': 8, 'observation': 1,
-                                   'result': 1, 'scheduler': 1}
-    assert sum(sum(profile.values()) for profile in profiles.values()) == 31
+    assert profiles['ordinary'] == {'ordinary': 10, 'observation': 4, 'result': 3, 'scheduler': 1}
+    assert profiles['control'] == {'control': 8}
+    assert sum(sum(profile.values()) for profile in profiles.values()) == 26
+    stopped = pool_profiles(10, 8, 4, split_api=True, role_aware=True, scheduler_enabled=False)
+    assert 'scheduler' not in stopped['ordinary']
+    assert sum(sum(profile.values()) for profile in stopped.values()) == 25
     with pytest.raises(ValueError, match='require split API'):
         pool_profiles(10, 8, 4, role_aware=True)
+
+
+def test_split_default_matches_40_threads_per_process():
+    profiles = pool_profiles(23, 40, 9, result=7, split_api=True, role_aware=True)
+    assert profiles == {'ordinary': {'ordinary': 23, 'observation': 9, 'result': 7, 'scheduler': 1},
+                        'control': {'control': 40}}
+    assert {role: sum(sizes.values()) for role, sizes in profiles.items()} == {'ordinary': 40, 'control': 40}
+
+
+def test_legacy_split_load_uses_full_pools_in_both_processes():
+    profiles = pool_profiles(10, 5, 2, split_api=True, scheduler_enabled=False)
+    assert profiles == {'ordinary': {'ordinary': 10, 'control': 5, 'observation': 2,
+                                     'result': 2, 'scheduler': 1},
+                        'control': {'ordinary': 10, 'control': 5, 'observation': 2,
+                                    'result': 2, 'scheduler': 1}}
+
+
+def test_compose_split_defaults_match_role_specific_40_connection_budget():
+    class ComposeLoader(yaml.SafeLoader):
+        pass
+
+    ComposeLoader.add_constructor('!reset', lambda loader, node: loader.construct_sequence(node))
+    overlay = yaml.load((Path(__file__).resolve().parents[2] / 'deploy/split-api-compose.yml').read_text(),
+                        Loader=ComposeLoader)['services']
+    profiles = {}
+    for service, role in (('api', 'ordinary'), ('control-api', 'control')):
+        env = overlay[service]['environment']
+        sizes = {}
+        for key, attr in (('DB_POOL_SIZE', 'ordinary'), ('DB_CONTROL_POOL_SIZE', 'control'),
+                          ('DB_OBSERVATION_POOL_SIZE', 'observation'), ('DB_RESULT_POOL_SIZE', 'result'),
+                          ('DB_SCHEDULER_POOL_SIZE', 'scheduler')):
+            value = str(env[key])
+            match = re.fullmatch(r'\$\{DB_SPLIT_[A-Z_]+:-([0-9]+)\}', value)
+            sizes[attr] = int(match.group(1) if match else value)
+        settings = Settings(**sizes, route_group=role, processes=int(env['API_DB_PROCESS_COUNT']),
+                            scheduler_enabled=env.get('SCHEDULER_ENABLED', '1') == '1')
+        assert env['API_ROUTE_GROUP'] == role
+        assert env['DB_ADMISSION_ENABLED'] == '0'
+        profiles[role] = settings.active_pool_sizes
+    assert profiles == pool_profiles(23, 40, 9, result=7, split_api=True, role_aware=True)
+    assert {role: sum(sizes.values()) for role, sizes in profiles.items()} == {'ordinary': 40, 'control': 40}
