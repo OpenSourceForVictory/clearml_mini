@@ -1,0 +1,166 @@
+[
+  {
+    "name": "整任务",
+    "batch_id": "71a245d1-f012-4c78-b35a-b47c5eb99c1d",
+    "job_id": "d17f926f-6f2a-49a8-a4db-ff707fe30dda",
+    "status": "SUCCEEDED",
+    "timing": {
+      "as_of": "2026-11-23T06:04:34.372357+00:00",
+      "mode": "whole_task",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:31.017842+00:00",
+        "finished_at": "2026-11-23T06:04:34.353303+00:00",
+        "seconds": 3.335461,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:30.348891+00:00",
+        "finished_at": "2026-11-23T06:04:31.017842+00:00",
+        "seconds": 0.668951,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T06:04:31.802932+00:00"
+    },
+    "episodes": []
+  },
+  {
+    "name": "逐回合",
+    "batch_id": "64a4f9a7-ab60-4cc7-9aae-f6ab6514da0a",
+    "job_id": "cf9bf75f-5a2a-4298-9466-130d32d1137b",
+    "status": "SUCCEEDED",
+    "timing": {
+      "as_of": "2026-11-23T06:04:43.441973+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:35.311720+00:00",
+        "finished_at": "2026-11-23T06:04:42.953316+00:00",
+        "seconds": 7.641596,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:34.393065+00:00",
+        "finished_at": "2026-11-23T06:04:35.311720+00:00",
+        "seconds": 0.918655,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T06:04:36.248319+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T06:04:43.445178+00:00",
+          "started_at": "2026-11-23T06:04:36.344197+00:00",
+          "finished_at": "2026-11-23T06:04:36.998248+00:00",
+          "seconds": 0.6540558219421655,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T06:04:43.445178+00:00",
+          "started_at": "2026-11-23T06:04:37.051954+00:00",
+          "finished_at": "2026-11-23T06:04:37.837916+00:00",
+          "seconds": 0.7859636468347162,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      },
+      {
+        "episode_id": 3,
+        "timing": {
+          "as_of": "2026-11-23T06:04:43.445178+00:00",
+          "started_at": "2026-11-23T06:04:37.879613+00:00",
+          "finished_at": "2026-11-23T06:04:38.653738+00:00",
+          "seconds": 0.774125951807946,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      }
+    ]
+  },
+  {
+    "name": "逐回合失败继续",
+    "batch_id": "a4f495f1-480c-4dcd-800e-6a96c125d010",
+    "job_id": "380dfc4a-ac35-40e0-9e3a-21ff17d501ec",
+    "status": "FAILED",
+    "timing": {
+      "as_of": "2026-11-23T06:04:51.496955+00:00",
+      "mode": "per_episode",
+      "execution": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:43.857642+00:00",
+        "finished_at": "2026-11-23T06:04:51.441334+00:00",
+        "seconds": 7.583692,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "waiting": {
+        "state": "finished",
+        "started_at": "2026-11-23T06:04:43.462868+00:00",
+        "finished_at": "2026-11-23T06:04:43.857642+00:00",
+        "seconds": 0.394774,
+        "source": "platform_lifecycle",
+        "quality": "recorded"
+      },
+      "running_started_at": "2026-11-23T06:04:44.677562+00:00"
+    },
+    "episodes": [
+      {
+        "episode_id": 1,
+        "timing": {
+          "as_of": "2026-11-23T06:04:51.499731+00:00",
+          "started_at": "2026-11-23T06:04:44.782896+00:00",
+          "finished_at": "2026-11-23T06:04:45.530396+00:00",
+          "seconds": 0.7475048708729446,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      },
+      {
+        "episode_id": 2,
+        "timing": {
+          "as_of": "2026-11-23T06:04:51.499731+00:00",
+          "started_at": "2026-11-23T06:04:45.591600+00:00",
+          "finished_at": "2026-11-23T06:04:46.386316+00:00",
+          "seconds": 0.7947189200203866,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      },
+      {
+        "episode_id": 3,
+        "timing": {
+          "as_of": "2026-11-23T06:04:51.499731+00:00",
+          "started_at": "2026-11-23T06:04:46.403476+00:00",
+          "finished_at": "2026-11-23T06:04:46.983715+00:00",
+          "seconds": 0.5802416140213609,
+          "source": "runner_monotonic",
+          "quality": "recorded",
+          "state": "finished",
+          "clock_adjusted": false
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "job_id": "380dfc4a-ac35-40e0-9e3a-21ff17d501ec",
+  "batch_id": "a4f495f1-480c-4dcd-800e-6a96c125d010",
+  "attempts": [
+    {
+      "execution_id": "5c198e10-6064-4e27-8bad-f961161ffe92",
+      "timing": {
+        "as_of": "2026-11-23T06:05:26.986963+00:00",
+        "mode": "per_episode",
+        "execution": {
+          "state": "finished",
+          "started_at": "2026-11-23T06:04:43.857642+00:00",
+          "finished_at": "2026-11-23T06:04:51.441334+00:00",
+          "seconds": 7.583692,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "waiting": {
+          "state": "finished",
+          "started_at": "2026-11-23T06:04:43.462868+00:00",
+          "finished_at": "2026-11-23T06:04:43.857642+00:00",
+          "seconds": 0.394774,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "running_started_at": "2026-11-23T06:04:44.677562+00:00"
+      }
+    },
+    {
+      "execution_id": "614fb061-be53-418d-a1cf-e7ed33601bd1",
+      "timing": {
+        "as_of": "2026-11-23T06:05:26.986963+00:00",
+        "mode": "per_episode",
+        "execution": {
+          "state": "finished",
+          "started_at": "2026-11-23T06:05:17.995794+00:00",
+          "finished_at": "2026-11-23T06:05:26.455684+00:00",
+          "seconds": 8.45989,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "waiting": {
+          "state": "finished",
+          "started_at": "2026-11-23T06:05:15.929703+00:00",
+          "finished_at": "2026-11-23T06:05:17.995794+00:00",
+          "seconds": 2.066091,
+          "source": "platform_lifecycle",
+          "quality": "recorded"
+        },
+        "running_started_at": "2026-11-23T06:05:19.745850+00:00"
+      }
+    }
+  ]
+}

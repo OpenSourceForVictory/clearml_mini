@@ -1,0 +1,54 @@
+{
+  "node_id": "a6101438-91bf-42e6-94c2-67379b485a3a",
+  "upgrade_id": "1dceb1ca-88bb-4707-bed9-82f4c70de7e2",
+  "state": "SUCCEEDED",
+  "slots": [
+    {
+      "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+      "gpu_index": 0,
+      "online": true,
+      "protocol_version": 18,
+      "software": {
+        "version": "0.21.15",
+        "build_digest": "876c6cf38030610132a9ab7cd5e4bfd1f00eab80e40c14397aaf1c8d4d4efc60",
+        "capabilities": [
+          "docker",
+          "host",
+          "episode_reporting",
+          "typed_parameters",
+          "directory_mounts",
+          "inference_services",
+          "task_input",
+          "command_tasks",
+          "accelerator_contract",
+          "ascend_docker",
+          "ascend_host",
+          "service_readiness_v1",
+          "host_login_environment",
+          "host_episode_launch",
+          "bounded_logs_v2",
+          "process_logs_v1",
+          "process_log_policy_v1",
+          "shared_artifacts_v1",
+          "artifact_roots_v1",
+          "task_result_reporting_v1",
+          "episode_timing_v1"
+        ],
+        "probe_references": [],
+        "process_log_policy": {
+          "error": null,
+          "policy": {
+            "node_bytes": null,
+            "scope_bytes": 16777216,
+            "segment_bytes": 4194304,
+            "execution_bytes": 268435456
+          },
+          "status": "applied",
+          "revision": 2,
+          "reported_at": "2026-11-23T06:03:16.782895+00:00",
+          "applied_revision": 2
+        }
+      }
+    }
+  ]
+}

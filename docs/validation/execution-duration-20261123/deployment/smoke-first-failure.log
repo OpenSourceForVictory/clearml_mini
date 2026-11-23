@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/dgh/Code/clearml_mini/.runtime/execution-duration-release-20261123/smoke.py", line 13, in <module>
+    t=api('admin/client-templates',{'name':'duration-release-'+launch+'-'+str(time.time_ns()),'version':'1','execution_mode':'host','task_type':'command','integration_mode':'direct','command':['python3','-c',code],'host_runtime':{'environment_name':'template_demo_cwd','episode_launch':launch,'episode_error_policy':'continue'}},'POST')
+  File "/home/dgh/Code/clearml_mini/.runtime/task-sdk-live/control.py", line 16, in api
+    raise RuntimeError('HTTP '+str(e.code)+' '+path) from None
+RuntimeError: HTTP 400 admin/client-templates
