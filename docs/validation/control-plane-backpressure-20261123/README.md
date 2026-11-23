@@ -81,6 +81,8 @@ LOG_TEST_DATABASE_URL=postgresql+psycopg://USER:<redacted>@127.0.0.1:PORT/postgr
 
 追加 [60 秒连接预算对照](pool-comparison-60s/README.md)：三组最大续租间隔18.64/9.77/12.13秒；增大总预算未保证通过，日志为真实接口写入模拟内容，具体边界见报告。
 
+追加 [独立日志上报短测](independent-logs/README.md)：日志生成不再依赖心跳先成功；100 Worker、30 秒满足本轮阈值，200 Worker 在两种连接预算以及修正压测客户端连接复用后均未通过。数据库首次借连接等待很低，不足以将失败归因于 PostgreSQL 自身容量；未达到长期容量验收。
+
 ## v2 日志与心跳锁隔离专项
 
 现有 v2 上传曾锁住整条 Run；同一执行的心跳需等日志提交，即使使用不同连接池也可能超时。现在日志只对 Run 取 KEY SHARE、防删除，以 RunLogState 行锁保护序号及滚动配额，并使用执行专属事务锁与 complete/cleanup 排序；运行中心跳取 Run NO KEY UPDATE。旧 `/logs` 仍写 Run.log_bytes、可能与心跳争行锁，不能把 v2 验证外推给旧节点或旧镜像。

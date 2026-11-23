@@ -1,7 +1,7 @@
 """Disposable real HTTP/PostgreSQL control-plane load. Never targets an existing database."""
 import argparse
 import asyncio
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from datetime import timedelta
 import hashlib
 import json
@@ -54,15 +54,20 @@ def percentile(values, fraction):
     return sorted(values)[min(len(values)-1, int(len(values)*fraction))] if values else None
 
 
-async def exercise(base, identities, seconds, log_bytes):
+async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
     latest_heartbeat, latest_sample = {}, {}
     worst_heartbeat_age = 0
+    log_queues = {identity: deque() for identity, _ in identities}
+    log_stats = Counter()
+    max_log_pending = max_log_age = 0
+    loop_lag = []
     started = time.monotonic()
     async with httpx.AsyncClient(base_url=base, trust_env=False, timeout=5,
-                                limits=httpx.Limits(max_connections=len(identities)*2)) as api:
+                                limits=httpx.Limits(max_connections=len(identities)*2,
+                                                    max_keepalive_connections=len(identities)*2)) as api:
         async def post(kind, identity, token, path, body):
             begin = time.monotonic()
             try:
@@ -82,6 +87,61 @@ async def exercise(base, identities, seconds, log_bytes):
                 return None
             finally:
                 latency[kind].append(time.monotonic()-begin)
+        async def sample_loop_lag():
+            target = time.monotonic() + .05
+            while time.monotonic() - started < seconds:
+                await asyncio.sleep(max(0, target - time.monotonic()))
+                current = time.monotonic()
+                loop_lag.append(max(0, current - target))
+                target = current + .05
+        async def produce_logs(identity):
+            nonlocal max_log_pending
+            queue = log_queues[identity]
+            gap_needed = False
+            await asyncio.sleep(random.uniform(0, 1))
+            while time.monotonic() - started < seconds:
+                log_stats['generated'] += 1
+                if len(queue) >= 256:
+                    log_stats['dropped'] += 1
+                    gap_needed = True
+                else:
+                    queue.append((time.monotonic(), gap_needed))
+                    gap_needed = False
+                    max_log_pending = max(max_log_pending, len(queue))
+                await asyncio.sleep(2)
+            if gap_needed:
+                log_stats['unreported_gap_workers'] += 1
+
+        async def send_logs(identity, token):
+            nonlocal max_log_age
+            queue = log_queues[identity]
+            sequence, retry = 0, .25
+            deadline = started + seconds + drain_seconds
+            path = f'worker/executions/{identity}/logs-v2'
+            while time.monotonic() < deadline:
+                if not queue:
+                    await asyncio.sleep(.02)
+                    continue
+                created, gap = queue[0]
+                max_log_age = max(max_log_age, time.monotonic() - created)
+                reply = await post('logs', identity, token, path,
+                                   {'sequence': sequence, 'content': 'x' * log_bytes, 'gap': gap})
+                if reply is not None and reply.status_code == 200:
+                    if reply.json().get('next_sequence') != sequence + 1:
+                        log_stats['unexpected_ack'] += 1
+                        break
+                    queue.popleft()
+                    sequence += 1
+                    log_stats['accepted'] += 1
+                    retry = .25
+                elif reply is not None and reply.status_code not in (503, 429, 502, 504):
+                    log_stats['permanent_error'] += 1
+                    break
+                else:
+                    hint = parse_retry_after(reply.headers.get('Retry-After')) if reply is not None else None
+                    await asyncio.sleep((hint or 0) + random.uniform(retry / 2, retry))
+                    retry = min(2, retry * 2)
+
         async def worker(identity, token):
             nonlocal worst_heartbeat_age
             seq = 0
@@ -105,21 +165,37 @@ async def exercise(base, identities, seconds, log_bytes):
                     retry = min(2, retry * 2)
                     continue
                 await post('health', identity, token, f'worker/executions/{identity}/service-health', {'ready':True})
-                reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2', {'sequence':seq, 'content':'x'*log_bytes})
-                if reply is not None and reply.status_code == 200:
-                    seq = reply.json()['next_sequence']
+                if not independent_logs:
+                    reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2',
+                                       {'sequence':seq, 'content':'x'*log_bytes})
+                    if reply is not None and reply.status_code == 200:
+                        seq = reply.json()['next_sequence']
                 await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
                 await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
                 await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)) + random.uniform(0,.1))
+        log_tasks = ([asyncio.create_task(task) for item in identities for task in
+                      (produce_logs(item[0]), send_logs(*item))] if independent_logs else [])
+        loop_task = asyncio.create_task(sample_loop_lag())
         await asyncio.gather(*(worker(*item) for item in identities))
-    end = time.monotonic()
+        end = time.monotonic()
+        await loop_task
+        if log_tasks:
+            await asyncio.gather(*log_tasks)
+            max_log_age = max(max_log_age, max((time.monotonic() - created for queue in log_queues.values()
+                                                for created, _ in queue), default=0))
     return {'requests': dict(codes), 'busy_reasons': dict(reasons),
             'requests_by_kind': {k:dict(v) for k,v in by_kind.items()},
             'busy_by_kind': {k:dict(v) for k,v in busy_by_kind.items()},
             'successful_latency_seconds': {k:{'p95':percentile(v,.95), 'p99':percentile(v,.99), 'max':max(v)} for k,v in successful_latency.items()},
             'latency_seconds': {k: {'p95':percentile(v,.95), 'p99':percentile(v,.99), 'max':max(v)} for k,v in latency.items()},
             'max_heartbeat_gap_seconds': max(worst_heartbeat_age, max(end-v for v in latest_heartbeat.values())),
-            'max_final_sample_age_seconds': max(end-v for v in latest_sample.values())}
+            'max_final_sample_age_seconds': max(end-v for v in latest_sample.values()),
+            'load_driver_loop_lag_seconds': {'p95': percentile(loop_lag, .95), 'p99': percentile(loop_lag, .99),
+                                             'max': max(loop_lag, default=0)},
+            'independent_logs': independent_logs,
+            'log_generation': {**dict(log_stats), 'max_pending_chunks_per_worker': max_log_pending,
+                               'final_pending_chunks': sum(len(queue) for queue in log_queues.values()),
+                               'max_pending_age_seconds': max_log_age} if independent_logs else None}
 
 
 def main():
@@ -130,9 +206,11 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--ordinary-pool', type=int, default=10)
     parser.add_argument('--control-pool', type=int, default=5)
+    parser.add_argument('--independent-logs', action='store_true')
+    parser.add_argument('--drain-seconds', type=int, default=5)
     args = parser.parse_args()
     grades = [int(x) for x in args.grades.split(',')]
-    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or min(args.ordinary_pool, args.control_pool) < 1 or args.ordinary_pool + args.control_pool + 5 > 80:
+    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or args.drain_seconds < 0 or min(args.ordinary_pool, args.control_pool) < 1 or args.ordinary_pool + args.control_pool + 5 > 80:
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
@@ -143,6 +221,7 @@ def main():
                'api_processes':1, 'pool_ordinary':args.ordinary_pool, 'pool_control':args.control_pool, 'pool_observation':2, 'pool_result':2, 'pool_scheduler':1, 'cards_per_node':1,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'target_cycle_seconds':2, 'scheduler_enabled':False,
+               'independent_logs':args.independent_logs, 'log_drain_seconds':args.drain_seconds if args.independent_logs else 0,
                'scope':'real HTTP/PostgreSQL, simulated running services; excludes scheduler allocation, Agent and real business processes', 'grades':[]}
     try:
         for count in grades:
@@ -160,6 +239,7 @@ def main():
                 with (output/f'api-{count}.log').open('w') as log:
                     env = {**os.environ, 'DATABASE_URL':target.render_as_string(hide_password=False), 'JWT_SECRET':uuid.uuid4().hex,
                            'SCHEDULER_ENABLED':'0', 'DB_BACKPRESSURE_ENABLED':'1', 'DB_POOL_SIZE':str(args.ordinary_pool), 'DB_CONTROL_POOL_SIZE':str(args.control_pool),
+                           'DB_OBSERVATION_POOL_SIZE':'2', 'DB_RESULT_POOL_SIZE':'2', 'DB_SCHEDULER_POOL_SIZE':'1',
                            'API_DB_PROCESS_COUNT':'1', 'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
                     process = subprocess.Popen([sys.executable,'-m','uvicorn','backend.app.main:app','--host','127.0.0.1',
                                                 '--port',str(port),'--no-access-log'], env=env, stdout=log, stderr=log)
@@ -171,7 +251,9 @@ def main():
                         except httpx.TransportError:pass
                         time.sleep(.1)
                     else:raise RuntimeError('isolated API did not become ready')
-                    result = asyncio.run(exercise(base, identities, args.seconds, args.log_bytes))
+                    result = asyncio.run(exercise(base, identities, args.seconds, args.log_bytes,
+                                                  independent_logs=args.independent_logs,
+                                                  drain_seconds=args.drain_seconds if args.independent_logs else 0))
                 checkouts = [float(v) for v in re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/f'api-{count}.log').read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
@@ -181,6 +263,11 @@ def main():
                 result['passed'] = (result['expired_leases'] == 0 and result['telemetry_stale'] == 0 and
                     result['max_heartbeat_gap_seconds'] < 10 and all(v['p99'] < 5 for v in result['latency_seconds'].values()) and
                     not any(k not in ('200','503') for k in result['requests']))
+                if args.independent_logs:
+                    logs = result['log_generation']
+                    result['passed'] = (result['passed'] and logs['generated'] == logs.get('accepted', 0)
+                                        and logs['final_pending_chunks'] == 0 and not logs.get('dropped', 0)
+                                        and not logs.get('permanent_error', 0) and not logs.get('unexpected_ack', 0))
                 summary['grades'].append(result)
                 (output/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps({'workers':count,'passed':result['passed'],'requests':result['requests']}),flush=True)

@@ -1,0 +1,152 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 1,
+  "pool_ordinary": 5,
+  "pool_control": 10,
+  "pool_observation": 2,
+  "pool_result": 2,
+  "pool_scheduler": 1,
+  "cards_per_node": 1,
+  "seconds_per_grade": 30,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": false,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "scope": "real HTTP/PostgreSQL, simulated running services; excludes scheduler allocation, Agent and real business processes",
+  "grades": [
+    {
+      "requests": {
+        "503": 2642,
+        "200": 7563,
+        "transport_error": 1
+      },
+      "busy_reasons": {
+        "request_concurrency": 2514,
+        "scheduler_lock": 128
+      },
+      "requests_by_kind": {
+        "logs": {
+          "503": 1301,
+          "200": 2772,
+          "transport_error": 1
+        },
+        "heartbeat": {
+          "200": 1513,
+          "503": 80
+        },
+        "health": {
+          "503": 30,
+          "200": 1483
+        },
+        "artifact": {
+          "503": 534,
+          "200": 979
+        },
+        "claim": {
+          "503": 697,
+          "200": 816
+        }
+      },
+      "busy_by_kind": {
+        "logs": {
+          "request_concurrency": 1301
+        },
+        "heartbeat": {
+          "request_concurrency": 80
+        },
+        "health": {
+          "request_concurrency": 30
+        },
+        "artifact": {
+          "request_concurrency": 534
+        },
+        "claim": {
+          "request_concurrency": 569,
+          "scheduler_lock": 128
+        }
+      },
+      "successful_latency_seconds": {
+        "heartbeat": {
+          "p95": 3.323692403966561,
+          "p99": 5.144777083070949,
+          "max": 9.854381456039846
+        },
+        "logs": {
+          "p95": 3.598536506993696,
+          "p99": 5.475387251004577,
+          "max": 9.792834621155635
+        },
+        "health": {
+          "p95": 3.5797636739443988,
+          "p99": 5.509160160087049,
+          "max": 8.946178138023242
+        },
+        "artifact": {
+          "p95": 3.1654286491684616,
+          "p99": 5.103599401889369,
+          "max": 10.508957422105595
+        },
+        "claim": {
+          "p95": 3.605016343994066,
+          "p99": 5.913425392005593,
+          "max": 10.68902068096213
+        }
+      },
+      "latency_seconds": {
+        "logs": {
+          "p95": 3.5001970680896193,
+          "p99": 5.359460529871285,
+          "max": 9.79283479321748
+        },
+        "heartbeat": {
+          "p95": 3.3034278999548405,
+          "p99": 5.144777241162956,
+          "max": 9.85438167816028
+        },
+        "health": {
+          "p95": 3.534775136038661,
+          "p99": 5.4939576021861285,
+          "max": 8.946178362006322
+        },
+        "artifact": {
+          "p95": 3.063276445027441,
+          "p99": 5.067553428001702,
+          "max": 10.508957615122199
+        },
+        "claim": {
+          "p95": 3.3506777950096875,
+          "p99": 5.519981831079349,
+          "max": 10.689020856982097
+        }
+      },
+      "max_heartbeat_gap_seconds": 13.082921002060175,
+      "max_final_sample_age_seconds": 13.082921002060175,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.02770451013930142,
+        "p99": 0.03123455890454352,
+        "max": 0.03704571188427508
+      },
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 3000,
+        "accepted": 2772,
+        "max_pending_chunks_per_worker": 12,
+        "final_pending_chunks": 228,
+        "max_pending_age_seconds": 26.02245203498751
+      },
+      "initial_checkout_wait_ms": {
+        "p95": 0.048,
+        "p99": 0.054
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 200,
+      "executions": 200,
+      "passed": false
+    }
+  ]
+}
