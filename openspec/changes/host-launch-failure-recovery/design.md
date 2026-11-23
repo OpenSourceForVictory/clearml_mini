@@ -25,3 +25,9 @@ created/launch.started 是外部副作用前的尝试标记，不能移到成功
 真机复现：service-probe-session 返回 503 后停止已启动进程，恢复报 unit missing。将会话申请纳入启动租约续期保护；503/网络超时在原启动时限内重试，取消、租约失效和非临时错误仍终止。保持执行身份，不重新创建进程。适用于 host 与 Docker。
 
 覆盖率验收补充：定向回归不代表完整功能组覆盖率。以本轮完整测试和独立 PostgreSQL 迁移/并发测试的统一统计为准，不合并历史版本数据。会话申请阻塞期间必须实测启动续租线程仍能续租、接收取消，以及收到已过期租约时终止；日志重启历史必须用两次真实 API 执行验证隔离。
+
+## 2026-11-23 本地启动异常分类
+
+现场提示 `source=journal-created; service_instance_id=unknown` 只能证明本地 created 标记存在且无法恢复 unit，不能证明业务程序启动成功或同名实例冲突。定向故障注入复现 create/start 抛 PermissionError、OSError、TimeoutError 时外层通信故障分支不保存 terminal_failure，导致首次错误丢失。
+
+仅在宿主机本地 create/start 调用边界把 OSError 转为有阶段说明的启动失败，进入已有首次失败持久化与重放流程。API 心跳和探测的通信重试保持原义；不清除 created、不自动重建不确定执行、不修改协议或数据库。Worker 0.21.14 发布后需升级实际承接任务的节点。硬中断或状态盘无法写入时仍可能缺少首错记录，不能承诺消除所有 missing-unit 报错。

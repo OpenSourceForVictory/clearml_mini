@@ -200,6 +200,8 @@ Worker 的 `created=true` 表示已进入创建尝试，host-control/launch.json
 
 旧 journal 没有保存的错误无法补回。找不到 unit、没有可靠退出记录且本地标记已尝试创建或平台状态为 RUNNING 时，仍拒绝重复执行；提示附 execution_id、service_instance_id（旧 API 为 unknown）、unit、source。同名服务实例使用不同执行 ID；不同卡 Worker 的 journal、每次执行控制目录与 systemd unit 独立，清理只针对该执行。
 
+0.21.14 补齐本地启动异常分类：宿主机准备或启动抛出 PermissionError/OSError（包括本地 TimeoutError）时，原先会落入通信故障分支而不保存首次失败；之后恢复可能只显示 `source=journal-created`。现在将这两个本地调用边界的错误保存为 `host preparation failed: ...` 或 `host launch failed: ...`，恢复重报原始原因。API 心跳超时仍按通信故障重试。此修正不能恢复旧记录已丢失的首错，硬中断或状态盘不可写仍可能保留不确定标记。不要仅凭 missing-unit 报错认定权限问题；应检查该执行首次异常及 host-control 日志。回归与覆盖率见[2026-11-23 验证记录](validation/host-missing-20261123/README.md)。
+
 需要更新并重启节点各卡 Worker 才生效，不能仅替换文件后保留旧进程。更新 API 后 claim 附带服务实例 ID，无数据库迁移。应先排空并按节点升级流程操作。修复原始启动问题后从平台重试产生新执行，不承诺自动恢复旧失败任务。专项验证与未覆盖边界见 [验证记录](validation/host-launch-failure-recovery/README.md)。
 
 

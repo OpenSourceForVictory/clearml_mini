@@ -579,12 +579,24 @@ class Worker:
                                 from .client_connectivity import verify
                                 verify(task['client_spec']['endpoint'])
                         check_startup()
-                        self.create(task)
+                        try:
+                            self.create(task)
+                        except OSError as exc:
+                            # Local preparation errors are terminal startup failures,
+                            # not transient control-plane transport failures. Preserve
+                            # the cause before cleanup can remove the launch record.
+                            if self.host_mode():
+                                raise RuntimeError('host preparation failed: '+str(exc)) from exc
+                            raise
                         check_startup()
                         container = self.inspect(execution)
                     if container['State']['Status'] == 'created':
                         check_startup()
-                        if self.host_mode(): HostBackend(self).start(task)
+                        if self.host_mode():
+                            try:
+                                HostBackend(self).start(task)
+                            except OSError as exc:
+                                raise RuntimeError('host launch failed: '+str(exc)) from exc
                         else: docker('start', self.name(execution), timeout=10)
                 session = None
                 if is_service(task) and task['client_spec']['service'].get('readiness'):
