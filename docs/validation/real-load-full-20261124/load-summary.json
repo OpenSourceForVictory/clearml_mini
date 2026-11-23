@@ -1,0 +1,899 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 2,
+  "gateway": "nginx host-network test container",
+  "pool_ordinary": 23,
+  "pool_control": 40,
+  "pool_observation": 9,
+  "pool_result": 7,
+  "pool_scheduler": 1,
+  "pool_by_process": {
+    "ordinary": {
+      "ordinary": 23,
+      "observation": 9,
+      "result": 7
+    },
+    "control": {
+      "control": 40
+    }
+  },
+  "db_backpressure_enabled": true,
+  "db_admission_enabled": false,
+  "cards_per_node": 1,
+  "seconds_per_grade": 1800,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": false,
+  "log_interval_seconds": 2,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "trace_http_phases": false,
+  "client_per_worker": true,
+  "agent_telemetry": true,
+  "scope": "real HTTP/PostgreSQL, simulated running services and Agent telemetry; excludes scheduler allocation and real business processes",
+  "grades": [
+    {
+      "requests": {
+        "200": 476799,
+        "503": 97
+      },
+      "busy_reasons": {
+        "connection_pool": 97
+      },
+      "requests_by_kind": {
+        "agent": {
+          "200": 35844,
+          "503": 28
+        },
+        "heartbeat": {
+          "200": 87761
+        },
+        "logs": {
+          "200": 89958,
+          "503": 22
+        },
+        "health": {
+          "200": 87761
+        },
+        "artifact": {
+          "200": 87732,
+          "503": 29
+        },
+        "claim": {
+          "200": 87743,
+          "503": 18
+        }
+      },
+      "busy_by_kind": {
+        "agent": {
+          "connection_pool": 28
+        },
+        "artifact": {
+          "connection_pool": 29
+        },
+        "logs": {
+          "connection_pool": 22
+        },
+        "claim": {
+          "connection_pool": 18
+        },
+        "heartbeat": {}
+      },
+      "successful_latency_seconds": {
+        "agent": {
+          "p95": 0.05411586188711226,
+          "p99": 0.07677323208190501,
+          "max": 1.133164007915184
+        },
+        "heartbeat": {
+          "p95": 0.03827789588831365,
+          "p99": 0.06925636599771678,
+          "max": 0.48103429307229817
+        },
+        "logs": {
+          "p95": 0.06671827286481857,
+          "p99": 0.08541905204765499,
+          "max": 1.0345019458327442
+        },
+        "health": {
+          "p95": 0.027405151864513755,
+          "p99": 0.04978049802593887,
+          "max": 0.11622844496741891
+        },
+        "artifact": {
+          "p95": 0.034220326924696565,
+          "p99": 0.052467857953161,
+          "max": 0.7789716650731862
+        },
+        "claim": {
+          "p95": 0.02884543198160827,
+          "p99": 0.046773114008829,
+          "max": 0.7605573369655758
+        }
+      },
+      "latency_seconds": {
+        "agent": {
+          "p95": 0.05433046096004546,
+          "p99": 0.07792076584883034,
+          "max": 1.1331641818396747
+        },
+        "heartbeat": {
+          "p95": 0.03827832103706896,
+          "p99": 0.0692566039506346,
+          "max": 0.4810345331206918
+        },
+        "logs": {
+          "p95": 0.06676324596628547,
+          "p99": 0.08571287686936557,
+          "max": 1.0345030138269067
+        },
+        "health": {
+          "p95": 0.027405472937971354,
+          "p99": 0.04978083516471088,
+          "max": 0.11622878001071513
+        },
+        "artifact": {
+          "p95": 0.03427568404003978,
+          "p99": 0.05290178093127906,
+          "max": 0.7789719810243696
+        },
+        "claim": {
+          "p95": 0.028900434030219913,
+          "p99": 0.04710681806318462,
+          "max": 0.7605576219502836
+        }
+      },
+      "max_heartbeat_gap_seconds": 4.0498682300094515,
+      "max_final_sample_age_seconds": 4.0498682300094515,
+      "max_final_agent_age_seconds": 7.0000528178643435,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.0010353438556194305,
+        "p99": 0.0012617348693311214,
+        "max": 0.06831615208648145
+      },
+      "http_phases_seconds": {},
+      "progress": [
+        {
+          "elapsed_seconds": 30.87,
+          "max_current_heartbeat_age_seconds": 1.4148468729108572,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 1500,
+          "log_accepted": 1500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 60.87,
+          "max_current_heartbeat_age_seconds": 2.083168630953878,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 3000,
+          "log_accepted": 3000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 90.87,
+          "max_current_heartbeat_age_seconds": 1.8901963389944285,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 4500,
+          "log_accepted": 4500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 120.87,
+          "max_current_heartbeat_age_seconds": 2.049651007866487,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 6000,
+          "log_accepted": 6000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 150.87,
+          "max_current_heartbeat_age_seconds": 2.0608675971161574,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 7500,
+          "log_accepted": 7500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 180.87,
+          "max_current_heartbeat_age_seconds": 2.0075688059441745,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 9000,
+          "log_accepted": 9000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 210.87,
+          "max_current_heartbeat_age_seconds": 2.079747079173103,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 10500,
+          "log_accepted": 10500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 240.87,
+          "max_current_heartbeat_age_seconds": 2.0268344979267567,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 12000,
+          "log_accepted": 12000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 270.87,
+          "max_current_heartbeat_age_seconds": 1.9731860239990056,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 13500,
+          "log_accepted": 13500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 300.87,
+          "max_current_heartbeat_age_seconds": 2.0652315269690007,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 15000,
+          "log_accepted": 15000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 330.87,
+          "max_current_heartbeat_age_seconds": 2.0843052288983017,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 16500,
+          "log_accepted": 16500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 360.87,
+          "max_current_heartbeat_age_seconds": 2.0120128330308944,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 18000,
+          "log_accepted": 18000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 390.87,
+          "max_current_heartbeat_age_seconds": 2.0442938678897917,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 19500,
+          "log_accepted": 19500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 420.88,
+          "max_current_heartbeat_age_seconds": 1.98774263006635,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 21000,
+          "log_accepted": 21000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 450.88,
+          "max_current_heartbeat_age_seconds": 2.037481078878045,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 22500,
+          "log_accepted": 22500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 480.88,
+          "max_current_heartbeat_age_seconds": 2.053812132915482,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 24000,
+          "log_accepted": 24000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 510.88,
+          "max_current_heartbeat_age_seconds": 2.0609380868263543,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 25500,
+          "log_accepted": 25500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 540.88,
+          "max_current_heartbeat_age_seconds": 2.0935054048895836,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 27000,
+          "log_accepted": 27000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 570.88,
+          "max_current_heartbeat_age_seconds": 2.0861578159965575,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 28500,
+          "log_accepted": 28500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 600.88,
+          "max_current_heartbeat_age_seconds": 2.0784865459427238,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 30000,
+          "log_accepted": 30000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 630.88,
+          "max_current_heartbeat_age_seconds": 2.0311873801983893,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 31500,
+          "log_accepted": 31500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 660.88,
+          "max_current_heartbeat_age_seconds": 2.0545090248342603,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 33000,
+          "log_accepted": 33000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 690.88,
+          "max_current_heartbeat_age_seconds": 2.0524950409308076,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 34500,
+          "log_accepted": 34500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 720.88,
+          "max_current_heartbeat_age_seconds": 2.0373647350352257,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 36000,
+          "log_accepted": 36000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 750.88,
+          "max_current_heartbeat_age_seconds": 2.0830970800016075,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 37500,
+          "log_accepted": 37500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 780.89,
+          "max_current_heartbeat_age_seconds": 2.055688122054562,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 39000,
+          "log_accepted": 39000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 810.89,
+          "max_current_heartbeat_age_seconds": 2.032962345983833,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 40500,
+          "log_accepted": 40500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 840.89,
+          "max_current_heartbeat_age_seconds": 2.078347912058234,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 42000,
+          "log_accepted": 42000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 870.89,
+          "max_current_heartbeat_age_seconds": 2.0192988750059158,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 43500,
+          "log_accepted": 43500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 900.89,
+          "max_current_heartbeat_age_seconds": 2.0778169168625027,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 45000,
+          "log_accepted": 45000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 930.89,
+          "max_current_heartbeat_age_seconds": 2.0696577539201826,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 46500,
+          "log_accepted": 46500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 960.89,
+          "max_current_heartbeat_age_seconds": 2.04674688517116,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 48000,
+          "log_accepted": 48000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 990.89,
+          "max_current_heartbeat_age_seconds": 2.037807626882568,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 49500,
+          "log_accepted": 49500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1020.89,
+          "max_current_heartbeat_age_seconds": 2.055730625987053,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 51000,
+          "log_accepted": 51000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1050.89,
+          "max_current_heartbeat_age_seconds": 2.0403182508889586,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 52500,
+          "log_accepted": 52500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1080.89,
+          "max_current_heartbeat_age_seconds": 2.0676249149255455,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 54000,
+          "log_accepted": 54000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1110.89,
+          "max_current_heartbeat_age_seconds": 2.0489869241137058,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 55500,
+          "log_accepted": 55500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1140.89,
+          "max_current_heartbeat_age_seconds": 2.0742796501144767,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 57000,
+          "log_accepted": 57000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1170.89,
+          "max_current_heartbeat_age_seconds": 2.0097202230244875,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 58500,
+          "log_accepted": 58500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1200.89,
+          "max_current_heartbeat_age_seconds": 2.0422616240102798,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 60000,
+          "log_accepted": 60000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1230.9,
+          "max_current_heartbeat_age_seconds": 2.036896811099723,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 61500,
+          "log_accepted": 61500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1260.9,
+          "max_current_heartbeat_age_seconds": 2.0478362371213734,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 63000,
+          "log_accepted": 63000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1290.9,
+          "max_current_heartbeat_age_seconds": 2.048673148965463,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 64500,
+          "log_accepted": 64500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1320.9,
+          "max_current_heartbeat_age_seconds": 2.039247949142009,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 66000,
+          "log_accepted": 66000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1350.9,
+          "max_current_heartbeat_age_seconds": 2.033335702959448,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 67500,
+          "log_accepted": 67500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1380.9,
+          "max_current_heartbeat_age_seconds": 2.056952574988827,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 69000,
+          "log_accepted": 69000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1410.9,
+          "max_current_heartbeat_age_seconds": 2.0654510108288378,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 70500,
+          "log_accepted": 70500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1440.9,
+          "max_current_heartbeat_age_seconds": 2.040110202971846,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 72000,
+          "log_accepted": 72000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1470.9,
+          "max_current_heartbeat_age_seconds": 2.0364656809251755,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 73500,
+          "log_accepted": 73500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1500.9,
+          "max_current_heartbeat_age_seconds": 2.050856677116826,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 75000,
+          "log_accepted": 75000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1530.9,
+          "max_current_heartbeat_age_seconds": 2.0622037171851844,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 76500,
+          "log_accepted": 76500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1560.9,
+          "max_current_heartbeat_age_seconds": 2.0425964649766684,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 78000,
+          "log_accepted": 78000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1590.9,
+          "max_current_heartbeat_age_seconds": 2.0756728500127792,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 79500,
+          "log_accepted": 79500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1620.9,
+          "max_current_heartbeat_age_seconds": 2.0490537909790874,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 81000,
+          "log_accepted": 81000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1650.9,
+          "max_current_heartbeat_age_seconds": 2.0665806620381773,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 82500,
+          "log_accepted": 82500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1680.9,
+          "max_current_heartbeat_age_seconds": 2.0470892211887985,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 84000,
+          "log_accepted": 84000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1710.9,
+          "max_current_heartbeat_age_seconds": 2.0376651159022003,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 85500,
+          "log_accepted": 85500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1740.9,
+          "max_current_heartbeat_age_seconds": 2.047530148876831,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 87000,
+          "log_accepted": 87000,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1770.9,
+          "max_current_heartbeat_age_seconds": 2.047496172133833,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 88500,
+          "log_accepted": 88500,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 1800.0,
+          "max_current_heartbeat_age_seconds": 2.0076849272008985,
+          "worst_heartbeat_gap_seconds": 2.21195310796611,
+          "log_generated": 89958,
+          "log_accepted": 89957,
+          "log_pending": 1,
+          "oldest_pending_log_seconds": 0.048171358183026314,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        }
+      ],
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 89958,
+        "accepted": 89958,
+        "max_pending_chunks_per_worker": 2,
+        "final_pending_chunks": 0,
+        "max_pending_age_seconds": 2.188779840944335
+      },
+      "initial_checkout_wait_ms": {
+        "p95": 0.053,
+        "p99": 0.072
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "workers": 100,
+      "executions": 100,
+      "passed": true
+    }
+  ]
+}

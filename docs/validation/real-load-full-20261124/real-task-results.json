@@ -1,0 +1,220 @@
+{
+  "single": {
+    "batch_id": "d0cb8a8b-7117-426e-af6f-3356b78cc176",
+    "status": "SUCCEEDED",
+    "error": null,
+    "placement": {
+      "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+      "node_name": "local4090-151",
+      "accelerator_type": "gpu",
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+      "gpu_model": "NVIDIA GeForce RTX 4090"
+    },
+    "outcomes": {
+      "execution": {
+        "normal": 1,
+        "abnormal": 0,
+        "running": 0,
+        "unknown": 0,
+        "not_started": 0
+      },
+      "protocol": {
+        "planned": 0,
+        "success": 0,
+        "failure": 0,
+        "invalid": 0,
+        "errors": 0,
+        "unreported": 0,
+        "not_applicable_tasks": 1,
+        "valid": 0,
+        "success_rate": null
+      },
+      "task_result": {
+        "success": 1,
+        "failure": 0,
+        "unreported": 0,
+        "not_applicable": 0
+      },
+      "task_result_state": "success",
+      "task_result_data": {
+        "kind": "task",
+        "metrics": {
+          "score": 1.0
+        },
+        "success": true,
+        "summary": "示例业务结果；请替换为真实评测逻辑"
+      },
+      "process_scope": "single_process",
+      "wrapper_exit_code": 0,
+      "detail_mode": "execution"
+    },
+    "cleanup_confirmed": true,
+    "model_evaluation": false
+  },
+  "queued": {
+    "batch_id": "6fbc84be-0b1d-41f0-88a6-603cc865efd3",
+    "cases": [
+      {
+        "case_id": "queue-smoke-1",
+        "job_id": "fd404e63-af43-48ae-9d06-07c3582a4217",
+        "status": "SUCCEEDED",
+        "placement": {
+          "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "node_name": "local4090-151",
+          "accelerator_type": "gpu",
+          "gpu_index": 0,
+          "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+          "gpu_model": "NVIDIA GeForce RTX 4090"
+        },
+        "outcomes": {
+          "execution": {
+            "normal": 1,
+            "abnormal": 0,
+            "running": 0,
+            "unknown": 0,
+            "not_started": 0
+          },
+          "protocol": {
+            "planned": 0,
+            "success": 0,
+            "failure": 0,
+            "invalid": 0,
+            "errors": 0,
+            "unreported": 0,
+            "not_applicable_tasks": 1,
+            "valid": 0,
+            "success_rate": null
+          },
+          "task_result": {
+            "success": 1,
+            "failure": 0,
+            "unreported": 0,
+            "not_applicable": 0
+          },
+          "task_result_state": "success",
+          "task_result_data": {
+            "kind": "task",
+            "metrics": {
+              "score": 1.0
+            },
+            "success": true,
+            "summary": "示例业务结果；请替换为真实评测逻辑"
+          },
+          "process_scope": "single_process",
+          "wrapper_exit_code": 0,
+          "detail_mode": "execution"
+        },
+        "attempt_count": 1,
+        "cleanup_confirmed": true
+      },
+      {
+        "case_id": "queue-smoke-2",
+        "job_id": "d0ad6601-a60b-424e-b785-fd3f7b034c26",
+        "status": "SUCCEEDED",
+        "placement": {
+          "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "node_name": "local4090-151",
+          "accelerator_type": "gpu",
+          "gpu_index": 0,
+          "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+          "gpu_model": "NVIDIA GeForce RTX 4090"
+        },
+        "outcomes": {
+          "execution": {
+            "normal": 1,
+            "abnormal": 0,
+            "running": 0,
+            "unknown": 0,
+            "not_started": 0
+          },
+          "protocol": {
+            "planned": 0,
+            "success": 0,
+            "failure": 0,
+            "invalid": 0,
+            "errors": 0,
+            "unreported": 0,
+            "not_applicable_tasks": 1,
+            "valid": 0,
+            "success_rate": null
+          },
+          "task_result": {
+            "success": 1,
+            "failure": 0,
+            "unreported": 0,
+            "not_applicable": 0
+          },
+          "task_result_state": "success",
+          "task_result_data": {
+            "kind": "task",
+            "metrics": {
+              "score": 1.0
+            },
+            "success": true,
+            "summary": "示例业务结果；请替换为真实评测逻辑"
+          },
+          "process_scope": "single_process",
+          "wrapper_exit_code": 0,
+          "detail_mode": "execution"
+        },
+        "attempt_count": 1,
+        "cleanup_confirmed": true
+      },
+      {
+        "case_id": "queue-smoke-3",
+        "job_id": "93a5747a-4054-41c7-b480-2f8249f3ebad",
+        "status": "SUCCEEDED",
+        "placement": {
+          "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+          "node_name": "local4090-151",
+          "accelerator_type": "gpu",
+          "gpu_index": 0,
+          "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+          "gpu_model": "NVIDIA GeForce RTX 4090"
+        },
+        "outcomes": {
+          "execution": {
+            "normal": 1,
+            "abnormal": 0,
+            "running": 0,
+            "unknown": 0,
+            "not_started": 0
+          },
+          "protocol": {
+            "planned": 0,
+            "success": 0,
+            "failure": 0,
+            "invalid": 0,
+            "errors": 0,
+            "unreported": 0,
+            "not_applicable_tasks": 1,
+            "valid": 0,
+            "success_rate": null
+          },
+          "task_result": {
+            "success": 1,
+            "failure": 0,
+            "unreported": 0,
+            "not_applicable": 0
+          },
+          "task_result_state": "success",
+          "task_result_data": {
+            "kind": "task",
+            "metrics": {
+              "score": 1.0
+            },
+            "success": true,
+            "summary": "示例业务结果；请替换为真实评测逻辑"
+          },
+          "process_scope": "single_process",
+          "wrapper_exit_code": 0,
+          "detail_mode": "execution"
+        },
+        "attempt_count": 1,
+        "cleanup_confirmed": true
+      }
+    ],
+    "model_evaluation": false
+  }
+}
