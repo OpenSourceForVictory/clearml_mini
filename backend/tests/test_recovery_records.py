@@ -152,7 +152,8 @@ def test_grant_immutable_and_legacy_not_implicitly_enabled(ledger):
             records.grant(s, run, 'w', 60)
 
 
-def test_fresh_grant_requires_claim_and_ownership(ledger):
+@pytest.mark.parametrize("policy_args, expected", [((), None), ((None,), None), ((120,), 120)])
+def test_fresh_grant_requires_claim_and_ownership(ledger, policy_args, expected):
     factory, _ = ledger
     with factory() as s:
         run = Run(id='r2', job_id='j', attempt=2, execution_id='e2', slot_id='s',
@@ -163,7 +164,7 @@ def test_fresh_grant_requires_claim_and_ownership(ledger):
         with pytest.raises(HTTPException):
             records.grant(s, run, 'w', None)
         run.status='STARTING'; run.cleanup_confirmed=False
-        assert records.grant(s, run, 'w', None).policy['disconnect_tolerance_seconds'] is None
+        assert records.grant(s, run, 'w', *policy_args).policy['disconnect_tolerance_seconds'] == expected
 
 
 def test_http_receipt_commits_before_ack(ledger):

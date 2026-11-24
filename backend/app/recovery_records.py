@@ -33,7 +33,7 @@ class ResultRecord(ControlRecord):
     kind: Literal['episode', 'task_result']
 
 
-def grant(s, run, worker_id, tolerance):
+def grant(s, run, worker_id, tolerance=None):
     """Called only in the allocation transaction after both peers negotiate."""
     if tolerance is not None and (type(tolerance) is not int or not 0 < tolerance < 2**63):
         raise HTTPException(422, 'invalid disconnection tolerance')
