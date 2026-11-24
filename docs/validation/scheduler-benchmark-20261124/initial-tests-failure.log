@@ -1,0 +1,18 @@
+...FF                                                                    [100%]
+=================================== FAILURES ===================================
+__________________ test_repeat_isolation_and_real_reservation __________________
+backend/tests/test_scheduler_benchmark.py:17: in test_repeat_isolation_and_real_reservation
+    first=measure(sessionmaker(bind=engine),at)
+scripts/scheduler_benchmark.py:108: in measure
+    for module,name in [(scheduling,'reconcile'),(scheduling.orchestration_scheduler,'reconcile'),
+E   AttributeError: module 'backend.app.scheduling' has no attribute 'orchestration_scheduler'
+_____________________ test_empty_queue_and_input_rejection _____________________
+backend/tests/test_scheduler_benchmark.py:30: in test_empty_queue_and_input_rejection
+    assert measure(sessionmaker(bind=engine),at)['admitted']==0
+scripts/scheduler_benchmark.py:108: in measure
+    for module,name in [(scheduling,'reconcile'),(scheduling.orchestration_scheduler,'reconcile'),
+E   AttributeError: module 'backend.app.scheduling' has no attribute 'orchestration_scheduler'
+=========================== short test summary info ============================
+FAILED backend/tests/test_scheduler_benchmark.py::test_repeat_isolation_and_real_reservation
+FAILED backend/tests/test_scheduler_benchmark.py::test_empty_queue_and_input_rejection
+2 failed, 3 passed in 10.76s

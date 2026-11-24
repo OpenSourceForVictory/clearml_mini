@@ -304,3 +304,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 预约领取窗口：`scheduling.reservation_deadline` 仅登记本轮新预约或服务就绪后新开启的窗口，tick 在主要 flush 后提交前统一刷新期限；不续期旧预约、不延长执行租约。托管等待保留原时长，`reserved_at` 保留决策时间。回归见 `test_reservation_windows.py`，说明与提交延迟边界见 `docs/operations.md`。无需迁移或 Worker 更新，当前是否部署须另核实。
 
 服务实例补齐公平性：`orchestration_scheduler.fill_desired_instances` 在客户端准入后使用独立 `SchedulerState(service_rotation)`，每用户每轮最多一个，用户内优先级/创建时间/ID 排序；资源 Planner 每次重新检查，游标与预约同事务。测试 `test_service_refill_fairness.py`，操作见 `docs/batch-controls.md`；无需迁移或 Worker 更新。
+
+隔离调度基准：`scripts/scheduler_benchmark.py` 自建带唯一标签的 PostgreSQL 容器，不接受平台数据库 URL；使用说明及测量边界见 `docs/scheduler-benchmark.md`。断联继续执行尚未启用，跨 Worker/API/删除/服务关联的实施核对见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。

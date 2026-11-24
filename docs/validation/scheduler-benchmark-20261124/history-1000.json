@@ -1,0 +1,70 @@
+{
+  "history": 1000,
+  "pending": 100,
+  "python": "3.13.9",
+  "cpu_count": 32,
+  "samples": [
+    {
+      "sql_count": 23,
+      "sql_seconds": 0.002590934280306101,
+      "objects_loaded": 1204,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.0003821440041065216,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005344150122255087,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003250008448958397
+      },
+      "admitted": 1,
+      "tick_seconds": 0.010754825081676245
+    },
+    {
+      "sql_count": 23,
+      "sql_seconds": 0.0032496231142431498,
+      "objects_loaded": 1204,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.00036164396442472935,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005061011761426926,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0006216277834028006
+      },
+      "admitted": 1,
+      "tick_seconds": 0.010703924112021923
+    },
+    {
+      "sql_count": 23,
+      "sql_seconds": 0.0035856470931321383,
+      "objects_loaded": 1204,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.000375780975446105,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005411210004240274,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0004569168668240309
+      },
+      "admitted": 1,
+      "tick_seconds": 0.027667123824357986
+    },
+    {
+      "sql_count": 23,
+      "sql_seconds": 0.0027643085923045874,
+      "objects_loaded": 1204,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.000378248980268836,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005577020347118378,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003330849576741457
+      },
+      "admitted": 1,
+      "tick_seconds": 0.010112995048984885
+    },
+    {
+      "sql_count": 23,
+      "sql_seconds": 0.0027450977358967066,
+      "objects_loaded": 1204,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.0003619021736085415,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005401619710028172,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.00032857502810657024
+      },
+      "admitted": 1,
+      "tick_seconds": 0.010077816899865866
+    }
+  ],
+  "boundary": "isolated PostgreSQL; mock ordinary jobs; rollback samples exclude commit durability; no HTTP/Worker load",
+  "postgres": "16.8 (Debian 16.8-1.pgdg120+1)"
+}
