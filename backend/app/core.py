@@ -246,6 +246,30 @@ class Run(Base):
     job: Mapped[Job] = relationship(back_populates='runs')
 
 
+class ExecutionRecovery(Base):
+    """Immutable assignment authority retained independently of visible runs."""
+    __tablename__ = 'execution_recovery'
+    execution_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(36), unique=True)
+    worker_id: Mapped[str] = mapped_column(String(36))
+    slot_id: Mapped[str] = mapped_column(String(36))
+    generation: Mapped[str] = mapped_column(String(36))
+    policy: Mapped[dict] = mapped_column(JSON_TYPE)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    received_bytes: Mapped[int] = mapped_column(BigInteger, default=0, server_default='0')
+    received_records: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+
+
+class ExecutionRecoveryReceipt(Base):
+    __tablename__ = 'execution_recovery_receipts'
+    execution_id: Mapped[str] = mapped_column(ForeignKey('execution_recovery.execution_id'), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), primary_key=True)
+    sequence: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON_TYPE)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class RunLog(Base):
     __tablename__ = 'run_logs'
     run_id: Mapped[str] = mapped_column(ForeignKey('evaluation_runs.id'), primary_key=True)

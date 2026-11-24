@@ -42,3 +42,22 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "disconnected_execution_foundations o
 ```
 
 本轮 144 通过、2865 未选择、1 个依赖弃用警告；统计工具另有 14 通过。两个新增模块行/分支均 100%，`worker/client.py` 专项行 65.29%、分支 51.90%，不是全模块达标结论。统一脚本保留完整分母，全项目门槛未通过，退出 1；没有降低门槛或排除业务文件。原始报告位于上述 coverage-artifacts 输出，精简证据见 [foundations-20261125.json](foundations-20261125.json)。首次统计工具测试路径拼错退出 4，改为实际文件名后通过，保留在证据中。
+
+## 2026-11-25 服务端补报收据与交付器
+
+已实现 `ExecutionRecovery` 不可变执行归属/代次及 `ExecutionRecoveryReceipt` 幂等账本，新增 `ae185f6`。控制、回合、任务结果均按执行/类型/序号和摘要去重；仅取原执行账本行锁，不争无关全局调度锁。事务提交后才 HTTP ACK；晚到消息无需旧租约，但不能由此变更 Run 状态、续租或释放资源。撤销/删除后业务数据拒绝；原节点鉴权有效时仍可保留控制证据。节点凭据撤销依旧 401，无法绕过。
+
+`RecoveryDelivery.step` 将本地队列交给对应控制/结果接口，核对服务端摘要后推进本地 ACK；响应丢失可重放。HTTP 收据 `reconciled: false` 不是恢复运行许可。接收账本的正文容量和条数有上限，给控制记录预留空间；未确认结果留在节点，不丢弃。
+
+新接口分别归执行控制与可靠结果，更新单/双/四角色分类与网关。历史 167 路由验收文件不改写；两个新增路由及 schema 单独保存在 `recovery-route-contracts.json`，测试合并后二者必须精确覆盖当前 169 路由。
+
+验证命令：
+
+```bash
+# LOG_TEST_DATABASE_URL 必须指向专用临时 PostgreSQL，fixture 自建并删除独立数据库。
+PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_execution_foundations or priority_routes or priority_gateway or split_api_process or execution_lock_scope or worker_execution_recovery or worker_startup_lease or worker_service_execution or worker_recovery"' .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/disconnected-execution-receipts
+```
+
+260 通过、2776 未选择、无跳过；统计工具另 14 通过。两个本轮新增逻辑模块行/分支均 100%，此前两个基础模块也均 100%。这是专项，统一脚本的全项目门槛仍未通过、退出 1；不宣称整项目达标。失败轨迹与迁移边界见 [receipts-20261125.json](receipts-20261125.json)。真实 PostgreSQL 验证并发 16 次同记录仅持久化一次、不等待无关调度锁，以及升级/回滚保护；HTTP 加本地队列验证长期旧租约、断网和提交后丢响应重放。
+
+当前领取路径仍不调用 `grant`，新策略未广告、未部署。仍需发放/持久接管授权、本地监督接线、控制版本与实际进程身份对账、可靠结果应用及资源收尾、向导配置/展示和真机端到端验证。不能把本节的“消息已收”说成“任务恢复完成”。

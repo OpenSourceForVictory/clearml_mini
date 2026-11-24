@@ -151,6 +151,9 @@ def install(app, db, current):
             raise HTTPException(401, 'invalid worker credential')
         return w
 
+    from . import recovery_records
+    recovery_records.install(app, db, worker_auth)
+
     def admin(user=Depends(current)):
         if user.role != 'admin':
             raise HTTPException(403, 'admin required')

@@ -318,3 +318,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 监控背压：frontend/src/poll.ts 支持 intervalMs，批次 monitor 5秒、其他默认2秒；失败指数退避至30秒并尊重更长Retry-After，document隐藏/卸载取消fetch，401停止自动轮询。api.ts ApiError保留status/reason/retryAfterMs。preflight.DiagnosticContext只在请求内按批次+服务集合+workload缓存托管候选并预计算holdings，不能用于scheduler共享快照。说明docs/batch-monitoring.md；回归test_monitor_backpressure.py、query-polling.spec.ts。
 
 断联恢复基础（尚未启用新协议）：`worker/disconnection.py` 提供绑定执行/代次/boot ID 的单调计时与不可逆停止决定；`worker/reliable_outbox.py` 使用 SQLite FULL 事务持久化控制/结果、摘要幂等 ACK 和控制容量预留，日志继续使用原游标。尚未接入 Worker/API 恢复和界面，不能宣称旧租约已被替换。`client.save` 已补原子重命名后的父目录 fsync，失败向上传播。专项见 `backend/tests/test_disconnected_execution_foundations.py`；实施状态见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。
+
+断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。`worker/recovery_delivery.py` 逐批上传并匹配摘要后确认本地 outbox，不能将收据视为运行许可或清理确认。尚未接入领取授权、本地监督及生命周期恢复，不广告能力、不对历史任务启用。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK 与鉴权；运维和迁移边界见 docs/operations.md、docs/database-migration.md。

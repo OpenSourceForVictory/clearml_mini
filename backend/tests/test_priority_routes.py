@@ -31,6 +31,8 @@ def test_legacy_categories_match_prechange_route_audit():
     audit = Path(__file__).resolve().parents[2] / 'docs/validation/priority-api-isolation-20261124/registered-routes.tsv'
     with audit.open() as stream:
         rows = list(csv.DictReader(stream, delimiter='\t'))
+    extra = audit.parents[1] / 'disconnected-execution-20261124/recovery-route-contracts.json'
+    rows.extend(json.loads(extra.read_text())['legacy_routes'])
     assert len(rows) == len(manifest())
     for row in rows:
         concrete = re.sub(r'\{[^}]+\}', 'sample', row['path'])
@@ -43,7 +45,16 @@ def test_request_contract_audit_covers_current_routes_and_declared_limits(monkey
     from backend.tests.priority_route_audit import collect
     audit = Path(__file__).resolve().parents[2] / 'docs/validation/priority-api-isolation-20261124/request-contracts.json'
     actual = collect(app)
-    assert json.loads(audit.read_text()) == actual
+    expected = json.loads(audit.read_text())
+    extra = json.loads((audit.parents[1] / 'disconnected-execution-20261124/recovery-route-contracts.json').read_text())
+    expected['routes'].extend(extra['routes'])
+    expected['body_schemas'].update(extra['body_schemas'])
+    # Historical isolation evidence remains immutable; additions are audited
+    # separately and every route/schema is still compared exhaustively.
+    key = lambda row: (row['method'], row['path'])
+    expected['routes'] = sorted(expected['routes'], key=key)
+    actual['routes'] = sorted(actual['routes'], key=key)
+    assert expected == actual
     assert actual['gateway_body_byte_limit'] is None
     assert len(actual['routes']) == len(manifest())
     assert all(row['confirmation'] for row in actual['routes'])

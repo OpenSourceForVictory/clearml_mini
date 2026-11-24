@@ -1000,5 +1000,17 @@
     "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/execution-location",
     "category": "page_read",
     "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/recovery/control",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/recovery/results",
+    "category": "worker_result",
+    "legacy_category": "result"
   }
 ]

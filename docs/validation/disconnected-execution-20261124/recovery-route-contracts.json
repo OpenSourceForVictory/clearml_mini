@@ -1,0 +1,115 @@
+{
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/control",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_records.ControlRecord'>"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.recovery_records.control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/results",
+      "category": "worker_result",
+      "role": "worker-data",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_records.ResultRecord'>"
+        }
+      ],
+      "confirmation": "reliable result acknowledgement; duplicate content must match",
+      "source": "backend.app.recovery_records.results"
+    }
+  ],
+  "body_schemas": {
+    "<class 'backend.app.recovery_records.ControlRecord'>": {
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "sequence": {
+          "exclusiveMaximum": 9223372036854775808,
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "body": {
+          "additionalProperties": true,
+          "title": "Body",
+          "type": "object"
+        }
+      },
+      "required": [
+        "generation",
+        "sequence",
+        "body"
+      ],
+      "title": "ControlRecord",
+      "type": "object"
+    },
+    "<class 'backend.app.recovery_records.ResultRecord'>": {
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "sequence": {
+          "exclusiveMaximum": 9223372036854775808,
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "body": {
+          "additionalProperties": true,
+          "title": "Body",
+          "type": "object"
+        },
+        "kind": {
+          "enum": [
+            "episode",
+            "task_result"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generation",
+        "sequence",
+        "body",
+        "kind"
+      ],
+      "title": "ResultRecord",
+      "type": "object"
+    }
+  },
+  "legacy_routes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/control",
+      "current_category": "control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/results",
+      "current_category": "result"
+    }
+  ]
+}
