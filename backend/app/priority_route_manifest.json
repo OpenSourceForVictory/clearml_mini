@@ -1,0 +1,1004 @@
+[
+  {
+    "method": "GET",
+    "path": "/healthz",
+    "category": "health",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/readyz",
+    "category": "health",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/renew",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/auth/me",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pools",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workers",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/benchmarks",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs/{job_id}/cancel",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs/{job_id}/retry",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/jobs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/logs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/health",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/nodes/{worker_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/unmanage",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/pools",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/pools/{pool_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/users",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/users/{user_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/node-installation-bundle",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/reenroll",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/enrollment",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/enrollment/complete",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/ssh-onboarding",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/cleanup/check",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/cleanup/eligibility",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/cleanup/begin",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/cleanup/complete",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-onboarding/check",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-onboarding/{identity}/confirm",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-onboarding/{identity}/verify",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-onboarding/{identity}/cancel",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-onboarding/{identity}/trust",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssh-enrollment/begin",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/server-templates",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/server-templates",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/server-templates/{identity}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/{kind}-templates/{identity}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/{kind}-templates/{identity}/clone",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/runtime-templates/{kind}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/runtime-templates/{kind}/{identity}/clone",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/runtime-templates/{kind}/{identity}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/runtime-templates/{kind}/{identity}/actions",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/server-templates/{identity}/access",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/host-environments",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{identity}/host-environments",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/services",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/services",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/services/{identity}/control",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/services/{identity}/logs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution}/service-probe-session",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution}/service-health",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/service-network",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{identity}/service-network",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/worker-releases",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/worker-releases",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/upgrades",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/upgrades",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{identity}/upgrades/{upgrade_id}/cancel",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/upgrades/poll",
+    "category": "worker_claim",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/worker/upgrades/{identity}/state",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/worker/upgrades/{identity}/archive",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/upgrades/{identity}/report",
+    "category": "execution_control",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/agent",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{identity}/agent",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/agent/register",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/agent/heartbeat",
+    "category": "worker_observation",
+    "legacy_category": "observation"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/agent/stop-permit",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{worker_id}/storage",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{worker_id}/storage",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{worker_id}/storage/slots/{slot_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{worker_id}/runtime",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{worker_id}/runtime",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/runtime-readiness",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/resource-memberships",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{worker_id}/execution-data",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/execution-data/scan",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/execution-data/preview",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/execution-data/operations/{op_id}/confirm",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{worker_id}/execution-data/operations",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/retention/preview",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{worker_id}/retention",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{slot_id}/execution-data/inventory",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{slot_id}/execution-data/control",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{slot_id}/execution-data/{item_id}/begin",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{slot_id}/execution-data/{item_id}/receipt",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/execution-data",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/log-catalog",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/log-catalog",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/log-reads",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/log-reads/{access_id}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/log-reads/claim",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/log-reads/{read_id}/reply",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes/{identity}/log-policy",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/nodes/{identity}/log-policy",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{identity}/log-policy",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/shared-artifacts",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media-access",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media/{identity}",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media/{identity}",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/worker/self",
+    "category": "worker_observation",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/users",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/worker-credentials",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/nodes",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/nodes/{worker_id}/rotate-token",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/nodes/{worker_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/pools",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/pools/{pool_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/register",
+    "category": "worker_claim",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/heartbeat",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/slots/{slot_id}/claim",
+    "category": "worker_claim",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/logs-v2",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/logs",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/episodes",
+    "category": "worker_result",
+    "legacy_category": "result"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/artifacts",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/complete",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/task-result",
+    "category": "worker_result",
+    "legacy_category": "result"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/cleanup",
+    "category": "execution_control",
+    "legacy_category": "control"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media-access",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media",
+    "category": "bulk_transfer",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/execution-limits",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client-templates",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/client-templates",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client-templates",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/client-templates/{template_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/orchestrations/preflight",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/orchestrations",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/orchestrations/{identity}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/orchestrations/{identity}/services/{service_id}/logs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/orchestrations/{identity}/services/{service_id}/control",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites/catalogs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/suites/preview",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites/manage",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/suites",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/suites/{id}/client-templates",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites/{id}/export",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/suites/{id}/clone",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites/{id}/runs",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites/{id}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/suites/{id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/suites/{id}/actions",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batches/{batch_id}/monitor",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/batches/{batch_id}/retry-failed",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batches/{batch_id}/report",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batch-comparisons",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/batches/{batch_id}/control",
+    "category": "user_action",
+    "legacy_category": "control"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/batches/{batch_id}/priority",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/suites",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/batches/preflight",
+    "category": "user_long",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/batches",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batches",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/batches/{batch_id}",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batches/{batch_id}",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/batches/{identity}/rerun-draft",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/episodes",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client-builds",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client-builds",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/client-builds/claim",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/client-builds/{build_id}/complete",
+    "category": "user_action",
+    "legacy_category": "ordinary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/jobs/{job_id}/attempts/{run_id}/execution-location",
+    "category": "page_read",
+    "legacy_category": "ordinary"
+  }
+]

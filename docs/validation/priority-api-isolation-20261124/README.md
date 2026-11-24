@@ -2,6 +2,8 @@
 
 此记录基于本仓库现有代码生成，不代表四角色方案已上线。使用 `JWT_SECRET=route-inventory-only` 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、直接依赖、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
 
+拟议类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 现在从此字段读取，所以现有部署的入口、池和网关路由不变。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，不能借用高优先级类别。四角色类别尚未接入运行中的中间件或网关。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
+
 ## 规模与当前拥塞面
 
 167 条方法路由（含 `/healthz`、`/readyz` 和媒体 HEAD）：GET 62、POST 80、DELETE 4、PATCH 7、PUT 12、HEAD 2。当前分类为 ordinary 152、control 12、observation 1、result 2；除 12 条 control 外均由双 API 部署中的普通进程处理。直接源码中 75 条包含锁字样、85 条包含 `s.commit()`、12 条显式调用本机执行器或共享文件 I/O；这些计数是审计线索，不是完整调用图。
@@ -48,4 +50,4 @@ FastAPI 路由清单不能代替客户端调用清单。后台调度在 `main.li
 
 ## 验证边界
 
-本阶段只做仓库静态审计和 FastAPI 注册路由枚举，没有更改产品运行逻辑、部署或数据库，也没有执行新混合负载。清单尚未逐路由核验鉴权、体积、事务与重试，OpenSpec 1.1 仍未完成。下一步完成逐路由核对并补基线驱动，在隔离 PostgreSQL 实测后再以失败原因与 p99 数据确定池分配。
+本阶段做了仓库静态审计、FastAPI 注册路由枚举和四角色分类清单；既有分类改为从同一清单读取，逐路由回归验证类别不变。分类专项 `test_priority_routes.py`、既有双进程及数据库预算专项合计 129 通过、15 跳过（需独立 PostgreSQL）；新分类模块定向行/分支覆盖均为 100%，不代表全项目覆盖。没有更改运行中的请求路由、部署或数据库，也没有执行新混合负载。OpenSpec 2.1 已完成；1.1 的逐路由鉴权、体积、事务与重试核对仍未完成。下一步完成逐路由核对并补基线驱动，在隔离 PostgreSQL 实测后再以失败原因与 p99 数据确定池分配。

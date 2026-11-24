@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import logging
 import math
 import os
-import re
 import threading
 import time
 
@@ -15,6 +14,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.exc import DBAPIError, TimeoutError as PoolTimeout
 from sqlalchemy.orm import sessionmaker
 from starlette.responses import JSONResponse
+from .priority_routes import legacy_category_for
 
 LOG = logging.getLogger(__name__)
 if os.getenv('DB_BUDGET_DIAGNOSTICS', '0') == '1':
@@ -99,21 +99,7 @@ class Settings:
 
 
 def request_category(path, method='POST'):
-    if method != 'POST':
-        return 'ordinary'
-    if path == '/api/v1/agent/heartbeat':
-        return 'observation'
-    if path in ('/api/v1/worker/heartbeat', '/api/v1/agent/stop-permit') or re.fullmatch(
-            r'/api/v1/worker/executions/[^/]+/(?:service-health|service-probe-session|complete|cleanup)', path):
-        return 'control'
-    if re.fullmatch(r'/api/v1/jobs/[^/]+/(?:cancel|retry)', path) or re.fullmatch(
-            r'/api/v1/(?:batches|admin/services)/[^/]+/control', path) or re.fullmatch(
-            r'/api/v1/batches/[^/]+/retry-failed', path) or re.fullmatch(
-            r'/api/v1/orchestrations/[^/]+/services/[^/]+/control', path):
-        return 'control'
-    if re.fullmatch(r'/api/v1/worker/executions/[^/]+/(?:episodes|task-result)', path):
-        return 'result'
-    return 'ordinary'
+    return legacy_category_for(path, method)
 
 
 def control_path(path):
