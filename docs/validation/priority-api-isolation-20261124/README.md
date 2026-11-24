@@ -4,6 +4,8 @@
 
 拟议类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 现在从此字段读取，所以现有部署的入口、池和网关路由不变。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，不能借用高优先级类别。四角色类别尚未接入运行中的中间件或网关。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
 
+`python -m backend.app.priority_gateway` 可由相同清单生成 [四角色 Nginx 候选配置](../../../deploy/priority-api-nginx.conf)，用 `$request_method:$uri` 区分 GET/HEAD/POST 等方法；静态路径先于动态路径，未知路径只转到交互进程。`test_priority_gateway.py` 检查生成结果与清单逐项一致；Nginx 1.27 `nginx -t` 已通过。此配置尚未连入 Compose 或部署：后端角色拒绝、角色就绪检查、健康检查聚合和回退配置未完成，不能单独启用。现有双进程网关保持原样。
+
 ## 规模与当前拥塞面
 
 167 条方法路由（含 `/healthz`、`/readyz` 和媒体 HEAD）：GET 62、POST 80、DELETE 4、PATCH 7、PUT 12、HEAD 2。当前分类为 ordinary 152、control 12、observation 1、result 2；除 12 条 control 外均由双 API 部署中的普通进程处理。直接源码中 75 条包含锁字样、85 条包含 `s.commit()`、12 条显式调用本机执行器或共享文件 I/O；这些计数是审计线索，不是完整调用图。
