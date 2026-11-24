@@ -1,10 +1,10 @@
 # API 流量隔离现状审计（设计实施基线）
 
-此记录基于本仓库现有代码生成，不代表四角色方案已上线。使用临时测试 JWT secret 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、依赖、鉴权方式、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。鉴权依赖计数：管理员 Bearer 68、用户 Bearer 63、节点 Bearer 29、媒体短期 Cookie 4、公开 3；媒体 Cookie 在处理函数内校验，不能仅看 FastAPI 依赖。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
+此记录保留实施时的静态审计和测试基线；本机发布结果见末节，不能把历史基线当作当前部署。使用临时测试 JWT secret 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、依赖、鉴权方式、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。鉴权依赖计数：管理员 Bearer 68、用户 Bearer 63、节点 Bearer 29、媒体短期 Cookie 4、公开 3；媒体 Cookie 在处理函数内校验，不能仅看 FastAPI 依赖。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
 
 类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 按此字段读取。四角色模式由新的 `priority_runtime.py` 使用目标类别；只在显式选择四角色时启用。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，使用交互进程的页面读取额度，不能借用高优先级类别。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
 
-`python -m backend.app.priority_gateway` 由相同清单生成 [四角色 Nginx 配置](../../../deploy/priority-api-nginx.conf)，用 `$request_method:$uri` 区分 GET/HEAD/POST 等方法；静态路径先于动态路径，未知路径只转到交互进程。`test_priority_gateway.py` 检查生成结果与清单逐项一致；Nginx 1.27 `nginx -t` 已通过。四角色运行时已接入角色拒绝、角色数据库就绪检查、配置指纹与聚合健康检查，新增可选 `priority-api-compose.yml`；隔离四进程实测通过，尚未切换本机生产部署。部署与回退见[操作指南](../../priority-api-isolation.md)。
+`python -m backend.app.priority_gateway` 由相同清单生成 [四角色 Nginx 配置](../../../deploy/priority-api-nginx.conf)，用 `$request_method:$uri` 区分 GET/HEAD/POST 等方法；静态路径先于动态路径，未知路径只转到交互进程。`test_priority_gateway.py` 检查生成结果与清单逐项一致；Nginx 1.27 `nginx -t` 已通过。四角色运行时已接入角色拒绝、角色数据库就绪检查、配置指纹与聚合健康检查，新增可选 `priority-api-compose.yml`；隔离四进程实测通过，随后已完成本机切换，见末节。部署与回退见[操作指南](../../priority-api-isolation.md)。
 
 全路由声明的请求体模型、字段限制、目标角色和确认类别见 [request-contracts.json](request-contracts.json)，可用 `python -m backend.tests.priority_route_audit` 重建；它和 TSV 共同提供逐路由入口索引。JSON Schema 不包含所有自定义 validator：业务参数的 16 KiB、日志 UTF-8 字节数及响应大小等必须结合下表和处理器源码。未声明请求体不等于请求没有成本；网关没有统一字节上限，不能把字段校验当作传输层大小限制。
 
@@ -135,3 +135,13 @@ LOG_TEST_DATABASE_URL='postgresql+psycopg://postgres@127.0.0.1:5432/postgres' \
 [变化正文故障档](priority-varied-outage-100/summary.json)：同为 100 Worker / 180 秒、16 KiB/块、15 秒中断。26 个批次完成失败→重评测→成功；8910 块日志全部确认，最大积压 11 块/Worker、年龄 21.85 秒，最终 0。1982 次预期 502 和 165 次恢复突发 503 均仅出现在日志/产物，心跳、Agent 和用户操作无此错误；活跃租约/遥测过期 0。成功请求 p99：心跳 72 ms、用户控制 14 ms、监控 185 ms、日志 231 ms。数据库样本连接峰值 44、未授予锁峰值 0，WAL 增量约 125.1 MB（重复字符档 22.7 MB），CPU 样本峰值 60.26%。这排除了重复字符过度压缩的主要偏差，仍不等于任意真实业务量的容量保证。
 
 原始 API 诊断日志和临时网关配置保留于本机 `.runtime/priority-api-isolation-load-20261125/`；Git 保留摘要、进度、失败档及复现参数，不提交运行目录。
+
+### 本机发布（2026-11-25）
+
+代码提交 `51fe692`，镜像 `mini-eval-api:priority-api-20261125` 已部署到原 `mini-eval` 项目，见 [发布验收](deployment.json)。发布前活动执行及待清理执行均为 0，已生成并检查 PostgreSQL 自定义格式备份；先停止旧 API/调度器，再启动四角色，未并行运行两个调度器。数据库仍为 `ad074e5`，没有新增迁移，没有更新节点组件。
+
+原有两个网关地址、认证配置、数据库连接和共享产物挂载均保留；四角色都挂载原 API 的自定义产物目录。聚合健康正常，原登录会话、批次列表和机器列表均返回 200。原先在线的 13 个 Worker 卡位及 6 个 Agent 均在新网关就绪后再次上报（逐 ID 核对时间推进），没有仅用“容器 healthy”替代节点验收。
+
+本次生产验证范围为控制端部署、真实节点回连及用户会话/读取；没有重新启动真实 GPU/NPU 模型程序，也未执行用户批次控制操作。批次提交、暂停/恢复、重评测及结果幂等由隔离真实 PostgreSQL/HTTP 专项和模拟 Worker 长测验证。长期断联继续执行、持久 outbox 和完成摘要仍属于其他未完成工作，本次发布不改变租约 watchdog 行为。
+
+本机的环境文件、原/新覆盖文件清单、数据库备份及回退日志保留于受保护的 `.runtime/priority-api-release-20261125/`，不进入 Git；登录测试令牌已从该发布目录清除。

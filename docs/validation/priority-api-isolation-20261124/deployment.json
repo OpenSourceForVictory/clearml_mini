@@ -1,0 +1,29 @@
+{
+  "commit": "51fe692",
+  "image": "mini-eval-api:priority-api-20261125",
+  "health": {
+    "status": "ok",
+    "roles": {
+      "execution-control": true,
+      "interaction": true,
+      "worker-data": true,
+      "bulk-transfer": true
+    }
+  },
+  "existing_login_and_pages": {
+    "auth/me": 200,
+    "batches?view=summary": 200,
+    "admin/nodes": 200
+  },
+  "public_bindings_preserved": true,
+  "shared_mounts_preserved_all_roles": true,
+  "active_runs_before": 0,
+  "pending_cleanup_before": 0,
+  "worker_slots_reconnected": 13,
+  "agents_reconnected": 6,
+  "verification": "all previously fresh Worker/Agent timestamps advanced after new gateway became healthy",
+  "database_version_before": "ad074e5",
+  "database_version_after": "ad074e5",
+  "deployed_at": "2026-11-24T17:17:40.292324+00:00",
+  "rollback_required": false
+}
