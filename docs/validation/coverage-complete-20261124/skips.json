@@ -1,0 +1,662 @@
+[
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_agent_mount_loss.test_workspace_mount_loss_does_not_break_local_agent_state",
+    "reason": "disposable privileged mount namespace required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_batch_controls_migration.test_batch_controls_upgrade_and_guarded_downgrade",
+    "reason": "separate disposable migration database required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_bundled_onboarding.test_bundled_executor_deployment_and_recovery",
+    "reason": "requires isolated mini-eval-onboarding-test Compose project"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_endpoint_migration.test_endpoint_backfill_constraint_and_downgrade_guard",
+    "reason": "dedicated migration database required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_endpoint_race.test_endpoint_scheduler_claim_cancel_cleanup_retry_races",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_orchestration_migration.test_template_migration_upgrade_and_downgrade",
+    "reason": "dedicated disposable orchestration migration database required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_resource_migration.test_resource_contract_migration_and_downgrade_guard",
+    "reason": "dedicated disposable resource migration database required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_retention_migration.test_retention_upgrade_defaults_and_downgrade_guard",
+    "reason": "separate disposable migration database required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_retention_mounts.test_same_filesystem_directory_and_file_bind_mount_boundaries",
+    "reason": "explicit disposable mount-namespace test required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_retention_race.test_postgres_confirm_replay_policy_begin_and_storage_serialization",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[shared-host]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[shared-docker]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[exclusive-host]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[exclusive-docker]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[failure-host]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[failure-docker]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[cancel-host]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[cancel-docker]",
+    "reason": "real host/docker sample opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_artifact_layout.test_real_docker_sdk_outputs_survive_deletion",
+    "reason": "opt-in real independent artifact Docker test"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_artifact_reader.test_real_docker_output_survives_container_removal",
+    "reason": "opt-in real local Docker artifact test"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_compatibility.test_new_worker_with_previous_api[host]",
+    "reason": "requires previous API checkout, PostgreSQL and local host/Docker"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_compatibility.test_new_worker_with_previous_api[docker]",
+    "reason": "requires previous API checkout, PostgreSQL and local host/Docker"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[transient-host]",
+    "reason": "requires local systemd user manager and approved Docker test image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[transient-docker]",
+    "reason": "requires local systemd user manager and approved Docker test image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[lease-expiry-host]",
+    "reason": "requires local systemd user manager and approved Docker test image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[lease-expiry-docker]",
+    "reason": "requires local systemd user manager and approved Docker test image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_directory_mounts.test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-a]",
+    "reason": "requires local Docker image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_directory_mounts.test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-b]",
+    "reason": "requires local Docker image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-direct]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-sdk-command]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-service]",
+    "reason": "opt-in real Docker matrix"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_backend.test_real_host_stop_and_recovery",
+    "reason": "set HOST_EXECUTION_TEST=1 for real systemd user units"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_backend.test_real_host_timeout_and_limits",
+    "reason": "real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_backend.test_worker_watchdog_stops_host_when_lease_lost",
+    "reason": "real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_working_directory.test_real_systemd_business_directory[direct]",
+    "reason": "requires systemd user manager"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_working_directory.test_real_systemd_business_directory[sdk-command]",
+    "reason": "requires systemd user manager"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_working_directory.test_real_systemd_business_directory[command]",
+    "reason": "requires systemd user manager"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_host_working_directory.test_real_systemd_business_directory[service]",
+    "reason": "requires systemd user manager"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_managed_host.test_real_business_permission_denied_before_launch",
+    "reason": "requires root, systemd and provisioned mini-eval test account"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[direct]",
+    "reason": "requires root, systemd and provisioned mini-eval test account"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[sdk-command]",
+    "reason": "requires root, systemd and provisioned mini-eval test account"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[command]",
+    "reason": "requires root, systemd and provisioned mini-eval test account"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[service]",
+    "reason": "requires root, systemd and provisioned mini-eval test account"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-direct-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-sdk-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-direct-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-sdk-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-direct-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-sdk-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-direct-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-sdk-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-direct-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-sdk-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-command-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[success-docker-whole_task-stop]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[business_false-docker-whole_task-stop]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[exception-docker-whole_task-stop]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[invalid_result-docker-whole_task-stop]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[exit-docker-whole_task-stop]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[success-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[nonzero-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[missing-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[cancel-docker]",
+    "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-tcp-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-tcp-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-http-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-http-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-handshake-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-handshake-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-message-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[False-message-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-tcp-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-tcp-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-http-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-http-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-handshake-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-handshake-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-message-host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_real_readiness_gate_and_release[True-message-docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_probe_timeout_does_not_block_cancel_or_heartbeat[host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_probe_timeout_does_not_block_cancel_or_heartbeat[docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_startup_deadline_survives_log_upload_failure[host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_startup_deadline_survives_log_upload_failure[docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_client_connection_failure_prevents_business_launch[host]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_readiness_execution.test_client_connection_failure_prevents_business_launch[docker]",
+    "reason": "requires Docker and delegated systemd"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[host-raise SystemExit(23)]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[host-print('{\"final\":{\"success_rate\":1,\"episode_count\":1,\"runtime\":0}}',flush=True)]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[docker-raise SystemExit(23)]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[docker-print('{\"final\":{\"success_rate\":1,\"episode_count\":1,\"runtime\":0}}',flush=True)]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[host-False]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[host-True]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[docker-False]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[docker-True]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_transient_health_upload_keeps_service_until_cancel[host]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_transient_health_upload_keeps_service_until_cancel[docker]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_lost_lease_preserves_journal_until_reconnect_cleanup[host]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_service_recovery.test_lost_lease_preserves_journal_until_reconnect_cleanup[docker]",
+    "reason": "requires local Docker image and real systemd opt-in"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_template_examples.test_docker_examples_with_isolated_loopback_service",
+    "reason": "requires built mini-eval-template-examples:v1 image"
+  },
+  {
+    "suite": "full",
+    "test": "backend.tests.test_worker_storage.test_real_probe",
+    "reason": "set STORAGE_PROBE_TEST_IMAGE for real Docker probe"
+  }
+]

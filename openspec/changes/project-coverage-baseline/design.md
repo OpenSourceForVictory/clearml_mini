@@ -10,3 +10,6 @@ SQLite 单测不等价于 PostgreSQL 并发或真机验收；特权/容器测试
 新增一条开发命令，替换 CI Python 测试命令并上传报告，不涉及部署。
 ## Open Questions
 无。
+
+## 2026-11-24 verification refresh
+Keep the existing six-directory denominator and gates. Full-suite coverage and any subsequently added tests may be combined only against identical production source; record their separate test results. Release backup/restore tests exercise real temporary backup files while isolating Docker commands, asserting network isolation, migration order, historical count preservation, readiness timeout and cleanup. These tests do not establish real deployment acceptance.

@@ -1,0 +1,22 @@
+{
+  "exit": {
+    "migration": 0,
+    "python": 0
+  },
+  "suites": {
+    "full": {
+      "tests": 2795,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 132,
+      "passed": 2663
+    },
+    "supplement": {
+      "tests": 66,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 66
+    }
+  }
+}
