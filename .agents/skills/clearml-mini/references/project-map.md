@@ -302,3 +302,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 迁移降级事务边界：`ab852c3` 升级保留并发建索引，降级改为事务内删除，防止较早版本保护规则拒绝时留下“版本记录存在、索引已删除”的状态。检查 `test_endpoint_migration.py`、`test_retention_migration.py` 与 `test_execution_timing_migration.py` 的真实 PostgreSQL 回归；降级须排空维护，详见 `docs/database-migration.md`。这不是调度算法修改。
 
 预约领取窗口：`scheduling.reservation_deadline` 仅登记本轮新预约或服务就绪后新开启的窗口，tick 在主要 flush 后提交前统一刷新期限；不续期旧预约、不延长执行租约。托管等待保留原时长，`reserved_at` 保留决策时间。回归见 `test_reservation_windows.py`，说明与提交延迟边界见 `docs/operations.md`。无需迁移或 Worker 更新，当前是否部署须另核实。
+
+服务实例补齐公平性：`orchestration_scheduler.fill_desired_instances` 在客户端准入后使用独立 `SchedulerState(service_rotation)`，每用户每轮最多一个，用户内优先级/创建时间/ID 排序；资源 Planner 每次重新检查，游标与预约同事务。测试 `test_service_refill_fairness.py`，操作见 `docs/batch-controls.md`；无需迁移或 Worker 更新。

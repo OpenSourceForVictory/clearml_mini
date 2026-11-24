@@ -5,7 +5,7 @@ counter. It cannot be claimed before the bound service generation is healthy.
 """
 from types import SimpleNamespace
 from sqlalchemy import select,or_
-from .core import EvaluationOrchestration,EvaluationBatch,ServiceInstance,Worker,Slot,Pool,Job,Run,User,now,uid
+from .core import EvaluationOrchestration,EvaluationBatch,ServiceInstance,Worker,Slot,Pool,Job,Run,User,SchedulerState,now,uid
 from . import scheduling as admission,services,image_runtime,service_dependencies
 from .job_resources import budget
 from .service_network import choose_port
@@ -205,45 +205,68 @@ def reconcile(s,at):
                 if job and job.status not in admission.TERMINAL:cancel_job(s,job)
 
 
+def _fill_one_instance(s,at,batch,definition,eligible):
+    """Attempt one replica; callers rotate only after a real allocation."""
+    target=definition['instance_count']
+    related=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id,ServiceInstance.service_key==definition['key'])))
+    occupied=sum(not i.auto_stopped or services.held(s,i) for i in related)
+    if occupied>=target:return False
+    planner=Planner(s,at)
+    if len(planner.active)>=admission.seconds('MAX_ACTIVE_GLOBAL',2):return False
+    if sum(planner.jobs[r.job_id].owner_id==batch.owner_id for r in planner.active)>=admission.seconds('MAX_ACTIVE_PER_USER',2):return False
+    client_active=any(planner.jobs[r.job_id].id in {j.id for j in eligible} and r.status in admission.ACTIVE for r in planner.active)
+    pair=None
+    if not client_active:
+        # Never fill all capacity with servers while no client can run.
+        pair=next((p for j in eligible if (p:=planner.pair(j,definition))),None)
+        if not pair:return False
+    server=server_job(definition,batch.owner_id)
+    allocation=None
+    for slot in planner.slots:
+        if pair and slot.id!=pair[0].id:continue
+        worker=planner.workers.get(slot.worker_id)
+        if not worker or not worker.service_network or not planner.fits(server,slot):continue
+        port=choose_port(s,worker)
+        if port is None:continue
+        if (definition['template'].get('readiness') or {}).get('port','business')!='business' and choose_port(s,worker,[port]) is None:continue
+        allocation=(slot,worker.service_network['address'],port);break
+    if not allocation:return False
+    stopped=[i for i in related if i.auto_stopped and not services.held(s,i)]
+    create_reserved_service(s,batch,definition,*allocation,at,stopped)
+    return True
+
+
 def fill_desired_instances(s,at):
-    """Fill explicit replica targets after client admission, using the same ledger."""
-    admitted=0
-    for orch in s.scalars(select(EvaluationOrchestration).order_by(EvaluationOrchestration.batch_id)):
+    """Refill after client admission with an independent persisted owner rotation."""
+    queues={}
+    for orch in s.scalars(select(EvaluationOrchestration)):
         batch=s.get(EvaluationBatch,orch.batch_id)
         if not batch or batch.deleted_at or batch.scheduling_paused:continue
         owner=s.get(User,batch.owner_id)
         if not owner or not owner.active:continue
         clients=list(s.scalars(select(Job).where(Job.batch_id==batch.id,Job.status.in_(['PENDING','RESERVED','STARTING','RUNNING']))))
-        if not clients:continue
         for definition in orch.definition['services']:
-            target=definition.get('instance_count')
             eligible=[j for j in clients if definition['key'] in (j.client_spec or {}).get('service_keys',[])]
-            if not target or not eligible:continue
-            while True:
-                related=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id,ServiceInstance.service_key==definition['key'])))
-                occupied=sum(not i.auto_stopped or services.held(s,i) for i in related)
-                if occupied>=target:break
-                planner=Planner(s,at)
-                if len(planner.active)>=admission.seconds('MAX_ACTIVE_GLOBAL',2):break
-                if sum(planner.jobs[r.job_id].owner_id==owner.id for r in planner.active)>=admission.seconds('MAX_ACTIVE_PER_USER',2):break
-                client_active=any(planner.jobs[r.job_id].id in {j.id for j in eligible} and r.status in admission.ACTIVE for r in planner.active)
-                pair=None
-                if not client_active:
-                    # Never fill all capacity with servers while no client can run.
-                    pair=next((p for j in eligible if (p:=planner.pair(j,definition))),None)
-                    if not pair:break
-                server=server_job(definition,owner.id)
-                allocation=None
-                for slot in planner.slots:
-                    if pair and slot.id!=pair[0].id:continue
-                    worker=planner.workers.get(slot.worker_id)
-                    if not worker or not worker.service_network or not planner.fits(server,slot):continue
-                    port=choose_port(s,worker)
-                    if port is None:continue
-                    if (definition['template'].get('readiness') or {}).get('port','business')!='business' and choose_port(s,worker,[port]) is None:continue
-                    allocation=(slot,worker.service_network['address'],port);break
-                if not allocation:break
-                stopped=[i for i in related if i.auto_stopped and not services.held(s,i)]
-                create_reserved_service(s,batch,definition,*allocation,at,stopped)
+            if definition.get('instance_count') and eligible:
+                queues.setdefault(owner.id,[]).append((batch,definition,eligible))
+    if not queues:return 0
+    for candidates in queues.values():
+        candidates.sort(key=lambda x:(-x[0].priority,admission.utc(x[0].created_at),x[0].id))
+    cursor=s.get(SchedulerState,'service_rotation')
+    last=cursor.value.get('owner','') if cursor else ''
+    owners=sorted(queues)
+    owners=[u for u in owners if u>last]+[u for u in owners if u<=last]
+    admitted=0
+    while True:
+        progressed=False
+        for owner in owners:
+            for batch,definition,eligible in queues[owner]:
+                if not _fill_one_instance(s,at,batch,definition,eligible):continue
+                if cursor is None:
+                    cursor=SchedulerState(key='service_rotation',value={})
+                    s.add(cursor)
+                cursor.value={'owner':owner}
                 admitted+=1
-    return admitted
+                progressed=True
+                break
+        if not progressed:return admitted

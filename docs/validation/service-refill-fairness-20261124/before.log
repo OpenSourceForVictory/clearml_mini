@@ -1,0 +1,51 @@
+FFFFF......                                                              [100%]
+=================================== FAILURES ===================================
+__________________ test_refill_orders_within_owner[priority] ___________________
+backend/tests/test_service_refill_fairness.py:58: in test_refill_orders_within_owner
+    assert counts(s, [low, high]) == ([2, 1] if order == 'tie' else [1, 2])
+E   assert [2, 1] == [1, 2]
+E     
+E     At index 0 diff: 2 != 1
+E     Use -v to get more diff
+___________________ test_refill_orders_within_owner[created] ___________________
+backend/tests/test_service_refill_fairness.py:58: in test_refill_orders_within_owner
+    assert counts(s, [low, high]) == ([2, 1] if order == 'tie' else [1, 2])
+E   assert [2, 1] == [1, 2]
+E     
+E     At index 0 diff: 2 != 1
+E     Use -v to get more diff
+_____________________ test_refill_orders_within_owner[tie] _____________________
+backend/tests/test_service_refill_fairness.py:60: in test_refill_orders_within_owner
+    assert cursor.value == {'owner': a.owner_id}
+E   AttributeError: 'NoneType' object has no attribute 'value'
+_____ test_rotation_survives_new_session_and_priority_does_not_cross_owner _____
+backend/tests/test_service_refill_fairness.py:84: in test_rotation_survives_new_session_and_priority_does_not_cross_owner
+    assert counts(s, ids) == [1, 2]
+E   assert [2, 1] == [1, 2]
+E     
+E     At index 0 diff: 2 != 1
+E     Use -v to get more diff
+_________________________ test_one_per_owner_per_round _________________________
+backend/tests/test_service_refill_fairness.py:97: in test_one_per_owner_per_round
+    with env[0].SessionLocal() as s: assert counts(s, ids) == [2, 2]
+E   assert [3, 1] == [2, 2]
+E     
+E     At index 0 diff: 3 != 2
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_service_refill_fairness.py::test_refill_orders_within_owner[priority]
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'exclude' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'exclude' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_service_refill_fairness.py::test_refill_orders_within_owner[priority]
+FAILED backend/tests/test_service_refill_fairness.py::test_refill_orders_within_owner[created]
+FAILED backend/tests/test_service_refill_fairness.py::test_refill_orders_within_owner[tie]
+FAILED backend/tests/test_service_refill_fairness.py::test_rotation_survives_new_session_and_priority_does_not_cross_owner
+FAILED backend/tests/test_service_refill_fairness.py::test_one_per_owner_per_round
+5 failed, 6 passed, 2 warnings in 45.82s
