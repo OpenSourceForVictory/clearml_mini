@@ -28,7 +28,7 @@
 
 ## 容量与确认边界
 
-可选双进程当前连接池普通 23 + 观察 9 + 结果 7 + 调度 1，控制 40，共 80；单进程默认配置保持独立。PostgreSQL 当前配置 100 连接，其中保留管理员连接，80 只是 API 池的最大可能占用，不是实测 Worker 上限。`request_category` 对非 POST 一律 ordinary；网关手写控制路径。四角色实施必须从同一分类清单派生入口与池，并在隔离 PostgreSQL 上加入用户提交、页面查询、真实调度、完成清理及大日志，不能仅重跑原 100 Worker 模拟脚本。
+可选双进程当前连接池普通 23 + 观察 9 + 结果 7 + 调度 1，控制 40，共 80；单进程默认配置保持独立。此处的 80 是 API 池的最大可能占用，不是实测 Worker 上限；实际 PostgreSQL `max_connections` 需要现场核对。`request_category` 对非 POST 一律 ordinary；网关手写控制路径。四角色实施必须从同一分类清单派生入口与池，并在隔离 PostgreSQL 上加入用户提交、页面查询、真实调度、完成清理及大日志，不能仅重跑原 100 Worker 模拟脚本。
 
 当前 Worker 本地租约 watchdog 仍会在持续续租失败时停止已启动程序；平台在租约到期外加 `LOST_WORKER_GRACE_SECONDS` 后将执行标为 TIMED_OUT 并隔离卡位。四角色隔离只能降低过载导致的心跳失败概率，不能替代 `worker-control-plane-backpressure` 未完成的断联继续执行与对账工作。日志 v2 有单块重试和序号确认，旧上报与持久 outbox 的边界不同，不可笼统称为“日志永不丢”。
 
@@ -50,4 +50,21 @@ FastAPI 路由清单不能代替客户端调用清单。后台调度在 `main.li
 
 ## 验证边界
 
-本阶段做了仓库静态审计、FastAPI 注册路由枚举和四角色分类清单；既有分类改为从同一清单读取，逐路由回归验证类别不变。分类专项 `test_priority_routes.py`、既有双进程及数据库预算专项合计 129 通过、15 跳过（需独立 PostgreSQL）；新分类模块定向行/分支覆盖均为 100%，不代表全项目覆盖。没有更改运行中的请求路由、部署或数据库，也没有执行新混合负载。OpenSpec 2.1 已完成；1.1 的逐路由鉴权、体积、事务与重试核对仍未完成。下一步完成逐路由核对并补基线驱动，在隔离 PostgreSQL 实测后再以失败原因与 p99 数据确定池分配。
+本阶段做了仓库静态审计、FastAPI 注册路由枚举和四角色分类清单；既有分类改为从同一清单读取，逐路由回归验证类别不变。分类专项 `test_priority_routes.py`、既有双进程及数据库预算专项合计 129 通过、15 跳过（需独立 PostgreSQL）；新分类模块定向行/分支覆盖均为 100%，不代表全项目覆盖。OpenSpec 2.1 已完成；1.1 的逐路由鉴权、体积、事务与重试核对仍未完成。
+
+### 双进程混合基线第一档
+
+`backend/tests/control_plane_load.py --mixed-ui` 现在可在隔离 PostgreSQL 中启用真实调度线程，并用真实用户 JWT 提交一个普通命令批次、暂停/恢复调度、每 2 秒查询批次列表与详情。其他 100 个模拟 Worker 持续续租、领取、服务健康、产物上报、独立日志流和 Agent 采样。运行示例：
+
+```bash
+LOG_TEST_DATABASE_URL='postgresql+psycopg://postgres@127.0.0.1:5432/postgres' \
+  .venv/bin/python -m backend.tests.control_plane_load \
+  --grades 100 --seconds 30 --output /tmp/priority-api-mixed \
+  --split-api --role-aware-pools --agent-telemetry --independent-logs \
+  --mixed-ui --ordinary-pool 23 --control-pool 40 \
+  --observation-pool 9 --result-pool 7 --progress-every-30s
+```
+
+只对可销毁 PostgreSQL 实例使用此命令；脚本为每档创建并删除独立数据库。2026-11-24 本机第一次 100 Worker/30 秒运行全部通过，第二次保留的失败证据见 [mixed-baseline/summary.json](mixed-baseline/summary.json) 和 [进度记录](mixed-baseline/progress-100.jsonl)：8077 个 200、1 个 201、120 个 503；其中批次详情 1 次 `request_concurrency` 503，Agent 41、日志 24、产物 25、领取 29 次同类拒绝，执行心跳无拒绝。1500 条日志全部 ACK，最大日志积压 1.28 秒，最大心跳间隔 3.34 秒，租约过期数 0；隔离数据库测试时 `max_connections=100`，结束时活动连接 52。批次最后仍为 `PENDING`，因为模拟 Worker 都已占满卡位。此失败不是服务实例或真实模型评测故障，也不能证明长期稳定。
+
+这档尚未覆盖空闲 Worker 领取并完成新任务、结果 ACK、重新评测、长时间页面刷新、数据库 CPU/WAL/锁样本及真实业务程序；OpenSpec 1.2 因而仍未完成。它已经证明现有普通 API 容量下页面详情可被观察/批量流量挤出，下一步用完整混合场景量化四角色隔离的改善。现有运行路由和部署未因压测改变。

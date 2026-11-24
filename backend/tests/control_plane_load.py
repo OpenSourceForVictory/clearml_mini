@@ -18,18 +18,23 @@ import time
 import uuid
 
 import httpx
+import jwt
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
-from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, now
+from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, now
 
 
-def seed(engine, count, *, agent_telemetry=False):
+def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
     Base.metadata.create_all(engine)
     with sessionmaker(engine).begin() as s:
         s.add(User(id='u', username='load-test', password_hash='unused'))
         s.add(Pool(id='p', name='load-test', gpu_model='virtual'))
+        if mixed_ui:
+            s.add(ClientTemplate(id='load-template', name='load-command', version='1', image='load:command',
+                                 command=['true'], protocols=[], task_type='command',
+                                 integration_mode='direct', status='published'))
     identities = []
     for i in range(count):
         identity, token = uuid.uuid4().hex, 'wk_' + uuid.uuid4().hex
@@ -95,7 +100,7 @@ def pool_profiles(ordinary, control, observation, *, split_api=False, role_aware
 
 async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0,
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
-                   progress_path=None, log_interval=2):
+                   progress_path=None, log_interval=2, user_token=None):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -107,6 +112,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
     loop_lag = []
     http_phases = defaultdict(list)
     progress = []
+    ui_evidence = {'batch_id': None, 'control_revisions': [], 'last_batch_status': None, 'errors': []}
     started = time.monotonic()
     async with AsyncExitStack() as stack:
         if client_per_worker:
@@ -287,16 +293,68 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
                 await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
                 await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)) + random.uniform(0,.1))
+        async def ui_traffic():
+            if user_token is None:
+                return
+            identity = identities[0][0]
+            headers = {'Authorization': 'Bearer '+user_token}
+            async def request(kind, method, path, body=None):
+                began = time.monotonic()
+                try:
+                    reply = await clients[identity].request(method, '/api/v1/'+path, json=body, headers=headers)
+                    code = str(reply.status_code)
+                    codes[code] += 1
+                    by_kind[kind][code] += 1
+                    if reply.status_code == 503:
+                        reason = reply.json().get('reason', 'unknown')
+                        reasons[reason] += 1
+                        busy_by_kind[kind][reason] += 1
+                    if reply.status_code in (200, 201):
+                        successful_latency[kind].append(time.monotonic()-began)
+                    else:
+                        ui_evidence['errors'].append({'kind':kind, 'status':reply.status_code,
+                                                      'detail':reply.text[:300]})
+                    return reply
+                except httpx.TransportError as exc:
+                    codes['transport_error'] += 1
+                    by_kind[kind]['transport_error'] += 1
+                    ui_evidence['errors'].append({'kind':kind, 'error':type(exc).__name__})
+                    return None
+                finally:
+                    latency[kind].append(time.monotonic()-began)
+            body = {'title':'mixed-load', 'pool_id':'p',
+                    'client':{'template_id':'load-template', 'service_mode':'none', 'task_name':'load'},
+                    'cases':[{'case_id':'queued-1', 'task_name':'load', 'episodes':1}]}
+            created = await request('ui_submit', 'POST', 'batches', body)
+            if created is None or created.status_code != 201:
+                return
+            batch_id = created.json()['id']
+            ui_evidence['batch_id'] = batch_id
+            for action, revision in (('pause', 0), ('resume', 1)):
+                reply = await request('ui_control', 'POST', f'batches/{batch_id}/control',
+                                      {'action':action, 'expected_revision':revision})
+                if reply is None or reply.status_code != 200:
+                    return
+                ui_evidence['control_revisions'].append(reply.json()['control_revision'])
+            while time.monotonic()-started < seconds:
+                await request('ui_list', 'GET', 'batches?view=summary')
+                detail = await request('ui_detail', 'GET', f'batches/{batch_id}')
+                if detail is not None and detail.status_code == 200:
+                    ui_evidence['last_batch_status'] = detail.json()['status']
+                await asyncio.sleep(2)
         log_tasks = ([asyncio.create_task(task) for item in identities for task in
                       (produce_logs(item[0]), send_logs(*item[:2]))] if independent_logs else [])
         agent_tasks = [asyncio.create_task(agent(*item)) for item in identities] if agent_telemetry else []
         loop_task = asyncio.create_task(sample_loop_lag())
         progress_task = asyncio.create_task(sample_progress()) if progress_path else None
+        ui_task = asyncio.create_task(ui_traffic()) if user_token else None
         await asyncio.gather(*(worker(*item[:2]) for item in identities))
         end = time.monotonic()
         await loop_task
         if progress_task:
             await progress_task
+        if ui_task:
+            await ui_task
         if agent_tasks:
             await asyncio.gather(*agent_tasks)
         if log_tasks:
@@ -316,6 +374,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             'http_phases_seconds': {k: {'p95': percentile(v, .95), 'p99': percentile(v, .99),
                                          'max': max(v), 'samples': len(v)} for k, v in http_phases.items()},
             'progress': progress,
+            'ui_evidence': ui_evidence if user_token else None,
             'independent_logs': independent_logs,
             'log_generation': {**dict(log_stats), 'max_pending_chunks_per_worker': max_log_pending,
                                'final_pending_chunks': sum(len(queue) for queue in log_queues.values()),
@@ -338,6 +397,8 @@ def main():
     parser.add_argument('--trace-http-phases', action='store_true')
     parser.add_argument('--client-per-worker', action='store_true')
     parser.add_argument('--agent-telemetry', action='store_true')
+    parser.add_argument('--mixed-ui', action='store_true',
+                        help='enable real scheduler plus authenticated batch submit/control/list/detail')
     parser.add_argument('--progress-every-30s', action='store_true')
     parser.add_argument('--split-api', action='store_true',
                         help='run two isolated API processes behind the production Nginx routing config')
@@ -357,7 +418,7 @@ def main():
         parser.error('--no-admission requires database backpressure')
     profiles = pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
                              split_api=args.split_api, role_aware=args.role_aware_pools,
-                             scheduler_enabled=False, result=args.result_pool)
+                             scheduler_enabled=args.mixed_ui, result=args.result_pool)
     process_count = len(profiles)
     if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or any(sum(p.values()) * process_count > 80 for p in profiles.values()):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
@@ -378,13 +439,17 @@ def main():
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
                'cards_per_node':1,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
-               'target_cycle_seconds':2, 'scheduler_enabled':False,
+               'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui,
                'log_interval_seconds':args.log_interval,
                'independent_logs':args.independent_logs, 'log_drain_seconds':args.drain_seconds if args.independent_logs else 0,
                'trace_http_phases':args.trace_http_phases,
                'client_per_worker':args.client_per_worker,
                'agent_telemetry':args.agent_telemetry,
-               'scope':('real HTTP/PostgreSQL, simulated running services and Agent telemetry; '
+               'mixed_ui':args.mixed_ui,
+               'scope':('real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read, '
+                        'real scheduler with no idle slots; excludes real business processes, result ACK and retry'
+                        if args.mixed_ui else
+                        'real HTTP/PostgreSQL, simulated running services and Agent telemetry; '
                         'excludes scheduler allocation and real business processes' if args.agent_telemetry else
                         'real HTTP/PostgreSQL, simulated running services; excludes scheduler allocation, Agent and real business processes'),
                'grades':[]}
@@ -397,7 +462,7 @@ def main():
             processes = []
             gateway = None
             try:
-                identities = seed(engine, count, agent_telemetry=args.agent_telemetry)
+                identities = seed(engine, count, agent_telemetry=args.agent_telemetry, mixed_ui=args.mixed_ui)
                 with engine.begin() as c:
                     c.execute(text("UPDATE evaluation_runs SET lease_expires_at=now()+interval '30 seconds'"))
                 def free_port():
@@ -408,8 +473,9 @@ def main():
                 control_port = free_port() if args.split_api else None
                 port = free_port() if args.split_api else ordinary_port
                 with ExitStack() as stack:
-                    env = {**os.environ, 'DATABASE_URL':target.render_as_string(hide_password=False), 'JWT_SECRET':uuid.uuid4().hex,
-                           'SCHEDULER_ENABLED':'0',
+                    jwt_secret = uuid.uuid4().hex
+                    env = {**os.environ, 'DATABASE_URL':target.render_as_string(hide_password=False), 'JWT_SECRET':jwt_secret,
+                           'SCHEDULER_ENABLED':'1' if args.mixed_ui else '0',
                            'DB_BACKPRESSURE_ENABLED':'0' if args.no_backpressure else '1',
                            'DB_ADMISSION_ENABLED':'0' if args.no_admission else '1',
                            'API_DB_PROCESS_COUNT':str(process_count),
@@ -423,6 +489,8 @@ def main():
                                    'DB_SCHEDULER_POOL_SIZE': '1'}
                         if args.split_api and args.role_aware_pools:
                             api_env['API_ROUTE_GROUP'] = role
+                        if args.split_api and role == 'control':
+                            api_env['SCHEDULER_ENABLED'] = '0'
                         log_name = (f'api-{role}-{count}.log' if args.split_api else f'api-{count}.log')
                         log = stack.enter_context((output/log_name).open('w'))
                         process = subprocess.Popen([sys.executable,'-m','uvicorn','backend.app.main:app',
@@ -461,17 +529,22 @@ def main():
                                                   client_per_worker=args.client_per_worker,
                                                   agent_telemetry=args.agent_telemetry,
                                                   progress_path=output/f'progress-{count}.jsonl' if args.progress_every_30s else None,
-                                                  log_interval=args.log_interval))
+                                                  log_interval=args.log_interval,
+                                                  user_token=jwt.encode({'sub':'u', 'exp':int(time.time())+3600}, jwt_secret,
+                                                                        algorithm='HS256') if args.mixed_ui else None))
                 checkouts = [float(v) for name in api_log_names(count, args.split_api) for v in
                              re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
                     result['expired_leases'] = c.scalar(text('SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now()'))
                     result['telemetry_stale'] = c.scalar(text("SELECT count(*) FROM gpu_slots WHERE telemetry_at IS NULL OR telemetry_at < now()-interval '45 seconds'"))
+                    result['database_max_connections'] = int(c.scalar(text('SHOW max_connections')))
+                    result['database_connections_at_end'] = c.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()"))
                 result['workers'] = result['executions'] = count
                 result['passed'] = (result['expired_leases'] == 0 and result['telemetry_stale'] == 0 and
                     result['max_heartbeat_gap_seconds'] < 10 and all(v['p99'] < 5 for v in result['latency_seconds'].values()) and
-                    not any(k not in ('200','503') for k in result['requests']))
+                    not any(k not in ((('200','201','503') if args.mixed_ui else ('200','503')))
+                            for k in result['requests']))
                 if args.independent_logs:
                     logs = result['log_generation']
                     result['passed'] = (result['passed'] and logs['generated'] == logs.get('accepted', 0)
@@ -480,6 +553,11 @@ def main():
                 if args.agent_telemetry:
                     result['passed'] = (result['passed'] and result['max_final_agent_age_seconds'] < 10
                                         and result['requests_by_kind'].get('agent', {}).get('200', 0) >= count)
+                if args.mixed_ui:
+                    ui = result['ui_evidence']
+                    result['passed'] = (result['passed'] and ui['batch_id'] is not None
+                                        and ui['control_revisions'] == [1, 2] and not ui['errors']
+                                        and result['requests_by_kind'].get('ui_detail', {}).get('200', 0) > 0)
                 summary['grades'].append(result)
                 (output/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps({'workers':count,'passed':result['passed'],'requests':result['requests']}),flush=True)

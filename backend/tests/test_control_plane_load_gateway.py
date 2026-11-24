@@ -3,9 +3,12 @@ import re
 
 import pytest
 import yaml
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
 from backend.app.db_budget import Settings
-from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config
+from backend.app.core import ClientTemplate
+from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config, seed
 
 
 def test_split_gateway_uses_distinct_loopback_backends():
@@ -18,6 +21,17 @@ def test_split_gateway_uses_distinct_loopback_backends():
     assert 'control-api:8000' not in config
     assert api_log_names(5, True) == ['api-ordinary-5.log', 'api-control-5.log']
     assert api_log_names(5, False) == ['api-5.log']
+
+
+def test_mixed_load_seed_adds_published_command_template_without_changing_worker_count():
+    engine = create_engine('sqlite://')
+    identities = seed(engine, 2, mixed_ui=True)
+    with Session(engine) as session:
+        templates = session.scalars(select(ClientTemplate)).all()
+    assert len(identities) == 2
+    assert [(t.id, t.task_type, t.status) for t in templates] == [
+        ('load-template', 'command', 'published')]
+    engine.dispose()
 
 
 def test_split_gateway_rejects_incomplete_template():
