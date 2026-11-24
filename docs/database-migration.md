@@ -244,3 +244,5 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 代码新增 `ae185f6`，父版本为 `ad074e5`，创建 `execution_recovery` 与 `execution_recovery_receipts`。沿用本文原 Compose 的 `migrate` 升级流程，不需要另建数据库。迁移不会为历史执行创建恢复授权，也不改变其租约或超时语义；不能只升级数据库就认为断联继续执行已生效。
 
 安全记录独立保留执行 ID、原节点/槽位、分配代次及补报摘要，未按运行记录级联删除。存在任何恢复授权时降级会拒绝，避免旧调度器无法识别仍可能在节点运行的任务；不要手工清空账本来绕过保护。完整对账/归档能力尚未启用前，不向生产任务发放新授权。验收记录见 [断联恢复实施核对](validation/disconnected-execution-20261124/implementation-audit.md)。
+
+2026-11-25 本机四角色 API 已发布恢复基础模块并迁移到 ae185f6；13 个 Worker 卡位与 6 个 Agent 回连，实际任务没有发放恢复授权。调度器读取新表，因此发布该版本 API 前必须先完成 migrate。生产备份在隔离库恢复/升级验证任务及执行数量不变；真实宿主机 SDK 和 Docker 命令批次完成并确认清理。这不是完整断联恢复上线，证据见 [发布记录](validation/disconnected-execution-20261124/release-20261125.json)。

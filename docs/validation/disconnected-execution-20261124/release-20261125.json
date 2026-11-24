@@ -1,0 +1,331 @@
+{
+  "image": "mini-eval-api:recovery-foundations-20261125",
+  "version_before": "ad074e5",
+  "version_after": "ae185f6",
+  "health": {
+    "status": "ok",
+    "roles": {
+      "execution-control": true,
+      "interaction": true,
+      "worker-data": true,
+      "bulk-transfer": true
+    }
+  },
+  "pages": {
+    "auth/me": 200,
+    "batches?view=summary": 200,
+    "admin/nodes": 200
+  },
+  "worker_slots_reconnected": 13,
+  "agents_reconnected": 6,
+  "new_recovery_grants": 0,
+  "full_recovery_enabled": false,
+  "deployed_at": "2026-11-24T18:19:14.237914+00:00",
+  "source_commit": "bd64d5c",
+  "post_release_error_lines": {
+    "api": 0,
+    "execution-control-api": 0,
+    "worker-data-api": 0,
+    "bulk-transfer-api": 0
+  },
+  "post_smoke_active_runs": 0,
+  "post_smoke_pending_cleanup": 0,
+  "backup_restore": {
+    "isolated_postgresql": true,
+    "before": "ad074e5",
+    "after": "ae185f6",
+    "runs_before": 461,
+    "runs_after": 461,
+    "jobs_before": 448,
+    "jobs_after": 448,
+    "recovery_grants": 0,
+    "initial_command_failure": "Local alembic executable did not include repository root on sys.path; rerun using python -m alembic succeeded; production migration succeeded inside the image."
+  },
+  "live_batches": {
+    "model_evaluation": false,
+    "full_disconnection_recovery_tested": false,
+    "host": {
+      "batch_id": "4515cae8-72f8-4da5-a816-6b6acba096a7",
+      "outcomes": [
+        {
+          "case": "success",
+          "status": "SUCCEEDED",
+          "placement": {
+            "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "node_name": "local4090-151",
+            "accelerator_type": "gpu",
+            "gpu_index": 0,
+            "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+            "gpu_model": "NVIDIA GeForce RTX 4090"
+          },
+          "outcomes": {
+            "execution": {
+              "normal": 1,
+              "abnormal": 0,
+              "running": 0,
+              "unknown": 0,
+              "not_started": 0
+            },
+            "protocol": {
+              "planned": 0,
+              "success": 0,
+              "failure": 0,
+              "invalid": 0,
+              "errors": 0,
+              "unreported": 0,
+              "not_applicable_tasks": 1,
+              "valid": 0,
+              "success_rate": null
+            },
+            "task_result": {
+              "success": 1,
+              "failure": 0,
+              "unreported": 0,
+              "not_applicable": 0
+            },
+            "task_result_state": "success",
+            "task_result_data": {
+              "kind": "task",
+              "metrics": {
+                "score": 1.0
+              },
+              "success": true,
+              "summary": "示例业务结果；请替换为真实评测逻辑"
+            },
+            "process_scope": "single_process",
+            "wrapper_exit_code": 0,
+            "detail_mode": "execution"
+          }
+        },
+        {
+          "case": "failure",
+          "status": "SUCCEEDED",
+          "placement": {
+            "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "node_name": "local4090-151",
+            "accelerator_type": "gpu",
+            "gpu_index": 0,
+            "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+            "gpu_model": "NVIDIA GeForce RTX 4090"
+          },
+          "outcomes": {
+            "execution": {
+              "normal": 1,
+              "abnormal": 0,
+              "running": 0,
+              "unknown": 0,
+              "not_started": 0
+            },
+            "protocol": {
+              "planned": 0,
+              "success": 0,
+              "failure": 0,
+              "invalid": 0,
+              "errors": 0,
+              "unreported": 0,
+              "not_applicable_tasks": 1,
+              "valid": 0,
+              "success_rate": null
+            },
+            "task_result": {
+              "success": 0,
+              "failure": 1,
+              "unreported": 0,
+              "not_applicable": 0
+            },
+            "task_result_state": "failure",
+            "task_result_data": {
+              "kind": "task",
+              "metrics": {
+                "score": 0.0
+              },
+              "success": false,
+              "summary": "示例业务结果；请替换为真实评测逻辑"
+            },
+            "process_scope": "single_process",
+            "wrapper_exit_code": 0,
+            "detail_mode": "execution"
+          }
+        }
+      ]
+    },
+    "docker": {
+      "batch_id": "b52918ed-f192-4684-bedc-2c7b02dce4ed",
+      "outcomes": [
+        {
+          "case": "success",
+          "status": "SUCCEEDED",
+          "placement": {
+            "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "node_name": "local4090-151",
+            "accelerator_type": "gpu",
+            "gpu_index": 0,
+            "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+            "gpu_model": "NVIDIA GeForce RTX 4090"
+          },
+          "outcomes": {
+            "execution": {
+              "normal": 1,
+              "abnormal": 0,
+              "running": 0,
+              "unknown": 0,
+              "not_started": 0
+            },
+            "protocol": {
+              "planned": 0,
+              "success": 0,
+              "failure": 0,
+              "invalid": 0,
+              "errors": 0,
+              "unreported": 0,
+              "not_applicable_tasks": 1,
+              "valid": 0,
+              "success_rate": null
+            },
+            "task_result": {
+              "success": 0,
+              "failure": 0,
+              "unreported": 0,
+              "not_applicable": 1
+            },
+            "task_result_state": "not_applicable",
+            "task_result_data": null,
+            "process_scope": "single_process",
+            "wrapper_exit_code": 0,
+            "detail_mode": "execution"
+          }
+        },
+        {
+          "case": "failure",
+          "status": "FAILED",
+          "placement": {
+            "id": "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe",
+            "node_name": "local4090-151",
+            "accelerator_type": "gpu",
+            "gpu_index": 0,
+            "gpu_uuid": "GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f",
+            "gpu_model": "NVIDIA GeForce RTX 4090"
+          },
+          "outcomes": {
+            "execution": {
+              "normal": 0,
+              "abnormal": 1,
+              "running": 0,
+              "unknown": 0,
+              "not_started": 0
+            },
+            "protocol": {
+              "planned": 0,
+              "success": 0,
+              "failure": 0,
+              "invalid": 0,
+              "errors": 0,
+              "unreported": 0,
+              "not_applicable_tasks": 1,
+              "valid": 0,
+              "success_rate": null
+            },
+            "task_result": {
+              "success": 0,
+              "failure": 0,
+              "unreported": 0,
+              "not_applicable": 1
+            },
+            "task_result_state": "not_applicable",
+            "task_result_data": null,
+            "process_scope": "single_process",
+            "wrapper_exit_code": 1,
+            "detail_mode": "execution"
+          }
+        }
+      ]
+    },
+    "cleanup_confirmed": true
+  },
+  "recovery_routes_unauthenticated": {
+    "control": 401,
+    "results": 401
+  },
+  "isolated_real_process_samples": {
+    "passed": 8,
+    "skipped": 0,
+    "seconds": 394.84,
+    "command": "ORCHESTRATION_EXECUTION_TEST=1 .venv/bin/python -m pytest backend/tests/integration/test_scheduling_sample.py -q --import-mode=importlib --tb=short",
+    "scope": [
+      "host",
+      "docker",
+      "shared",
+      "exclusive",
+      "multiple_batches",
+      "failure",
+      "cancellation",
+      "resource_cleanup"
+    ],
+    "logical_nodes": true,
+    "full_disconnection_recovery_tested": false
+  },
+  "expanded_tests": {
+    "passed": 254,
+    "skipped": 7,
+    "failures": 0,
+    "seconds": 439.235,
+    "coverage_gate_exit": 1,
+    "full_project_gates_passed": false,
+    "scope": "targeted, full denominator retained",
+    "skips": [
+      {
+        "test": "test_resource_contract_migration_and_downgrade_guard",
+        "reason": "dedicated disposable resource migration database required"
+      },
+      {
+        "test": "test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-a]",
+        "reason": "requires local Docker image"
+      },
+      {
+        "test": "test_real_docker_mounts_resolve_node_paths_and_enforce_read_only[node-b]",
+        "reason": "requires local Docker image"
+      },
+      {
+        "test": "test_real_systemd_business_directory[direct]",
+        "reason": "requires systemd user manager"
+      },
+      {
+        "test": "test_real_systemd_business_directory[sdk-command]",
+        "reason": "requires systemd user manager"
+      },
+      {
+        "test": "test_real_systemd_business_directory[command]",
+        "reason": "requires systemd user manager"
+      },
+      {
+        "test": "test_real_systemd_business_directory[service]",
+        "reason": "requires systemd user manager"
+      }
+    ],
+    "modules": {
+      "backend/app/scheduling.py": {
+        "percent_statements_covered": 93.87755102040816,
+        "percent_branches_covered": 84.93150684931507
+      },
+      "backend/app/recovery_records.py": {
+        "percent_statements_covered": 100.0,
+        "percent_branches_covered": 100.0
+      }
+    }
+  },
+  "additional_service_test": {
+    "passed": 1,
+    "assertion": "Disconnected negotiated service retains resources but remains ineligible for new clients even with fresh health and node heartbeat."
+  },
+  "resolved_expanded_skips": {
+    "passed": 7,
+    "skipped": 0,
+    "seconds": 6.39,
+    "scope": [
+      "dedicated_resource_migration_database",
+      "two_real_docker_mounts",
+      "four_real_systemd_business_directory_modes"
+    ],
+    "coverage_merged": false
+  }
+}

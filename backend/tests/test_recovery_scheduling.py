@@ -111,3 +111,27 @@ def test_postgres_reconcile_preserves_negotiated_execution(pg, status):
         assert s.get(Run, 'r').status == status
         assert s.get(Run, 'r').execution_id == 'e'
         assert not s.get(Run, 'r').cleanup_confirmed
+
+
+def test_disconnected_service_keeps_ownership_but_is_not_ready_for_new_clients(farm):
+    from backend.app.core import ServiceInstance
+    from backend.app.service_dependencies import ready
+    jid, execution = claimed(farm)
+    at = now()
+    with farm() as s:
+        run = s.scalar(select(Run).where(Run.job_id == jid))
+        run.status = 'RUNNING'
+        run.started_at = at - timedelta(days=365)
+        s.get(Job, jid).benchmark = 'inference-service'
+        # A fresh node heartbeat or health sample alone cannot restore this
+        # execution's expired control lease.
+        s.get(Slot, run.slot_id).last_seen_at = at
+        service = ServiceInstance(id='recovery-service', name='service',
+            worker_id='single', slot_id=run.slot_id, address='127.0.0.1', port=19000,
+            current_job_id=jid, template_snapshot={}, desired_running=True,
+            health_ready=True, health_at=at)
+        s.add(service); s.flush()
+        scheduling.reconcile(s, at)
+        assert run.status == 'RUNNING' and run.execution_id == execution
+        assert not ready(s, service, at)
+        assert not run.cleanup_confirmed

@@ -69,3 +69,13 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 ### 调度侧断联保护接线（2026-11-25）
 
 新 test_recovery_scheduling.py 验证 STARTING/RUNNING/CANCEL_REQUESTED、有限/无限、撤销、旧授权错配、业务时限与未领取预约；新增真实 PostgreSQL 场景。调度器在批量查询和锁后复核中读取原授权，不能凭租约或缺启动上报终结已授权执行。初轮调度 28 通过；统一覆盖率专项 155 通过、8 跳过（真实进程样例 opt-in 未开）、2896 未选择。专项调度模块行 86.39%、分支 63.01%，全项目门槛未通过；保留 coverage-artifacts/recovery-scheduling 原始报告，继续补充相关运行与资源回归。授权发放和完整 Worker 恢复仍未启用，不勾选 4.6 完成。
+
+### 四角色发布及真实业务进程回归
+
+代码 bd64d5c 已构建为 mini-eval-api:recovery-foundations-20261125，并更新本机四角色 API；数据库从 ad074e5 升到 ae185f6。发布前无活跃任务/待清理，保留生产备份；发布后 13 卡位和 6 Agent 时间戳均推进，主要页面接口 200。恢复接口未认证均 401，未向生产执行发放恢复授权。完整断联继续执行/对账仍未启用，不能把本轮发布视为该功能验收。
+
+扩大专项 254 通过、7 环境开关跳过；调度 scheduling.py 行 93.88%、分支 84.93%，收据 recovery_records.py 为 100%/100%。标准脚本仍因全项目分母门槛退出 1，不宣称全项目达标。额外失联服务就绪用例 1 通过。首次 8 个 opt-in 跳过的多批次样例已实际开启，宿主机/Docker、共享/独占、失败/取消的 8 场景全部通过（394.84 秒）；真实子进程覆盖率未合并。
+
+平台可见批次：宿主机 SDK 4515cae8-72f8-4da5-a816-6b6acba096a7（业务成功/失败，程序均退出 0）；Docker 命令 b52918ed-f192-4684-bedc-2c7b02dce4ed（退出 0/1，对应执行成功/失败）。四项均确认清理，未修改原业务模板，未升级现有 Worker。这是实际节点上的短程序验收，不是模型评测，也不是长期断联验收。生产备份另在隔离 PostgreSQL 恢复并升级，461 执行/448 任务数量不变；本机直接调用 alembic 首次因 import 路径失败，使用 python -m alembic 后成功，生产容器迁移无此错误。完整结果见 release-20261125.json。
+
+扩大专项的 7 个环境跳过随后全部补跑通过（6.39 秒）：新建专用资源迁移库，并开启 DIRECTORY_MOUNT_TEST=1、HOST_EXECUTION_TEST=1，真实两组 Docker 只读/可写挂载和四种 systemd 业务目录模式通过。首次跳过记录保留；补跑未合并覆盖率，不据此提高统计值。
