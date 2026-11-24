@@ -1,0 +1,63 @@
+{
+  "tests": {
+    "passed": 115,
+    "failed": 0,
+    "skipped": 0
+  },
+  "mount-tests": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "compatibility": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0
+  },
+  "onboarding": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "batch_controls_migration": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "endpoint_migration": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "endpoint_race": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "orchestration_migration": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "resource_migration": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "retention_migration": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "retention_race": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "managed": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "managed.log (container XML was not retrievable before removal)"
+  }
+}

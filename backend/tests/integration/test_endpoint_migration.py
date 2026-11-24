@@ -29,4 +29,9 @@ def test_endpoint_backfill_constraint_and_downgrade_guard(monkeypatch):
         j=s.scalar(select(Job).where(Job.title=='PENDING'));j.client_spec={'endpoints':[{'url':'http://inference:8000','mode':'shared'}]};s.commit()
     with factory() as s: current_revision=s.execute(text('SELECT version_num FROM alembic_version')).scalar()
     with pytest.raises(RuntimeError,match='Drain multi-address'):command.downgrade(cfg,'h841c23')
-    with factory() as s:assert s.execute(text('SELECT version_num FROM alembic_version')).scalar()==current_revision
+    with factory() as s:
+        assert s.execute(text('SELECT version_num FROM alembic_version')).scalar()==current_revision
+        assert s.execute(text("SELECT indisvalid FROM pg_index WHERE indexrelid=to_regclass('ix_job_events_run_status_created')")).scalar() is True
+        assert s.scalar(select(Job).where(Job.title=='PENDING')).client_spec['endpoints']==[{'url':'http://inference:8000','mode':'shared'}]
+        assert s.scalar(select(Run).where(Run.status=='RUNNING')).assigned_endpoint=='http://inference:8000'
+    command.upgrade(cfg,'head');command.check(cfg)

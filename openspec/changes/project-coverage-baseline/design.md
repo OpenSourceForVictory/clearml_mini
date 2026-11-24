@@ -13,3 +13,6 @@ SQLite 单测不等价于 PostgreSQL 并发或真机验收；特权/容器测试
 
 ## 2026-11-24 verification refresh
 Keep the existing six-directory denominator and gates. Full-suite coverage and any subsequently added tests may be combined only against identical production source; record their separate test results. Release backup/restore tests exercise real temporary backup files while isolating Docker commands, asserting network isolation, migration order, historical count preservation, readiness timeout and cleanup. These tests do not establish real deployment acceptance.
+
+## Skipped-test migration finding (2026-11-24)
+A concurrent index drop in ab852c3 downgrade committed before an older downgrade guard failed. The version record rolled back to ab852c3 but the index stayed absent; upgrade head did not recreate it. Keep upgrade concurrent for online index creation, but make downgrade index removal transactional during the documented drained maintenance window. Verify failed downgrade preserves revision, valid index and protected endpoint/retention records, followed by upgrade/check. No scheduler behavior changes.

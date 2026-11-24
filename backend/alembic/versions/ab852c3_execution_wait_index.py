@@ -22,6 +22,7 @@ def upgrade():
 
 
 def downgrade():
-    if op.get_bind().dialect.name == 'postgresql':
-        with op.get_context().autocommit_block():op.execute(f'DROP INDEX CONCURRENTLY IF EXISTS {NAME}')
-    else:op.execute(f'DROP INDEX IF EXISTS {NAME}')
+    # Downgrade runs during a drained maintenance window. Keep the drop in
+    # the migration transaction: a later guard must roll back both the index
+    # and version record, otherwise upgrade head cannot restore the index.
+    op.execute(f'DROP INDEX IF EXISTS {NAME}')

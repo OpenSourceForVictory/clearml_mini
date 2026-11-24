@@ -16,3 +16,8 @@ Fresh isolated full suite: 1112 passed, 99 skipped, no failures; coverage runner
 - [x] 4.2 Run the full current-source Python denominator with isolated PostgreSQL, supplement coverage from new tests on the same source tree, retain skips/failures, and document directory/function gates.
 
 2026-11-24 refresh: 2663 full-suite passes + 16 new distinct passes, 132 skips retained; combined current-source coverage 92.57% / 83.87%, all gates pass. Evidence: docs/validation/coverage-complete-20261124/README.md.
+
+## 5. Skipped integration follow-up
+- [x] 5.1 Enable available isolated Docker/systemd and database tests, retain first failures, correct obsolete migration-test assumptions and document remaining prerequisites.
+
+Skipped follow-up: all 132 previous skips passed in isolated prerequisites, plus 2 timing/index regressions; initial failures retained in docs/validation/skipped-specialists-20261124/README.md.

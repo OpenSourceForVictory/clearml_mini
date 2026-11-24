@@ -1,6 +1,7 @@
 """Run only against a dedicated disposable resource migration database."""
 import os
 import subprocess
+import sys
 import pytest
 from sqlalchemy import create_engine,text
 
@@ -9,7 +10,7 @@ from sqlalchemy import create_engine,text
 def test_resource_contract_migration_and_downgrade_guard():
     url=os.environ['RESOURCE_MIGRATION_URL'];env={**os.environ,'DATABASE_URL':url}
     def migrate(*args):
-        return subprocess.run(['.venv/bin/alembic','-c','backend/alembic.ini',*args],env=env,check=True,capture_output=True,text=True)
+        return subprocess.run([sys.executable,'-m','alembic','-c','backend/alembic.ini',*args],env=env,check=True,capture_output=True,text=True)
     migrate('upgrade','r841a23');engine=create_engine(url)
     try:
         with engine.begin() as c:

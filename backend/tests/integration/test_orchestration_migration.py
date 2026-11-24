@@ -1,6 +1,7 @@
 """Opt-in only: downgrades a dedicated disposable database."""
 import os
 import subprocess
+import sys
 import pytest
 from sqlalchemy import create_engine, inspect, text
 
@@ -8,7 +9,7 @@ from sqlalchemy import create_engine, inspect, text
 @pytest.mark.skipif(not os.getenv('ORCHESTRATION_MIGRATION_URL'),reason='dedicated disposable orchestration migration database required')
 def test_template_migration_upgrade_and_downgrade():
     url=os.environ['ORCHESTRATION_MIGRATION_URL'];env={**os.environ,'DATABASE_URL':url}
-    def migrate(*args):subprocess.run(['.venv/bin/alembic','-c','backend/alembic.ini',*args],env=env,check=True,capture_output=True,text=True)
+    def migrate(*args):subprocess.run([sys.executable,'-m','alembic','-c','backend/alembic.ini',*args],env=env,check=True,capture_output=True,text=True)
     migrate('upgrade','n407c89');engine=create_engine(url)
     with engine.begin() as c:
         c.execute(text("INSERT INTO client_templates(id,name,version,image,command,protocols,enabled,created_at) VALUES ('migration-client','legacy','1','test:1','[\"python\"]','[\"http\"]',true,CURRENT_TIMESTAMP)"))

@@ -298,3 +298,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 界面查询：`backend/app/read_views.py` 只用于请求内最新尝试及统计投影，不能用于调度/写操作或历史尝试接口；`batches?view=summary` 保留原完整默认响应。`monitoring.py` 仅待调度任务构造全局诊断，`orchestrations?view_mode=status` 省去批次结果重复计算。`administration.node_views` 批量获取节点占用；前端 `PollVisibility` 暂停隐藏页签而保留状态，顶层监控继续刷新控制修订。见 docs/batch-monitoring.md、backend/tests/test_read_views.py、frontend/tests/query-polling.spec.ts 与 docs/validation/ui-query-20261124/README.md。未修改调度快照或预约逻辑。
 
 发布恢复边界补测：`backend/tests/test_release_recovery_boundaries.py` 验证备份清单/权限、隔离恢复顺序、历史记录数保护、失败清理及 HTTP 请求和错误脱敏；本机 HTTP 服务为真实协议测试，Docker 为故障注入。全目录覆盖复核见 `docs/code-coverage.md`，不得把专项低比例或模拟恢复当作全量/真实部署结论。
+
+迁移降级事务边界：`ab852c3` 升级保留并发建索引，降级改为事务内删除，防止较早版本保护规则拒绝时留下“版本记录存在、索引已删除”的状态。检查 `test_endpoint_migration.py`、`test_retention_migration.py` 与 `test_execution_timing_migration.py` 的真实 PostgreSQL 回归；降级须排空维护，详见 `docs/database-migration.md`。这不是调度算法修改。

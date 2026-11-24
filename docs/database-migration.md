@@ -230,3 +230,11 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 升降级回归使用一次性 PostgreSQL，覆盖历史值回填、空库、当前会话值合并降级、旧会话不覆盖新配置及迁移失败事务回滚。升级失败不能手动篡改 alembic_version；应保留错误，修复原因后重试。降级必须暂停 API 写入，把当前会话最新观察合并回 Worker JSON 后再移除表，不能直接 DROP TABLE。
 
 上述迁移验收不等于整个过载方案可发布；控制通道和剩余锁竞争的范围见 [控制面通道审计](validation/control-plane-backpressure-20261123/channel-audit.md)。尚未实现的断联继续执行/终态补传可能有独立 schema 变更，不能将本迁移视为那些能力已就绪。
+
+## 并发索引迁移的降级回滚（2026-11-24 修正）
+
+`ab852c3` 升级仍使用 PostgreSQL `CREATE INDEX CONCURRENTLY`，不改变在线建索引方式。降级改为事务内 `DROP INDEX IF EXISTS`，应按前文在排空、暂停写入的维护窗口执行：如果更早版本的端点或数据保留保护规则拒绝降级，索引、数据库版本和受保护数据将一起回滚。
+
+旧实现使用并发删除索引，会在后续保护规则拒绝前提交删除；因此可能出现 `current` 仍含 ab852c3，但索引实际缺失、再次 `upgrade head` 也不重建的状态。遇到这种情况先保留失败日志，核对 `alembic current`、`alembic heads`、`alembic check` 及 `pg_index` 中 `ix_job_events_run_status_created` 的存在和有效性；不要用 `stamp` 掩盖差异。应在隔离恢复库验证修复方案，再按维护流程处理现场。
+
+此次修正不新增迁移版本，不要求已经正常升级的数据库再次降级；需更新执行迁移命令的代码/镜像。真实 PostgreSQL 专项验证拒绝降级后版本不变、索引仍有效、端点和保留数据不丢失，并验证重新升级及 schema check。

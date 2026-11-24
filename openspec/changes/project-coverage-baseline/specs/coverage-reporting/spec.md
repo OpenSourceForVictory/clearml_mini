@@ -35,3 +35,6 @@ Tests SHALL cover normal completion, cancellation, resource admission failure, r
 #### Scenario: Real migration driver regression
 - **WHEN** a dedicated disposable PostgreSQL server is explicitly configured for driver tests
 - **THEN** each driver uses a separate temporary database and verifies historical backfill, downgrade guards and re-upgrade before deleting that database
+#### Scenario: Guarded downgrade preserves execution timing index
+- **WHEN** a downgrade crosses the execution timing index revision and a historical data guard rejects it
+- **THEN** the database revision, valid timing index and guarded records remain intact, and upgrading/checking head succeeds without stamping the version
