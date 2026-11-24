@@ -65,3 +65,7 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 ### 新策略默认不限断联时长（2026-11-25）
 
 恢复授权 grant 默认 tolerance=None，显式固化为 null；参数化验证省略值、显式 null、有限 120 秒，以及既有授权不可静默改写，共 4 项通过（24 项未选择）。首次宽泛 -k grant 为 2 通过、1 跳过（未提供 PostgreSQL 测试连接），之后精确选择本次默认值测试，无跳过。OpenSpec 严格校验通过。本次未重跑全量覆盖率，不据此宣称全项目达标；未部署，完整恢复链路仍未启用。同步设计、运维说明与 Skill 实现索引。
+
+### 调度侧断联保护接线（2026-11-25）
+
+新 test_recovery_scheduling.py 验证 STARTING/RUNNING/CANCEL_REQUESTED、有限/无限、撤销、旧授权错配、业务时限与未领取预约；新增真实 PostgreSQL 场景。调度器在批量查询和锁后复核中读取原授权，不能凭租约或缺启动上报终结已授权执行。初轮调度 28 通过；统一覆盖率专项 155 通过、8 跳过（真实进程样例 opt-in 未开）、2896 未选择。专项调度模块行 86.39%、分支 63.01%，全项目门槛未通过；保留 coverage-artifacts/recovery-scheduling 原始报告，继续补充相关运行与资源回归。授权发放和完整 Worker 恢复仍未启用，不勾选 4.6 完成。

@@ -322,3 +322,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。`worker/recovery_delivery.py` 逐批上传并匹配摘要后确认本地 outbox，不能将收据视为运行许可或清理确认。尚未接入领取授权、本地监督及生命周期恢复，不广告能力、不对历史任务启用。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK 与鉴权；运维和迁移边界见 docs/operations.md、docs/database-migration.md。
 
 断联恢复默认值（开发中）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。当前仅基础模块与补报收据已实现，完整领取/监督/对账链路尚未启用，修改默认值不会改变现网执行。
+
+调度恢复保护：scheduling.reconcile 对匹配执行 ID、Run ID、槽位的显式恢复授权，不再因旧租约或缺少启动上报将任务终结；撤销授权也不能充当进程已停止的证明。业务总执行时限仍独立生效，资源继续占用直至清理确认，旧协议及未领取预约维持原规则。批量读取使用相关 EXISTS，锁后重新核对授权与执行状态，不为每条执行增添独立授权查询。本次尚不向实际任务发放恢复授权，不能据此宣称端到端断联恢复已启用；回归见 test_recovery_scheduling.py。部署必须先完成 ae185f6 迁移。

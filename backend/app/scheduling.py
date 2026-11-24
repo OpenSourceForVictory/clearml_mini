@@ -3,10 +3,10 @@ import logging
 import os
 import threading
 from datetime import timedelta, timezone
-from sqlalchemy import or_, select, text
+from sqlalchemy import exists, or_, select, text
 from fastapi import HTTPException
 from . import endpoints
-from .core import EvaluationBatch, Event, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
+from .core import EvaluationBatch, Event, ExecutionRecovery, Job, Pool, Run, SchedulerState, Slot, User, Worker, now, uid
 from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 
 ACTIVE = ('RESERVED', 'STARTING', 'RUNNING', 'CANCEL_REQUESTED')
@@ -77,28 +77,35 @@ def finalize_reservation_windows(s, at):
 
 
 def reconcile(s, at):
-    for run in s.scalars(select(Run).where(Run.status.in_(ACTIVE))).all():
+    # Grant existence is execution-scoped and immutable. Revocation is a stop
+    # intent, never evidence that an offline process has stopped.
+    recovery = exists().where(
+        ExecutionRecovery.execution_id == Run.execution_id,
+        ExecutionRecovery.run_id == Run.id,
+        ExecutionRecovery.slot_id == Run.slot_id)
+    for run, recoverable in s.execute(select(Run, recovery).where(Run.status.in_(ACTIVE))).all():
         if run.status == 'RESERVED':
             if utc(run.reservation_expires_at) <= at:
                 # No worker has claimed it, so no container can have been started.
                 transition(s, run, 'PENDING', 'unclaimed reservation expired')
                 run.slot_id = run.execution_id = run.reservation_expires_at = None
             continue
-        expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
+        expired = not recoverable and run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
         overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
-        startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
+        startup = not recoverable and run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
             # Renewals no longer take the global scheduling lock. Never act on
             # the pre-lock lease snapshot. Busy executions can be checked on
             # the next tick instead of holding up all resource allocation.
-            run = s.scalar(select(Run).where(Run.id == run.id, Run.status.in_(ACTIVE))
-                           .with_for_update(skip_locked=True)
-                           .execution_options(populate_existing=True))
-            if run is None:
+            locked = s.execute(select(Run, recovery).where(Run.id == run.id, Run.status.in_(ACTIVE))
+                               .with_for_update(skip_locked=True, of=Run)
+                               .execution_options(populate_existing=True)).first()
+            if locked is None:
                 continue
-            expired = run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
+            run, recoverable = locked
+            expired = not recoverable and run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
             overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
-            startup = run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
+            startup = not recoverable and run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
             if not (expired or overrun or startup):
                 continue
             if overrun:
