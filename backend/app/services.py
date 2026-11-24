@@ -111,8 +111,10 @@ def enqueue(s,instance,user):
     s.add(job);s.flush();s.add(Run(job_id=job.id,attempt=1));instance.current_job_id=job.id;instance.desired_running=True;instance.health_ready=False;instance.health_at=None;instance.health_error=None;instance.probe_state={}
 
 
-def view(s,item):
-    job=s.get(Job,item.current_job_id) if item.current_job_id else None;slot=s.get(Slot,item.slot_id)
+def view(s,item,loaded=None):
+    job=(loaded['jobs'].get(item.current_job_id) if loaded is not None else s.get(Job,item.current_job_id)) if item.current_job_id else None
+    slot=loaded['slots'].get(item.slot_id) if loaded is not None else s.get(Slot,item.slot_id)
+    cleanup=bool(job and (job.id in loaded['cleanup'] if loaded is not None else s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))))
     alive=slot is not None and online(slot)
     state=job.status if job else 'STOPPED'
     if job and state=='RUNNING':
@@ -120,12 +122,12 @@ def view(s,item):
         fresh=is_fresh(item)
         state='HEALTHY' if alive and fresh and item.health_ready else 'UNHEALTHY' if alive and fresh else 'UNKNOWN'
         if item.template_snapshot.get('readiness') and alive and fresh and not (item.probe_state or {}).get('ever_ready'):state='STARTING'
-    if not item.desired_running and not held(s,item):state='STOPPED'
+    if not item.desired_running and not (job and (job.status in (*ACTIVE,'PENDING') or cleanup)):state='STOPPED'
     from .service_readiness import diagnostics
     from .placement import view as placement_view
     run = job.runs[-1] if job and job.runs else None
-    assigned = s.get(Slot, run.slot_id) if run and run.slot_id else None
-    return {'placement':placement_view(assigned),'probe':diagnostics(item),'health_port':item.health_port,**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':bool(job and s.scalar(select(Run.id).where(Run.job_id==job.id,Run.cleanup_confirmed.is_(False)).limit(1))),'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
+    assigned = (loaded['slots'].get(run.slot_id) if loaded is not None else s.get(Slot, run.slot_id)) if run and run.slot_id else None
+    return {'placement':placement_view(assigned),'probe':diagnostics(item),'health_port':item.health_port,**{k:getattr(item,k) for k in ('id','name','worker_id','slot_id','address','port','revision','desired_running','current_job_id','health_at','health_error','created_at')},'state':state,'online':alive,'cleanup_pending':cleanup,'endpoint':f"{item.template_snapshot['protocol']}://{item.address}:{item.port}",'template':item.template_snapshot,'parameters':item.parameters,'resources':item.resources,'resource_sources':item.resource_sources or {},'error':job.error if job else None}
 
 
 def resolve_parameters(definition,parameters,environment,overrides):

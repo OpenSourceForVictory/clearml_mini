@@ -1,0 +1,104 @@
+{
+  "nodes_full": [
+    {
+      "seconds": 0.21714,
+      "sql": 1001,
+      "bytes": 130780
+    },
+    {
+      "seconds": 0.20989,
+      "sql": 1001,
+      "bytes": 130780
+    },
+    {
+      "seconds": 0.23554,
+      "sql": 1001,
+      "bytes": 130780
+    }
+  ],
+  "nodes_batched": [
+    {
+      "seconds": 0.01496,
+      "sql": 3,
+      "bytes": 130780
+    },
+    {
+      "seconds": 0.01462,
+      "sql": 3,
+      "bytes": 130780
+    },
+    {
+      "seconds": 0.01469,
+      "sql": 3,
+      "bytes": 130780
+    }
+  ],
+  "batches_full": [
+    {
+      "seconds": 0.19874,
+      "sql": 101,
+      "bytes": 2930290
+    },
+    {
+      "seconds": 0.20401,
+      "sql": 101,
+      "bytes": 2930290
+    },
+    {
+      "seconds": 0.22679,
+      "sql": 101,
+      "bytes": 2930290
+    }
+  ],
+  "batches_summary": [
+    {
+      "seconds": 0.02877,
+      "sql": 7,
+      "bytes": 19180
+    },
+    {
+      "seconds": 0.02849,
+      "sql": 7,
+      "bytes": 19180
+    },
+    {
+      "seconds": 0.02868,
+      "sql": 7,
+      "bytes": 19180
+    }
+  ],
+  "monitor_before": [
+    {
+      "seconds": 0.03569,
+      "sql": 12,
+      "bytes": 192297
+    },
+    {
+      "seconds": 0.03761,
+      "sql": 12,
+      "bytes": 192297
+    },
+    {
+      "seconds": 0.0635,
+      "sql": 12,
+      "bytes": 192297
+    }
+  ],
+  "monitor_after": [
+    {
+      "seconds": 0.02382,
+      "sql": 8,
+      "bytes": 192297
+    },
+    {
+      "seconds": 0.03879,
+      "sql": 8,
+      "bytes": 192297
+    },
+    {
+      "seconds": 0.02104,
+      "sql": 8,
+      "bytes": 192297
+    }
+  ]
+}

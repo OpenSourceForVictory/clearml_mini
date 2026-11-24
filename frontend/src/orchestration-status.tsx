@@ -28,7 +28,7 @@ function SchedulingStatus({definition,diagnosis}:{definition:{key:string};diagno
 }
 
 export function ServiceStartupSummary({id,onDetails}:{id:string;onDetails:()=>void}){
- const {data,error}=usePoll<Detail>('orchestrations/'+id);
+ const {data,error}=usePoll<Detail>('orchestrations/'+id+'?view_mode=status');
  if(!data&&!error)return <section className="service-startup-summary" aria-label="服务端启动状态"><h3>服务端启动状态</h3><p>正在查询服务端状态…</p></section>;
  if(data?.orchestration.service_mode!=='managed'&&!error)return null;
  const services=data?.orchestration.services||[];
@@ -51,7 +51,7 @@ function ServiceInstanceRow({batchId,service:s,busy,onAction}:{batchId:string;se
 }
 
 export function OrchestrationStatus({id}:{id:string}){
- const {data,error}=usePoll<Detail>('orchestrations/'+id),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+ const {data,error}=usePoll<Detail>('orchestrations/'+id+'?view_mode=status'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
  async function action(service:Service,action:'start'|'stop'){setBusy(true);setMessage('');try{await api(`orchestrations/${id}/services/${service.id}/control`,'POST',{action,expected_revision:service.revision});setMessage(action==='stop'?'已请求停止，等待服务清理。':'已请求恢复，等待调度。')}catch(e){setMessage(String(e))}finally{setBusy(false)}}
 
  return <section aria-label="客户端与服务关系"><h3>客户端与服务关系</h3>{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}

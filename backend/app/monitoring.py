@@ -51,13 +51,16 @@ def batch_jobs(s, batch):
 
 def monitor(s, batch):
     from .batches import batch_view
-    jobs = batch_jobs(s, batch)
-    records = defaultdict(list)
-    for row in s.scalars(select(EpisodeRecord).where(EpisodeRecord.run_id.in_([j.runs[-1].id for j in jobs]))):
-        records[row.run_id].append(row)
+    from .read_views import latest_jobs, episode_summaries
+    from .core import Slot, now
+    jobs = latest_jobs(s, [batch.id])
+    records = episode_summaries(s, [j.runs[-1].id for j in jobs])
     progresses = {j.runs[-1].id: summarize(records[j.runs[-1].id]) for j in jobs}
     result = batch_view(s, batch, jobs, progresses, records)
-    context = DiagnosticContext(s)
+    context = DiagnosticContext(s) if any(j.status == 'PENDING' for j in jobs) else None
+    at = context.at if context else now()
+    slot_ids = {j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
+    slots = context.slots if context else {x.id:x for x in s.scalars(select(Slot).where(Slot.id.in_(slot_ids)))}
     owner = s.get(User, batch.owner_id)
     pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.id.in_({j.pool_id for j in jobs})))}
     reporting = [c for c in result['cases'] if c['episode_reporting']]
@@ -65,7 +68,7 @@ def monitor(s, batch):
     evaluated=[c for c in reporting if c['task_type']!='command']
     evaluated_completed=sum(c['progress']['completed'] for c in evaluated)
     successes = sum(c['progress']['successes'] for c in evaluated)
-    result.update(checked_at=context.at, summary=dict(states=dict(Counter(j.status for j in jobs)),
+    result.update(checked_at=at, summary=dict(states=dict(Counter(j.status for j in jobs)),
         cancel_requested_tasks=sum(j.status == 'CANCEL_REQUESTED' for j in jobs),
         cleanup_pending_tasks=sum(not j.runs[-1].cleanup_confirmed and j.status in ('CANCEL_REQUESTED', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT') for j in jobs),
         completed_episodes=completed, successes=successes, goal_failures=evaluated_completed-successes,
@@ -75,7 +78,7 @@ def monitor(s, batch):
         success_rate=successes/evaluated_completed if evaluated_completed else None))
     for case, job in zip(result['cases'], jobs):
         run = job.runs[-1]
-        slot = context.slots.get(run.slot_id)
+        slot = slots.get(run.slot_id)
         case.update(cleanup_confirmed=run.cleanup_confirmed,
                     node_name=slot.node_name if slot else None, gpu_index=slot.gpu_index if slot else None,
                     waiting=None, reason_codes=[])

@@ -294,3 +294,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 2026-11-24 重新验证已部署版本：真机宿主机 SDK 单任务及同卡三任务排队均成功，100 仿真 Worker 混合上报完成 30 分钟；心跳无 503、日志最终无积压，普通通道仍有 97 次连接池 503。具体口径、全量回归与失败/跳过边界见 [真机与稳定性复测](../../../../docs/validation/real-load-full-20261124/README.md)。
 
 模板说明引入同前缀区域名后，向导测试应精确定位模板 combobox，避免把“服务 1 模板说明”也匹配为控件；`frontend/tests/wizard-clarity.spec.ts` 同时验证未允许环境变量保留原输入、阻止进入资源步骤且不发预检。此项是测试选择器修正，不改变用户操作。
+
+界面查询：`backend/app/read_views.py` 只用于请求内最新尝试及统计投影，不能用于调度/写操作或历史尝试接口；`batches?view=summary` 保留原完整默认响应。`monitoring.py` 仅待调度任务构造全局诊断，`orchestrations?view_mode=status` 省去批次结果重复计算。`administration.node_views` 批量获取节点占用；前端 `PollVisibility` 暂停隐藏页签而保留状态，顶层监控继续刷新控制修订。见 docs/batch-monitoring.md、backend/tests/test_read_views.py、frontend/tests/query-polling.spec.ts 与 docs/validation/ui-query-20261124/README.md。未修改调度快照或预约逻辑。

@@ -11,7 +11,7 @@ import {OrchestrationStatus,ServiceStartupSummary} from './orchestration-status'
 import {ReportDownloads} from './batch-reports';
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
-import {usePoll} from './poll';
+import {usePoll,PollVisibility} from './poll';
 import {ArtifactList,EpisodeList} from './cs';
 
 export const statusLabels:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'已结束',FAILED:'已结束（异常）',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
@@ -71,9 +71,9 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
         <button aria-pressed={tab==='parameters'} onClick={()=>{setTab('parameters');setShowParameters(true);}}>运行配置</button>
         <button aria-pressed={tab==='services'} onClick={()=>{setTab('services');setShowServices(true);}}>服务端与关联</button>
       </nav>
-      <section hidden={tab!=='parameters'} aria-label="批次配置页">{showParameters&&<BatchParameters key={id} batchId={id} suiteId={b.suite_id} cases={b.cases} maxConcurrent={b.max_concurrent} orchestrated={b.orchestrated} onServices={()=>{setTab('services');setShowServices(true);}}/>}</section>
-      <section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行配置或任务执行配置中查看。</p>}</section>
-      <section hidden={tab!=='tasks'} aria-label="批次任务页">
+      <PollVisibility.Provider value={tab==='parameters'}><section hidden={tab!=='parameters'} aria-label="批次配置页">{showParameters&&<BatchParameters key={id} batchId={id} suiteId={b.suite_id} cases={b.cases} maxConcurrent={b.max_concurrent} orchestrated={b.orchestrated} onServices={()=>{setTab('services');setShowServices(true);}}/>}</section></PollVisibility.Provider>
+      <PollVisibility.Provider value={tab==='services'}><section hidden={tab!=='services'} aria-label="批次服务页">{b.orchestrated?showServices&&<OrchestrationStatus id={id}/>:<p>本批次没有平台托管的服务编排。外部服务地址可在运行配置或任务执行配置中查看。</p>}</section></PollVisibility.Provider>
+      <PollVisibility.Provider value={tab==='tasks'}><section hidden={tab!=='tasks'} aria-label="批次任务页">
       {b.orchestrated&&tab==='tasks'&&<ServiceStartupSummary id={id} onDetails={()=>{setTab('services');setShowServices(true);}}/>}
       <p>{Object.entries(b.summary.states).map(([state,n])=>`${statusLabels[state]||state} ${n}`).join(' · ')}</p>
       <ResultOutcomes value={b.outcomes}/>
@@ -95,7 +95,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
         <td><button aria-expanded={!!episodeRows[c.job_id]} onClick={()=>setEpisodeRows(old=>({...old,[c.job_id]:!old[c.job_id]}))}>{c.outcomes?.detail_mode==='execution'?(episodeRows[c.job_id]?'收起执行':'查看执行'):(episodeRows[c.job_id]?'收起回合':'查看回合')}</button>{c.run_id&&<ArtifactBrowser jobId={c.job_id} runId={c.run_id}/>}<button onClick={()=>setJob(c.job_id)}>排查任务</button><button onClick={()=>onJob(c.job_id)}>详情 / 重试</button></td></tr>{episodeRows[c.job_id]&&<tr><td colSpan={10}><section aria-label={c.case_id+(c.outcomes?.detail_mode==='execution'?' 执行状态':' 回合状态')}><p>{c.case_id} · 尝试 {c.attempt}</p>{c.run_id?<EpisodeList key={c.run_id} jobId={c.job_id} runId={c.run_id}/>:<p>尚未创建执行尝试。</p>}</section></td></tr>}</React.Fragment>)}</tbody></table></div>
       {!cases.length&&<p>没有符合筛选条件的任务。</p>}
       {job&&<AttemptInspector key={job} jobId={job} onClose={()=>setJob('')}/>}
-      </section>
+      </section></PollVisibility.Provider>
     </>}
   </section>;
 }

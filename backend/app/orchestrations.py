@@ -156,23 +156,40 @@ def diagnose_service(s, definition, owner, context, planner, batch=None):
             'status':diagnosis['status'],'reasons':diagnosis['reasons'],'nodes':diagnosis['nodes']}
 
 
-def view(s,batch):
-    result=batch_view(s,batch);orch=s.get(EvaluationOrchestration,batch.id)
+def view(s,batch,light=False):
+    from .read_views import latest_jobs
+    from .core import Slot
+    from .placement import view as placement
+    from . import endpoints
+    if light:
+        jobs=latest_jobs(s,[batch.id])
+        ids={j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
+        slots={x.id:x for x in s.scalars(select(Slot).where(Slot.id.in_(ids)))}
+        result={'id':batch.id,'cases':[dict(case_id=j.case_id,job_id=j.id,
+            placement=placement(slots.get(j.runs[-1].slot_id)), **endpoints.view(j.runs[-1],j.client_spec)) for j in jobs]}
+    else:result=batch_view(s,batch)
+    orch=s.get(EvaluationOrchestration,batch.id)
     instances=list(s.scalars(select(ServiceInstance).where(ServiceInstance.orchestration_batch_id==batch.id)))
+    job_ids={i.current_job_id for i in instances if i.current_job_id}
+    jobs={j.id:j for j in latest_jobs(s,job_ids=job_ids)}
+    slot_ids={i.slot_id for i in instances if i.slot_id}|{j.runs[-1].slot_id for j in jobs.values() if j.runs[-1].slot_id}
+    loaded={'jobs':jobs,'slots':{x.id:x for x in s.scalars(select(Slot).where(Slot.id.in_(slot_ids)))},
+            'cleanup':set(s.scalars(select(Run.job_id).where(Run.job_id.in_(job_ids),Run.cleanup_confirmed.is_(False))))}
+    def occupied(item):
+        job=jobs.get(item.current_job_id)
+        return not item.auto_stopped or bool(job and (job.status in (*services.ACTIVE,'PENDING') or job.id in loaded['cleanup']))
+    waiting=[d for d in orch.definition['services'] if sum(occupied(i) for i in instances if i.service_key==d['key']) < (d.get('instance_count') or 1)]
     scheduling=[]
-    if orch.definition['service_mode']=='managed':
+    if waiting and orch.definition['service_mode']=='managed':
         from .preflight import DiagnosticContext
         from .orchestration_scheduler import Planner
         context=DiagnosticContext(s)
         planner=Planner(s,context.at)
         owner=s.get(User,batch.owner_id)
-        for definition in orch.definition['services']:
-            related=[item for item in instances if item.service_key==definition['key']]
-            occupied=sum(not item.auto_stopped or services.held(s,item) for item in related)
-            if occupied >= (definition.get('instance_count') or 1):continue
+        for definition in waiting:
             scheduling.append(diagnose_service(s,definition,owner,context,planner,batch))
     result['orchestration']={'stop_after_batch':orch.stop_after_batch,'services':[
-        {**services.view(s,i),'service_key':i.service_key,'auto_stopped':i.auto_stopped}
+        {**services.view(s,i,loaded),'service_key':i.service_key,'auto_stopped':i.auto_stopped}
         for i in instances],
         'definitions':orch.definition['services'],'service_mode':orch.definition['service_mode'],
         'scheduling':scheduling}
@@ -231,8 +248,8 @@ def install(app,db,current):
         s.commit();return view(s,batch)
 
     @app.get('/api/v1/orchestrations/{identity}')
-    def detail(identity:str,user=Depends(current),s=Depends(db)):
-        batch,_=owned(s,identity,user);return view(s,batch)
+    def detail(identity:str,view_mode:Literal['full','status']='full',user=Depends(current),s=Depends(db)):
+        batch,_=owned(s,identity,user);return view(s,batch,light=view_mode=='status')
 
     @app.get('/api/v1/orchestrations/{identity}/services/{service_id}/logs')
     def logs(identity:str,service_id:str,job_id:str|None=None,after:int=Query(-1,ge=-1),limit:int=Query(256,ge=1,le=256),cursor_run:str|None=None,user=Depends(current),s=Depends(db)):

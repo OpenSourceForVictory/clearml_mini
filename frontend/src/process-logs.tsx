@@ -1,6 +1,6 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useContext,useEffect,useRef,useState} from 'react';
 import {api} from './api';
-import {usePoll} from './poll';
+import {usePoll,PollVisibility} from './poll';
 import {CopyValue} from './execution-location';
 import './process-logs.css';
 
@@ -46,7 +46,8 @@ function LogDrawer({jobId,runId,entry,close}:{jobId:string;runId:string;entry:Ca
   finally{busy.current=false;if(alive.current)setLoading(false);}
  }
  useEffect(()=>{serial.current++;setPage(null);setError('');setContinuation(null);void load();},[stream]);
- useEffect(()=>{if(!follow)return;const timer=setInterval(()=>{if(!page?.closed)void load();},3000);return()=>clearInterval(timer);},[follow,page?.closed,stream,entry.next_sequence]);
+ const visible=useContext(PollVisibility);
+ useEffect(()=>{if(!follow||!visible)return;const timer=setInterval(()=>{if(!page?.closed)void load();},3000);return()=>clearInterval(timer);},[follow,visible,page?.closed,stream,entry.next_sequence]);
  async function download(next=false){
   const resume=next?continuation:null,until=resume?.until??Math.max(entry.next_sequence,page?.next_sequence??0),part=resume?.part??1;
   setDownloading(true);cancelDownload.current=false;setNotice('');const chunks:string[]=[];let bytes=0,cursor:string|null=resume?.cursor??null,gap=resume?.gap??false;

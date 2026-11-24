@@ -14,15 +14,29 @@ def audit(s, user, action, target, details=None):
     s.add(ManagementAudit(actor_id=user.id, action=action, target_id=target, details=details or {}))
 
 
-def node_view(s, w):
+def node_view(s, w, *, slots=None, held_count=None):
     from .node_agents import view as agent_view
     connection = dict(w.connection or {})
     if 'agent' in connection: connection['agent'] = agent_view(w)
-    slots = list(s.scalars(select(Slot).where(Slot.worker_id == w.id)))
+    slots = list(s.scalars(select(Slot).where(Slot.worker_id == w.id))) if slots is None else slots
     return {**{k: getattr(w, k) for k in ('id', 'node_name', 'enabled', 'max_concurrent', 'cpu_capacity', 'ram_gb_capacity', 'roles', 'management_revision', 'revoked_at', 'connection')},
             'status': 'unmanaged' if w.revoked_at else 'enrolling' if (w.connection or {}).get('enrollment',{}).get('state')=='INSTALLING' else 'disabled' if not w.enabled else 'online' if any(online(x) for x in slots) else 'offline' if slots else 'waiting',
             'connection': connection or None,
-            'held_executions': s.scalar(select(func.count()).select_from(Run).where(Run.slot_id.in_([x.id for x in slots]), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))), 'gpu_count': len(slots)}
+            'held_executions': held_count if held_count is not None else s.scalar(select(func.count()).select_from(Run).where(Run.slot_id.in_([x.id for x in slots]), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))), 'gpu_count': len(slots)}
+
+
+def node_views(s, workers):
+    from collections import defaultdict
+    ids = [w.id for w in workers]
+    slots = defaultdict(list)
+    counts = {}
+    for offset in range(0, len(ids), 500):
+        part = ids[offset:offset+500]
+        for slot in s.scalars(select(Slot).where(Slot.worker_id.in_(part))):slots[slot.worker_id].append(slot)
+        counts.update(s.execute(select(Slot.worker_id, func.count(Run.id)).join(Run, Run.slot_id == Slot.id)
+            .where(Slot.worker_id.in_(part), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))
+            .group_by(Slot.worker_id)).all())
+    return [node_view(s, w, slots=slots[w.id], held_count=counts.get(w.id, 0)) for w in workers]
 
 
 def release_reservations(s, slots):

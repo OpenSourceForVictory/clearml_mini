@@ -20,7 +20,7 @@ function Field({label,children}:{label:string;children:React.ReactNode}) {
 
 export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaunch=null}:{initialLaunch?:WizardLaunch|null;pageView?:'wizard'|'records';admin?:boolean;renderJob:(id:string,close:()=>void)=>React.ReactNode}) {
   const [templates,setTemplates]=useState<Template[]>([]),[pools,setPools]=useState<{id:string;name:string}[]>([]),[batches,setBatches]=useState<Batch[]>([]);
-  const [loading,setLoading]=useState(true);
+  const [loading,setLoading]=useState(true),[optionsError,setOptionsError]=useState('');
   const [error,setError]=useState(''),[selected,setSelected]=useState(''),[page,setPage]=useState(1);
   const [suites,setSuites]=useState<Suite[]>([]),[launch,setLaunch]=useState<WizardLaunch|null>(initialLaunch);
   useEffect(()=>{if(initialLaunch)setLaunch(initialLaunch)},[initialLaunch]);
@@ -40,21 +40,30 @@ export function CSWorkbench({renderJob,admin=false,pageView='wizard',initialLaun
   useEffect(()=>{const change=()=>{setCompareRoute(location.hash.match(/^#\/cs\/compare\/([^/]+)\/([^/]+)$/)?.slice(1)||[]);setBatchId(location.hash.match(/^#\/cs\/batches\/([^/]+)$/)?.[1]||'');};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
   const openBatch=(id:string)=>{setResultsTab('history');location.hash='/cs/batches/'+id;};
   const refresh=async()=>{
-    const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));
+    const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?view=summary&page='+page),api<Suite[]>('suites')]);
+    setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setOptionsError('');
   };
+  useEffect(()=>{
+    let active=true;
+    async function loadOptions(){try{
+      const [t,p,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Suite[]>('suites')]);
+      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setOptionsError('');}
+    }catch(e){if(active)setOptionsError(String(e));}}
+    if(!batchId&&!compareRoute.length){void loadOptions();window.addEventListener('focus',loadOptions);}
+    return()=>{active=false;window.removeEventListener('focus',loadOptions);};
+  },[pageView,launch,batchId,compareRoute.join()]);
   useEffect(()=>{
     setLoading(true);
     let active=true,timer:ReturnType<typeof setTimeout>;
     async function load(){try{
-      const [t,p,b,s]=await Promise.all([api<Template[]>('client-templates'),api<{id:string;name:string}[]>('pools'),api<Batch[]>('batches?page='+page),api<Suite[]>('suites')]);
-      if(active){setTemplates(t.filter(x=>x.enabled));setPools(p);setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setSuites(old=>{const selected=old.find(x=>x.id===launch?.suite?.id);return selected&&!s.some(x=>x.id===selected.id)?[selected,...s]:s;});setError('');}
+      const b=await api<Batch[]>('batches?view=summary&page='+page);
+      if(active){setBatches(b.filter(x=>!deletedIds.current.has(x.id)));setError('');}
     }catch(e){if(active)setError(String(e));}finally{if(active){setLoading(false);timer=setTimeout(load,2000);}}}
     if(!batchId&&!compareRoute.length)void load();return()=>{active=false;clearTimeout(timer);};
   },[page,launch,batchId,compareRoute.join()]);
   return <>
     <div className="page-title"><div><p className="eyebrow">CLIENT / SERVER</p><h1>{pageView==='wizard'?'业务评测向导':'评测运行与结果'}</h1><p className="muted">{pageView==='wizard'?'选择任务、客户端和推理服务，检查后提交业务评测。':'按提交批次查看运行状态、任务参数、服务状态与评测结果。'}</p></div></div>
-    {error&&<p className="error" role="alert">{error}</p>}
+    {(error||optionsError)&&<p className="error" role="alert">{error||optionsError}</p>}
     {importState&&<section aria-label="历史批次导入">{importState.loading?<p role="status">正在读取历史批次配置…</p>:<p role="alert">历史配置导入失败：{importState.error}<button onClick={()=>void importBatch(importState.id)}>重试导入</button></p>}</section>}
     <div hidden={!!batchId||!!compareRoute.length}><div hidden={pageView==='records'}><RunWizard key={launch?.rerun?rerunSequence.current:0} templates={templates} pools={pools} suites={suites} launch={launch}
       onSubmitted={()=>{void refresh().catch(e=>setError(String(e)));}} onJob={setSelected} onBatch={openBatch}/></div>

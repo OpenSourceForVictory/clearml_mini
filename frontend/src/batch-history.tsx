@@ -3,7 +3,7 @@ import React,{useState,useRef,useEffect} from 'react';
 import {api} from './api';
 import './batch-history.css';
 
-export type Batch = {outcomes?:Outcomes;id:string;title:string;status:string;scheduling_paused?:boolean;control_revision?:number;priority?:number;pending_count?:number;created_at?:string;max_concurrent?:number;total:number;finished:number;succeeded:number;total_episodes:number;cases:{episode_reporting?:boolean;progress?:{completed:number}}[]};
+export type Batch = {outcomes?:Outcomes;id:string;title:string;status:string;scheduling_paused?:boolean;control_revision?:number;priority?:number;pending_count?:number;created_at?:string;max_concurrent?:number;total:number;finished:number;succeeded:number;total_episodes:number;cases?:{episode_reporting?:boolean;progress?:{completed:number}}[]};
 const labels:Record<string,string>={PENDING:'排队中',RUNNING:'运行中',SUCCEEDED:'已结束',FAILED:'已结束（异常）',CANCELLED:'已取消'};
 const terminal=new Set(['SUCCEEDED','FAILED','CANCELLED']);
 const tone=(status:string)=>status==='SUCCEEDED'?'success':status==='FAILED'?'failure':status==='RUNNING'?'running':'neutral';

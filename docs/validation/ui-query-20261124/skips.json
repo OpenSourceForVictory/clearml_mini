@@ -1,0 +1,98 @@
+[
+  {
+    "test": "backend.tests.integration.test_batch_controls_migration.test_batch_controls_upgrade_and_guarded_downgrade",
+    "reason": "separate disposable migration database required"
+  },
+  {
+    "test": "backend.tests.integration.test_batch_controls_race.test_control_ordering[pause_claim]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_batch_controls_race.test_control_ordering[cancel_claim]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_batch_controls_race.test_control_ordering[pause_tick]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_batch_controls_race.test_control_ordering[cancel_retry]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_batch_controls_race.test_control_ordering[opposite]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_monitoring_race.test_bulk_single_and_replay[1]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_monitoring_race.test_bulk_single_and_replay[10]",
+    "reason": "dedicated PostgreSQL required"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host-docker]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker-host]",
+    "reason": "real process/container execution opt-in"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_migration.test_template_migration_upgrade_and_downgrade",
+    "reason": "dedicated disposable orchestration migration database required"
+  },
+  {
+    "test": "backend.tests.integration.test_orchestration_race.test_joint_reservation_and_submission_race",
+    "reason": "dedicated PostgreSQL is required"
+  },
+  {
+    "test": "backend.tests.test_execution_timing_migration.test_pg_upgrade_invalid_index_retry_old_writer_and_downgrade",
+    "reason": "requires disposable PostgreSQL server"
+  },
+  {
+    "test": "backend.tests.test_execution_timing_migration.test_thousand_attempts_wait_lookup_uses_three_queries",
+    "reason": "requires disposable PostgreSQL server"
+  },
+  {
+    "test": "backend.tests.test_process_log_migration.test_process_log_migration_and_batch_deletion",
+    "reason": "requires disposable PostgreSQL server"
+  },
+  {
+    "test": "backend.tests.test_shared_artifact_lifecycle.test_terminal_registration_replay_and_deleted_batch_cannot_revive[FAILED]",
+    "reason": "requires disposable PostgreSQL server"
+  },
+  {
+    "test": "backend.tests.test_shared_artifact_lifecycle.test_terminal_registration_replay_and_deleted_batch_cannot_revive[CANCELLED]",
+    "reason": "requires disposable PostgreSQL server"
+  },
+  {
+    "test": "backend.tests.test_shared_artifact_lifecycle.test_terminal_registration_replay_and_deleted_batch_cannot_revive[SUCCEEDED]",
+    "reason": "requires disposable PostgreSQL server"
+  }
+]

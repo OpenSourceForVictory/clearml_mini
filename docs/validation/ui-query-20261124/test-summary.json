@@ -1,0 +1,60 @@
+{
+  "targeted_python": {
+    "passed": 157,
+    "skipped": 24,
+    "deselected": 2613,
+    "seconds": 384.88,
+    "pytest_exit_code": 0,
+    "coverage_gate_exit_code": 1
+  },
+  "additional_services_execution": {
+    "passed": 22
+  },
+  "additional_multicard_count": {
+    "passed": 1
+  },
+  "frontend_related": {
+    "passed": 99
+  },
+  "frontend_polling_strengthened_rerun": {
+    "passed": 2
+  },
+  "files": {
+    "read_views": {
+      "covered_lines": 32,
+      "num_statements": 32,
+      "covered_branches": 10,
+      "num_branches": 10
+    },
+    "batches": {
+      "covered_lines": 203,
+      "num_statements": 222,
+      "covered_branches": 39,
+      "num_branches": 54
+    },
+    "monitoring": {
+      "covered_lines": 90,
+      "num_statements": 93,
+      "covered_branches": 17,
+      "num_branches": 20
+    },
+    "orchestrations": {
+      "covered_lines": 226,
+      "num_statements": 239,
+      "covered_branches": 73,
+      "num_branches": 96
+    },
+    "services": {
+      "covered_lines": 132,
+      "num_statements": 199,
+      "covered_branches": 24,
+      "num_branches": 72
+    },
+    "administration": {
+      "covered_lines": 143,
+      "num_statements": 171,
+      "covered_branches": 28,
+      "num_branches": 54
+    }
+  }
+}

@@ -82,21 +82,21 @@ def suite_view(suite):
     return {k: getattr(suite, k) for k in ('id', 'name', 'version', 'template_id', 'template_ids', 'cases', 'created_at', 'status', 'archived', 'revision', 'description', 'tags', 'source','client_defaults')}
 
 
-def batch_view(s, batch, jobs=None, progresses=None, result_rows=None):
+def batch_view(s, batch, jobs=None, progresses=None, result_rows=None, *, summary=False, orchestrated=None):
     jobs = jobs if jobs is not None else s.scalars(select(Job).options(selectinload(Job.runs)).where(Job.batch_id == batch.id)
                      .order_by(Job.created_at, Job.id)).all()
     from .episodes import summarize
     from . import execution_timing
     from .core import now
     at = now()
-    starts = execution_timing.pending_starts(s, [j.runs[-1].id for j in jobs])
+    starts = {} if summary else execution_timing.pending_starts(s, [j.runs[-1].id for j in jobs])
     from .result_views import load_records, summarize_attempt, aggregate
     result_rows = load_records(s,[j.runs[-1].id for j in jobs]) if result_rows is None else result_rows
     if progresses is None:progresses = {j.runs[-1].id:summarize(result_rows[j.runs[-1].id]) for j in jobs}
     outcomes = {j.runs[-1].id:summarize_attempt(j,j.runs[-1],result_rows[j.runs[-1].id]) for j in jobs}
     from .core import Slot
     from .placement import view as placement_view
-    slot_ids = {j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
+    slot_ids = set() if summary else {j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
     placements = {slot.id: placement_view(slot) for slot in s.scalars(select(Slot).where(Slot.id.in_(slot_ids)))} if slot_ids else {}
     succeeded = sum(j.status == 'SUCCEEDED' for j in jobs)
     finished = sum(j.status in TERMINAL for j in jobs)
@@ -110,15 +110,29 @@ def batch_view(s, batch, jobs=None, progresses=None, result_rows=None):
         status = 'FAILED'
     else:
         status = 'CANCELLED'
-    return {'timing':execution_timing.batch(batch, [j.runs[-1] for j in jobs], at), 'outcomes':aggregate(outcomes.values()),'orchestrated':s.get(EvaluationOrchestration,batch.id) is not None,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'priority': batch.priority, 'pending_count': sum(j.status == 'PENDING' for j in jobs), 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
+    result = {'timing':execution_timing.batch(batch, [j.runs[-1] for j in jobs], at), 'outcomes':aggregate(outcomes.values()),'orchestrated':(s.get(EvaluationOrchestration,batch.id) is not None) if orchestrated is None else orchestrated,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'priority': batch.priority, 'pending_count': sum(j.status == 'PENDING' for j in jobs), 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command' or j.client_spec['template'].get('episode_reporting')),
-            'cases': [{'timing':execution_timing.attempt(j,j.runs[-1],at,starts.get(j.runs[-1].id)), 'outcomes':outcomes[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
+            'cases': [] if summary else [{'timing':execution_timing.attempt(j,j.runs[-1],at,starts.get(j.runs[-1].id)), 'outcomes':outcomes[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
                        'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' and not j.client_spec['template'].get('episode_reporting') else j.episodes, 'status': j.status,
                        'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,
                        'episode_reporting': j.client_spec['template'].get('episode_reporting', False),
                        'progress': progresses[j.runs[-1].id] if progresses is not None else progress(s, j.runs[-1]), 'error': j.error} for j in jobs]}
+    if summary:result.pop('cases')
+    return result
+
+
+def batch_summaries(s, batches):
+    from collections import defaultdict
+    from .read_views import latest_jobs, episode_summaries
+    ids = [b.id for b in batches]
+    jobs = latest_jobs(s, ids, summary=True)
+    records = episode_summaries(s, [j.runs[-1].id for j in jobs])
+    orchestrated = set(s.scalars(select(EvaluationOrchestration.batch_id).where(EvaluationOrchestration.batch_id.in_(ids)))) if ids else set()
+    groups = defaultdict(list)
+    for job in jobs:groups[job.batch_id].append(job)
+    return [batch_view(s, b, groups[b.id], result_rows=records, summary=True, orchestrated=b.id in orchestrated) for b in batches]
 
 
 def resolve_batch(s, body, user, initial_defaults=None):
@@ -236,9 +250,10 @@ def install(app, db, current):
         return batch_view(s, batch)
 
     @app.get('/api/v1/batches')
-    def batches(page: int = Query(1, ge=1), user=Depends(current), s: Session = Depends(db)):
+    def batches(page: int = Query(1, ge=1), view: Literal['full', 'summary'] = 'full', user=Depends(current), s: Session = Depends(db)):
         q = select(EvaluationBatch).where(EvaluationBatch.owner_id == user.id, EvaluationBatch.deleted_at.is_(None)).order_by(EvaluationBatch.created_at.desc(), EvaluationBatch.id.desc())
-        return [batch_view(s, b) for b in s.scalars(q.offset((page-1)*20).limit(20))]
+        rows = list(s.scalars(q.offset((page-1)*20).limit(20)))
+        return batch_summaries(s, rows) if view == 'summary' else [batch_view(s, b) for b in rows]
 
     @app.delete('/api/v1/batches/{batch_id}')
     def delete_batch(batch_id: str, user=Depends(current), s: Session = Depends(db)):

@@ -233,7 +233,7 @@ def install(app, db, current):
 
     @app.get('/api/v1/admin/nodes')
     def nodes(user=Depends(admin), s: Session = Depends(db)):
-        return [administration.node_view(s, w) for w in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)).order_by(Worker.node_name))]
+        return administration.node_views(s, list(s.scalars(select(Worker).where(Worker.deleted_at.is_(None)).order_by(Worker.node_name))))
 
     @app.post('/api/v1/admin/nodes/{worker_id}/rotate-token')
     def rotate(worker_id: str, user=Depends(admin), s: Session = Depends(db)):
