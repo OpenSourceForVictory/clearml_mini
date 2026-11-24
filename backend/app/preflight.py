@@ -111,6 +111,8 @@ class DiagnosticContext:
         self.jobs = {j.id: j for j in s.scalars(select(Job).where(Job.id.in_({r.job_id for r in self.active})))}
         self.slots = {x.id: x for x in s.scalars(select(Slot).where(Slot.deleted_at.is_(None)))}
         self.workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)))}
+        self.endpoint_held = endpoints.holdings(self.active)
+        self.managed_endpoint_states = {}
         self.by_slot, self.by_node = defaultdict(list), defaultdict(list)
         self.owners, self.batches = Counter(), Counter()
         for run in self.active:
@@ -129,7 +131,16 @@ class DiagnosticContext:
         if len(self.active) >= admission.seconds('MAX_ACTIVE_GLOBAL', 2): codes.append('global_concurrency')
         if self.owners[owner.id] >= admission.seconds('MAX_ACTIVE_PER_USER', 2): codes.append('user_concurrency')
         if batch and job.benchmark != 'inference-service' and self.batches[batch.id] >= batch.max_concurrent: codes.append('batch_concurrency')
-        endpoint_states = endpoints.inspect(job.client_spec, endpoints.holdings(self.active),self.session)
+        spec = job.client_spec or {}
+        if spec.get('service_mode') == 'managed':
+            # Diagnostic snapshot only: never reused across requests or by admission.
+            keys = tuple(sorted(set(spec['service_keys']))) if 'service_keys' in spec else None
+            key = (spec.get('orchestration_batch_id'), keys, spec.get('workload'))
+            if key not in self.managed_endpoint_states:
+                self.managed_endpoint_states[key] = endpoints.inspect(job.client_spec, self.endpoint_held, self.session)
+            endpoint_states = self.managed_endpoint_states[key]
+        else:
+            endpoint_states = endpoints.inspect(job.client_spec, self.endpoint_held, self.session)
         if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_not_ready')
         if (job.client_spec or {}).get('service_mode')=='managed' and not endpoint_states:codes.append('service_dependency')
         if endpoint_states and not any(e['available'] for e in endpoint_states): codes.append('endpoint_busy')

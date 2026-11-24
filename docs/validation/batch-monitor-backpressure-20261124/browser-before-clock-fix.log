@@ -1,0 +1,34 @@
+
+Running 4 tests using 1 worker
+
+(node:857331) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `mini-eval-node24 --trace-warnings ...` to show where the warning was created)
+  ✓  1 frontend/tests/query-polling.spec.ts:3:1 › hidden service page stops polling and preserves log cursor and expanded state (5.4s)
+  ✓  2 frontend/tests/query-polling.spec.ts:44:1 › batch polling uses summaries without repeatedly loading static options (5.0s)
+  ✘  3 frontend/tests/query-polling.spec.ts:70:1 › batch monitor backs off, honors retry-after, retains data and pauses hidden documents (210ms)
+(node:857766) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `mini-eval-node24 --trace-warnings ...` to show where the warning was created)
+  ✓  4 frontend/tests/query-polling.spec.ts:98:1 › API preserves retry metadata for JSON and non-JSON failures and aborts fetch (152ms)
+
+
+  1) frontend/tests/query-polling.spec.ts:70:1 › batch monitor backs off, honors retry-after, retains data and pauses hidden documents 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 3
+
+      86 |  fail=true;await page.clock.runFor(5000);await expect(page.getByRole('alert')).toContainText('request_budget');expect(reads).toBe(2);
+      87 |  await expect(page.getByRole('heading',{name:'保留上次结果'})).toBeVisible();
+    > 88 |  await page.clock.runFor(9999);expect(reads).toBe(2);await page.clock.runFor(1);await expect.poll(()=>reads).toBe(3);
+         |                                              ^
+      89 |  await page.clock.runFor(19999);expect(reads).toBe(3);retryAfter='40';await page.clock.runFor(1);await expect.poll(()=>reads).toBe(4);
+      90 |  await page.clock.runFor(39999);expect(reads).toBe(4);fail=false;await page.clock.runFor(1);await expect(page.getByRole('alert')).toHaveCount(0);expect(reads).toBe(5);
+      91 |  await page.clock.runFor(5000);await expect.poll(()=>reads).toBe(6);
+        at /home/dgh/Code/clearml_mini/frontend/tests/query-polling.spec.ts:88:46
+
+    Error Context: frontend/test-results/query-polling-batch-monito-2936d-and-pauses-hidden-documents/error-context.md
+
+  1 failed
+    frontend/tests/query-polling.spec.ts:70:1 › batch monitor backs off, honors retry-after, retains data and pauses hidden documents 
+  3 passed (11.3s)

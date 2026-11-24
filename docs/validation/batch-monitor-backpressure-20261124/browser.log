@@ -1,0 +1,20 @@
+
+Running 13 tests using 1 worker
+
+(node:858682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `mini-eval-node24 --trace-warnings ...` to show where the warning was created)
+  ✓   1 frontend/tests/query-polling.spec.ts:3:1 › hidden service page stops polling and preserves log cursor and expanded state (5.2s)
+  ✓   2 frontend/tests/query-polling.spec.ts:44:1 › batch polling uses summaries without repeatedly loading static options (5.0s)
+  ✓   3 frontend/tests/query-polling.spec.ts:70:1 › batch monitor backs off, honors retry-after, retains data and pauses hidden documents (1.0s)
+  ✓   4 frontend/tests/query-polling.spec.ts:99:1 › API preserves retry metadata for JSON and non-JSON failures and aborts fetch (131ms)
+  ✓   5 frontend/tests/query-polling.spec.ts:117:1 › switching batches cancels a slow old monitor and never replaces the new batch (238ms)
+  ✓   6 frontend/tests/services.spec.ts:2:1 › server machine shows deploy, status, logs and revisioned stop (357ms)
+  ✓   7 frontend/tests/services.spec.ts:18:44 › service deployment sends typed business values and selected accelerator legacy-gpu (329ms)
+  ✓   8 frontend/tests/services.spec.ts:18:44 › service deployment sends typed business values and selected accelerator npu (323ms)
+  ✓   9 frontend/tests/services.spec.ts:39:1 › readiness diagnostics are read-only and collapse on a narrow screen (360ms)
+  ✓  10 frontend/tests/services.spec.ts:59:1 › same-name service logs select the execution history without mixing scoped drawers (601ms)
+  ✓  11 frontend/tests/services.spec.ts:89:1 › service management shows actual NPU placement and never guesses missing assignment (312ms)
+  ✓  12 frontend/tests/services.spec.ts:115:1 › accepted service recovery remains successful when the subsequent refresh is busy (301ms)
+  ✓  13 frontend/tests/services.spec.ts:135:1 › accepted task retry is not reported as failed when detail refresh times out (262ms)
+
+  13 passed (14.9s)

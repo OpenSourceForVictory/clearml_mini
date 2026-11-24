@@ -240,3 +240,5 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 
 
 界面读取优化使用兼容的摘要参数，不更改调度、租约或资源预约。API 先于前端发布，无数据库迁移和节点升级要求；具体接口、隐藏页刷新及测试边界见 [批次监控](batch-monitoring.md#列表与详情读取优化)。回退前端仍可使用原完整接口。
+
+批次监控频繁失败时，先区分 request_budget、connection_pool 与 lock_timeout。监控前端已采用5秒正常刷新、失败退避和隐藏标签页暂停；后端仅在请求内复用相同托管服务诊断。需同时更新API和前端，无Worker升级或新增迁移。操作说明见[批次监控](batch-monitoring.md)，持锁查询见[控制操作背压](control-operation-backpressure.md)。这些措施降低读取压力，不代表任意并发容量保证。

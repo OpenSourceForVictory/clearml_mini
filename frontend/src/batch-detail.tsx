@@ -25,7 +25,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
   const [tab,setTab]=useState('tasks');
   const [episodeRows,setEpisodeRows]=useState<Record<string,boolean>>({});
   const [showParameters,setShowParameters]=useState(false),[showServices,setShowServices]=useState(false);
-  const {data:b,error}=usePoll<Monitor>('batches/'+id+'/monitor');
+  const {data:b,error}=usePoll<Monitor>('batches/'+id+'/monitor',true,5000);
   const [status,setStatus]=useState(savedFilters.current[id]?.status||''),[reason,setReason]=useState(savedFilters.current[id]?.reason||''),[query,setQuery]=useState(savedFilters.current[id]?.query||''),[job,setJob]=useState('');
   useEffect(()=>{savedFilters.current[id]={status,reason,query};},[id,status,reason,query,savedFilters]);
   const [selected,setSelected]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[retryError,setRetryError]=useState(''),[result,setResult]=useState<RetryResult|null>(null);
@@ -48,7 +48,7 @@ export function BatchDetail({id,onBack,onJob,savedFilters,onRerun}:{savedFilters
     setResult(r);setSelected({});
   }catch(e){setRetryError(String(e)+'；保留原尝试选择，可安全再次提交。');}finally{setBusy(false);}}
   return <section className="panel batch-detail" aria-label="批次详情"><div className="batch-detail-toolbar"><button onClick={onBack}>返回批次列表</button>{onRerun&&<button onClick={()=>onRerun(id)}>基于此批次创建</button>}<ReportDownloads id={id}/></div>
-    {error&&<p className="error" role="alert">监控更新失败：{error}。将自动重试。</p>}
+    {error&&<p className="error" role="alert">监控更新失败：{error}。已降低刷新频率，将自动重试；已有数据为上次成功读取结果。</p>}
     {!b&&!error&&<p>正在加载批次…</p>}
     {b&&<><h2>{b.title}</h2><p className="hint">最近更新：{b.checked_at?new Date(b.checked_at).toLocaleString():'—'}</p><p>任务已结束 {b.finished}/{b.total} · 最大并行 {b.max_concurrent}</p>
       <div className="batch-detail-metrics" aria-label="批次运行概览"><div><span>批次历时（含排队）</span><strong><DurationValue value={b.timing?.elapsed} anchor={b.timing} failed={!!error}/></strong></div>

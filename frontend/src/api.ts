@@ -32,16 +32,29 @@ const errors: Record<string, string> = {
   "username already exists": "用户名已存在",
   "pool name already exists": "资源池名称已存在",
 };
+export class ApiError extends Error {
+  constructor(message:string, public status:number, public reason?:string, public retryAfterMs=0) {
+    super(message);
+  }
+}
+function retryAfter(value:string|null):number {
+  if (!value) return 0;
+  const seconds=Number(value);
+  const delay=Number.isFinite(seconds)?seconds*1000:Date.parse(value)-Date.now();
+  return Number.isFinite(delay)?Math.max(0,delay):0;
+}
 export async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
   extra: Record<string, string> = {},
+  signal?: AbortSignal,
 ): Promise<T> {
   const token = sessionStorage.getItem("eval-token");
   if (!token && !path.startsWith('auth/')) throw new Error('请重新登录后继续操作');
   const res = await fetch("/api/v1/" + path, {
     method,
+    signal,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: "Bearer " + token } : {}),
@@ -55,12 +68,13 @@ export async function api<T>(
   try {
     value = await res.json();
   } catch {
-    throw new Error(res.ok ? `响应格式错误 (${res.status})` : `请求失败 (${res.status})`);
+    throw new ApiError(res.ok ? `响应格式错误 (${res.status})` : `请求失败 (${res.status})`, res.status, undefined, retryAfter(res.headers.get("Retry-After")));
   }
   if (!res.ok) {
     const detail = value?.detail;
-    throw new Error(
+    throw new ApiError(
       (Array.isArray(detail) ? detail.map((x:{slot_id?:string;reason?:string}) => (x?.slot_id||'')+': '+(x?.reason||JSON.stringify(x))).join('; ') : typeof detail === 'string' ? errors[detail] || detail : '') || `请求失败 (${res.status})`,
+      res.status, typeof value?.reason === "string" ? value.reason : undefined, retryAfter(res.headers.get("Retry-After")),
     );
   }
   return value;
