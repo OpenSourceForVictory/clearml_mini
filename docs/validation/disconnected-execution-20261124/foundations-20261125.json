@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-25",
+  "scope": "foundations and legacy Worker regression only; recovery protocol not enabled",
+  "tests": {
+    "passed": 144,
+    "deselected": 2865,
+    "warnings": 1,
+    "pytest_exit_code": 0,
+    "coverage_command_exit_code": 1,
+    "coverage_tool_tests_passed": 14
+  },
+  "modules": {
+    "worker/disconnection.py": {
+      "covered_lines": 58,
+      "num_statements": 58,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 30,
+      "num_partial_branches": 0,
+      "covered_branches": 30,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "worker/reliable_outbox.py": {
+      "covered_lines": 102,
+      "num_statements": 102,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 36,
+      "num_partial_branches": 0,
+      "covered_branches": 36,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "worker/client.py": {
+      "covered_lines": 585,
+      "num_statements": 896,
+      "percent_covered": 61.392405063291136,
+      "percent_covered_display": "61.39",
+      "missing_lines": 311,
+      "excluded_lines": 0,
+      "percent_statements_covered": 65.29017857142857,
+      "percent_statements_covered_display": "65.29",
+      "num_branches": 368,
+      "num_partial_branches": 57,
+      "covered_branches": 191,
+      "missing_branches": 177,
+      "percent_branches_covered": 51.90217391304348,
+      "percent_branches_covered_display": "51.90"
+    }
+  },
+  "coverage_boundary": "Project coverage gates fail for this selected test run; do not claim full-project coverage. Uninstrumented subprocess coverage not merged.",
+  "failed_invocation": "Initial invocation named nonexistent test_coverage_report.py and exited 4; corrected to test_coverage_reporting.py (14 passed).",
+  "validation_boundary": "Real local SQLite, subprocess abrupt exit and injected transaction failure; no actual host/Docker disconnection E2E, real disk exhaustion or model assessment."
+}

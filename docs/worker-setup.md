@@ -58,6 +58,8 @@ systemctl --user restart mini-eval-worker@gpu0
 
 禁用机器会拒绝其 Worker 认证，Worker 会停止容器；重新启用后会恢复状态对账。token 丢失时管理员可调用 `POST /api/v1/admin/nodes/{id}/rotate-token` 重新生成，并更新所有该机器的 Worker 配置。旧 token 立即失效。
 
+Worker 执行 journal 在写入临时文件后同步文件，再原子重命名并同步父目录；本地持久化失败必须报错，不能视为已可靠记录并继续启动。文件系统须支持目录 fsync；若出现相关 I/O 错误，先修复节点存储，不要删除恢复记录。
+
 Worker 正常退出会尝试确认清理。突然掉电或 SIGKILL 后，服务端在租约和宽限期后隔离槽位；重启原 Worker 可停止遗留容器并解除隔离。任务重试前必须先完成这一步。
 
 ## 异构池和同卡共享

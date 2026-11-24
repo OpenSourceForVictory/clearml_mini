@@ -316,3 +316,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 控制操作背压：重评 retry/retry-failed 与 nginx 同步进入 control；services.control_ack 提交前生成纯值确认，提交后不读取 ORM/完整详情。monitoring 批量重评只查选中任务但保留完整尝试关系。见 docs/control-operation-backpressure.md；test_control_operations、test_control_operations_postgres、services.spec.ts。调度锁仍保留，双进程不隔离 PostgreSQL 锁。
 
 监控背压：frontend/src/poll.ts 支持 intervalMs，批次 monitor 5秒、其他默认2秒；失败指数退避至30秒并尊重更长Retry-After，document隐藏/卸载取消fetch，401停止自动轮询。api.ts ApiError保留status/reason/retryAfterMs。preflight.DiagnosticContext只在请求内按批次+服务集合+workload缓存托管候选并预计算holdings，不能用于scheduler共享快照。说明docs/batch-monitoring.md；回归test_monitor_backpressure.py、query-polling.spec.ts。
+
+断联恢复基础（尚未启用新协议）：`worker/disconnection.py` 提供绑定执行/代次/boot ID 的单调计时与不可逆停止决定；`worker/reliable_outbox.py` 使用 SQLite FULL 事务持久化控制/结果、摘要幂等 ACK 和控制容量预留，日志继续使用原游标。尚未接入 Worker/API 恢复和界面，不能宣称旧租约已被替换。`client.save` 已补原子重命名后的父目录 fsync，失败向上传播。专项见 `backend/tests/test_disconnected_execution_foundations.py`；实施状态见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。

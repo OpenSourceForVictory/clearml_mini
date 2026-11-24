@@ -133,6 +133,13 @@ class Worker:
             f.flush()
             os.fsync(f.fileno())
         temporary.replace(self.path)
+        # fsync(file) alone does not make the renamed journal directory entry
+        # durable. Never authorize a launch after an unconfirmed local commit.
+        directory_fd = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
 
     def name(self, execution):
         return 'mini-eval-' + str(uuid.UUID(execution))

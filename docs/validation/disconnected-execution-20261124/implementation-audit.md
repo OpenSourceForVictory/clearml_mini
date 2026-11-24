@@ -24,3 +24,21 @@
 5. 宿主机与容器真实进程测试：断网超过旧租约仍完成多个回合；断网结束后不重启；API/Worker 重启、ACK 丢失、取消、磁盘满、同节点多实例及旧版本兼容。禁止用仅修改 lease 数值的单元测试代替。
 
 此工作对应 `worker-control-plane-backpressure` 的 4.1–4.10 和关联控制重试条目。不能只勾选 4.6，就宣称断联执行及补报完整；也不能仅延长 LEASE_SECONDS 或关掉 watchdog 作为实现。服务补齐公平性和调度等价优化不能暗中改变这些生命周期规则。
+
+## 2026-11-25 基础实现进展（未启用）
+
+- `worker/disconnection.py`：有限正整数秒/null 不限制；只处理原执行、原代次的有序控制确认，按请求发出时间刷新单调计时。截止后的 ACK 不撤销停止；同 boot ID 恢复不重置计时，机器重启需对账。调用者必须持久化快照后才确认状态，不能把内存对象当作完整监督器。
+- `worker/reliable_outbox.py`：本地 SQLite FULL 事务存储控制、回合与任务结果；相同键同摘要幂等、异摘要拒绝。ACK 后保留摘要墓碑，只有原执行全部确认后才允许显式清理；不按离线时长删除。控制预留独立于普通结果，数量限制包含 ACK 墓碑，字节限制按待交付 UTF-8 正文计，实际磁盘另有 SQLite 页及事务开销。磁盘/事务失败明确抛出，不能返回接收成功。日志不放入此队列。
+- `Worker.save`：文件同步及原子重命名后补父目录同步，I/O 失败传播；这是当前 journal 的持久化修正，不改变租约停止、取消或资源释放语义。
+- 基础测试包括真实 SQLite 并发、重复 ACK、容量预留、冲突、子进程骤停后的提交保留与事务回滚，以及 Worker journal 的目录同步失败。数据库失败使用事务故障注入，不宣称真实磁盘耗尽或整机掉电验收；独立子进程覆盖率未合并。
+
+尚缺策略配置/能力协商、运行循环本地监督接线、服务端恢复鉴权与迁移、补报接口、取消删除并发及界面状态。新模块暂不被现有执行协议调用、不发布能力标记。任务 4.2、4.6–4.10 保持未完成；不得通过增大租约或放开 `live` 校验代替后续实施。
+
+专项命令：
+
+```bash
+PYTEST_ADDOPTS='--import-mode=importlib -k "disconnected_execution_foundations or worker_execution_recovery or worker_startup_lease or worker_service_execution or worker_recovery"' .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/disconnected-execution-foundations
+.venv/bin/python -m pytest -q backend/tests/test_coverage_reporting.py --import-mode=importlib
+```
+
+本轮 144 通过、2865 未选择、1 个依赖弃用警告；统计工具另有 14 通过。两个新增模块行/分支均 100%，`worker/client.py` 专项行 65.29%、分支 51.90%，不是全模块达标结论。统一脚本保留完整分母，全项目门槛未通过，退出 1；没有降低门槛或排除业务文件。原始报告位于上述 coverage-artifacts 输出，精简证据见 [foundations-20261125.json](foundations-20261125.json)。首次统计工具测试路径拼错退出 4，改为实际文件名后通过，保留在证据中。

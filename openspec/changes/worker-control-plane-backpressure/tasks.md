@@ -47,3 +47,7 @@
 
 - 全部实施验收后再归档；容量或覆盖率未达标时保持待办并明确发布边界。
 - 发布前核对目标节点版本与能力，灰度启用，不热替换在途程序，不清除恢复 journal 或待补传数据。
+
+### 2026-11-25 实施记录
+
+断联单调计时及可靠 outbox 基础模块已实现并完成专项测试；Worker journal 增加目录 fsync。两个新模块尚未接入协商/恢复链路，因此 4.2、4.6、4.7 不勾选完成。详见 `docs/validation/disconnected-execution-20261124/implementation-audit.md` 及 foundations-20261125.json；专项 144 通过不能替代端到端、全量或覆盖率门槛验收。
