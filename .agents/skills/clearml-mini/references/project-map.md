@@ -306,3 +306,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 服务实例补齐公平性：`orchestration_scheduler.fill_desired_instances` 在客户端准入后使用独立 `SchedulerState(service_rotation)`，每用户每轮最多一个，用户内优先级/创建时间/ID 排序；资源 Planner 每次重新检查，游标与预约同事务。测试 `test_service_refill_fairness.py`，操作见 `docs/batch-controls.md`；无需迁移或 Worker 更新。
 
 隔离调度基准：`scripts/scheduler_benchmark.py` 自建带唯一标签的 PostgreSQL 容器，不接受平台数据库 URL；使用说明及测量边界见 `docs/scheduler-benchmark.md`。断联继续执行尚未启用，跨 Worker/API/删除/服务关联的实施核对见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。
+
+已有平台切换双 API 的可执行步骤见 `docs/split-api-startup.md`：保留项目名/环境/覆盖文件，基础 Compose 与 scripts/control.py 不会自动启用双进程；迁移前停两组 API，已有账号不重跑 bootstrap。

@@ -39,6 +39,8 @@
 
 2026-11-23 本机先备份并在隔离 PostgreSQL 完成恢复及 `ab852c3 → ad074e5` 迁移演练，随后将生产数据库迁移至 `ad074e5`，逐台受控升级六台机器的 13 个 Worker 卡位至 0.21.16，再启用双 API。原回环和私网入口均返回健康 200；真实本机 GPU 小任务经网关成功、退出码 0、清理已确认。该任务使用 SDK 演示业务，不是模型评测或 100 Worker 生产容量验收。发布记录见[双进程验证](validation/split-control-api-process-20261123/README.md)。
 
+逐条操作步骤见 [已有平台双 API 启动与更新](split-api-startup.md)，包含配置核对、备份、迁移及验证。
+
 `deploy/split-api-compose.yml` 在基础 Compose 之上增加独立控制 API 和 Nginx 网关。两个 API 容器各自在内部监听 8000，只有网关绑定原 `API_BIND_HOST:API_BIND_PORT`；浏览器和 Worker 的平台地址不变。控制进程只接收执行控制 POST（续租、服务状态/探测、完成/清理、停止许可、取消/服务控制），普通进程处理 Agent 监控、领取、结果、日志、产物和 Web。两个进程的 FastAPI 同步线程池独立，普通进程运行调度器，控制进程设置 `SCHEDULER_ENABLED=0`。误路由在鉴权和数据库访问前返回 404；网关不会在控制进程故障时回退到普通进程。
 
 启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程启用 `DB_BACKPRESSURE_ENABLED=1`、`DB_ADMISSION_ENABLED=0` 和 `API_DB_PROCESS_COUNT=2`。`DB_ADMISSION_ENABLED=0` 取消新增的分类入口并发闸门；数据库连接池仍有界，连接等待超时仍会返回可重试 503。双进程使用同一组类别额度，默认普通/控制/观察/结果/调度为 23/40/9/7/1；普通 API 实际创建 23+9+7+1=40 个连接上限，控制 API 创建 40 个，合计最多 80 个，分别对齐每进程默认 40 个同步线程额度。普通、观察、结果和控制主要预算可分别用 `DB_SPLIT_ORDINARY_POOL_SIZE`、`DB_SPLIT_OBSERVATION_POOL_SIZE`、`DB_SPLIT_RESULT_POOL_SIZE`、`DB_SPLIT_CONTROL_POOL_SIZE` 覆盖；改动后用 Compose 展开结果核对两进程参数一致及总预算。当前 PostgreSQL `max_connections=100`、保留管理员连接 3 个；80 只是 API 理论上限，还必须计入其他连接，启用前检查实测余量，不要仅因配置通过就上线。池大小是同时持有的数据库连接上限，并非 Worker 数或同类 HTTP 入口并发上限；同步线程额度另由 AnyIO 管理，仍共享主机 CPU。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
