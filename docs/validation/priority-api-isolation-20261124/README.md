@@ -1,6 +1,6 @@
 # API 流量隔离现状审计（设计实施基线）
 
-此记录基于本仓库现有代码生成，不代表四角色方案已上线。使用 `JWT_SECRET=route-inventory-only` 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、直接依赖、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
+此记录基于本仓库现有代码生成，不代表四角色方案已上线。使用临时测试 JWT secret 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、依赖、鉴权方式、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。鉴权依赖计数：管理员 Bearer 68、用户 Bearer 63、节点 Bearer 29、媒体短期 Cookie 4、公开 3；媒体 Cookie 在处理函数内校验，不能仅看 FastAPI 依赖。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
 
 拟议类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 现在从此字段读取，所以现有部署的入口、池和网关路由不变。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，不能借用高优先级类别。四角色类别尚未接入运行中的中间件或网关。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
 
@@ -46,7 +46,7 @@ FastAPI 路由清单不能代替客户端调用清单。后台调度在 `main.li
 | Node Agent | POST `/agent/register`、`heartbeat`、`stop-permit` | 独立 HTTP 调用超时 5 秒；heartbeat 与 stop-permit 使用不同本地并发 lane；401/409 表示会话失效 | heartbeat 混合采样、设备、配置 ACK 与事件，不能整包丢弃；stop-permit 是控制 |
 | 节点 Updater | POST `/worker/upgrades/poll`、`report`；GET `/worker/upgrades/{id}/archive`、`state` | 每次请求超时 10 秒；下载归档最多 2 MiB，升级 journal 支持恢复与状态核对 | poll/归档与执行续租分预算；report 是升级确认 |
 
-用户浏览器请求仍由注册路由清单覆盖。页面自动刷新和用户主动查看若访问同一个 GET，当前 API 无法识别意图；不能仅凭请求头赋予不同优先级。请求体上限并非全局统一：例如日志 v2 的 `content` 上限 16 KiB、Updater 归档响应上限 2 MiB、Agent 响应上限 128 KiB；其他端点需继续逐个从 Pydantic 模型及处理器核对，不能把表中数字当全 API 限制。
+用户浏览器请求仍由注册路由清单覆盖。页面自动刷新和用户主动查看若访问同一个 GET，当前 API 无法识别意图；不能仅凭请求头赋予不同优先级。清单中的 `http_body_limit=none_at_gateway` 表示网关未施加统一字节上限，**不表示**处理器无限接收：例如日志 v2 的 `content` 上限 16 KiB、旧日志单块上限 8192 字符、Updater 归档响应上限 2 MiB、Agent 响应上限 128 KiB；其他端点仍需逐个从 Pydantic 模型及处理器核对。
 
 ## 验证边界
 
