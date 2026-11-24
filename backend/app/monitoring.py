@@ -110,8 +110,10 @@ def install(app, db, current):
     def retry(batch_id: str, body: RetrySelection, user=Depends(current), s=Depends(db)):
         lock(s)
         batch = owned(s, batch_id, user)
-        jobs = batch_jobs(s, batch)
         wanted = {item.job_id: item.expected_run_id for item in body.items}
+        # Keep complete attempt histories for mutations, but only for selected jobs.
+        jobs = s.scalars(select(Job).options(selectinload(Job.runs)).where(
+            Job.batch_id == batch.id, Job.id.in_(wanted)).order_by(Job.created_at, Job.id)).all()
         if set(wanted) - {j.id for j in jobs}:
             raise HTTPException(404, 'batch task not found')
         s.execute(select(User.id).where(User.id == batch.owner_id).with_for_update())

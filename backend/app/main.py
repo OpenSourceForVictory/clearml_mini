@@ -351,8 +351,9 @@ def retry(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
     visible(job, user)
     from .retries import retry_job
     run = retry_job(s, job)
+    response = {'id': job.id, 'attempt': run.attempt, 'status': job.status}
     s.commit()
-    return {'id': job.id, 'attempt': run.attempt, 'status': job.status}
+    return response
 
 
 @app.get('/api/v1/admin/jobs')

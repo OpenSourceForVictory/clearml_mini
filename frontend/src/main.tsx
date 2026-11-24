@@ -487,8 +487,12 @@ function JobDetail({ id, close }: { id: string; close: () => void }) {
     setError("");
     try {
       await api("jobs/" + id + "/" + kind, "POST");
-      setJob(await api<Job>("jobs/" + id));
       if (kind === "retry") setAttempt("");
+      try {
+        setJob(await api<Job>("jobs/" + id));
+      } catch (e) {
+        setError("操作已接受，状态刷新失败，请稍后核对：" + String(e));
+      }
     } catch (e) {
       setError(String(e));
     } finally {

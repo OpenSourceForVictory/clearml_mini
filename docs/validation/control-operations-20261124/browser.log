@@ -1,0 +1,15 @@
+
+Running 8 tests using 1 worker
+
+(node:835429) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `mini-eval-node24 --trace-warnings ...` to show where the warning was created)
+  ✓  1 frontend/tests/services.spec.ts:2:1 › server machine shows deploy, status, logs and revisioned stop (390ms)
+  ✓  2 frontend/tests/services.spec.ts:18:44 › service deployment sends typed business values and selected accelerator legacy-gpu (331ms)
+  ✓  3 frontend/tests/services.spec.ts:18:44 › service deployment sends typed business values and selected accelerator npu (345ms)
+  ✓  4 frontend/tests/services.spec.ts:39:1 › readiness diagnostics are read-only and collapse on a narrow screen (367ms)
+  ✓  5 frontend/tests/services.spec.ts:59:1 › same-name service logs select the execution history without mixing scoped drawers (623ms)
+  ✓  6 frontend/tests/services.spec.ts:89:1 › service management shows actual NPU placement and never guesses missing assignment (271ms)
+  ✓  7 frontend/tests/services.spec.ts:115:1 › accepted service recovery remains successful when the subsequent refresh is busy (348ms)
+  ✓  8 frontend/tests/services.spec.ts:135:1 › accepted task retry is not reported as failed when detail refresh times out (262ms)
+
+  8 passed (3.3s)

@@ -308,3 +308,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 隔离调度基准：`scripts/scheduler_benchmark.py` 自建带唯一标签的 PostgreSQL 容器，不接受平台数据库 URL；使用说明及测量边界见 `docs/scheduler-benchmark.md`。断联继续执行尚未启用，跨 Worker/API/删除/服务关联的实施核对见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。
 
 已有平台切换双 API 的可执行步骤见 `docs/split-api-startup.md`：保留项目名/环境/覆盖文件，基础 Compose 与 scripts/control.py 不会自动启用双进程；迁移前停两组 API，已有账号不重跑 bootstrap。
+
+控制操作背压：重评 retry/retry-failed 与 nginx 同步进入 control；services.control_ack 提交前生成纯值确认，提交后不读取 ORM/完整详情。monitoring 批量重评只查选中任务但保留完整尝试关系。见 docs/control-operation-backpressure.md；test_control_operations、test_control_operations_postgres、services.spec.ts。调度锁仍保留，双进程不隔离 PostgreSQL 锁。

@@ -106,8 +106,9 @@ def request_category(path, method='POST'):
     if path in ('/api/v1/worker/heartbeat', '/api/v1/agent/stop-permit') or re.fullmatch(
             r'/api/v1/worker/executions/[^/]+/(?:service-health|service-probe-session|complete|cleanup)', path):
         return 'control'
-    if re.fullmatch(r'/api/v1/jobs/[^/]+/cancel', path) or re.fullmatch(
+    if re.fullmatch(r'/api/v1/jobs/[^/]+/(?:cancel|retry)', path) or re.fullmatch(
             r'/api/v1/(?:batches|admin/services)/[^/]+/control', path) or re.fullmatch(
+            r'/api/v1/batches/[^/]+/retry-failed', path) or re.fullmatch(
             r'/api/v1/orchestrations/[^/]+/services/[^/]+/control', path):
         return 'control'
     if re.fullmatch(r'/api/v1/worker/executions/[^/]+/(?:episodes|task-result)', path):

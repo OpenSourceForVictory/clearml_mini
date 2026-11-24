@@ -202,7 +202,9 @@ def test_failed_cleaned_service_can_be_stopped_without_recancelling_job(env):
     assert c.post('/api/v1/worker/executions/'+task['execution_id']+'/complete',headers=token,json={'status':'FAILED','error':'startup failed'}).status_code==200
     r=c.post('/api/v1/admin/services/'+instance['id']+'/control',headers=a['admin'],json={'action':'stop','expected_revision':0})
     assert r.status_code==200,r.text
-    assert r.json()['state']=='STOPPED' and not r.json()['desired_running']
+    assert r.json()['accepted'] and r.json()['action']=='stop'
+    item=next(x for x in c.get('/api/v1/admin/services',headers=a['admin']).json() if x['id']==instance['id'])
+    assert item['state']=='STOPPED' and not item['desired_running']
 
 
 def test_independent_health_port_reuses_time_wait_but_rejects_listener():

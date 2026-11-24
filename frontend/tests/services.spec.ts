@@ -111,3 +111,45 @@ test('service management shows actual NPU placement and never guesses missing as
  await page.getByRole('button',{name:'部署服务实例',exact:true}).click();
  await expect(page.getByLabel('目标机器 / 加速卡').locator('option[value="slot"]')).toHaveText('npu-node / NPU 3 · Ascend');
 });
+
+test('accepted service recovery remains successful when the subsequent refresh is busy',async({page})=>{
+ let writes=0;await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={username:'admin',role:'admin'};
+  if(p==='admin/nodes')data=[{id:'n',node_name:'server',roles:['server'],enabled:true,status:'online'}];
+  if(p==='admin/services'){
+   if(writes)return route.fulfill({status:503,json:{detail:'database busy; retry shortly',reason:'request_budget'}});
+   data=[{id:'s',name:'stopped',worker_id:'n',state:'STOPPED',online:true,revision:4,desired_running:false,cleanup_pending:false,endpoint:'http://node:19000',template:{name:'demo',version:'1'}}];
+  }
+  if(p==='admin/services/s/control'){writes++;data={accepted:true,id:'s',revision:5,action:'start',current_job_id:'new-job'}}
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();await page.getByRole('tab',{name:'服务端机器'}).click();
+ await page.getByRole('button',{name:'启动新执行'}).click();
+ await expect(page.getByText('恢复请求已接受，等待调度。')).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('操作已接受，状态刷新失败');
+ expect(writes).toBe(1);
+});
+
+test('accepted task retry is not reported as failed when detail refresh times out',async({page})=>{
+ let writes=0;
+ const job={id:'j',title:'重评确认',status:'FAILED',owner_name:'user',model_ref:'m',episodes:1,benchmark:'mock',created_at:'2026-11-20T00:00:00Z',attempts:[{id:'r',attempt:1,status:'FAILED',cleanup_confirmed:true}]};
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(p==='auth/me')data={id:'user',username:'user',role:'user'};
+  if(p==='jobs')data=[job];
+  if(p==='jobs/j'){
+   if(writes)return route.fulfill({status:503,json:{detail:'database busy; retry shortly',reason:'request_budget'}});
+   data=job;
+  }
+  if(p==='jobs/j/retry'){writes++;data={id:'j',attempt:2,status:'PENDING'}}
+  if(p.endsWith('/logs'))data={chunks:[],complete:true};
+  if(p.endsWith('/execution-location'))data={run_id:'r',directories:[]};
+  await route.fulfill({json:data});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'查看详情',exact:true}).click();
+ await page.getByRole('button',{name:'重新评测',exact:true}).click();
+ await expect(page.getByText(/操作已接受，状态刷新失败/)).toBeVisible();expect(writes).toBe(1);
+});

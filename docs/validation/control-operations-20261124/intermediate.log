@@ -1,0 +1,31 @@
+.............................................................F.......... [ 85%]
+............                                                             [100%]
+=================================== FAILURES ===================================
+_____ test_failed_cleaned_service_can_be_stopped_without_recancelling_job ______
+
+env = (<module 'backend.app.main' from '/home/dgh/Code/clearml_mini/backend/app/main.py'>, <starlette.testclient.TestClient ...b2IiLCJzZXNzaW9uX3N0YXJ0ZWRfYXQiOjE3OTU1MzAwMjksImV4cCI6MTc5NTUzMTgyOX0.Z_q-HuzBaXO46wjRBVtpwoYdHuY5DuPOfE0f_yn6FR8'}})
+
+    def test_failed_cleaned_service_can_be_stopped_without_recancelling_job(env):
+        _,c,a=env;token,slot,body=setup(env)
+        instance=c.post('/api/v1/admin/services',headers=a['admin'],json=body).json()
+        task=claim(env,token,slot)
+        assert c.post('/api/v1/worker/executions/'+task['execution_id']+'/complete',headers=token,json={'status':'FAILED','error':'startup failed'}).status_code==200
+        r=c.post('/api/v1/admin/services/'+instance['id']+'/control',headers=a['admin'],json={'action':'stop','expected_revision':0})
+        assert r.status_code==200,r.text
+>       assert r.json()['state']=='STOPPED' and not r.json()['desired_running']
+E       KeyError: 'state'
+
+backend/tests/test_services.py:205: KeyError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_control_operations.py::test_service_control_ack_survives_unavailable_details_and_replay
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'exclude' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'exclude' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_services.py::test_failed_cleaned_service_can_be_stopped_without_recancelling_job
+1 failed, 83 passed, 2 warnings in 149.65s (0:02:29)

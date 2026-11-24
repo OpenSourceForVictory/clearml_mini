@@ -285,4 +285,6 @@ def install(app,db,current):
                 job=s.get(Job,item.current_job_id)
                 job.requested_cpu=definition['resources'].get('cpus');job.requested_ram_gb=definition['resources'].get('ram_gb');job.required_gpu_model=definition['resources'].get('required_gpu_model')
             item.auto_stopped=True
-        item.revision+=1;s.commit();return view(s,batch)
+        item.revision+=1
+        response=services.control_ack(item,body.action)
+        s.commit();return response

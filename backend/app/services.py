@@ -159,6 +159,12 @@ def create_instance(s,body,user):
     s.add(item);s.flush();enqueue(s,item,user);audit(s,user,'service.deploy',item.id);return item
 
 
+def control_ack(instance, action):
+    """Snapshot before commit; the acknowledgement must never load a detail view."""
+    return {'id': instance.id, 'revision': instance.revision,
+            'current_job_id': instance.current_job_id, 'action': action, 'accepted': True}
+
+
 def install(app,db,admin,worker_auth):
     @app.get('/api/v1/admin/services')
     def listing(user=Depends(admin),s=Depends(db)):
@@ -184,7 +190,9 @@ def install(app,db,admin,worker_auth):
             template=s.get(ServerTemplate,item.template_snapshot['id'])
             if not template or not template.enabled or template.archived:raise HTTPException(409,'service template is disabled or archived')
             enqueue(s,item,user)
-        item.revision+=1;audit(s,user,'service.'+body.action,item.id);s.commit();return view(s,item)
+        item.revision+=1;audit(s,user,'service.'+body.action,item.id)
+        response=control_ack(item,body.action)
+        s.commit();return response
 
     @app.get('/api/v1/admin/services/{identity}/logs')
     def logs(identity:str,job_id:str|None=None,user=Depends(admin),s=Depends(db)):

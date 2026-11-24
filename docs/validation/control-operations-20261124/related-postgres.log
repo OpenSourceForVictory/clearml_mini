@@ -1,0 +1,134 @@
+.....FF................................................................. [ 41%]
+........................................................................ [ 82%]
+...............................                                          [100%]
+=================================== FAILURES ===================================
+_____________ test_orchestrated_control_ack_without_detail_queries _____________
+backend/tests/test_control_operations.py:83: in test_orchestrated_control_ack_without_detail_queries
+    identity=item.id
+E   AttributeError: 'NoneType' object has no attribute 'id'
+_____________ test_service_commit_failure_does_not_ack_or_persist ______________
+backend/tests/test_control_operations.py:104: in test_service_commit_failure_does_not_ack_or_persist
+    r=c.post('/api/v1/admin/services/'+item['id']+'/control',headers=a['admin'],
+.venv/lib/python3.13/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1144: in post
+    return self.request(
+.venv/lib/python3.13/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+.venv/lib/python3.13/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/opt/anaconda3/lib/python3.13/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/opt/anaconda3/lib/python3.13/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1054: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:61: in wrapped_app
+    response = await run_in_threadpool(handler, conn, exc)  # type: ignore
+.venv/lib/python3.13/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+.venv/lib/python3.13/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+backend/app/main.py:75: in database_error
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:76: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:61: in wrapped_app
+    response = await run_in_threadpool(handler, conn, exc)  # type: ignore
+.venv/lib/python3.13/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+.venv/lib/python3.13/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+backend/app/main.py:75: in database_error
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/starlette/routing.py:73: in app
+    response = await f(request)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:301: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:214: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+.venv/lib/python3.13/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+.venv/lib/python3.13/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+backend/app/services.py:195: in control
+    s.commit();return response
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1276: in _prepare_impl
+    self.session.dispatch.before_commit(self.session)
+.venv/lib/python3.13/site-packages/sqlalchemy/event/attr.py:378: in __call__
+    fn(*args, **kw)
+backend/tests/test_control_operations.py:101: in fail_commit
+    def fail_commit(session):raise db_budget.DatabaseBusy('commit unavailable')
+E   backend.app.db_budget.DatabaseBusy: commit unavailable
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_control_operations.py::test_service_control_ack_survives_unavailable_details_and_replay
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'exclude' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'exclude' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_control_operations.py::test_orchestrated_control_ack_without_detail_queries
+FAILED backend/tests/test_control_operations.py::test_service_commit_failure_does_not_ack_or_persist
+2 failed, 173 passed, 2 warnings in 231.25s (0:03:51)

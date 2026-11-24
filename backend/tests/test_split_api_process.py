@@ -27,6 +27,7 @@ def gateway_control_path(path):
     '/api/v1/worker/executions/abc/complete',
     '/api/v1/worker/executions/abc/cleanup',
     '/api/v1/jobs/abc/cancel', '/api/v1/batches/abc/control',
+    '/api/v1/jobs/abc/retry', '/api/v1/batches/abc/retry-failed',
     '/api/v1/admin/services/abc/control',
     '/api/v1/orchestrations/abc/services/def/control',
     '/api/v1/agent/heartbeat', '/api/v1/worker/executions/abc/logs',
