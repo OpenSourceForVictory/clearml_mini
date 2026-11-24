@@ -1,0 +1,188 @@
+import json
+import os
+import time
+from types import SimpleNamespace
+
+import pytest
+
+from worker.recovery_runtime import RecoveryRuntime
+from worker.recovery_supervisor import RecoverySupervisor
+from worker.host_backend import HostBackend
+from worker.client import Worker, docker
+from backend.tests.test_host_backend import worker as host_worker
+
+
+@pytest.mark.parametrize('host',[True,False])
+def test_runtime_binding_and_stop_uses_immutable_id(tmp_path,monkeypatch,host):
+    w=host_worker(tmp_path,['python3','business.py']);w.host_mode=lambda:host
+    data={'State':{'Running':True,'ExitCode':0},'Id':'a'*64,'InvocationID':'b'*32}
+    calls=[]
+    w.inspect=lambda e:data
+    monkeypatch.setattr(HostBackend,'inspect',lambda *a,**kw:data)
+    monkeypatch.setattr(HostBackend,'stop',lambda *a:calls.append('host-stop'))
+    monkeypatch.setattr('worker.client.docker',lambda *a,**kw:calls.append(a))
+    runtime=RecoveryRuntime(w,w.state['task']['execution_id'])
+    bound=runtime.inspect()['identity']
+    assert bound['kind']==('host' if host else 'docker')
+    with pytest.raises(RuntimeError,match='different'):runtime.stop({**bound,'runtime_id':'c'*len(bound['runtime_id'])})
+    assert calls==[]
+    runtime.stop(bound)
+    assert calls==(['host-stop'] if host else [('stop','--time','10','a'*64)])
+    data['State']['Running']=False
+    assert runtime.inspect()['state']=='exited'
+    runtime.stop(bound)
+    assert len(calls)==1
+    data['State']['Recovered']=True
+    assert runtime.inspect()['state']=='missing'
+    runtime.stop(bound)
+    assert len(calls)==1
+    with pytest.raises(ValueError):RecoveryRuntime(w,'other')
+
+
+@pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker recovery supervision opt-in')
+@pytest.mark.parametrize('mode',['host','docker'])
+@pytest.mark.parametrize('tolerance',[None,60])
+def test_real_process_continues_across_failed_control_then_stops_or_finishes(tmp_path,mode,tolerance):
+    """Real runtime + local supervisor, injected HTTP outage/monotonic time.
+
+    This does not advertise recovery or start a platform evaluation batch.
+    """
+    script='import time\nprint("started",flush=True)\ntime.sleep(2)\nprint("completed",flush=True)\n'
+    (tmp_path/'business.py').write_text(script)
+    w=host_worker(tmp_path,['python3','business.py'],timeout=0)
+    w.host_mode=lambda:mode=='host'
+    task=w.state['task'];execution=task['execution_id'];host=HostBackend(w)
+    name='mini-eval-'+execution
+    supervisor=None
+    if mode=='host':
+        host.create(task)
+        launch=json.loads((host.root/'launch.json').read_text())
+        launch['command']=['/usr/bin/python3',str(tmp_path/'business.py')]
+        (host.root/'launch.json').write_text(json.dumps(launch))
+        host.start(task)
+    else:
+        docker('run','--detach','--name',name,'--label','mini-eval.execution='+execution,
+               '--entrypoint','python',os.environ.get('RECOVERY_RUNTIME_IMAGE','mini-eval-api:recovery-foundations-20261125'),'-c',script)
+        w.name=lambda e:'mini-eval-'+e
+        w.inspect=lambda e:Worker.inspect(w,e)
+    try:
+        runtime=RecoveryRuntime(w,execution)
+        end=time.monotonic()+5
+        while time.monotonic()<end:
+            observed=runtime.inspect()
+            if observed['state']=='running':break
+            time.sleep(.05)
+        assert observed['state']=='running'
+        bound=observed['identity']
+        supervisor=RecoverySupervisor(tmp_path/'supervision',execution_id=execution,generation='test',
+            process_identity=bound,tolerance=tolerance,started_at=0,requested_at=0)
+        def disconnected(*args):raise ConnectionError('injected control outage')
+        with pytest.raises(ConnectionError):supervisor.exchange(SimpleNamespace(post=disconnected),clock=lambda:1)
+        # Past the old 30-second heartbeat lease, but inside 60-second tolerance.
+        assert supervisor.tick(runtime.inspect,runtime.stop,at=35)=='track'
+        assert runtime.inspect()['identity']==bound and runtime.inspect()['state']=='running'
+        supervisor.close()
+        supervisor=RecoverySupervisor(tmp_path/'supervision',execution_id=execution,generation='test',
+            process_identity=bound,tolerance=tolerance,started_at=35,requested_at=35)
+        assert supervisor.snapshot()['started_at']==0
+        if tolerance:
+            assert supervisor.tick(runtime.inspect,runtime.stop,at=60)=='stop'
+        end=time.monotonic()+8
+        while time.monotonic()<end:
+            observed=runtime.inspect()
+            if observed['state']!='running':break
+            time.sleep(.05)
+        assert observed['state']!='running'
+        assert supervisor.tick(runtime.inspect,runtime.stop,at=61)=='retain'
+        if tolerance is None:
+            assert observed['state']=='exited' and observed['exit_code']==0
+            assert supervisor.snapshot()['exit_code']==0
+        else:assert supervisor.snapshot()['stop_reason']=='disconnection_timeout'
+    finally:
+        if supervisor:supervisor.close()
+        if mode=='host':host.remove(execution)
+        else:docker('rm','--force',name,check=False)
+
+
+@pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker API reconciliation opt-in')
+@pytest.mark.parametrize('mode',['host','docker'])
+def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,monkeypatch,mode):
+    from datetime import timedelta
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+    from backend.app import recovery_control, recovery_records, scheduling
+    from backend.app.core import Run, Job, now
+    from backend.tests.test_execution_logs_postgres import seed
+
+    w=host_worker(tmp_path,['python3','business.py'],timeout=0)
+    w.host_mode=lambda:mode=='host'
+    task=w.state['task'];execution=task['execution_id'];name='mini-eval-'+execution
+    script='import time;print("started",flush=True);time.sleep(3);print("completed",flush=True)'
+    (tmp_path/'business.py').write_text(script)
+    host=HostBackend(w)
+    engine=create_engine('sqlite://',connect_args={'check_same_thread':False},poolclass=StaticPool)
+    factory=seed(engine);at=now()
+    with factory() as db:
+        run=db.get(Run,'r');run.execution_id=execution;run.status='STARTING';run.enqueued_at=at
+        db.get(Job,'j').client_spec={'timeout_seconds':0}
+        generation=recovery_records.grant(db,run,'w',60).generation;db.commit()
+    def database():
+        with factory() as db:yield db
+    app=FastAPI();recovery_control.install(app,database,lambda:SimpleNamespace(id='w'))
+    supervisor=None
+    if mode=='host':
+        host.create(task)
+        launch=json.loads((host.root/'launch.json').read_text());launch['command']=['/usr/bin/python3',str(tmp_path/'business.py')]
+        (host.root/'launch.json').write_text(json.dumps(launch));host.start(task)
+    else:
+        docker('run','--detach','--name',name,'--label','mini-eval.execution='+execution,
+               '--entrypoint','python',os.environ.get('RECOVERY_RUNTIME_IMAGE','mini-eval-api:recovery-foundations-20261125'),'-c',script)
+        w.name=lambda e:'mini-eval-'+e;w.inspect=lambda e:Worker.inspect(w,e)
+    try:
+        runtime=RecoveryRuntime(w,execution);bound=runtime.inspect()['identity']
+        supervisor=RecoverySupervisor(tmp_path/'supervision',execution_id=execution,generation=generation,
+            process_identity=bound,tolerance=60,started_at=0,requested_at=0)
+        with TestClient(app) as client:
+            def post(path,body):
+                response=client.post('/api/v1/'+path,json=body)
+                assert response.status_code==200,response.text
+                return response.json()
+            monkeypatch.setattr(recovery_control,'now',lambda:at)
+            supervisor.exchange(SimpleNamespace(post=post),clock=lambda:0)
+            # Both API and node see the same expired legacy lease. Allocation
+            # remains protected, while the node keeps the original process.
+            current=at+timedelta(seconds=35)
+            monkeypatch.setattr(recovery_control,'now',lambda:current)
+            with factory() as db:
+                assert scheduling.utc(db.get(Run,'r').lease_expires_at)<current
+                scheduling.reconcile(db,current);db.commit()
+                assert db.get(Run,'r').status=='RUNNING'
+            assert supervisor.tick(runtime.inspect,runtime.stop,at=35)=='track'
+            supervisor.exchange(SimpleNamespace(post=post),clock=lambda:35)
+            assert runtime.inspect()['identity']==bound
+            assert supervisor.snapshot()['control']['clock']['confirmed_at']==35
+            with factory() as db:
+                run=db.get(Run,'r')
+                assert run.execution_id==execution and run.status=='RUNNING'
+                assert not run.cleanup_confirmed
+                assert scheduling.utc(run.started_at)==at
+            end=time.monotonic()+8
+            while runtime.inspect()['state']=='running' and time.monotonic()<end:time.sleep(.05)
+            assert supervisor.tick(runtime.inspect,runtime.stop,at=40)=='retain'
+            supervisor.exchange(SimpleNamespace(post=post),clock=lambda:40)
+            assert supervisor.snapshot()['exit_code']==0
+            assert supervisor.snapshot()['control']['directive']=='retain'
+    finally:
+        if supervisor:supervisor.close()
+        if mode=='host':host.remove(execution)
+        else:docker('rm','--force',name,check=False)
+        engine.dispose()
+
+
+def test_created_container_is_not_a_successful_exit(tmp_path):
+    w=host_worker(tmp_path,['python3','business.py']);w.host_mode=lambda:False
+    w.inspect=lambda e:{'Id':'a'*64,'State':{'Status':'created','Running':False,'ExitCode':0}}
+    runtime=RecoveryRuntime(w,w.state['task']['execution_id'])
+    with pytest.raises(RuntimeError,match='has not started'):runtime.inspect()

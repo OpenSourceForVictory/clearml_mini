@@ -90,3 +90,19 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 初轮失败证据：10 失败、221 通过，有限配置缺少原始 enqueued_at 时 TypeError；修复为待核对且不重置计时，补充缺失起点测试。单独早期运行 9 失败/37 通过，修复后 67 通过。最终证据见 control-20261125.json；原始覆盖率保留在 coverage-artifacts/recovery-control 与 recovery-control-final，不合并无关历史覆盖率。
 
 尚未完成领取协商、真实 Worker 主循环接线、终态应用及资源收尾，未部署该控制阶段，不宣称完成核心目标的端到端验收。迁移 af296a7 仅专用 PostgreSQL 升降级验证；生产仍 ae185f6。
+
+
+### 本地监督与运行实体接线验证（2026-11-25，开发阶段）
+
+新增 recovery_supervisor.py：独立本地 tick 与 HTTP exchange，先持久化请求再发送，丢 ACK 原样重放，文件锁防双监督者，重启不重置计时。新增 recovery_runtime.py：读取真实 systemd InvocationID / Docker 完整 ID；不同运行身份不停止，原进程消失不伪造成功。HostBackend 默认 inspect 行为保持兼容，只在 recovery=True 时读取 InvocationID。
+
+第一轮专项 195 通过、无跳过、2981 未选择（32.57 秒），新监督与 runtime 模块行/分支均 100%；host_backend 整体尚为 78.93%/59.09%，因此扩大相关回归。后续独立真实运行/API 联测 8 通过（15.00 秒）：其中 6 项使用真实 systemd 用户服务或 Docker 短程序，2 项为 runtime 身份隔离单测。断联时刻由单调测试时钟注入，HTTP 故障注入不改变生产网络；API 联测使用隔离 TestClient/SQLite。不是实际平台批次、NPU/GPU 模型评测或长时间断网实测。
+
+中间扩大运行 330 通过、5 跳过、2843 未选择（70.73 秒）；其中覆盖率生成期间新增了关闭监督者保护代码，源码行号与该轮运行不再一致，因此不将这一轮新模块覆盖率作为验收证据，不合并到最终报告。原始记录保留在 coverage-artifacts/recovery-supervision-expanded。最终覆盖率必须由源码稳定后的独立完整专项重新生成。
+
+尚未广告恢复能力、尚未接入生产 Worker.execute 领取/启动/结果/清理路径，不应按此阶段升级生产并认为断联继续执行已上线。下一步完成领取响应丢失恢复、可靠结果应用及清理确认后，再统一接线、发布和平台可见批次验收。
+
+
+最终扩大专项 653 通过、50 跳过、2476 未选择（237.82 秒）。其中 45 个 Docker 环境跳过已开启 GENERIC_DOCKER_TEST / PROCESS_LOG_TEST_IMAGE / MINI_EVAL_TEST_ARTIFACT_DOCKER 补跑，最终补跑与监督专项 163 通过、无跳过、3017 未选择（100.56 秒），并核对测试标识确实覆盖原 45 项。剩余 5 项需要 root、systemd 和专用业务账号，当前用户无免密 sudo，保留跳过而不宣称通过。
+
+最终新监督和 runtime 模块行/分支均 100%；未再修改的 host_backend 在扩大专项为 100% / 92.73%。这些为各自标准报告的模块指标，没有合并独立进程或不同报告充当全项目结果；标准脚本仍因专项不能满足全项目门槛而退出 1。补跑还覆盖只创建尚未启动的容器不能当作退出 0、旧监督者关闭后不能再写入、停止操作期间不能释放监督权。结果见 supervision-20261125.json。没有新增数据库迁移，没有部署或升级生产节点。

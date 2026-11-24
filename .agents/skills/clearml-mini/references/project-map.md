@@ -293,7 +293,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 执行锁范围：运行中续租按 Run → Slot 行锁，不修改 Worker JSON；非执行配置确认仍锁 Worker。日志/回合/旧产物/任务结果按 Run 串行化，首次启动转换及资源分配/释放仍用全局调度锁。超时回收取行锁后刷新租约并复核，忙执行留到下次 tick。回归见 `backend/tests/test_execution_lock_scope.py`；运维边界见 `docs/operations.md`。
 
-控制面预算新增 DB_OBSERVATION_POOL_SIZE / DB_RESULT_POOL_SIZE / DB_SCHEDULER_POOL_SIZE，完成与清理属于控制池，Agent 监控不借控制预留。AgentObservation/agent_state.py 与 ad074e5 迁移分离期望配置和最新观察；旧 API 不可混写，发布前检查迁移及同节点竞争专项。断联继续执行和终态补传目前仅完成设计，不能用当前重试代码宣称已实现。
+控制面预算新增 DB_OBSERVATION_POOL_SIZE / DB_RESULT_POOL_SIZE / DB_SCHEDULER_POOL_SIZE，完成与清理属于控制池，Agent 监控不借控制预留。AgentObservation/agent_state.py 与 ad074e5 迁移分离期望配置和最新观察；旧 API 不可混写，发布前检查迁移及同节点竞争专项。断联继续执行已实现计时、收据、控制对账与本地监督模块，完整执行循环和终态补传仍未接通，不能用当前重试代码宣称已启用。
 
 2026-11-24 重新验证已部署版本：真机宿主机 SDK 单任务及同卡三任务排队均成功，100 仿真 Worker 混合上报完成 30 分钟；心跳无 503、日志最终无积压，普通通道仍有 97 次连接池 503。具体口径、全量回归与失败/跳过边界见 [真机与稳定性复测](../../../../docs/validation/real-load-full-20261124/README.md)。
 
@@ -321,9 +321,12 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。`worker/recovery_delivery.py` 逐批上传并匹配摘要后确认本地 outbox，不能将收据视为运行许可或清理确认。尚未接入领取授权、本地监督及生命周期恢复，不广告能力、不对历史任务启用。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK 与鉴权；运维和迁移边界见 docs/operations.md、docs/database-migration.md。
 
-断联恢复默认值（开发中）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。当前仅基础模块与补报收据已实现，完整领取/监督/对账链路尚未启用，修改默认值不会改变现网执行。
+断联恢复默认值（开发中）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。当前已实现基础模块、补报收据、控制对账与本地监督，完整领取/监督/结果恢复链路尚未启用，修改默认值不会改变现网执行。
 
 调度恢复保护：scheduling.reconcile 对匹配执行 ID、Run ID、槽位的显式恢复授权，不再因旧租约或缺少启动上报将任务终结；撤销授权也不能充当进程已停止的证明。业务总执行时限仍独立生效，资源继续占用直至清理确认，旧协议及未领取预约维持原规则。批量读取使用相关 EXISTS，锁后重新核对授权与执行状态，不为每条执行增添独立授权查询。本次尚不向实际任务发放恢复授权，不能据此宣称端到端断联恢复已启用；回归见 test_recovery_scheduling.py。部署必须先完成 ae185f6 迁移。
 
 
 控制对账开发阶段：backend/app/recovery_control.py + worker/recovery_control.py，迁移 af296a7 保存可变决策，原授权保持不可变。平台已生效取消/超时/终态优先于迟到节点结果；退出码仅保留事实，不能释放资源或撤销终态。API 决策核对执行/代次/boot/运行身份，重复响应不续期，节点先持久化再采纳。test_recovery_control.py / test_worker_recovery_control.py 覆盖容忍边界、长期迟到、身份冲突、取消锁竞争、重复及持久化失败；调度/控制/节点计时联合测试不等于真实 Worker 主循环验收，完整恢复仍未启用。操作边界见 docs/operations.md。
+
+
+节点监督开发阶段：worker/recovery_supervisor.py 以执行级 flock、原子 fsync journal 保存控制时钟、原始业务起点、进程绑定、退出事实和精确重放请求。tick 本地观察/停止与 exchange HTTP 分开，不在网络期间持有监督锁。worker/recovery_runtime.py 使用 HostBackend.inspect(recovery=True) 的 InvocationID / Docker 完整 ID；缺少可信身份不接管，同名重建不停止，退出后卸载不抹掉原退出码。尚未接入 Worker.execute 或广告恢复能力。test_recovery_runtime.py 的 RECOVERY_RUNTIME_TEST=1 用真实 systemd 用户服务和本机镜像进行短程序+模拟时钟测试，API 联测为隔离 TestClient/SQLite，不是生产批次或 GPU/NPU 模型评测；不得将该测试当作功能已上线。

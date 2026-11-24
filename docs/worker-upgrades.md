@@ -152,3 +152,8 @@ Worker 协议编号仍为 18，新增可选能力 episode_timing_v1。新 API �
 ### 控制面过载重试专项（未发布）
 
 0.21.16 开发改动将 Retry-After 作为最早重试时间，在其后保留随机抖动，避免多个节点固定一秒同时重试；本地退避分量上限为 2 秒，服务端等待提示不被该上限截短。等待仍可取消，并受当前执行租约截止约束。此阶段尚未实现断联继续执行与恢复对账，不要单边删除看门狗或放开旧 API 租约校验。API 的五类连接预算及 Agent 分表迁移要求见 [运维指南](operations.md)。
+
+
+## 断联本地监督开发阶段（未启用）
+
+新增 recovery_supervisor / recovery_runtime 模块，宿主机恢复读取 systemd InvocationID，Docker 使用完整容器 ID。journal 与单调计时持久化、执行级文件锁阻止双监督者；网络对账不能阻塞本地停止判断。普通旧执行仍走原看门狗，更新代码不会给在途执行追溯启用不限断联。生产领取能力协商、主循环接线、结果/清理应用及界面仍待完成，当前不要手工添加授权或删除 journal。验证范围见 [断联恢复实施核对](validation/disconnected-execution-20261124/implementation-audit.md)。

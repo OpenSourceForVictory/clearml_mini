@@ -31,8 +31,10 @@ class HostBackend:
         p=subprocess.run(['systemctl',*([] if self.system else ['--user']),*args],env=user_environment(),capture_output=True,text=True,timeout=15)
         if check and p.returncode:raise RuntimeError('host unit control failed: '+p.stderr[-500:])
         return p
-    def inspect(self,execution):
-        p=self.control('show',self.unit(execution),'--property=LoadState,Description,ActiveState,SubState,ExecMainStatus',check=False)
+    def inspect(self,execution,*,recovery=False):
+        properties='LoadState,Description,ActiveState,SubState,ExecMainStatus'
+        if recovery:properties+=',InvocationID'
+        p=self.control('show',self.unit(execution),'--property='+properties,check=False)
         values=dict(line.split('=',1) for line in p.stdout.splitlines() if '=' in line)
         if values.get('LoadState')=='not-found':
             if (self.root/'launch.json').exists():
@@ -49,7 +51,8 @@ class HostBackend:
         running=values.get('SubState') in ('running','start','start-pre','start-post','stop','stop-sigterm','stop-sigkill') or values.get('ActiveState')=='activating'
         code=int(values.get('ExecMainStatus','1'))
         if (self.root/'exit.json').exists():code=json.loads((self.root/'exit.json').read_text())['code']
-        return {'State':{'Status':'running' if running else 'exited','Running':running,'ExitCode':code}}
+        return {'State':{'Status':'running' if running else 'exited','Running':running,'ExitCode':code},
+                **({'InvocationID':values.get('InvocationID')} if recovery else {})}
     def stop(self,execution):
         item=self.inspect(execution)
         if item and item['State']['Status']!='created' and not item['State'].get('Recovered'):

@@ -1,0 +1,106 @@
+{
+  "stage": "local supervision and runtime adapter; production Worker main loop not enabled",
+  "broad_regression": {
+    "passed": 653,
+    "skipped": 50,
+    "deselected": 2476,
+    "seconds": 237.82
+  },
+  "final_runtime_regression": {
+    "passed": 163,
+    "skipped": 0,
+    "deselected": 3017,
+    "seconds": 100.56,
+    "previously_skipped_now_passed": 45
+  },
+  "remaining_skips": [
+    {
+      "test": "backend.tests.test_managed_host.test_real_business_permission_denied_before_launch",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[direct]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[sdk-command]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[command]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[service]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    }
+  ],
+  "coverage": {
+    "worker/host_backend.py": {
+      "covered_lines": 242,
+      "num_statements": 242,
+      "percent_covered": 97.72727272727273,
+      "percent_covered_display": "97.73",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 110,
+      "num_partial_branches": 8,
+      "covered_branches": 102,
+      "missing_branches": 8,
+      "percent_branches_covered": 92.72727272727273,
+      "percent_branches_covered_display": "92.73"
+    },
+    "worker/recovery_supervisor.py": {
+      "covered_lines": 141,
+      "num_statements": 141,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 48,
+      "num_partial_branches": 0,
+      "covered_branches": 48,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "worker/recovery_runtime.py": {
+      "covered_lines": 30,
+      "num_statements": 30,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 14,
+      "num_partial_branches": 0,
+      "covered_branches": 14,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    }
+  },
+  "coverage_boundary": "Per-module metrics from respective standard reports; no merging independent runs; whole-project gates not met by targeted selections. Child processes not instrumented.",
+  "real_runtime_cases": {
+    "host_and_docker_short_programs": 6,
+    "clock": "injected monotonic time; no long disconnection claim",
+    "api": "isolated FastAPI TestClient/SQLite",
+    "business": "no GPU/NPU model evaluation; no platform batches"
+  },
+  "safety": [
+    "No production capability advertised or recovery grants issued.",
+    "No production deployment or node upgrade.",
+    "Original Worker watchdog unchanged.",
+    "No additional database migration in this stage."
+  ],
+  "outstanding": [
+    "Claim/launch negotiation and stable request recovery",
+    "Worker.execute integration with reliable result application and cleanup confirmation",
+    "Production-visible real batch disconnection acceptance"
+  ]
+}
