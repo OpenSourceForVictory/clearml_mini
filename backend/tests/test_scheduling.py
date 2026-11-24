@@ -167,6 +167,6 @@ def test_reports_committed_during_tick_use_read_completion_time(farm,monkeypatch
             slot.storage_reported_at=slot.runtime_reported_at=start+timedelta(seconds=sample_offset)
         s.flush()
     monkeypatch.setattr(orchestration_scheduler,'reconcile',reconcile)
-    times=iter([start,start+timedelta(seconds=2)])
+    times=iter([start,start+timedelta(seconds=2),start+timedelta(seconds=2)])
     monkeypatch.setattr(scheduling,'now',lambda:next(times))
     assert tick(farm,start if explicit else None)==expected

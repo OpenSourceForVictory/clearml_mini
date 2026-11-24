@@ -62,6 +62,20 @@ def execution_timeout(job):
     return job.client_spec['timeout_seconds'] if job.client_spec else limit
 
 
+def reservation_deadline(s, run, at, ttl):
+    """Register only a newly opened window, never renew all existing reservations."""
+    run.reservation_expires_at = at + timedelta(seconds=ttl)
+    windows = s.info.get('scheduler_reservation_windows')
+    if windows is not None:
+        windows[run.id] = (run, run.execution_id, ttl)
+
+
+def finalize_reservation_windows(s, at):
+    for run, execution_id, ttl in s.info.pop('scheduler_reservation_windows', {}).values():
+        if run.status == 'RESERVED' and run.execution_id == execution_id:
+            run.reservation_expires_at = at + timedelta(seconds=ttl)
+
+
 def reconcile(s, at):
     for run in s.scalars(select(Run).where(Run.status.in_(ACTIVE))).all():
         if run.status == 'RESERVED':
@@ -227,6 +241,7 @@ def tick(factory, at=None):
     with factory() as s:
         if not lock(s, wait=False):
             return 0
+        s.info['scheduler_reservation_windows'] = {}
         reconcile(s, at)
         from . import orchestration_scheduler
         orchestration_scheduler.reconcile(s,at)
@@ -339,6 +354,10 @@ def tick(factory, at=None):
             s.add(state)
         state.value = {'at': at.isoformat()}
         state.updated_at = at
+        # Persist the planning work before starting newly opened claim windows.
+        # The final deadline write and commit remain in this same transaction.
+        s.flush()
+        finalize_reservation_windows(s, now() if live_clock else at)
         s.commit()
         return admitted
 

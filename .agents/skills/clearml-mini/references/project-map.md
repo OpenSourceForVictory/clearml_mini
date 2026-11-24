@@ -300,3 +300,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 发布恢复边界补测：`backend/tests/test_release_recovery_boundaries.py` 验证备份清单/权限、隔离恢复顺序、历史记录数保护、失败清理及 HTTP 请求和错误脱敏；本机 HTTP 服务为真实协议测试，Docker 为故障注入。全目录覆盖复核见 `docs/code-coverage.md`，不得把专项低比例或模拟恢复当作全量/真实部署结论。
 
 迁移降级事务边界：`ab852c3` 升级保留并发建索引，降级改为事务内删除，防止较早版本保护规则拒绝时留下“版本记录存在、索引已删除”的状态。检查 `test_endpoint_migration.py`、`test_retention_migration.py` 与 `test_execution_timing_migration.py` 的真实 PostgreSQL 回归；降级须排空维护，详见 `docs/database-migration.md`。这不是调度算法修改。
+
+预约领取窗口：`scheduling.reservation_deadline` 仅登记本轮新预约或服务就绪后新开启的窗口，tick 在主要 flush 后提交前统一刷新期限；不续期旧预约、不延长执行租约。托管等待保留原时长，`reserved_at` 保留决策时间。回归见 `test_reservation_windows.py`，说明与提交延迟边界见 `docs/operations.md`。无需迁移或 Worker 更新，当前是否部署须另核实。

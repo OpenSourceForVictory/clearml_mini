@@ -1,0 +1,58 @@
+{
+  "scope": "专项测试，同一生产源码的 coverage append；非全量，不合并历史报告",
+  "tests": {
+    "related": 102,
+    "postgres_locks_and_loop": 13,
+    "resource_group": 122,
+    "total": 237,
+    "failed": 0,
+    "skipped": 0
+  },
+  "new_tests": 17,
+  "changed_modules": {
+    "backend/app/scheduling.py": {
+      "line_percent": 94.52054794520548,
+      "branch_percent": 84.93150684931507
+    },
+    "backend/app/orchestration_scheduler.py": {
+      "line_percent": 94.6078431372549,
+      "branch_percent": 81.35593220338983
+    }
+  },
+  "scheduler_resource_group": {
+    "files": 5,
+    "lines": 797,
+    "covered_lines": 751,
+    "branches": 382,
+    "covered_branches": 316,
+    "line_percent": 94.22835633626097,
+    "branch_percent": 82.72251308900523
+  },
+  "project_gate_passed": false,
+  "project_gate_violations": [
+    "backend/app: line 64.23% < 80.00%",
+    "backend/app: branch 38.87% < 70.00%",
+    "worker: line 18.40% < 80.00%",
+    "worker: branch 6.89% < 70.00%",
+    "node_agent: line 72.22% < 80.00%",
+    "node_agent: branch 55.71% < 70.00%",
+    "runner: line 19.14% < 80.00%",
+    "runner: branch 16.94% < 70.00%",
+    "onboarding: line 0.84% < 80.00%",
+    "onboarding: branch 0.00% < 70.00%",
+    "scripts: line 0.00% < 80.00%",
+    "scripts: branch 0.00% < 70.00%",
+    "节点纳管与升级: line 14.01% < 90.00%",
+    "节点纳管与升级: branch 4.81% < 80.00%",
+    "业务执行与结果: line 27.63% < 90.00%",
+    "业务执行与结果: branch 15.46% < 80.00%",
+    "节点监控: line 72.22% < 80.00%",
+    "节点监控: branch 55.71% < 70.00%",
+    "运行模板注册管理: line 61.55% < 80.00%",
+    "运行模板注册管理: branch 32.43% < 70.00%",
+    "评测结果与批次管理: line 56.23% < 80.00%",
+    "评测结果与批次管理: branch 40.43% < 70.00%",
+    "任务集合与编排: line 68.15% < 80.00%",
+    "任务集合与编排: branch 44.82% < 70.00%"
+  ]
+}

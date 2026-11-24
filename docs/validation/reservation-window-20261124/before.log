@@ -1,0 +1,86 @@
+.FFFF.F.FF.F                                                             [100%]
+=================================== FAILURES ===================================
+___________ test_new_reservation_window_excludes_scheduling_tail[29] ___________
+backend/tests/test_reservation_windows.py:40: in test_new_reservation_window_excludes_scheduling_tail
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 36, 53, 972751, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 36, 52, 972751, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 36, 53, 972751, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 36, 53, 972751))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 36, 53, 972751) = <backend.app.core.Run object at 0x7260066ee5d0>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+___________ test_new_reservation_window_excludes_scheduling_tail[30] ___________
+backend/tests/test_reservation_windows.py:40: in test_new_reservation_window_excludes_scheduling_tail
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 36, 56, 707730, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 36, 56, 707730, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 36, 56, 707730, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 36, 56, 707730))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 36, 56, 707730) = <backend.app.core.Run object at 0x7260066efb10>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+___________ test_new_reservation_window_excludes_scheduling_tail[31] ___________
+backend/tests/test_reservation_windows.py:40: in test_new_reservation_window_excludes_scheduling_tail
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 36, 59, 890205, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 37, 0, 890205, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 36, 59, 890205, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 36, 59, 890205))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 36, 59, 890205) = <backend.app.core.Run object at 0x7260064d6c10>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+__________ test_new_reservation_window_excludes_scheduling_tail[120] ___________
+backend/tests/test_reservation_windows.py:40: in test_new_reservation_window_excludes_scheduling_tail
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 37, 2, 627234, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 38, 32, 627234, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 37, 2, 627234, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 37, 2, 627234))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 37, 2, 627234) = <backend.app.core.Run object at 0x7260064d5bd0>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+____________ test_expired_reservation_gets_new_identity_and_window _____________
+backend/tests/test_reservation_windows.py:71: in test_expired_reservation_gets_new_identity_and_window
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 37, 8, 605188, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 37, 9, 605188, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 37, 8, 605188, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 37, 8, 605188))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 37, 8, 605188) = <backend.app.core.Run object at 0x7260066ef110>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+_________ test_failed_commit_rolls_back_window_and_next_tick_is_fresh __________
+backend/tests/test_reservation_windows.py:106: in test_failed_commit_rolls_back_window_and_next_tick_is_fresh
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 37, 15, 642133, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 37, 16, 642133, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 37, 15, 642133, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 37, 15, 642133))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 37, 15, 642133) = <backend.app.core.Run object at 0x7260066ee710>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+_________ test_joint_and_additional_service_windows_keep_distinct_ttls _________
+backend/tests/test_reservation_windows.py:131: in test_joint_and_additional_service_windows_keep_distinct_ttls
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=ttl)
+E   assert datetime.datetime(2026, 11, 24, 6, 40, 48, 274087, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 37, 19, 274087, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=240))
+E    +  where datetime.datetime(2026, 11, 24, 6, 40, 48, 274087, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 40, 48, 274087))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 40, 48, 274087) = <backend.app.core.Run object at 0x726004fe9090>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=240) = timedelta(seconds=240)
+__ test_waiting_client_only_gets_new_window_when_service_becomes_ready[True] ___
+backend/tests/test_reservation_windows.py:152: in test_waiting_client_only_gets_new_window_when_service_becomes_ready
+    assert scheduling.utc(run.reservation_expires_at) == clock[0] + timedelta(seconds=30)
+E   assert datetime.datetime(2026, 11, 24, 6, 37, 26, 305915, tzinfo=datetime.timezone.utc) == (datetime.datetime(2026, 11, 24, 6, 37, 27, 305915, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=30))
+E    +  where datetime.datetime(2026, 11, 24, 6, 37, 26, 305915, tzinfo=datetime.timezone.utc) = <function utc at 0x726006eca020>(datetime.datetime(2026, 11, 24, 6, 37, 26, 305915))
+E    +    where <function utc at 0x726006eca020> = scheduling.utc
+E    +    and   datetime.datetime(2026, 11, 24, 6, 37, 26, 305915) = <backend.app.core.Run object at 0x726004627750>.reservation_expires_at
+E    +  and   datetime.timedelta(seconds=30) = timedelta(seconds=30)
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_reservation_windows.py::test_joint_and_additional_service_windows_keep_distinct_ttls
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'exclude' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'exclude' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_reservation_windows.py::test_new_reservation_window_excludes_scheduling_tail[29]
+FAILED backend/tests/test_reservation_windows.py::test_new_reservation_window_excludes_scheduling_tail[30]
+FAILED backend/tests/test_reservation_windows.py::test_new_reservation_window_excludes_scheduling_tail[31]
+FAILED backend/tests/test_reservation_windows.py::test_new_reservation_window_excludes_scheduling_tail[120]
+FAILED backend/tests/test_reservation_windows.py::test_expired_reservation_gets_new_identity_and_window
+FAILED backend/tests/test_reservation_windows.py::test_failed_commit_rolls_back_window_and_next_tick_is_fresh
+FAILED backend/tests/test_reservation_windows.py::test_joint_and_additional_service_windows_keep_distinct_ttls
+FAILED backend/tests/test_reservation_windows.py::test_waiting_client_only_gets_new_window_when_service_becomes_ready[True]
+8 failed, 4 passed, 2 warnings in 38.62s

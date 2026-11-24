@@ -3,7 +3,6 @@
 A waiting client's RESERVED Run is its startup budget, never a second resource
 counter. It cannot be claimed before the bound service generation is healthy.
 """
-from datetime import timedelta
 from types import SimpleNamespace
 from sqlalchemy import select,or_
 from .core import EvaluationOrchestration,EvaluationBatch,ServiceInstance,Worker,Slot,Pool,Job,Run,User,now,uid
@@ -122,7 +121,8 @@ def reserve(s,job,slot,at,selection=None,waiting=False,ttl=None):
     run.slot_id=slot.id;run.queue_name=slot.queue_name;run.execution_id=uid()
     run.exclusive=job.gpu_mode=='exclusive';run.reserved_vram_mb=slot.vram_mb if run.exclusive else job.requested_vram_gb*1024
     run.reserved_cpu=request.cpu_per_job;run.reserved_ram_gb=request.ram_gb_per_job
-    run.reserved_at=at;run.reservation_expires_at=at+timedelta(seconds=ttl or admission.seconds('RESERVATION_SECONDS',30));run.waiting_service=waiting
+    run.reserved_at=at;run.waiting_service=waiting
+    admission.reservation_deadline(s,run,at,ttl or admission.seconds('RESERVATION_SECONDS',30))
     if selection:
         run.assigned_endpoint=selection['url'];run.assigned_endpoint_mode=selection['mode'];service_dependencies.bind(run,selection)
     job.queued_at=at;admission.transition(s,run,'RESERVED');s.flush()
@@ -187,7 +187,7 @@ def reconcile(s,at):
     for run in s.scalars(select(Run).where(Run.status=='RESERVED',Run.waiting_service.is_(True))):
         if service_dependencies.binding_ready(s,run,at):
             run.waiting_service=False
-            run.reservation_expires_at=at+timedelta(seconds=admission.seconds('RESERVATION_SECONDS',30))
+            admission.reservation_deadline(s,run,at,admission.seconds('RESERVATION_SECONDS',30))
         else:
             item=s.get(ServiceInstance,run.assigned_service_instance_id)
             current=service_dependencies.current_run(s,item) if item else None
