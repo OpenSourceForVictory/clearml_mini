@@ -1,0 +1,59 @@
+{
+  "scope": "control reconciliation modules; actual Worker loop not wired; no production activation",
+  "tests": {
+    "targeted": 264,
+    "skipped": 0,
+    "deselected": 2873,
+    "seconds": 104.33,
+    "additional_joint_cases": 4
+  },
+  "coverage": {
+    "backend/app/recovery_control.py": {
+      "covered_lines": 145,
+      "num_statements": 145,
+      "percent_covered": 99.53051643192488,
+      "percent_covered_display": "99.53",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 68,
+      "num_partial_branches": 1,
+      "covered_branches": 67,
+      "missing_branches": 1,
+      "percent_branches_covered": 98.52941176470588,
+      "percent_branches_covered_display": "98.53"
+    },
+    "worker/recovery_control.py": {
+      "covered_lines": 33,
+      "num_statements": 33,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 14,
+      "num_partial_branches": 0,
+      "covered_branches": 14,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    }
+  },
+  "failures_preserved": [
+    {
+      "initial_targeted": "10 failed, 221 passed",
+      "cause": "Finite tolerance used missing Run.enqueued_at as datetime origin, raising TypeError. Added inspect decision for absent origin; fixtures for actually claimed execution now populate enqueue time.",
+      "focused_initial": "9 failed, 37 passed",
+      "focused_after_fix": "67 passed"
+    }
+  ],
+  "limits": [
+    "Standard coverage command exits nonzero because whole-project gates are not met by targeted selection.",
+    "Host/Docker identities are parameterized; this is not an actual host/container disconnected supervision test.",
+    "No recovery capability advertised; no production grants; existing Worker watchdog remains unchanged.",
+    "Reliable results application and cleanup reconciliation still incomplete."
+  ],
+  "migration": "af296a7 tested on dedicated PostgreSQL, not deployed"
+}

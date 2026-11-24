@@ -79,3 +79,14 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 平台可见批次：宿主机 SDK 4515cae8-72f8-4da5-a816-6b6acba096a7（业务成功/失败，程序均退出 0）；Docker 命令 b52918ed-f192-4684-bedc-2c7b02dce4ed（退出 0/1，对应执行成功/失败）。四项均确认清理，未修改原业务模板，未升级现有 Worker。这是实际节点上的短程序验收，不是模型评测，也不是长期断联验收。生产备份另在隔离 PostgreSQL 恢复并升级，461 执行/448 任务数量不变；本机直接调用 alembic 首次因 import 路径失败，使用 python -m alembic 后成功，生产容器迁移无此错误。完整结果见 release-20261125.json。
 
 扩大专项的 7 个环境跳过随后全部补跑通过（6.39 秒）：新建专用资源迁移库，并开启 DIRECTORY_MOUNT_TEST=1、HOST_EXECUTION_TEST=1，真实两组 Docker 只读/可写挂载和四种 systemd 业务目录模式通过。首次跳过记录保留；补跑未合并覆盖率，不据此提高统计值。
+
+
+### 控制对账与心跳容忍专项（2026-11-25）
+
+新增 recovery/reconcile（execution_control），全路由契约现在为 170 条；control 决策由 af296a7 独立表保存。平台已提交取消/超时/终态优先，节点迟到退出事实不能覆盖；重复响应不刷新租约，身份冲突不停止其他进程。Worker 决策先持久化后采纳。默认不限断联、有限截止边界、连续两次心跳超期恢复、超限一年后补报、平台取消/超时覆盖迟到成功、服务重新就绪、并发重复、取消锁竞争和迁移降级保护均纳入专项。
+
+统一统计命令选择 recovery_control、recovery_records、recovery_scheduling、disconnected_execution_foundations、priority_routes、priority_gateway、split_api_process、execution_lock_scope：264 通过、无跳过、2873 未选，104.33 秒。随后补充联合测试 4 通过：host/Docker 身份 × 默认不限/有限 120 秒，实际调用调度器、对账决策与持久化节点计时；这不是真实宿主机或容器断网启动实验。新增 API 模块行 100%、分支 98.53%，Worker 模块 100%/100%，未降低门槛；全项目门槛仍因专项范围未通过。
+
+初轮失败证据：10 失败、221 通过，有限配置缺少原始 enqueued_at 时 TypeError；修复为待核对且不重置计时，补充缺失起点测试。单独早期运行 9 失败/37 通过，修复后 67 通过。最终证据见 control-20261125.json；原始覆盖率保留在 coverage-artifacts/recovery-control 与 recovery-control-final，不合并无关历史覆盖率。
+
+尚未完成领取协商、真实 Worker 主循环接线、终态应用及资源收尾，未部署该控制阶段，不宣称完成核心目标的端到端验收。迁移 af296a7 仅专用 PostgreSQL 升降级验证；生产仍 ae185f6。

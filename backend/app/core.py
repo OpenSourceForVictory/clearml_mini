@@ -260,6 +260,13 @@ class ExecutionRecovery(Base):
     received_records: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
 
 
+class ExecutionRecoveryControl(Base):
+    """Last applied control observation; independent from receipt acknowledgements."""
+    __tablename__ = 'execution_recovery_controls'
+    execution_id: Mapped[str] = mapped_column(ForeignKey('execution_recovery.execution_id'), primary_key=True)
+    snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
+
+
 class ExecutionRecoveryReceipt(Base):
     __tablename__ = 'execution_recovery_receipts'
     execution_id: Mapped[str] = mapped_column(ForeignKey('execution_recovery.execution_id'), primary_key=True)

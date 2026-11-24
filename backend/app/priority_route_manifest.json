@@ -1012,5 +1012,11 @@
     "path": "/api/v1/worker/executions/{execution_id}/recovery/results",
     "category": "worker_result",
     "legacy_category": "result"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/worker/executions/{execution_id}/recovery/reconcile",
+    "category": "execution_control",
+    "legacy_category": "control"
   }
 ]

@@ -246,3 +246,8 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 安全记录独立保留执行 ID、原节点/槽位、分配代次及补报摘要，未按运行记录级联删除。存在任何恢复授权时降级会拒绝，避免旧调度器无法识别仍可能在节点运行的任务；不要手工清空账本来绕过保护。完整对账/归档能力尚未启用前，不向生产任务发放新授权。验收记录见 [断联恢复实施核对](validation/disconnected-execution-20261124/implementation-audit.md)。
 
 2026-11-25 本机四角色 API 已发布恢复基础模块并迁移到 ae185f6；13 个 Worker 卡位与 6 个 Agent 回连，实际任务没有发放恢复授权。调度器读取新表，因此发布该版本 API 前必须先完成 migrate。生产备份在隔离库恢复/升级验证任务及执行数量不变；真实宿主机 SDK 和 Docker 命令批次完成并确认清理。这不是完整断联恢复上线，证据见 [发布记录](validation/disconnected-execution-20261124/release-20261125.json)。
+
+
+## 控制对账决策迁移（开发中）
+
+新增版本 `af296a7`，父版本 `ae185f6`，创建 `execution_recovery_controls` 保存原执行的身份、控制序号、幂等响应和不可逆停止决定。继续按本文原 Compose 的 migrate 流程升级，再更新 API。历史执行不自动启用恢复协议。存在决策记录时禁止降级，不要删除记录绕过保护。本轮只在专用 PostgreSQL 验证迁移，生产尚未升级至此版本。

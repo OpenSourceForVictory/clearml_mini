@@ -29,6 +29,21 @@
       ],
       "confirmation": "reliable result acknowledgement; duplicate content must match",
       "source": "backend.app.recovery_records.results"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/reconcile",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_control.Observation'>"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.recovery_control.control"
     }
   ],
   "body_schemas": {
@@ -98,6 +113,119 @@
       ],
       "title": "ResultRecord",
       "type": "object"
+    },
+    "<class 'backend.app.recovery_control.Observation'>": {
+      "$defs": {
+        "ProcessIdentity": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "host",
+                "docker"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "boot_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Boot Id",
+              "type": "string"
+            },
+            "runtime_id": {
+              "pattern": "^[0-9a-f]{32}$|^[0-9a-f]{64}$",
+              "title": "Runtime Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "boot_id",
+            "runtime_id"
+          ],
+          "title": "ProcessIdentity",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "sequence": {
+          "exclusiveMaximum": 9223372036854775808,
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "identity": {
+          "$ref": "#/$defs/ProcessIdentity"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "exited",
+            "missing"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "elapsed_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elapsed Seconds"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "stop_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "disconnection_timeout",
+                "execution_timeout",
+                "cancelled",
+                "node_restarted"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stop Reason"
+        }
+      },
+      "required": [
+        "generation",
+        "sequence",
+        "identity",
+        "state"
+      ],
+      "title": "Observation",
+      "type": "object"
     }
   },
   "legacy_routes": [
@@ -110,6 +238,11 @@
       "method": "POST",
       "path": "/api/v1/worker/executions/{execution_id}/recovery/results",
       "current_category": "result"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/reconcile",
+      "current_category": "control"
     }
   ]
 }
