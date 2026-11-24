@@ -1,0 +1,168 @@
+method	path	module	endpoint	current_category	dependency_names	body_models	direct_lock	direct_commit	external_io
+GET	/healthz	backend.app.main	health	ordinary			False	False	False
+GET	/readyz	backend.app.main	ready	ordinary	db		False	False	False
+POST	/api/v1/auth/login	backend.app.main	login	ordinary	db	<class 'backend.app.main.Login'>	False	False	False
+POST	/api/v1/auth/renew	backend.app.main	renew	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/auth/me	backend.app.main	me	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/pools	backend.app.main	pools	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/workers	backend.app.main	workers	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/benchmarks	backend.app.main	benchmarks	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/jobs	backend.app.main	submit	ordinary	HTTPBearer,current,db	<class 'backend.app.main.Submit'>	True	True	False
+GET	/api/v1/jobs	backend.app.main	jobs	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/jobs/{job_id}	backend.app.main	get_job	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/jobs/{job_id}/cancel	backend.app.main	cancel	control	HTTPBearer,current,db		True	True	False
+POST	/api/v1/jobs/{job_id}/retry	backend.app.main	retry	control	HTTPBearer,current,db		True	True	False
+GET	/api/v1/admin/jobs	backend.app.main	admin_jobs	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/jobs/{job_id}/logs	backend.app.main	job_logs	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/admin/health	backend.app.main	admin_health	ordinary	HTTPBearer,current,db		False	False	False
+DELETE	/api/v1/admin/nodes/{worker_id}	backend.app.administration	remove_node	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.Revision'>	True	True	False
+POST	/api/v1/admin/nodes/{worker_id}/unmanage	backend.app.administration	unmanage	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.Revision'>	True	True	False
+GET	/api/v1/admin/pools	backend.app.administration	pool_list	ordinary	HTTPBearer,admin,current,db		False	False	False
+DELETE	/api/v1/admin/pools/{pool_id}	backend.app.administration	delete_pool	ordinary	HTTPBearer,admin,current,db		True	True	False
+GET	/api/v1/admin/users	backend.app.administration	users	ordinary	HTTPBearer,admin,current,db		False	False	False
+PATCH	/api/v1/admin/users/{user_id}	backend.app.administration	account	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.AccountUpdate'>	True	True	False
+GET	/api/v1/admin/node-installation-bundle	backend.app.enrollment	download	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{identity}/reenroll	backend.app.enrollment	start	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.Revision'>	True	False	False
+GET	/api/v1/admin/nodes/{identity}/enrollment	backend.app.enrollment	status	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{identity}/enrollment/complete	backend.app.enrollment	complete	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.Revision'>	True	True	False
+GET	/api/v1/admin/ssh-onboarding	backend.app.ssh_onboarding	listing	ordinary	HTTPBearer,admin,current,db		True	True	True
+POST	/api/v1/admin/nodes/{identity}/cleanup/check	backend.app.ssh_onboarding	cleanup_check	ordinary	HTTPBearer,admin,current,db	<class 'dict'>	True	False	True
+POST	/api/v1/admin/nodes/{identity}/cleanup/eligibility	backend.app.ssh_onboarding	cleanup_eligibility	ordinary	HTTPBearer,admin,current,db	<class 'dict'>	True	False	False
+POST	/api/v1/admin/nodes/{identity}/cleanup/begin	backend.app.ssh_onboarding	cleanup_begin	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.ssh_onboarding.CleanupBegin'>	True	True	False
+POST	/api/v1/admin/nodes/{identity}/cleanup/complete	backend.app.ssh_onboarding	cleanup_complete	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.ssh_onboarding.CleanupComplete'>	True	True	True
+POST	/api/v1/admin/ssh-onboarding/check	backend.app.ssh_onboarding	check	ordinary	HTTPBearer,admin,current,db	<class 'dict'>	False	False	True
+POST	/api/v1/admin/ssh-onboarding/{identity}/confirm	backend.app.ssh_onboarding	confirm	ordinary	HTTPBearer,admin,current,db		False	False	True
+POST	/api/v1/admin/ssh-onboarding/{identity}/verify	backend.app.ssh_onboarding	verify	ordinary	HTTPBearer,admin,current,db		False	False	True
+POST	/api/v1/admin/ssh-onboarding/{identity}/cancel	backend.app.ssh_onboarding	cancel	ordinary	HTTPBearer,admin,current,db		False	False	True
+POST	/api/v1/admin/ssh-onboarding/{identity}/trust	backend.app.ssh_onboarding	trust	ordinary	HTTPBearer,admin,current,db	<class 'dict'>	False	False	True
+POST	/api/v1/admin/ssh-enrollment/begin	backend.app.ssh_onboarding	start	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.ssh_onboarding.Begin'>	True	False	False
+GET	/api/v1/admin/server-templates	backend.app.templates	listing	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/server-templates	backend.app.templates	create	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.templates.ServerCreate'>	True	True	False
+PATCH	/api/v1/admin/server-templates/{identity}	backend.app.templates	state	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.clients.TemplateState'>	True	True	False
+DELETE	/api/v1/admin/{kind}-templates/{identity}	backend.app.templates	archive	ordinary	HTTPBearer,admin,current,db		True	True	False
+POST	/api/v1/admin/{kind}-templates/{identity}/clone	backend.app.templates	clone	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.templates.Clone'>	True	True	False
+GET	/api/v1/runtime-templates/{kind}	backend.app.template_versions	listing	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/runtime-templates/{kind}/{identity}/clone	backend.app.template_versions	clone	ordinary	HTTPBearer,current,db	<class 'backend.app.templates.Clone'>	True	True	False
+PUT	/api/v1/runtime-templates/{kind}/{identity}	backend.app.template_versions	edit	ordinary	HTTPBearer,current,db	<class 'backend.app.template_versions.Edit'>	True	True	False
+POST	/api/v1/runtime-templates/{kind}/{identity}/actions	backend.app.template_versions	action	ordinary	HTTPBearer,current,db	<class 'backend.app.template_versions.Action'>	True	True	False
+PATCH	/api/v1/admin/server-templates/{identity}/access	backend.app.template_versions	access	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.template_versions.Access'>	True	True	False
+GET	/api/v1/admin/nodes/{identity}/host-environments	backend.app.host_environments	get	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{identity}/host-environments	backend.app.host_environments	put	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.host_environments.Config'>	True	True	False
+GET	/api/v1/admin/services	backend.app.services	listing	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/services	backend.app.services	create	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.services.Deploy'>	True	True	False
+POST	/api/v1/admin/services/{identity}/control	backend.app.services	control	control	HTTPBearer,admin,current,db	<class 'backend.app.services.Control'>	True	True	False
+GET	/api/v1/admin/services/{identity}/logs	backend.app.services	logs	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/worker/executions/{execution}/service-probe-session	backend.app.services	session	control	HTTPBearer,db,worker_auth		True	True	False
+POST	/api/v1/worker/executions/{execution}/service-health	backend.app.services	health	control	HTTPBearer,db,worker_auth	<class 'backend.app.services.Health'>	True	True	False
+GET	/api/v1/admin/nodes/{identity}/service-network	backend.app.service_network	get	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{identity}/service-network	backend.app.service_network	put	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.service_network.Update'>	True	True	False
+GET	/api/v1/admin/worker-releases	backend.app.worker_upgrades	releases	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/worker-releases	backend.app.worker_upgrades	publish	ordinary	HTTPBearer,admin,current,db		True	True	False
+GET	/api/v1/admin/nodes/{identity}/upgrades	backend.app.worker_upgrades	listing	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{identity}/upgrades	backend.app.worker_upgrades	start	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.worker_upgrades.Start'>	True	True	False
+POST	/api/v1/admin/nodes/{identity}/upgrades/{upgrade_id}/cancel	backend.app.worker_upgrades	cancel	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.worker_upgrades.Cancel'>	True	True	False
+POST	/api/v1/worker/upgrades/poll	backend.app.worker_upgrades	poll	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.worker_upgrades.Poll'>	True	True	False
+GET	/api/v1/worker/upgrades/{identity}/state	backend.app.worker_upgrades	state	ordinary	HTTPBearer,db,worker_auth		False	False	False
+GET	/api/v1/worker/upgrades/{identity}/archive	backend.app.worker_upgrades	archive	ordinary	HTTPBearer,db,worker_auth		False	False	False
+POST	/api/v1/worker/upgrades/{identity}/report	backend.app.worker_upgrades	report	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.worker_upgrades.Report'>	True	True	False
+GET	/api/v1/admin/nodes/{identity}/agent	backend.app.node_agents	status	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{identity}/agent	backend.app.node_agents	configure	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.node_agents.Configure'>	True	True	False
+POST	/api/v1/agent/register	backend.app.node_agents	register	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.node_agents.Register'>	True	True	False
+POST	/api/v1/agent/heartbeat	backend.app.node_agents	heartbeat	observation	HTTPBearer,db,worker_auth	<class 'backend.app.node_agents.Heartbeat'>	False	True	False
+POST	/api/v1/agent/stop-permit	backend.app.node_agents	permit	control	HTTPBearer,db,worker_auth	<class 'backend.app.node_agents.Permit'>	True	False	False
+GET	/api/v1/admin/nodes/{worker_id}/storage	backend.app.storage	get_storage	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{worker_id}/storage	backend.app.storage	put_storage	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.storage.StorageUpdate'>	True	True	False
+PUT	/api/v1/admin/nodes/{worker_id}/storage/slots/{slot_id}	backend.app.storage	put_slot_storage	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.storage.StorageUpdate'>	True	True	False
+GET	/api/v1/admin/nodes/{worker_id}/runtime	backend.app.image_runtime	get	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{worker_id}/runtime	backend.app.image_runtime	put	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.image_runtime.Update'>	True	True	False
+GET	/api/v1/jobs/{job_id}/runtime-readiness	backend.app.image_runtime	readiness	ordinary	HTTPBearer,current,db		False	False	False
+PUT	/api/v1/admin/resource-memberships	backend.app.memberships	update	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.memberships.MembershipUpdate'>	True	True	False
+GET	/api/v1/admin/nodes/{worker_id}/execution-data	backend.app.retention	inventory	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{worker_id}/execution-data/scan	backend.app.retention	scan	ordinary	HTTPBearer,admin,current,db		False	True	False
+POST	/api/v1/admin/nodes/{worker_id}/execution-data/preview	backend.app.retention	make_preview	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.retention.Selection'>	False	True	False
+POST	/api/v1/admin/nodes/{worker_id}/execution-data/operations/{op_id}/confirm	backend.app.retention	submit	ordinary	HTTPBearer,admin,current,db		False	True	False
+GET	/api/v1/admin/nodes/{worker_id}/execution-data/operations	backend.app.retention	operations	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{worker_id}/retention/preview	backend.app.retention	policy_preview	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.retention.Policy'>	False	True	False
+PUT	/api/v1/admin/nodes/{worker_id}/retention	backend.app.retention	set_policy	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.retention.Policy'>	False	True	False
+POST	/api/v1/worker/slots/{slot_id}/execution-data/inventory	backend.app.retention	report	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.retention.Inventory'>	False	True	False
+POST	/api/v1/worker/slots/{slot_id}/execution-data/control	backend.app.retention	control	ordinary	HTTPBearer,db,worker_auth		False	True	False
+POST	/api/v1/worker/slots/{slot_id}/execution-data/{item_id}/begin	backend.app.retention	begin	ordinary	HTTPBearer,db,worker_auth		False	True	False
+POST	/api/v1/worker/slots/{slot_id}/execution-data/{item_id}/receipt	backend.app.retention	receipt	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.retention.Receipt'>	False	True	False
+GET	/api/v1/jobs/{job_id}/execution-data	backend.app.retention	job_data	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/worker/executions/{execution_id}/log-catalog	backend.app.process_logs	register	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.process_logs.Registration'>	True	True	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/log-catalog	backend.app.process_logs	listing	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/jobs/{job_id}/attempts/{run_id}/log-reads	backend.app.process_logs	request	ordinary	HTTPBearer,current,db	<class 'backend.app.process_logs.Query'>	True	True	False
+GET	/api/v1/log-reads/{access_id}	backend.app.process_logs	result	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/worker/log-reads/claim	backend.app.process_logs	claim	ordinary	HTTPBearer,db,worker_auth	backend.app.process_logs.Claim | None	True	True	False
+POST	/api/v1/worker/log-reads/{read_id}/reply	backend.app.process_logs	reply	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.process_logs.Reply'>	True	True	False
+GET	/api/v1/admin/nodes/{identity}/log-policy	backend.app.log_policy	read	ordinary	HTTPBearer,admin,current,db		False	False	False
+PUT	/api/v1/admin/nodes/{identity}/log-policy	backend.app.log_policy	update	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.log_policy.PolicyUpdate'>	True	True	False
+POST	/api/v1/worker/slots/{identity}/log-policy	backend.app.log_policy	sync	ordinary	HTTPBearer,db,worker_auth	<class 'dict'>	True	True	False
+POST	/api/v1/worker/executions/{execution_id}/shared-artifacts	backend.app.shared_artifacts	register	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.shared_artifacts.Registration'>	False	False	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts	backend.app.shared_artifacts	listing	ordinary	HTTPBearer,current,db		False	False	True
+POST	/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media-access	backend.app.shared_artifacts	grant	ordinary	HTTPBearer,current,db	<class 'backend.app.shared_artifacts.FileQuery'>	False	False	True
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media/{identity}	backend.app.shared_artifacts	media	ordinary	db		False	False	True
+HEAD	/api/v1/jobs/{job_id}/attempts/{run_id}/shared-artifacts/media/{identity}	backend.app.shared_artifacts	media	ordinary	db		False	False	True
+GET	/api/v1/worker/self	backend.app.execution	worker_self	ordinary	HTTPBearer,db,worker_auth		False	False	False
+POST	/api/v1/admin/users	backend.app.execution	create_user	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.execution.UserCreate'>	True	True	False
+POST	/api/v1/admin/worker-credentials	backend.app.execution	provision	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.execution.WorkerCreate'>	True	True	False
+GET	/api/v1/admin/nodes	backend.app.execution	nodes	ordinary	HTTPBearer,admin,current,db		False	False	False
+POST	/api/v1/admin/nodes/{worker_id}/rotate-token	backend.app.execution	rotate	ordinary	HTTPBearer,admin,current,db		True	True	False
+PATCH	/api/v1/admin/nodes/{worker_id}	backend.app.execution	enable_node	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.execution.Enabled'>	True	False	False
+POST	/api/v1/admin/pools	backend.app.execution	create_pool	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.execution.PoolCreate'>	True	True	False
+PATCH	/api/v1/admin/pools/{pool_id}	backend.app.execution	update_pool	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.administration.PoolUpdate'>	False	False	False
+POST	/api/v1/worker/register	backend.app.execution	register	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.execution.Register'>	True	True	False
+POST	/api/v1/worker/heartbeat	backend.app.execution	heartbeat	control	HTTPBearer,db,worker_auth	<class 'backend.app.execution.Heartbeat'>	True	True	False
+POST	/api/v1/worker/slots/{slot_id}/claim	backend.app.execution	claim	ordinary	HTTPBearer,db,worker_auth	typing.Optional[backend.app.execution.Claim]	True	True	False
+POST	/api/v1/worker/executions/{execution_id}/logs-v2	backend.app.execution_logs	upload	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.execution_logs.LogChunk'>	False	True	False
+POST	/api/v1/worker/executions/{execution_id}/logs	backend.app.execution	logs	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.execution.LogBody'>	False	True	False
+POST	/api/v1/worker/executions/{execution_id}/episodes	backend.app.execution	episode	result	HTTPBearer,db,worker_auth	<class 'dict'>	False	True	False
+POST	/api/v1/worker/executions/{execution_id}/artifacts	backend.app.execution	upload_artifact	ordinary	HTTPBearer,db,worker_auth	<class 'backend.app.execution.ArtifactUpload'>	False	True	False
+POST	/api/v1/worker/executions/{execution_id}/complete	backend.app.execution	complete	control	HTTPBearer,db,worker_auth	<class 'backend.app.execution.Finish'>	True	True	False
+POST	/api/v1/worker/executions/{execution_id}/task-result	backend.app.execution	task_result	result	HTTPBearer,db,worker_auth	<class 'backend.app.execution.TaskResult'>	False	True	False
+POST	/api/v1/worker/executions/{execution_id}/cleanup	backend.app.execution	cleanup	control	HTTPBearer,db,worker_auth		True	True	False
+POST	/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media-access	backend.app.artifact_media	grant	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media	backend.app.artifact_media	media	ordinary	db		False	False	False
+HEAD	/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}/media	backend.app.artifact_media	media	ordinary	db		False	False	False
+GET	/api/v1/execution-limits	backend.app.clients	execution_limits	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/client-templates	backend.app.clients	templates	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/admin/client-templates	backend.app.clients	create	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.clients.TemplateCreate'>	True	True	False
+POST	/api/v1/client-templates	backend.app.clients	create_private	ordinary	HTTPBearer,current,db	<class 'backend.app.clients.TemplateCreate'>	True	True	False
+PATCH	/api/v1/admin/client-templates/{template_id}	backend.app.clients	enable	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.clients.TemplateState'>	True	True	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts	backend.app.clients	artifacts	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/artifacts/{artifact_id}	backend.app.clients	download	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/orchestrations/preflight	backend.app.orchestrations	preflight	ordinary	HTTPBearer,current,db	<class 'backend.app.orchestrations.Submit'>	False	False	False
+POST	/api/v1/orchestrations	backend.app.orchestrations	submit	ordinary	HTTPBearer,current,db	<class 'backend.app.orchestrations.Submit'>	True	True	False
+GET	/api/v1/orchestrations/{identity}	backend.app.orchestrations	detail	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/orchestrations/{identity}/services/{service_id}/logs	backend.app.orchestrations	logs	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/orchestrations/{identity}/services/{service_id}/control	backend.app.orchestrations	control	control	HTTPBearer,current,db	<class 'backend.app.services.Control'>	True	True	False
+GET	/api/v1/suites/catalogs	backend.app.suites	catalogs	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/suites/preview	backend.app.suites	preview	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.Preview'>	False	False	False
+GET	/api/v1/suites/manage	backend.app.suites	manage	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/suites	backend.app.suites	create	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.SuiteWrite'>	True	True	False
+PUT	/api/v1/suites/{id}/client-templates	backend.app.suites	relationships	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.Relations'>	True	True	False
+GET	/api/v1/suites/{id}/export	backend.app.suites	export	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/suites/{id}/clone	backend.app.suites	clone	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.Copy'>	True	True	False
+GET	/api/v1/suites/{id}/runs	backend.app.suites	runs	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/suites/{id}	backend.app.suites	detail	ordinary	HTTPBearer,current,db		False	False	False
+PUT	/api/v1/suites/{id}	backend.app.suites	edit	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.SuiteEdit'>	True	True	False
+POST	/api/v1/suites/{id}/actions	backend.app.suites	action	ordinary	HTTPBearer,current,db	<class 'backend.app.suites.Action'>	True	True	False
+GET	/api/v1/batches/{batch_id}/monitor	backend.app.monitoring	get	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/batches/{batch_id}/retry-failed	backend.app.monitoring	retry	control	HTTPBearer,current,db	<class 'backend.app.monitoring.RetrySelection'>	True	True	False
+GET	/api/v1/batches/{batch_id}/report	backend.app.reports	download	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/batch-comparisons	backend.app.reports	comparison	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/batches/{batch_id}/control	backend.app.batch_controls	control	control	HTTPBearer,current,db	<class 'backend.app.batch_controls.Control'>	True	True	False
+PATCH	/api/v1/batches/{batch_id}/priority	backend.app.batch_priority	update_priority	ordinary	HTTPBearer,current,db	<class 'backend.app.batch_priority.PriorityUpdate'>	True	True	False
+GET	/api/v1/suites	backend.app.batches	suites	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/batches/preflight	backend.app.batches	preflight	ordinary	HTTPBearer,current,db	<class 'backend.app.batches.BatchSubmit'>	False	False	False
+POST	/api/v1/batches	backend.app.batches	create	ordinary	HTTPBearer,current,db	<class 'backend.app.batches.BatchSubmit'>	True	True	False
+GET	/api/v1/batches	backend.app.batches	batches	ordinary	HTTPBearer,current,db		False	False	False
+DELETE	/api/v1/batches/{batch_id}	backend.app.batches	delete_batch	ordinary	HTTPBearer,current,db		False	True	False
+GET	/api/v1/batches/{batch_id}	backend.app.batches	detail	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/batches/{identity}/rerun-draft	backend.app.batch_rerun	draft	ordinary	HTTPBearer,current,db		False	False	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/episodes	backend.app.episodes	episodes	ordinary	HTTPBearer,current,db		False	False	False
+POST	/api/v1/client-builds	backend.app.builds	submit	ordinary	HTTPBearer,current,db	<class 'backend.app.builds.SourceSubmit'>	True	True	False
+GET	/api/v1/client-builds	backend.app.builds	builds	ordinary	HTTPBearer,current,db		True	True	False
+POST	/api/v1/admin/client-builds/claim	backend.app.builds	claim	ordinary	HTTPBearer,admin,current,db		True	True	False
+POST	/api/v1/admin/client-builds/{build_id}/complete	backend.app.builds	finish	ordinary	HTTPBearer,admin,current,db	<class 'backend.app.builds.BuildResult'>	True	True	False
+GET	/api/v1/jobs/{job_id}/attempts/{run_id}/execution-location	backend.app.execution_locations	location	ordinary	HTTPBearer,current,db		False	False	False

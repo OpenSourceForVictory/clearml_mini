@@ -6,6 +6,8 @@
 
 本机平台于 2026-11-23 启用双 API 网关和角色连接池；六台机器的 13 个 Worker 卡位随后已升至 0.21.17。基础 Compose 仍是单 API 默认配置，其他部署不继承本机状态。发布顺序、真实 GPU SDK 小任务和 100 Worker 模拟负载边界见 [双进程验证](../../../../docs/validation/split-control-api-process-20261123/README.md)。
 
+四角色 API 隔离仍在设计实施阶段，未部署。现有 167 条 HTTP 方法路由、当前类别、关键事务/锁及 Worker 心跳断联停止边界见 [API 流量审计](../../../../docs/validation/priority-api-isolation-20261124/README.md)；目标架构见 `openspec/changes/priority-api-isolation/design.md`。Agent 心跳同时包含可合并采样和不可直接丢弃的配置 ACK/事件，不能把整条请求归为低价值遥测。
+
 | 边界 | 源码 / 文档 | 关联检查 |
 | --- | --- | --- |
 | 登录与会话 | backend/app/main.py、frontend/src/login-session.ts、api.ts、main.tsx；docs/login-sessions.md | 真实交互续期、闲置/12 小时上限、并发响应、同账号草稿恢复；轮询不续期 |
