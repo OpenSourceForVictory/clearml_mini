@@ -27,18 +27,21 @@ from .batches import install as install_batches
 from .episodes import install as install_episodes
 from .builds import install as install_builds
 
-from . import db_budget
+from . import db_budget, priority_runtime
 
 DB_BACKPRESSURE_ENABLED = os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1'
 DB_ADMISSION_ENABLED = os.getenv('DB_ADMISSION_ENABLED', '1') != '0'
 API_ROUTE_GROUP = os.getenv('API_ROUTE_GROUP') or None
-if API_ROUTE_GROUP not in (None, 'ordinary', 'control'):
-    raise RuntimeError('API_ROUTE_GROUP must be ordinary or control')
+PRIORITY_API = API_ROUTE_GROUP in priority_runtime.ROLE_POOLS
+if API_ROUTE_GROUP not in (None, 'ordinary', 'control', *priority_runtime.ROLE_POOLS):
+    raise RuntimeError('unknown API_ROUTE_GROUP')
+if PRIORITY_API and (not DB_BACKPRESSURE_ENABLED or not DB_ADMISSION_ENABLED):
+    raise RuntimeError('priority API requires database backpressure and category admission')
 if DB_BACKPRESSURE_ENABLED:
-    db_settings = db_budget.Settings.environment()
+    db_settings = (priority_runtime.Settings if PRIORITY_API else db_budget.Settings).environment()
     DatabaseSessions = db_budget.factories(
         os.getenv('DATABASE_URL', 'sqlite:///./eval.db'), db_settings, isolated=True)
-    SessionLocal = DatabaseSessions.get('ordinary') or DatabaseSessions['control']
+    SessionLocal = DatabaseSessions.get('ordinary') or next(iter(DatabaseSessions.values()))
     ControlSessionLocal = DatabaseSessions.get('control')
     SchedulerSessionLocal = DatabaseSessions.get('scheduler')
 else:
@@ -49,6 +52,8 @@ _online_session_factory = SessionLocal
 async def lifespan(app):
     stop = threading.Event()
     thread = None
+    if PRIORITY_API:
+        priority_runtime.check_database_budget(SessionLocal, db_settings)
     if os.getenv('SCHEDULER_ENABLED', '1') == '1':
         thread = threading.Thread(target=loop, args=(SchedulerSessionLocal if SessionLocal is _online_session_factory else SessionLocal, stop), daemon=True)
         thread.start()
@@ -59,10 +64,12 @@ async def lifespan(app):
 
 
 app = FastAPI(title='Mini Eval Platform', lifespan=lifespan)
-if DB_BACKPRESSURE_ENABLED:
+if PRIORITY_API:
+    app.add_middleware(priority_runtime.Admission, settings=db_settings)
+elif DB_BACKPRESSURE_ENABLED:
     app.add_middleware(db_budget.Admission, settings=db_settings,
                        admission_enabled=DB_ADMISSION_ENABLED)
-if API_ROUTE_GROUP:
+if API_ROUTE_GROUP and not PRIORITY_API:
     app.add_middleware(db_budget.RouteGroup, route_group=API_ROUTE_GROUP)
 bearer = HTTPBearer(auto_error=False)
 
@@ -176,7 +183,11 @@ def details(session, jobs):
 
 
 @app.get('/healthz')
-async def health():
+async def health(scope: str = ''):
+    if PRIORITY_API:
+        if scope == 'deployment':
+            return await priority_runtime.deployment_health(db_settings)
+        return {'status': 'ok', 'role': API_ROUTE_GROUP, 'budget': db_settings.fingerprint}
     return {'status': 'ok'}
 
 

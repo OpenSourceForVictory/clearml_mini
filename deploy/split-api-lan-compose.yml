@@ -1,4 +1,4 @@
-# Apply after split-api-compose.yml when the Worker uses a second private IP.
+# Apply after split-api-compose.yml or priority-api-compose.yml for a second private Worker IP.
 services:
   api-gateway:
     ports:

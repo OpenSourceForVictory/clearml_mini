@@ -1,0 +1,74 @@
+# Opt-in four-role overlay. Apply after compose.yml, not after split-api-compose.yml.
+# All roles must receive the same budget manifest; /healthz checks its fingerprint.
+x-priority-environment: &priority-environment
+  DB_BACKPRESSURE_ENABLED: "1"
+  DB_ADMISSION_ENABLED: "1"
+  API_DB_PROCESS_COUNT: "4"
+  PRIORITY_API_POOL_SIZES: ${PRIORITY_API_POOL_SIZES:-}
+  PRIORITY_API_PEERS: ${PRIORITY_API_PEERS:-}
+  DB_CONNECTION_HEADROOM: ${DB_CONNECTION_HEADROOM:-20}
+  DB_LONG_REQUEST_TIMEOUT_SECONDS: ${DB_LONG_REQUEST_TIMEOUT_SECONDS:-30}
+
+services:
+  api:
+    ports: !reset []
+    environment:
+      <<: *priority-environment
+      API_ROUTE_GROUP: interaction
+      SCHEDULER_ENABLED: "0"
+    networks:
+      default:
+        aliases: [interaction-api]
+
+  execution-control-api:
+    extends:
+      file: compose.yml
+      service: api
+    ports: !reset []
+    environment:
+      <<: *priority-environment
+      API_ROUTE_GROUP: execution-control
+      SCHEDULER_ENABLED: "0"
+
+  worker-data-api:
+    extends:
+      file: compose.yml
+      service: api
+    ports: !reset []
+    environment:
+      <<: *priority-environment
+      API_ROUTE_GROUP: worker-data
+      SCHEDULER_ENABLED: "1"
+
+  bulk-transfer-api:
+    extends:
+      file: compose.yml
+      service: api
+    ports: !reset []
+    environment:
+      <<: *priority-environment
+      API_ROUTE_GROUP: bulk-transfer
+      SCHEDULER_ENABLED: "0"
+
+  api-gateway:
+    image: m.daocloud.io/docker.io/library/nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./priority-api-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./proxy-common.inc:/etc/nginx/conf.d/proxy-common.inc:ro
+    ports:
+      - "${API_BIND_HOST:-127.0.0.1}:${API_BIND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      api:
+        condition: service_healthy
+      execution-control-api:
+        condition: service_healthy
+      worker-data-api:
+        condition: service_healthy
+      bulk-transfer-api:
+        condition: service_healthy

@@ -12,7 +12,7 @@
 | 调度与资源、节点纳管与升级、业务执行与结果 | ≥90% | ≥80% |
 | 其他功能分组 | ≥80% | ≥70% |
 
-控制面背压变更把 `backend/app/db_budget.py` 纳入“调度与资源”，把 `worker/backpressure.py` 及执行 API `backend/app/execution.py` 纳入“业务执行与结果”；它们同时保留在目录总量中，关键功能仍按 90% / 80% 验证，不降低门槛。
+控制面背压变更把 `backend/app/db_budget.py` 纳入“调度与资源”；四角色隔离的 `priority_runtime.py`、`priority_routes.py`、`priority_gateway.py` 也纳入同组。`worker/backpressure.py` 及执行 API `backend/app/execution.py` 纳入“业务执行与结果”；它们同时保留在目录总量中，关键功能仍按 90% / 80% 验证，不降低门槛。
 
 配置在 `backend/tests/coverage-floors.json`，CI 与本地使用相同规则。任何测试失败或任一门槛未达到均返回非零；既有代码未达标也不会自动豁免。新增功能必须随代码提供正常、边界和失败路径测试。不得通过排除未测文件、mock 掉需要验证的行为或降低门槛凑数字；调整统计范围/门槛需有明确需求和评审说明。
 
@@ -138,3 +138,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 本次完整结果：2663 通过、132 跳过、0 失败，另有 16 个新增用例通过；同源码合并后 92.57% 行 / 83.87% 分支，全部目录与功能门槛通过。详见 [全项目复核记录](validation/coverage-complete-20261124/README.md)，其中保留全量基线、跳过原因及模拟/真实协议测试的边界。
 
 前次全量中的 132 个环境跳过项已在隔离条件下补跑通过，另有 2 个索引回归通过；发现并修复了迁移降级索引回滚缺陷。见 [跳过专项验证](validation/skipped-specialists-20261124/README.md)。此次不重跑全量，不把未插桩真实进程通过数计入覆盖率。
+
+2026-11-25 四角色 API 隔离全量验证：2790 通过、155 跳过；整体行 92.26%、分支 84.15%，目录与关键功能门槛均通过。新分类/运行时/网关模块纳入“调度与资源”，未调整门槛。独立 PostgreSQL、容器和前端实测与全量统计边界见 [验收记录](validation/priority-api-isolation-20261124/README.md)。

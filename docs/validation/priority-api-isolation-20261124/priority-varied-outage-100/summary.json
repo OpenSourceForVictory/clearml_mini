@@ -1,0 +1,1454 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 4,
+  "gateway": "nginx host-network test container",
+  "pool_by_process": {
+    "execution-control": {
+      "execution_control": 24
+    },
+    "interaction": {
+      "user_action": 10,
+      "user_long": 4,
+      "page_read": 10
+    },
+    "worker-data": {
+      "worker_claim": 6,
+      "worker_result": 7,
+      "worker_observation": 8,
+      "scheduler": 1
+    },
+    "bulk-transfer": {
+      "bulk_transfer": 10
+    }
+  },
+  "configured_total_connections": 80,
+  "db_backpressure_enabled": true,
+  "db_admission_enabled": true,
+  "cards_per_node": 1,
+  "seconds_per_grade": 180,
+  "log_bytes_per_worker_per_cycle": 16384,
+  "log_payload_style": "varied-structured",
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": true,
+  "priority_api": true,
+  "log_interval_seconds": 2,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "trace_http_phases": true,
+  "client_per_worker": true,
+  "agent_telemetry": true,
+  "mixed_ui": true,
+  "continuous_batches": true,
+  "bulk_outage_seconds": 15,
+  "scope": "real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read/retry, real scheduler and one simulated command Worker completing two attempts; excludes real business processes",
+  "grades": [
+    {
+      "requests": {
+        "201": 26,
+        "200": 47568,
+        "502": 1982,
+        "503": 165
+      },
+      "busy_reasons": {
+        "request_concurrency": 165
+      },
+      "requests_by_kind": {
+        "ui_submit": {
+          "201": 26
+        },
+        "heartbeat": {
+          "200": 9017
+        },
+        "agent": {
+          "200": 3600
+        },
+        "ui_control": {
+          "200": 52
+        },
+        "logs": {
+          "200": 8910,
+          "502": 1255,
+          "503": 111
+        },
+        "claim": {
+          "200": 8965
+        },
+        "health": {
+          "200": 8681
+        },
+        "ui_list": {
+          "200": 87
+        },
+        "artifact": {
+          "200": 7900,
+          "502": 727,
+          "503": 54
+        },
+        "ui_detail": {
+          "200": 87
+        },
+        "ui_monitor": {
+          "200": 87
+        },
+        "result": {
+          "200": 52
+        },
+        "result_duplicate": {
+          "200": 52
+        },
+        "complete": {
+          "200": 52
+        },
+        "ui_retry": {
+          "200": 26
+        }
+      },
+      "busy_by_kind": {
+        "heartbeat": {},
+        "logs": {
+          "request_concurrency": 111
+        },
+        "agent": {},
+        "artifact": {
+          "request_concurrency": 54
+        }
+      },
+      "successful_latency_seconds": {
+        "ui_submit": {
+          "p95": 0.18655436718836427,
+          "p99": 0.2766224311199039,
+          "max": 0.2766224311199039
+        },
+        "heartbeat": {
+          "p95": 0.05449952301569283,
+          "p99": 0.07160369516350329,
+          "max": 0.12335870694369078
+        },
+        "agent": {
+          "p95": 0.03975136089138687,
+          "p99": 0.05701195006258786,
+          "max": 0.08504315000027418
+        },
+        "ui_control": {
+          "p95": 0.013800827087834477,
+          "p99": 0.01420439314097166,
+          "max": 0.01420439314097166
+        },
+        "logs": {
+          "p95": 0.20707053691148758,
+          "p99": 0.23141133110038936,
+          "max": 0.27341322298161685
+        },
+        "claim": {
+          "p95": 0.013759945053607225,
+          "p99": 0.02371060405857861,
+          "max": 0.06015429110266268
+        },
+        "health": {
+          "p95": 0.0389189999550581,
+          "p99": 0.051661206874996424,
+          "max": 0.0838366081006825
+        },
+        "ui_list": {
+          "p95": 0.010637816973030567,
+          "p99": 0.017818290973082185,
+          "max": 0.017818290973082185
+        },
+        "artifact": {
+          "p95": 0.029272146988660097,
+          "p99": 0.18723313510417938,
+          "max": 0.23887651902623475
+        },
+        "ui_detail": {
+          "p95": 0.008994132047519088,
+          "p99": 0.01142601203173399,
+          "max": 0.01142601203173399
+        },
+        "ui_monitor": {
+          "p95": 0.138031569076702,
+          "p99": 0.18541783187538385,
+          "max": 0.18541783187538385
+        },
+        "result": {
+          "p95": 0.021538323955610394,
+          "p99": 0.03168475301936269,
+          "max": 0.03168475301936269
+        },
+        "result_duplicate": {
+          "p95": 0.00977376801893115,
+          "p99": 0.017819411121308804,
+          "max": 0.017819411121308804
+        },
+        "complete": {
+          "p95": 0.04629383096471429,
+          "p99": 0.07571084820665419,
+          "max": 0.07571084820665419
+        },
+        "ui_retry": {
+          "p95": 0.1587782520800829,
+          "p99": 0.21274886117316782,
+          "max": 0.21274886117316782
+        }
+      },
+      "latency_seconds": {
+        "ui_submit": {
+          "p95": 0.1865546761546284,
+          "p99": 0.27662270911969244,
+          "max": 0.27662270911969244
+        },
+        "heartbeat": {
+          "p95": 0.05449971789494157,
+          "p99": 0.07160396222025156,
+          "max": 0.12335938098840415
+        },
+        "agent": {
+          "p95": 0.03975155088119209,
+          "p99": 0.0570123209618032,
+          "max": 0.08504335302859545
+        },
+        "ui_control": {
+          "p95": 0.01380114397034049,
+          "p99": 0.014204635052010417,
+          "max": 0.014204635052010417
+        },
+        "logs": {
+          "p95": 0.202669968130067,
+          "p99": 0.22985861799679697,
+          "max": 0.2734137140214443
+        },
+        "claim": {
+          "p95": 0.013760376023128629,
+          "p99": 0.023710858076810837,
+          "max": 0.06015495001338422
+        },
+        "health": {
+          "p95": 0.03891935897991061,
+          "p99": 0.0516614718362689,
+          "max": 0.08383678807877004
+        },
+        "ui_list": {
+          "p95": 0.010638220934197307,
+          "p99": 0.01781876804307103,
+          "max": 0.01781876804307103
+        },
+        "artifact": {
+          "p95": 0.027676704106852412,
+          "p99": 0.1852037701755762,
+          "max": 0.23887674510478973
+        },
+        "ui_detail": {
+          "p95": 0.008994478965178132,
+          "p99": 0.011426561046391726,
+          "max": 0.011426561046391726
+        },
+        "ui_monitor": {
+          "p95": 0.1380317909643054,
+          "p99": 0.18541823094710708,
+          "max": 0.18541823094710708
+        },
+        "result": {
+          "p95": 0.02153879404067993,
+          "p99": 0.03168504708446562,
+          "max": 0.03168504708446562
+        },
+        "result_duplicate": {
+          "p95": 0.009774185949936509,
+          "p99": 0.017819859087467194,
+          "max": 0.017819859087467194
+        },
+        "complete": {
+          "p95": 0.04629448102787137,
+          "p99": 0.07571102306246758,
+          "max": 0.07571102306246758
+        },
+        "ui_retry": {
+          "p95": 0.15877877711318433,
+          "p99": 0.21274931798689067,
+          "max": 0.21274931798689067
+        }
+      },
+      "max_heartbeat_gap_seconds": 4.103365396847948,
+      "max_final_sample_age_seconds": 4.103365396847948,
+      "max_final_agent_age_seconds": 5.66911395592615,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.0010630509350448847,
+        "p99": 0.001737040001899004,
+        "max": 0.05370960384607315
+      },
+      "http_phases_seconds": {
+        "client_before_transport": {
+          "p95": 0.0009637800976634026,
+          "p99": 0.0016593481414020061,
+          "max": 0.06905712396837771,
+          "samples": 49376
+        },
+        "tcp_connect": {
+          "p95": 0.0030230639968067408,
+          "p99": 0.005541729973629117,
+          "max": 0.023725586012005806,
+          "samples": 2548
+        },
+        "response_headers_wait": {
+          "p95": 0.04722924483940005,
+          "p99": 0.2035587220452726,
+          "max": 0.2704128911718726,
+          "samples": 49376
+        }
+      },
+      "progress": [
+        {
+          "elapsed_seconds": 30.87,
+          "max_current_heartbeat_age_seconds": 1.4260844010859728,
+          "worst_heartbeat_gap_seconds": 2.1405995849054307,
+          "log_generated": 1485,
+          "log_accepted": 1485,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 60.87,
+          "max_current_heartbeat_age_seconds": 2.0285818250849843,
+          "worst_heartbeat_gap_seconds": 2.161230441182852,
+          "log_generated": 2970,
+          "log_accepted": 2970,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 111,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 90.87,
+          "max_current_heartbeat_age_seconds": 1.9250352811068296,
+          "worst_heartbeat_gap_seconds": 2.161230441182852,
+          "log_generated": 4455,
+          "log_accepted": 4455,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 111,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 120.87,
+          "max_current_heartbeat_age_seconds": 2.0245782469864935,
+          "worst_heartbeat_gap_seconds": 2.1961881208699197,
+          "log_generated": 5940,
+          "log_accepted": 5940,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 111,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 150.87,
+          "max_current_heartbeat_age_seconds": 2.0245650310534984,
+          "worst_heartbeat_gap_seconds": 2.1961881208699197,
+          "log_generated": 7425,
+          "log_accepted": 7425,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 111,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 180.0,
+          "max_current_heartbeat_age_seconds": 2.019353238865733,
+          "worst_heartbeat_gap_seconds": 2.1961881208699197,
+          "log_generated": 8910,
+          "log_accepted": 8910,
+          "log_pending": 0,
+          "oldest_pending_log_seconds": 0,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 111,
+          "agent_admission_rejections": 0
+        }
+      ],
+      "ui_evidence": {
+        "batch_id": "69d09f23-922f-4bc7-adce-db410dd56648",
+        "control_revisions": [
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2,
+          1,
+          2
+        ],
+        "last_batch_status": "SUCCEEDED",
+        "retried": true,
+        "retry_count": 26,
+        "batch_count": 26,
+        "completed_batches": [
+          "380d2f37-cb9a-4589-bc8a-46f777da877e",
+          "7091f708-2869-4570-9978-077f6cef6a5b",
+          "17b7afe5-f39d-4a66-ab7d-9a9ece954d91",
+          "d5ed89e3-d977-40d5-8f49-b006bf99f4e0",
+          "ce3e014f-e990-4d7b-be6a-3318a2edaf21",
+          "896bb6e9-c3e0-48ff-bc13-520bdc56ece3",
+          "577f1627-1ca0-43aa-84f9-7fbf854c30e0",
+          "928b595a-b41f-4dc2-8bd7-abf7cd7ed09e",
+          "27c015ac-8a70-4d97-bc57-904a856ade37",
+          "73b1fdd6-3454-4972-9b4b-51b440b0fd91",
+          "a3b1b516-2a1b-49f0-9972-afc88edb58b2",
+          "7a9e4f45-8dde-449e-94e8-8cad66d6d7eb",
+          "673db089-f644-4ddd-9957-997d1e5f3fac",
+          "ee36af18-4b82-48e7-9314-c5a643fbd6ae",
+          "f4000f98-af10-425b-99b3-7830e90790d4",
+          "fa0312de-f3fa-4819-9b5e-9271c5fda704",
+          "99ef227a-77a9-42d0-81ad-efd2538358d5",
+          "9230a613-0b74-4fd5-9e3a-c86266083484",
+          "41b003c4-4ab3-40c4-bb61-7c85015d368d",
+          "0e2b0383-39d0-42a0-8bd1-36aa697d7c04",
+          "18db7443-cdc4-4a38-aa33-115e9efa34e0",
+          "76a4351a-e909-4a26-bb11-523e7493f1eb",
+          "3955f403-0180-4643-8c65-416c1f0c3504",
+          "b84f3aac-b90a-4c76-808b-83f551dea092",
+          "b866a9db-1b72-4cbf-a0c0-913711c53367",
+          "69d09f23-922f-4bc7-adce-db410dd56648"
+        ],
+        "executions": [
+          {
+            "execution_id": "c884a183-5392-42bd-8e19-e82cea86d7ce",
+            "job_id": "fbbdb5af-1291-4efc-8526-b568ac2d894d",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "5c068014-2b51-4ad2-953e-e36e94686e81",
+            "job_id": "fbbdb5af-1291-4efc-8526-b568ac2d894d",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "f6cbcf19-6a60-4117-84c5-d3bd43c136d7",
+            "job_id": "f619edf7-2aef-429c-8767-2327165ebe02",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "be2ad99a-9c10-4a89-bc86-7c7368231897",
+            "job_id": "f619edf7-2aef-429c-8767-2327165ebe02",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "a763d5fa-031b-42a9-b75a-78a8c71ecdb1",
+            "job_id": "6e723735-782a-450b-b633-58e3799caa91",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "ad6593f2-00e6-41a4-9655-de885cb091e6",
+            "job_id": "6e723735-782a-450b-b633-58e3799caa91",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "3b5053b4-d291-4899-92db-1df2bbb5f386",
+            "job_id": "6eac5b6a-dbb4-4517-a94d-1959f8d7ad8d",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "67f10019-7067-49b5-9128-e53565e9787f",
+            "job_id": "6eac5b6a-dbb4-4517-a94d-1959f8d7ad8d",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "f27df3da-d531-45f5-83df-d737d94bcaaa",
+            "job_id": "9f35dcfa-6081-468c-9a75-c8bfad61b420",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "23f14cd2-4268-400a-8568-774f73b687e3",
+            "job_id": "9f35dcfa-6081-468c-9a75-c8bfad61b420",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "917b24d7-11cd-4684-8967-8e442bbac385",
+            "job_id": "ea14645b-2da0-4804-8ce8-7f8550bdbb64",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "97da3f2b-bd26-4afa-8cbb-8600920d3e76",
+            "job_id": "ea14645b-2da0-4804-8ce8-7f8550bdbb64",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "d358df67-f097-4941-b851-eae815bf8a80",
+            "job_id": "1b605d2e-e260-425f-8c74-71d49d8e7677",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "306a706d-e19f-455b-9cb9-7f6bf2c454dd",
+            "job_id": "1b605d2e-e260-425f-8c74-71d49d8e7677",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "31de0da0-dbe1-4f21-9d9c-9512f00a3880",
+            "job_id": "ee39290f-5a49-4aeb-a46f-7adfaa5127f5",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "cac77eaa-e9ae-48cb-ac39-5c2aa97e2604",
+            "job_id": "ee39290f-5a49-4aeb-a46f-7adfaa5127f5",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "6c4be1cf-4275-41be-9387-fdda0e1ff6c7",
+            "job_id": "0be4d4ca-d29e-4452-8874-edf82ea48aac",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "c17043f5-3c4a-4c3d-89fb-4c87dbd5f818",
+            "job_id": "0be4d4ca-d29e-4452-8874-edf82ea48aac",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "36328ceb-8f9f-4b29-a9c3-fa9ee5a8ae6b",
+            "job_id": "0746c850-2270-41fa-8bf2-1cc6e8008fde",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "a7581502-1318-4db4-a786-adfdb6b5b631",
+            "job_id": "0746c850-2270-41fa-8bf2-1cc6e8008fde",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "291a7e45-f44d-474c-95c0-a2c5c92ea640",
+            "job_id": "740ae1e8-e06a-4089-b59f-64c8f9b83be0",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "14d9877f-bc9d-4b0f-be3f-0b98b6bc61b1",
+            "job_id": "740ae1e8-e06a-4089-b59f-64c8f9b83be0",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "7385a6d5-2644-439f-bc4f-ed168711b3e9",
+            "job_id": "d99af084-eadb-4ec9-a47e-99bc81c44232",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "8e3eb0fc-1dd6-440b-810a-af06a4e52672",
+            "job_id": "d99af084-eadb-4ec9-a47e-99bc81c44232",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "eb967b02-a3d7-4b11-950c-7e9412c2bfa3",
+            "job_id": "d9fbd1a2-af2e-4d6b-b9e4-0c82180e2a0c",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "3ec6c396-65bd-4a9e-a1a8-266a760a5d7c",
+            "job_id": "d9fbd1a2-af2e-4d6b-b9e4-0c82180e2a0c",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "b9c72386-069c-46a7-a7dd-df9af7f74adf",
+            "job_id": "b8e02a1e-6023-4114-a9e0-f4bf517960c6",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "bd5eed3a-930a-4fc5-b65d-b5f35a69f6e6",
+            "job_id": "b8e02a1e-6023-4114-a9e0-f4bf517960c6",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "0111d2fb-86af-4130-a04f-3a903cb9f3e2",
+            "job_id": "1334ab10-6fe5-4b72-85df-09c33f4b56a9",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "a35debe9-f696-4552-a5e8-80d1accb01b7",
+            "job_id": "1334ab10-6fe5-4b72-85df-09c33f4b56a9",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "a8dad4cc-6b5d-46bd-b3da-b2f899095467",
+            "job_id": "a7d18bea-bc4d-401b-a37e-eca1bb8ab3be",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "9aa7030a-01cf-4593-be24-384bcd5188f5",
+            "job_id": "a7d18bea-bc4d-401b-a37e-eca1bb8ab3be",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "b0d0099d-5886-4258-b7eb-9738ae871146",
+            "job_id": "f01da71a-c941-4ed2-8f54-b3edc2a18000",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "ee17d268-9a9b-4d2b-bb5c-7492d28aa893",
+            "job_id": "f01da71a-c941-4ed2-8f54-b3edc2a18000",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "4e139b7e-f580-4eae-b73a-bd406a72134e",
+            "job_id": "7d4f248c-9fb0-4062-80f2-0c3904d0d03e",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "69a02330-9b01-48fc-b4f4-3d75b230890c",
+            "job_id": "7d4f248c-9fb0-4062-80f2-0c3904d0d03e",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "7d9cf0ee-21bb-43a9-aa68-24a258211200",
+            "job_id": "2d58bae1-48cf-42a5-b4a3-786693c693a8",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "956e4d96-e8d0-40ee-b2e9-4d03a9d89126",
+            "job_id": "2d58bae1-48cf-42a5-b4a3-786693c693a8",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "15c61e76-05bd-462a-90d3-7b9a6fbd1905",
+            "job_id": "caa4c2eb-1edd-4b2d-9ff3-2dbdce826bd4",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "797fe5a1-5b7e-4d2d-a447-8f7370b39f9c",
+            "job_id": "caa4c2eb-1edd-4b2d-9ff3-2dbdce826bd4",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "d5ef51e3-899d-471c-b38d-b14b06e1a1e2",
+            "job_id": "9ec73ad2-ee4b-4c58-8b80-a95ba5f847e2",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "85bcd652-997b-438f-83c6-1bf0f4a0d3c5",
+            "job_id": "9ec73ad2-ee4b-4c58-8b80-a95ba5f847e2",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "63c97bdb-32a2-4282-ab11-c77d9edf4cd2",
+            "job_id": "ceeaac2e-d5ee-4110-b2d9-72c6fb8430a2",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "fccbd96f-922d-4ee1-9f59-a5f1898639bc",
+            "job_id": "ceeaac2e-d5ee-4110-b2d9-72c6fb8430a2",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "685fb044-7781-478f-8cd4-bffcfa96564b",
+            "job_id": "ace87b5d-6a00-4172-985b-16592969642d",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "c20e9177-c87a-46f7-a5c0-9e5f6baa9566",
+            "job_id": "ace87b5d-6a00-4172-985b-16592969642d",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "aebc3cf4-dc40-4d32-8f55-46116e4f5b27",
+            "job_id": "3752287e-074c-4c54-8c7f-e22c4e16afe2",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "142360c6-63cf-46b6-bff2-73cec4e9af7f",
+            "job_id": "3752287e-074c-4c54-8c7f-e22c4e16afe2",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "5b7d28f5-887c-4203-9d0d-a23086c4a9c6",
+            "job_id": "52178848-0657-48aa-b02d-5284042a9103",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "002d7da4-b148-4a61-84bf-6547717e1ad4",
+            "job_id": "52178848-0657-48aa-b02d-5284042a9103",
+            "status": "SUCCEEDED"
+          },
+          {
+            "execution_id": "df475bba-95b8-4723-b9bd-49d98d35bbc0",
+            "job_id": "8c55d7a7-6bfd-4d3a-a42a-f0d9fe1a951c",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "1caebf08-dc9b-4ddf-8e51-81d10025a38a",
+            "job_id": "8c55d7a7-6bfd-4d3a-a42a-f0d9fe1a951c",
+            "status": "SUCCEEDED"
+          }
+        ],
+        "duplicate_results": 52,
+        "errors": [],
+        "last_monitor": [
+          {
+            "status": "SUCCEEDED",
+            "reasons": [],
+            "waiting": null
+          }
+        ]
+      },
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 8910,
+        "accepted": 8910,
+        "max_pending_chunks_per_worker": 11,
+        "final_pending_chunks": 0,
+        "max_pending_age_seconds": 21.846438423963264
+      },
+      "during_load_outage": {
+        "stopped_at_seconds": 30.982045891927555,
+        "restarted_at_seconds": 45.982837525894865
+      },
+      "database_samples": [
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 5,
+              "max_query_age_seconds": 0.185376
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 7,
+            "xact_rollback": 1,
+            "blks_read": 0,
+            "blks_hit": 32579,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 982767522,
+          "postgres_container": {
+            "CPUPerc": "16.90%",
+            "MemUsage": "154.7MiB / 62.63GiB",
+            "BlockIO": "0B / 2.7GB",
+            "PIDs": "36"
+          },
+          "sample_seconds": 1.0174821440596133,
+          "elapsed_seconds": 1.0190905020572245
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.00253
+            },
+            {
+              "state": "active",
+              "wait_event_type": "LWLock",
+              "connections": 3,
+              "max_query_age_seconds": 0.004726
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 38,
+              "max_query_age_seconds": 1.927219
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.00035
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 2602,
+            "xact_rollback": 1574,
+            "blks_read": 50,
+            "blks_hit": 257407,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 994649716,
+          "postgres_container": {
+            "CPUPerc": "60.26%",
+            "MemUsage": "207.1MiB / 62.63GiB",
+            "BlockIO": "0B / 2.72GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0171660790219903,
+          "elapsed_seconds": 12.036952669965103
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.00197
+            },
+            {
+              "state": "active",
+              "wait_event_type": "LWLock",
+              "connections": 1,
+              "max_query_age_seconds": 0.002378
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 37,
+              "max_query_age_seconds": 2.525488
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 5,
+              "max_query_age_seconds": 0.000733
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 5094,
+            "xact_rollback": 3411,
+            "blks_read": 50,
+            "blks_hit": 354662,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1001653226,
+          "postgres_container": {
+            "CPUPerc": "20.71%",
+            "MemUsage": "210.2MiB / 62.63GiB",
+            "BlockIO": "0B / 2.74GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0145854870788753,
+          "elapsed_seconds": 23.052106285933405
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 34,
+              "max_query_age_seconds": 2.446942
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 7483,
+            "xact_rollback": 5261,
+            "blks_read": 50,
+            "blks_hit": 443799,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1007512104,
+          "postgres_container": {
+            "CPUPerc": "15.58%",
+            "MemUsage": "183.1MiB / 62.63GiB",
+            "BlockIO": "0B / 2.76GB",
+            "PIDs": "42"
+          },
+          "sample_seconds": 1.0146801539231092,
+          "elapsed_seconds": 34.06703546294011
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.003086
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 31,
+              "max_query_age_seconds": 3.665239
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 2,
+              "max_query_age_seconds": 0.000872
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 9262,
+            "xact_rollback": 6591,
+            "blks_read": 50,
+            "blks_hit": 503960,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1007982819,
+          "postgres_container": {
+            "CPUPerc": "28.53%",
+            "MemUsage": "184MiB / 62.63GiB",
+            "BlockIO": "0B / 2.79GB",
+            "PIDs": "42"
+          },
+          "sample_seconds": 1.01782808592543,
+          "elapsed_seconds": 45.08592899609357
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.004507
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 36,
+              "max_query_age_seconds": 3.072891
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 7,
+              "max_query_age_seconds": 0.000925
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 12369,
+            "xact_rollback": 8232,
+            "blks_read": 50,
+            "blks_hit": 691834,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1023149016,
+          "postgres_container": {
+            "CPUPerc": "21.25%",
+            "MemUsage": "214.2MiB / 62.63GiB",
+            "BlockIO": "0B / 2.82GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0171807520091534,
+          "elapsed_seconds": 56.10437104199082
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 44,
+              "max_query_age_seconds": 4.027032
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 14972,
+            "xact_rollback": 10096,
+            "blks_read": 50,
+            "blks_hit": 821054,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1030828306,
+          "postgres_container": {
+            "CPUPerc": "46.57%",
+            "MemUsage": "224.2MiB / 62.63GiB",
+            "BlockIO": "0B / 2.86GB",
+            "PIDs": "53"
+          },
+          "sample_seconds": 1.015006145928055,
+          "elapsed_seconds": 67.12089359597303
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.000192
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 27,
+              "max_query_age_seconds": 3.755869
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 16,
+              "max_query_age_seconds": 0.00239
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 17682,
+            "xact_rollback": 12038,
+            "blks_read": 50,
+            "blks_hit": 980847,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1038657330,
+          "postgres_container": {
+            "CPUPerc": "43.73%",
+            "MemUsage": "221.9MiB / 62.63GiB",
+            "BlockIO": "0B / 2.88GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0168404730502516,
+          "elapsed_seconds": 78.13824733300135
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 42,
+              "max_query_age_seconds": 3.136134
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 2,
+              "max_query_age_seconds": 0.000283
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 20439,
+            "xact_rollback": 13993,
+            "blks_read": 50,
+            "blks_hit": 1112184,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1046052598,
+          "postgres_container": {
+            "CPUPerc": "12.56%",
+            "MemUsage": "223.2MiB / 62.63GiB",
+            "BlockIO": "0B / 2.9GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.017192861996591,
+          "elapsed_seconds": 89.1564402631484
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.001683
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 42,
+              "max_query_age_seconds": 1.899934
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.000288
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 22931,
+            "xact_rollback": 15820,
+            "blks_read": 50,
+            "blks_hit": 1243052,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1053182230,
+          "postgres_container": {
+            "CPUPerc": "40.97%",
+            "MemUsage": "222.9MiB / 62.63GiB",
+            "BlockIO": "0B / 2.92GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.015863330103457,
+          "elapsed_seconds": 100.17383566312492
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 41,
+              "max_query_age_seconds": 3.89416
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 3,
+              "max_query_age_seconds": 0.001164
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 25397,
+            "xact_rollback": 17646,
+            "blks_read": 50,
+            "blks_hit": 1374714,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1060504480,
+          "postgres_container": {
+            "CPUPerc": "22.10%",
+            "MemUsage": "230.1MiB / 62.63GiB",
+            "BlockIO": "0B / 2.94GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0138894440606236,
+          "elapsed_seconds": 111.18820943194441
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 44,
+              "max_query_age_seconds": 3.850871
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 27903,
+            "xact_rollback": 19564,
+            "blks_read": 50,
+            "blks_hit": 1508493,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1067605993,
+          "postgres_container": {
+            "CPUPerc": "29.75%",
+            "MemUsage": "237.5MiB / 62.63GiB",
+            "BlockIO": "0B / 2.98GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0159050521906465,
+          "elapsed_seconds": 122.20487649505958
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.004348
+            },
+            {
+              "state": "active",
+              "wait_event_type": "LWLock",
+              "connections": 1,
+              "max_query_age_seconds": 0.000186
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 38,
+              "max_query_age_seconds": 2.12109
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 4,
+              "max_query_age_seconds": 0.001202
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 30414,
+            "xact_rollback": 21428,
+            "blks_read": 50,
+            "blks_hit": 1685731,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1076385081,
+          "postgres_container": {
+            "CPUPerc": "35.63%",
+            "MemUsage": "241.4MiB / 62.63GiB",
+            "BlockIO": "0B / 3.02GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0158326108939946,
+          "elapsed_seconds": 133.22123803314753
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.004011
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 35,
+              "max_query_age_seconds": 1.974539
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 8,
+              "max_query_age_seconds": 0.001172
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 32950,
+            "xact_rollback": 23304,
+            "blks_read": 50,
+            "blks_hit": 1814596,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1083440823,
+          "postgres_container": {
+            "CPUPerc": "22.99%",
+            "MemUsage": "241.9MiB / 62.63GiB",
+            "BlockIO": "0B / 3.05GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0158972761128098,
+          "elapsed_seconds": 144.23843217315152
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 44,
+              "max_query_age_seconds": 1.781762
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 35669,
+            "xact_rollback": 25251,
+            "blks_read": 50,
+            "blks_hit": 1953819,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1091041240,
+          "postgres_container": {
+            "CPUPerc": "29.15%",
+            "MemUsage": "242.4MiB / 62.63GiB",
+            "BlockIO": "0B / 3.07GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0161208240315318,
+          "elapsed_seconds": 155.25509624998085
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 38,
+              "max_query_age_seconds": 3.559781
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 6,
+              "max_query_age_seconds": 0.001834
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 38230,
+            "xact_rollback": 27059,
+            "blks_read": 50,
+            "blks_hit": 2085795,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1098130568,
+          "postgres_container": {
+            "CPUPerc": "37.63%",
+            "MemUsage": "242.9MiB / 62.63GiB",
+            "BlockIO": "0B / 3.11GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0158813879825175,
+          "elapsed_seconds": 166.27118525793776
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": null,
+              "connections": 1,
+              "max_query_age_seconds": 0.00014
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 39,
+              "max_query_age_seconds": 10.521861
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 4,
+              "max_query_age_seconds": 0.000963
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 40767,
+            "xact_rollback": 28892,
+            "blks_read": 50,
+            "blks_hit": 2220985,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1105404801,
+          "postgres_container": {
+            "CPUPerc": "25.49%",
+            "MemUsage": "243.2MiB / 62.63GiB",
+            "BlockIO": "0B / 3.13GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.0176884620450437,
+          "elapsed_seconds": 177.28979738010094
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 44,
+              "max_query_age_seconds": 19.308773
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 41691,
+            "xact_rollback": 29556,
+            "blks_read": 50,
+            "blks_hit": 2277435,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 1107867620,
+          "postgres_container": {
+            "CPUPerc": "0.01%",
+            "MemUsage": "243MiB / 62.63GiB",
+            "BlockIO": "0B / 3.13GB",
+            "PIDs": "52"
+          },
+          "sample_seconds": 1.015674830880016,
+          "elapsed_seconds": 186.07431873609312
+        }
+      ],
+      "role_topology": {
+        "execution-control": {
+          "health": {
+            "status": "ok",
+            "role": "execution-control",
+            "budget": "c869dbe1d571d12d"
+          },
+          "ready_status": 200,
+          "wrong_route_status": 404
+        },
+        "interaction": {
+          "health": {
+            "status": "ok",
+            "role": "interaction",
+            "budget": "c869dbe1d571d12d"
+          },
+          "ready_status": 200,
+          "wrong_route_status": 404
+        },
+        "worker-data": {
+          "health": {
+            "status": "ok",
+            "role": "worker-data",
+            "budget": "c869dbe1d571d12d"
+          },
+          "ready_status": 200,
+          "wrong_route_status": 404
+        },
+        "bulk-transfer": {
+          "health": {
+            "status": "ok",
+            "role": "bulk-transfer",
+            "budget": "c869dbe1d571d12d"
+          },
+          "ready_status": 200,
+          "wrong_route_status": 404
+        }
+      },
+      "role_failure": {
+        "gateway_health_when_bulk_stopped": 503,
+        "bulk_request_when_stopped": 502,
+        "heartbeat_when_bulk_stopped": 200,
+        "gateway_health_after_restart": 200
+      },
+      "initial_checkout_wait_ms": {
+        "p95": 0.064,
+        "p99": 0.081
+      },
+      "expired_leases": 0,
+      "telemetry_stale": 0,
+      "database_max_connections": 100,
+      "database_connections_at_end": 37,
+      "executions": 151,
+      "workers": 100,
+      "passed": true
+    }
+  ]
+}

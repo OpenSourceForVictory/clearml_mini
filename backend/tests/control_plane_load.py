@@ -24,6 +24,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
 from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, now
+from backend.app import priority_runtime, priority_gateway
+from backend.tests.control_plane_metrics import observe, with_outage
 
 
 def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
@@ -34,7 +36,7 @@ def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
         if mixed_ui:
             s.add(ClientTemplate(id='load-template', name='load-command', version='1', image='load:command',
                                  command=['true'], protocols=[], task_type='command',
-                                 integration_mode='direct', status='published'))
+                                 integration_mode='sdk-task-result', status='published'))
     identities = []
     for i in range(count):
         identity, token = uuid.uuid4().hex, 'wk_' + uuid.uuid4().hex
@@ -49,8 +51,13 @@ def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
             if agent_telemetry:
                 s.add(AgentObservation(worker_id=identity, session=agent_session, payload={}))
             s.add(Slot(id=identity, worker_id=identity, pool_id='p', node_name='load-'+str(i), queue_name='load-'+identity, gpu_index=0,
-                       gpu_uuid='mock:'+identity, gpu_model='virtual', vram_mb=1024))
+                       gpu_uuid='mock:'+identity, gpu_model='virtual', vram_mb=1024,
+                       protocol_version=18 if mixed_ui and i == count-1 else 1,
+                       client_images=['load:command']))
             s.flush()
+            if mixed_ui and i == count-1:
+                identities.append((identity, token, agent_session) if agent_telemetry else (identity, token))
+                continue
             s.add(ServiceInstance(id=identity, name='load', worker_id=identity, slot_id=identity,
                                   address='127.0.0.1', port=19000, template_snapshot={}, current_job_id=identity))
             s.flush()
@@ -79,7 +86,18 @@ def render_gateway_config(template, ordinary_port, control_port, gateway_port):
                      f'set $ordinary_backend 127.0.0.1:{ordinary_port};'))
 
 
-def api_log_names(count, split_api):
+def render_priority_gateway_config(ports, gateway_port):
+    if set(ports) != set(priority_runtime.ROLE_POOLS):
+        raise ValueError('priority gateway requires every role port')
+    config = priority_gateway.render().replace('listen 8000;', f'listen 127.0.0.1:{gateway_port};')
+    for role, port in ports.items():
+        config = config.replace(priority_gateway.BACKENDS[role], f'127.0.0.1:{port}')
+    return config
+
+
+def api_log_names(count, split_api, priority_api=False):
+    if priority_api:
+        return [f'api-{role}-{count}.log' for role in priority_runtime.ROLE_POOLS]
     return ([f'api-ordinary-{count}.log', f'api-control-{count}.log'] if split_api
             else [f'api-{count}.log'])
 
@@ -98,9 +116,30 @@ def pool_profiles(ordinary, control, observation, *, split_api=False, role_aware
     return {'ordinary': common, **({'control': common.copy()} if split_api else {})}
 
 
+def log_payload(identity, sequence, size, varied=False):
+    if not varied:
+        return 'x' * size
+    # Deterministic retries but distinct lines/chunks; avoid an all-x TOAST bias.
+    rows = []
+    for line in range(size // 128 + 1):
+        detail = hashlib.shake_256(f'{identity}:{sequence}:{line}'.encode()).hexdigest(64)
+        rows.append(f'INFO worker={identity} chunk={sequence} step={line} event=simulation_progress detail={detail}\n')
+    return ''.join(rows)[:size]
+
+
+def acceptable_responses(by_kind, *, mixed_ui, bulk_outage):
+    for kind, counts in by_kind.items():
+        allowed = {'200', '503'} | ({'201'} if mixed_ui else set())
+        if bulk_outage and kind in ('logs', 'artifact'):
+            allowed |= {'502', '504'}
+        if set(counts) - allowed:
+            return False
+    return True
+
+
 async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0,
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
-                   progress_path=None, log_interval=2, user_token=None):
+                   progress_path=None, log_interval=2, user_token=None, continuous_batches=False, varied_logs=False):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -112,20 +151,26 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
     loop_lag = []
     http_phases = defaultdict(list)
     progress = []
-    ui_evidence = {'batch_id': None, 'control_revisions': [], 'last_batch_status': None, 'errors': []}
+    ui_evidence = {'batch_id': None, 'control_revisions': [], 'last_batch_status': None,
+                   'retried': False, 'retry_count':0, 'batch_count':0, 'completed_batches':[],
+                   'executions': [], 'duplicate_results': 0, 'errors': []}
+    running_identities = identities[:-1] if user_token else identities
     started = time.monotonic()
     async with AsyncExitStack() as stack:
         if client_per_worker:
             clients = {identity: await stack.enter_async_context(httpx.AsyncClient(
                 base_url=base, trust_env=False, timeout=5,
-                limits=httpx.Limits(max_connections=2, max_keepalive_connections=2)))
+                limits=httpx.Limits(max_connections=4, max_keepalive_connections=4)))
                 for identity, *_ in identities}
         else:
             shared = await stack.enter_async_context(httpx.AsyncClient(
                 base_url=base, trust_env=False, timeout=5,
-                limits=httpx.Limits(max_connections=len(identities)*2,
-                                    max_keepalive_connections=len(identities)*2)))
+                limits=httpx.Limits(max_connections=len(identities)*4,
+                                    max_keepalive_connections=len(identities)*4)))
             clients = {identity: shared for identity, *_ in identities}
+        ui_client = await stack.enter_async_context(httpx.AsyncClient(
+            base_url=base, trust_env=False, timeout=5,
+            limits=httpx.Limits(max_connections=4, max_keepalive_connections=4))) if user_token else None
         async def post(kind, identity, token, path, body):
             begin = time.monotonic()
             events = {}
@@ -220,7 +265,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 created, gap = queue[0]
                 max_log_age = max(max_log_age, time.monotonic() - created)
                 reply = await post('logs', identity, token, path,
-                                   {'sequence': sequence, 'content': 'x' * log_bytes, 'gap': gap})
+                                   {'sequence': sequence, 'content': log_payload(identity, sequence, log_bytes, varied_logs), 'gap': gap})
                 if reply is not None and reply.status_code == 200:
                     if reply.json().get('next_sequence') != sequence + 1:
                         log_stats['unexpected_ack'] += 1
@@ -287,12 +332,57 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 await post('health', identity, token, f'worker/executions/{identity}/service-health', {'ready':True})
                 if not independent_logs:
                     reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2',
-                                       {'sequence':seq, 'content':'x'*log_bytes})
+                                       {'sequence':seq, 'content':log_payload(identity, seq, log_bytes, varied_logs)})
                     if reply is not None and reply.status_code == 200:
                         seq = reply.json()['next_sequence']
                 await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
                 await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
                 await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)) + random.uniform(0,.1))
+        async def command_worker(identity, token):
+            nonlocal worst_heartbeat_age
+            current, result_sent = None, False
+            latest_heartbeat[identity] = latest_sample[identity] = started
+            while time.monotonic()-started < seconds:
+                heartbeat = {'slot_id':identity, 'telemetry':{'free_vram_mb':1024, 'gpu_utilization':0}}
+                if current:
+                    heartbeat['execution_id'] = current['execution_id']
+                else:
+                    heartbeat['storage'] = {'revision':0, 'applied_revision':0, 'status':'applied',
+                                            'effective':{'workspace_root':'/tmp/load/work', 'assets_root':'/tmp/load/assets',
+                                                         'cache_root':'/tmp/load/cache'}}
+                    heartbeat['runtime'] = {'revision':0, 'applied_revision':0, 'effective':{'images':['load:command']},
+                                            'images':{'load:command':{'ready':True}}}
+                reply = await post('heartbeat', identity, token, 'worker/heartbeat', heartbeat)
+                worst_heartbeat_age = max(worst_heartbeat_age, time.monotonic()-latest_heartbeat[identity])
+                if reply is None or reply.status_code != 200:
+                    await asyncio.sleep(.25)
+                    continue
+                latest_heartbeat[identity] = latest_sample[identity] = time.monotonic()
+                if current is None:
+                    reply = await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[]})
+                    if reply is not None and reply.status_code == 200:
+                        current = reply.json().get('task')
+                        result_sent = False
+                else:
+                    execution_id = current['execution_id']
+                    success = any(e['job_id'] == current['job_id'] for e in ui_evidence['executions'])
+                    path = f'worker/executions/{execution_id}'
+                    if not result_sent:
+                        body = {'success':success, 'metrics':{}, 'summary':'simulated API lifecycle'}
+                        reply = await post('result', identity, token, path+'/task-result', body)
+                        if reply is not None and reply.status_code == 200:
+                            duplicate = await post('result_duplicate', identity, token, path+'/task-result', body)
+                            if duplicate is not None and duplicate.status_code == 200 and duplicate.json().get('duplicate'):
+                                ui_evidence['duplicate_results'] += 1
+                                result_sent = True
+                    if result_sent:
+                        status = 'SUCCEEDED' if success else 'FAILED'
+                        reply = await post('complete', identity, token, path+'/complete',
+                                           {'status':status, 'exit_code':0 if success else 1})
+                        if reply is not None and reply.status_code == 200:
+                            ui_evidence['executions'].append({'execution_id':execution_id, 'job_id':current['job_id'], 'status':status})
+                            current = None
+                await asyncio.sleep(.5)
         async def ui_traffic():
             if user_token is None:
                 return
@@ -301,7 +391,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             async def request(kind, method, path, body=None):
                 began = time.monotonic()
                 try:
-                    reply = await clients[identity].request(method, '/api/v1/'+path, json=body, headers=headers)
+                    reply = await ui_client.request(method, '/api/v1/'+path, json=body, headers=headers)
                     code = str(reply.status_code)
                     codes[code] += 1
                     by_kind[kind][code] += 1
@@ -325,30 +415,57 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             body = {'title':'mixed-load', 'pool_id':'p',
                     'client':{'template_id':'load-template', 'service_mode':'none', 'task_name':'load'},
                     'cases':[{'case_id':'queued-1', 'task_name':'load', 'episodes':1}]}
-            created = await request('ui_submit', 'POST', 'batches', body)
-            if created is None or created.status_code != 201:
+            async def submit_batch():
+                created = await request('ui_submit', 'POST', 'batches', body)
+                if created is None or created.status_code != 201:
+                    return None
+                batch_id = created.json()['id']
+                ui_evidence.update(batch_id=batch_id, retried=False, last_batch_status=None)
+                ui_evidence['batch_count'] += 1
+                for action, revision in (('pause', 0), ('resume', 1)):
+                    reply = await request('ui_control', 'POST', f'batches/{batch_id}/control',
+                                          {'action':action, 'expected_revision':revision})
+                    if reply is None or reply.status_code != 200:
+                        return None
+                    ui_evidence['control_revisions'].append(reply.json()['control_revision'])
+                return batch_id
+            batch_id = await submit_batch()
+            if batch_id is None:
                 return
-            batch_id = created.json()['id']
-            ui_evidence['batch_id'] = batch_id
-            for action, revision in (('pause', 0), ('resume', 1)):
-                reply = await request('ui_control', 'POST', f'batches/{batch_id}/control',
-                                      {'action':action, 'expected_revision':revision})
-                if reply is None or reply.status_code != 200:
-                    return
-                ui_evidence['control_revisions'].append(reply.json()['control_revision'])
             while time.monotonic()-started < seconds:
                 await request('ui_list', 'GET', 'batches?view=summary')
                 detail = await request('ui_detail', 'GET', f'batches/{batch_id}')
+                monitor = await request('ui_monitor', 'GET', f'batches/{batch_id}/monitor')
+                if monitor is not None and monitor.status_code == 200:
+                    ui_evidence['last_monitor'] = [{'status':case['status'], 'reasons':case['reason_codes'],
+                                                    'waiting':case['waiting']} for case in monitor.json()['cases']]
                 if detail is not None and detail.status_code == 200:
-                    ui_evidence['last_batch_status'] = detail.json()['status']
+                    batch = detail.json()
+                    ui_evidence['last_batch_status'] = batch['status']
+                    if batch['status'] == 'FAILED' and not ui_evidence['retried']:
+                        failed = batch['cases'][0]
+                        retry = await request('ui_retry', 'POST', f'batches/{batch_id}/retry-failed',
+                                              {'items':[{'job_id':failed['job_id'], 'expected_run_id':failed['run_id']}]})
+                        if retry is not None and retry.status_code == 200:
+                            ui_evidence['retried'] = retry.json()['retried'] == 1
+                            ui_evidence['retry_count'] += int(ui_evidence['retried'])
+                    if batch['status'] == 'SUCCEEDED' and batch_id not in ui_evidence['completed_batches']:
+                        ui_evidence['completed_batches'].append(batch_id)
+                    if batch['status'] == 'SUCCEEDED' and continuous_batches and started+seconds-time.monotonic() > 15:
+                        batch_id = await submit_batch()
+                        if batch_id is None:
+                            return
                 await asyncio.sleep(2)
-        log_tasks = ([asyncio.create_task(task) for item in identities for task in
+        log_tasks = ([asyncio.create_task(task) for item in running_identities for task in
                       (produce_logs(item[0]), send_logs(*item[:2]))] if independent_logs else [])
         agent_tasks = [asyncio.create_task(agent(*item)) for item in identities] if agent_telemetry else []
         loop_task = asyncio.create_task(sample_loop_lag())
         progress_task = asyncio.create_task(sample_progress()) if progress_path else None
         ui_task = asyncio.create_task(ui_traffic()) if user_token else None
-        await asyncio.gather(*(worker(*item[:2]) for item in identities))
+        worker_tasks = [worker(*item[:2]) for item in running_identities]
+        if user_token:
+            worker_tasks.append(command_worker(*identities[-1][:2]))
+        await asyncio.gather(*worker_tasks)
         end = time.monotonic()
         await loop_task
         if progress_task:
@@ -386,6 +503,7 @@ def main():
     parser.add_argument('--grades', default='50,100,200')
     parser.add_argument('--seconds', type=int, default=30)
     parser.add_argument('--log-bytes', type=int, default=1024)
+    parser.add_argument('--varied-logs', action='store_true', help='distinct deterministic structured log lines, instead of highly compressible repeated characters')
     parser.add_argument('--log-interval', type=float, default=2)
     parser.add_argument('--output', required=True)
     parser.add_argument('--ordinary-pool', type=int, default=10)
@@ -399,9 +517,14 @@ def main():
     parser.add_argument('--agent-telemetry', action='store_true')
     parser.add_argument('--mixed-ui', action='store_true',
                         help='enable real scheduler plus authenticated batch submit/control/list/detail')
+    parser.add_argument('--continuous-batches', action='store_true', help='repeat submit/fail/retry/succeed during mixed UI load')
+    parser.add_argument('--bulk-outage-seconds', type=int, default=0, help='stop bulk role 30 seconds into load, then restart')
+    parser.add_argument('--postgres-container', help='optional disposable PostgreSQL container for read-only docker stats')
     parser.add_argument('--progress-every-30s', action='store_true')
     parser.add_argument('--split-api', action='store_true',
                         help='run two isolated API processes behind the production Nginx routing config')
+    parser.add_argument('--priority-api', action='store_true',
+                        help='run four role-specific API processes and the generated Nginx gateway')
     parser.add_argument('--role-aware-pools', action='store_true',
                         help='use the split Compose role-specific pool profile')
     parser.add_argument('--no-backpressure', action='store_true',
@@ -410,17 +533,25 @@ def main():
                         help='retain bounded DB pools and deadlines but do not reject at category entrance')
     args = parser.parse_args()
     grades = [int(x) for x in args.grades.split(',')]
+    if args.bulk_outage_seconds < 0 or (args.bulk_outage_seconds and (not args.priority_api or not args.independent_logs or args.seconds < 60+args.bulk_outage_seconds)):
+        parser.error('--bulk-outage-seconds requires four roles, independent logs and at least 60 + outage seconds')
+    if args.continuous_batches and (not args.mixed_ui or args.seconds < 30):
+        parser.error('--continuous-batches requires --mixed-ui and at least 30 seconds')
+    if args.priority_api and (args.split_api or args.role_aware_pools or args.no_admission or args.no_backpressure):
+        parser.error('--priority-api requires its own pools and admission, without --split-api')
     if args.role_aware_pools and not args.split_api:
         parser.error('--role-aware-pools requires --split-api')
     if args.role_aware_pools and args.no_backpressure:
         parser.error('--role-aware-pools requires database backpressure')
     if args.no_backpressure and args.no_admission:
         parser.error('--no-admission requires database backpressure')
-    profiles = pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
+    profiles = ({role: priority_runtime.Settings(role, role == 'worker-data').active_pool_sizes
+                 for role in priority_runtime.ROLE_POOLS} if args.priority_api else
+                pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
                              split_api=args.split_api, role_aware=args.role_aware_pools,
-                             scheduler_enabled=args.mixed_ui, result=args.result_pool)
+                             scheduler_enabled=args.mixed_ui, result=args.result_pool))
     process_count = len(profiles)
-    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or any(sum(p.values()) * process_count > 80 for p in profiles.values()):
+    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
@@ -428,31 +559,38 @@ def main():
     output = Path(args.output);output.mkdir(parents=True, exist_ok=True)
     admin = create_engine(url, isolation_level='AUTOCOMMIT')
     summary = {'hardware': {'machine':platform.machine(), 'cpu_count':os.cpu_count()},
-               'api_processes':2 if args.split_api else 1,
-               'gateway':'nginx host-network test container' if args.split_api else None,
+               'api_processes':process_count,
+               'gateway':'nginx host-network test container' if args.split_api or args.priority_api else None,
                'pool_ordinary':args.ordinary_pool, 'pool_control':args.control_pool,
                'pool_observation':args.observation_pool,
                'pool_result':args.result_pool if args.result_pool is not None else (3 if args.role_aware_pools else 2),
                'pool_scheduler':1,
                'pool_by_process':profiles if not args.no_backpressure else None,
+               'configured_total_connections':sum(sum(p.values()) for p in profiles.values()),
                'db_backpressure_enabled':not args.no_backpressure,
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
                'cards_per_node':1,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
-               'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui,
+               'log_payload_style':'varied-structured' if args.varied_logs else 'repeated-character',
+               'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui or args.priority_api,
+               'priority_api':args.priority_api,
                'log_interval_seconds':args.log_interval,
                'independent_logs':args.independent_logs, 'log_drain_seconds':args.drain_seconds if args.independent_logs else 0,
                'trace_http_phases':args.trace_http_phases,
                'client_per_worker':args.client_per_worker,
                'agent_telemetry':args.agent_telemetry,
                'mixed_ui':args.mixed_ui,
-               'scope':('real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read, '
-                        'real scheduler with no idle slots; excludes real business processes, result ACK and retry'
+               'continuous_batches':args.continuous_batches, 'bulk_outage_seconds':args.bulk_outage_seconds,
+               'scope':('real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read/retry, '
+                        'real scheduler and one simulated command Worker completing two attempts; excludes real business processes'
                         if args.mixed_ui else
                         'real HTTP/PostgreSQL, simulated running services and Agent telemetry; '
                         'excludes scheduler allocation and real business processes' if args.agent_telemetry else
                         'real HTTP/PostgreSQL, simulated running services; excludes scheduler allocation, Agent and real business processes'),
                'grades':[]}
+    if args.priority_api:
+        for key in ('pool_ordinary', 'pool_control', 'pool_observation', 'pool_result', 'pool_scheduler'):
+            summary.pop(key)
     try:
         for count in grades:
             database = 'control_load_'+uuid.uuid4().hex
@@ -460,6 +598,7 @@ def main():
             target = url.set(database=database)
             engine = create_engine(target)
             processes = []
+            role_processes = {}
             gateway = None
             try:
                 identities = seed(engine, count, agent_telemetry=args.agent_telemetry, mixed_ui=args.mixed_ui)
@@ -471,7 +610,8 @@ def main():
                         return sock.getsockname()[1]
                 ordinary_port = free_port()
                 control_port = free_port() if args.split_api else None
-                port = free_port() if args.split_api else ordinary_port
+                role_ports = {role: free_port() for role in profiles} if args.priority_api else {}
+                port = free_port() if args.split_api or args.priority_api else ordinary_port
                 with ExitStack() as stack:
                     jwt_secret = uuid.uuid4().hex
                     env = {**os.environ, 'DATABASE_URL':target.render_as_string(hide_password=False), 'JWT_SECRET':jwt_secret,
@@ -480,6 +620,11 @@ def main():
                            'DB_ADMISSION_ENABLED':'0' if args.no_admission else '1',
                            'API_DB_PROCESS_COUNT':str(process_count),
                            'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
+                    if args.mixed_ui:
+                        env.update(MAX_ACTIVE_GLOBAL=str(count+10), MAX_ACTIVE_PER_USER=str(count+10))
+                    if args.priority_api:
+                        env['PRIORITY_API_PEERS'] = json.dumps({role:f'http://127.0.0.1:{p}' for role,p in role_ports.items()})
+                        env['PRIORITY_API_POOL_SIZES'] = json.dumps(priority_runtime.DEFAULT_POOLS)
                     def launch(role, api_port):
                         api_env = {**env, 'DB_POOL_SIZE': str(args.ordinary_pool),
                                    'DB_CONTROL_POOL_SIZE': str(args.control_pool),
@@ -491,18 +636,28 @@ def main():
                             api_env['API_ROUTE_GROUP'] = role
                         if args.split_api and role == 'control':
                             api_env['SCHEDULER_ENABLED'] = '0'
-                        log_name = (f'api-{role}-{count}.log' if args.split_api else f'api-{count}.log')
-                        log = stack.enter_context((output/log_name).open('w'))
+                        if args.priority_api:
+                            api_env['API_ROUTE_GROUP'] = role
+                            api_env['SCHEDULER_ENABLED'] = '1' if role == 'worker-data' else '0'
+                        log_name = (f'api-{role}-{count}.log' if args.split_api or args.priority_api else f'api-{count}.log')
+                        log = stack.enter_context((output/log_name).open('a' if role in role_processes else 'w'))
                         process = subprocess.Popen([sys.executable,'-m','uvicorn','backend.app.main:app',
                                                     '--host','127.0.0.1','--port',str(api_port),'--no-access-log'],
                                                    env=api_env, stdout=log, stderr=log)
                         processes.append(process)
-                    launch('ordinary', ordinary_port)
+                        role_processes[role] = process
+                    if args.priority_api:
+                        for role, api_port in role_ports.items():
+                            launch(role, api_port)
+                    else:
+                        launch('ordinary', ordinary_port)
                     if args.split_api:
                         launch('control', control_port)
+                    if args.split_api or args.priority_api:
                         deploy = Path(__file__).resolve().parents[2] / 'deploy'
-                        config = render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
-                                                       ordinary_port, control_port, port)
+                        config = (render_priority_gateway_config(role_ports, port) if args.priority_api else
+                                  render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
+                                                       ordinary_port, control_port, port))
                         gateway_config = output/f'gateway-{count}.conf'
                         gateway_config.write_text(config)
                         gateway = 'mini-eval-load-gateway-'+uuid.uuid4().hex[:12]
@@ -522,7 +677,7 @@ def main():
                         except httpx.TransportError:pass
                         time.sleep(.1)
                     else:raise RuntimeError('isolated API did not become ready')
-                    result = asyncio.run(exercise(base, identities, args.seconds, args.log_bytes,
+                    work = exercise(base, identities, args.seconds, args.log_bytes,
                                                   independent_logs=args.independent_logs,
                                                   drain_seconds=args.drain_seconds if args.independent_logs else 0,
                                                   trace_http_phases=args.trace_http_phases,
@@ -530,24 +685,59 @@ def main():
                                                   agent_telemetry=args.agent_telemetry,
                                                   progress_path=output/f'progress-{count}.jsonl' if args.progress_every_30s else None,
                                                   log_interval=args.log_interval,
+                                                  continuous_batches=args.continuous_batches, varied_logs=args.varied_logs,
                                                   user_token=jwt.encode({'sub':'u', 'exp':int(time.time())+3600}, jwt_secret,
-                                                                        algorithm='HS256') if args.mixed_ui else None))
-                checkouts = [float(v) for name in api_log_names(count, args.split_api) for v in
+                                                                        algorithm='HS256') if args.mixed_ui else None)
+                    if args.bulk_outage_seconds:
+                        def stop_bulk():
+                            victim = role_processes['bulk-transfer']
+                            victim.terminate()
+                            victim.wait(timeout=10)
+                        work = with_outage(work, stop_bulk, lambda: launch('bulk-transfer', role_ports['bulk-transfer']),
+                                           after=30, duration=args.bulk_outage_seconds)
+                    result = asyncio.run(observe(work, engine, container=args.postgres_container))
+                    if args.priority_api:
+                        topology = {}
+                        for role, api_port in role_ports.items():
+                            direct = f'http://127.0.0.1:{api_port}'
+                            wrong = '/api/v1/batches' if role != 'interaction' else '/api/v1/worker/heartbeat'
+                            topology[role] = {'health':httpx.get(direct+'/healthz', trust_env=False).json(),
+                                              'ready_status':httpx.get(direct+'/readyz', trust_env=False).status_code,
+                                              'wrong_route_status':httpx.post(direct+wrong, trust_env=False).status_code}
+                        result['role_topology'] = topology
+                        victim = role_processes['bulk-transfer']
+                        victim.terminate()
+                        victim.wait(timeout=10)
+                        result['role_failure'] = {
+                            'gateway_health_when_bulk_stopped':httpx.get(base+'/healthz', trust_env=False).status_code,
+                            'bulk_request_when_stopped':httpx.post(base+'/api/v1/worker/executions/test/logs-v2',
+                                                                 trust_env=False).status_code,
+                            'heartbeat_when_bulk_stopped':httpx.post(base+'/api/v1/worker/heartbeat',
+                                headers={'Authorization':'Bearer '+identities[0][1]},
+                                json={'slot_id':identities[0][0]}, trust_env=False).status_code}
+                        launch('bulk-transfer', role_ports['bulk-transfer'])
+                        for _ in range(50):
+                            healthy = httpx.get(base+'/healthz', trust_env=False, timeout=2).status_code
+                            if healthy == 200:
+                                break
+                            time.sleep(.1)
+                        result['role_failure']['gateway_health_after_restart'] = healthy
+                checkouts = [float(v) for name in api_log_names(count, args.split_api, args.priority_api) for v in
                              re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
-                    result['expired_leases'] = c.scalar(text('SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now()'))
+                    result['expired_leases'] = c.scalar(text("SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now() AND status IN ('STARTING','RUNNING','CANCEL_REQUESTED')"))
                     result['telemetry_stale'] = c.scalar(text("SELECT count(*) FROM gpu_slots WHERE telemetry_at IS NULL OR telemetry_at < now()-interval '45 seconds'"))
                     result['database_max_connections'] = int(c.scalar(text('SHOW max_connections')))
                     result['database_connections_at_end'] = c.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()"))
-                result['workers'] = result['executions'] = count
+                    result['executions'] = c.scalar(text('SELECT count(*) FROM evaluation_runs'))
+                result['workers'] = count
                 result['passed'] = (result['expired_leases'] == 0 and result['telemetry_stale'] == 0 and
                     result['max_heartbeat_gap_seconds'] < 10 and all(v['p99'] < 5 for v in result['latency_seconds'].values()) and
-                    not any(k not in ((('200','201','503') if args.mixed_ui else ('200','503')))
-                            for k in result['requests']))
+                    acceptable_responses(result['requests_by_kind'], mixed_ui=args.mixed_ui, bulk_outage=args.bulk_outage_seconds))
                 if args.independent_logs:
                     logs = result['log_generation']
-                    result['passed'] = (result['passed'] and logs['generated'] == logs.get('accepted', 0)
+                    result['passed'] = (result['passed'] and logs.get('generated', 0) == logs.get('accepted', 0)
                                         and logs['final_pending_chunks'] == 0 and not logs.get('dropped', 0)
                                         and not logs.get('permanent_error', 0) and not logs.get('unexpected_ack', 0))
                 if args.agent_telemetry:
@@ -556,8 +746,17 @@ def main():
                 if args.mixed_ui:
                     ui = result['ui_evidence']
                     result['passed'] = (result['passed'] and ui['batch_id'] is not None
-                                        and ui['control_revisions'] == [1, 2] and not ui['errors']
+                                        and ui['control_revisions'] == [1, 2]*ui['batch_count'] and not ui['errors']
+                                        and ui['retried'] and ui['last_batch_status'] == 'SUCCEEDED'
+                                        and len(ui['completed_batches']) == ui['retry_count'] == ui['batch_count']
+                                        and [e['status'] for e in ui['executions']] == ['FAILED', 'SUCCEEDED']*ui['batch_count']
+                                        and ui['duplicate_results'] == 2*ui['batch_count']
                                         and result['requests_by_kind'].get('ui_detail', {}).get('200', 0) > 0)
+                if args.priority_api:
+                    result['passed'] = (result['passed'] and all(row['ready_status'] == 200 and row['wrong_route_status'] == 404
+                                         for row in result['role_topology'].values()) and result['role_failure'] == {
+                                             'gateway_health_when_bulk_stopped':503, 'bulk_request_when_stopped':502,
+                                             'heartbeat_when_bulk_stopped':200, 'gateway_health_after_restart':200})
                 summary['grades'].append(result)
                 (output/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps({'workers':count,'passed':result['passed'],'requests':result['requests']}),flush=True)

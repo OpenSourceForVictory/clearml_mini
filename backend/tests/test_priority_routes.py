@@ -1,5 +1,6 @@
 """The priority manifest must cover every FastAPI method, including HEAD."""
 import csv
+import json
 from pathlib import Path
 import re
 
@@ -34,6 +35,18 @@ def test_legacy_categories_match_prechange_route_audit():
     for row in rows:
         concrete = re.sub(r'\{[^}]+\}', 'sample', row['path'])
         assert legacy_category_for(concrete, row['method']) == row['current_category']
+
+
+def test_request_contract_audit_covers_current_routes_and_declared_limits(monkeypatch):
+    monkeypatch.setenv('JWT_SECRET', 'priority-route-test-only')
+    from backend.app.main import app
+    from backend.tests.priority_route_audit import collect
+    audit = Path(__file__).resolve().parents[2] / 'docs/validation/priority-api-isolation-20261124/request-contracts.json'
+    actual = collect(app)
+    assert json.loads(audit.read_text()) == actual
+    assert actual['gateway_body_byte_limit'] is None
+    assert len(actual['routes']) == len(manifest())
+    assert all(row['confirmation'] for row in actual['routes'])
 
 
 @pytest.mark.parametrize('method,path,category,role', [

@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.db_budget import Settings
 from backend.app.core import ClientTemplate
-from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config, seed
+from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config, render_priority_gateway_config, seed
+from backend.app.priority_runtime import ROLE_POOLS
 
 
 def test_split_gateway_uses_distinct_loopback_backends():
@@ -39,6 +40,19 @@ def test_split_gateway_rejects_incomplete_template():
         render_gateway_config('listen 8000; set $ordinary_backend api:8000;', 18001, 18002, 18003)
     with pytest.raises(ValueError, match='missing a required route marker'):
         render_gateway_config('listen 8000; set $control_backend control-api:8000;', 18001, 18002, 18003)
+
+
+def test_priority_load_uses_four_distinct_backends_and_health_target():
+    ports = {role:18010+i for i,role in enumerate(ROLE_POOLS)}
+    config = render_priority_gateway_config(ports, 18000)
+    assert 'listen 127.0.0.1:18000;' in config
+    for role, port in ports.items():
+        assert role+'-api:8000' not in config
+        assert f'127.0.0.1:{port}' in config
+    assert f'set $interaction_backend 127.0.0.1:{ports["interaction"]};' in config
+    assert api_log_names(100, False, True) == [f'api-{role}-100.log' for role in ROLE_POOLS]
+    with pytest.raises(ValueError, match='every role'):
+        render_priority_gateway_config({}, 18000)
 
 
 def test_role_aware_pools_preserve_control_and_observation_capacity():
@@ -92,3 +106,43 @@ def test_compose_split_defaults_match_role_specific_40_connection_budget():
         profiles[role] = settings.active_pool_sizes
     assert profiles == pool_profiles(23, 40, 9, result=7, split_api=True, role_aware=True)
     assert {role: sum(sizes.values()) for role, sizes in profiles.items()} == {'ordinary': 40, 'control': 40}
+
+
+@pytest.mark.parametrize('kind,code,outage,accepted', [
+    ('logs','502',True,True), ('artifact','504',True,True),
+    ('logs','502',False,False), ('heartbeat','502',True,False),
+    ('ui_control','504',True,False), ('result','500',True,False),
+    ('logs','exception:TimeoutError',True,False), ('heartbeat','503',True,True),
+])
+def test_fault_acceptance_never_hides_control_errors(kind, code, outage, accepted):
+    from backend.tests.control_plane_load import acceptable_responses
+    assert acceptable_responses({kind:{code:1}}, mixed_ui=True, bulk_outage=outage) is accepted
+
+
+@pytest.mark.parametrize('arguments', [
+    ['--bulk-outage-seconds','-1'],
+    ['--bulk-outage-seconds','15'],
+    ['--priority-api','--bulk-outage-seconds','15'],
+    ['--priority-api','--independent-logs','--seconds','60','--bulk-outage-seconds','15'],
+])
+def test_fault_arguments_reject_unsupported_runs_before_database_access(monkeypatch, capsys, arguments):
+    from backend.tests.control_plane_load import main
+    monkeypatch.setattr('sys.argv',['load','--output','/unused',*arguments])
+    monkeypatch.delenv('LOG_TEST_DATABASE_URL',raising=False)
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert '--bulk-outage-seconds requires' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('size',[1,1024,16384])
+def test_varied_logs_have_exact_size_and_stable_retry_content(size):
+    from backend.tests.control_plane_load import log_payload
+    value = log_payload('node-1',3,size,True)
+    assert len(value.encode()) == size
+    assert value == log_payload('node-1',3,size,True)
+    assert log_payload('node-1',3,size) == 'x'*size
+    if size >= 1024:
+        import zlib
+        assert value != log_payload('node-1',4,size,True)
+        assert len(zlib.compress(value.encode())) > size/4

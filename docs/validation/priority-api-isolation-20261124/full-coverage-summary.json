@@ -1,0 +1,193 @@
+{
+  "scope": "Python only; frontend and uninstrumented subprocesses excluded from claims",
+  "total": {
+    "files": 185,
+    "lines": 17697,
+    "covered_lines": 16327,
+    "branches": 6308,
+    "covered_branches": 5308,
+    "line_percent": 92.25857489970052,
+    "branch_percent": 84.14711477488903
+  },
+  "directories": {
+    "backend/app": {
+      "files": 60,
+      "lines": 7330,
+      "covered_lines": 7076,
+      "branches": 2446,
+      "covered_branches": 2106,
+      "line_percent": 96.53478854024557,
+      "branch_percent": 86.09975470155355
+    },
+    "worker": {
+      "files": 30,
+      "lines": 3782,
+      "covered_lines": 3487,
+      "branches": 1480,
+      "covered_branches": 1224,
+      "line_percent": 92.19989423585405,
+      "branch_percent": 82.70270270270271
+    },
+    "node_agent": {
+      "files": 8,
+      "lines": 360,
+      "covered_lines": 330,
+      "branches": 140,
+      "covered_branches": 118,
+      "line_percent": 91.66666666666667,
+      "branch_percent": 84.28571428571429
+    },
+    "runner": {
+      "files": 32,
+      "lines": 2085,
+      "covered_lines": 1983,
+      "branches": 850,
+      "covered_branches": 739,
+      "line_percent": 95.10791366906474,
+      "branch_percent": 86.94117647058823
+    },
+    "onboarding": {
+      "files": 9,
+      "lines": 716,
+      "covered_lines": 698,
+      "branches": 328,
+      "covered_branches": 276,
+      "line_percent": 97.48603351955308,
+      "branch_percent": 84.14634146341463
+    },
+    "scripts": {
+      "files": 46,
+      "lines": 3424,
+      "covered_lines": 2753,
+      "branches": 1064,
+      "covered_branches": 845,
+      "line_percent": 80.40303738317758,
+      "branch_percent": 79.4172932330827
+    }
+  },
+  "functions": {
+    "调度与资源": {
+      "files": 8,
+      "lines": 1014,
+      "covered_lines": 1001,
+      "branches": 452,
+      "covered_branches": 418,
+      "line_percent": 98.71794871794872,
+      "branch_percent": 92.47787610619469
+    },
+    "节点纳管与升级": {
+      "files": 18,
+      "lines": 1685,
+      "covered_lines": 1612,
+      "branches": 728,
+      "covered_branches": 609,
+      "line_percent": 95.66765578635015,
+      "branch_percent": 83.65384615384616
+    },
+    "业务执行与结果": {
+      "files": 56,
+      "lines": 5776,
+      "covered_lines": 5552,
+      "branches": 2238,
+      "covered_branches": 1991,
+      "line_percent": 96.1218836565097,
+      "branch_percent": 88.96336014298481
+    },
+    "节点监控": {
+      "files": 8,
+      "lines": 360,
+      "covered_lines": 330,
+      "branches": 140,
+      "covered_branches": 118,
+      "line_percent": 91.66666666666667,
+      "branch_percent": 84.28571428571429
+    },
+    "运行模板注册管理": {
+      "files": 5,
+      "lines": 528,
+      "covered_lines": 497,
+      "branches": 222,
+      "covered_branches": 173,
+      "line_percent": 94.12878787878788,
+      "branch_percent": 77.92792792792793
+    },
+    "评测结果与批次管理": {
+      "files": 5,
+      "lines": 345,
+      "covered_lines": 336,
+      "branches": 94,
+      "covered_branches": 84,
+      "line_percent": 97.3913043478261,
+      "branch_percent": 89.36170212765957
+    },
+    "任务集合与编排": {
+      "files": 5,
+      "lines": 951,
+      "covered_lines": 916,
+      "branches": 328,
+      "covered_branches": 271,
+      "line_percent": 96.31966351209253,
+      "branch_percent": 82.6219512195122
+    }
+  },
+  "functional_groups_overlap": true,
+  "requirements": {
+    "directories": {
+      "backend/app": {
+        "line": 80,
+        "branch": 70
+      },
+      "worker": {
+        "line": 80,
+        "branch": 70
+      },
+      "node_agent": {
+        "line": 80,
+        "branch": 70
+      },
+      "runner": {
+        "line": 80,
+        "branch": 70
+      },
+      "onboarding": {
+        "line": 80,
+        "branch": 70
+      },
+      "scripts": {
+        "line": 80,
+        "branch": 70
+      }
+    },
+    "functions": {
+      "调度与资源": {
+        "line": 90,
+        "branch": 80
+      },
+      "节点纳管与升级": {
+        "line": 90,
+        "branch": 80
+      },
+      "业务执行与结果": {
+        "line": 90,
+        "branch": 80
+      },
+      "节点监控": {
+        "line": 80,
+        "branch": 70
+      },
+      "任务集合与编排": {
+        "line": 80,
+        "branch": 70
+      },
+      "运行模板注册管理": {
+        "line": 80,
+        "branch": 70
+      },
+      "评测结果与批次管理": {
+        "line": 80,
+        "branch": 70
+      }
+    }
+  },
+  "violations": []
+}

@@ -81,3 +81,5 @@
 机器指南新增后台探测依赖、300 秒回连窗口和“继续回连验收”说明，详见 [节点重新纳管](node-reenrollment.md#回连超时与可选探测依赖)。
 
 版本升级帮助明确节点组件包覆盖 Worker、Runner 和已配置托管的 Agent，区分平台容器适配器与旧镜像内置 Runner；界面和升级操作用例见 worker-upgrades.spec.ts。
+
+四角色 API 隔离的管理员说明见用户指南“API 通道隔离与过载排查”与 [部署步骤](priority-api-isolation.md)，包含角色职责、连接预算、健康检查及租约限制。普通用户不显示该运维主题；`frontend/tests/user-guide.spec.ts` 检查管理员搜索入口、普通用户过滤和查看帮助不提交配置。

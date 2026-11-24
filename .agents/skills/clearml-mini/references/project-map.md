@@ -6,7 +6,9 @@
 
 本机平台于 2026-11-23 启用双 API 网关和角色连接池；六台机器的 13 个 Worker 卡位随后已升至 0.21.17。基础 Compose 仍是单 API 默认配置，其他部署不继承本机状态。发布顺序、真实 GPU SDK 小任务和 100 Worker 模拟负载边界见 [双进程验证](../../../../docs/validation/split-control-api-process-20261123/README.md)。
 
-四角色 API 隔离仍在设计实施阶段，未部署。现有 167 条 HTTP 方法路由、当前类别、关键事务/锁及 Worker 心跳断联停止边界见 [API 流量审计与双进程混合基线](../../../../docs/validation/priority-api-isolation-20261124/README.md)；`backend/app/priority_route_manifest.json` 同时保存未启用的目标分类和既有单/双 API 分类，`db_budget.request_category` 仍按后者运行，完整性检查是 `backend/tests/test_priority_routes.py`，目标架构见 `openspec/changes/priority-api-isolation/design.md`。`backend/app/priority_gateway.py` 从同一清单生成 `deploy/priority-api-nginx.conf` 候选网关，但尚无四角色 Compose、角色拒绝或健康聚合，不能单独启用。负载工具 `--mixed-ui` 会在隔离 PostgreSQL 启用真实调度并加入批次提交、暂停/恢复和页面查询；100 Worker/30 秒档出现一次批次详情 `request_concurrency` 503，且模拟 Worker 全部占卡，没有验证新任务完成或重评测。Agent 心跳同时包含可合并采样和不可直接丢弃的配置 ACK/事件，不能把整条请求归为低价值遥测。
+四角色 API 隔离已实现为可选部署，尚未替换本机双进程。`backend/app/priority_route_manifest.json` 是 167 条方法/路径的唯一分类源；`priority_gateway.py` 生成网关，`priority_runtime.py` 校验角色、总连接预算与 PostgreSQL 余量，并隔离各类准入队列。`deploy/priority-api-compose.yml` 分离执行控制、用户交互、Worker 数据和批量传输，仅 Worker 数据角色启动调度器；网关健康检查聚合四角色及配置指纹。部署、回退和连接预算见 [四角色部署指南](../../../../docs/priority-api-isolation.md)。单/双 API 保留原分类和行为。
+
+证据见 [API 流量审计与混合基线](../../../../docs/validation/priority-api-isolation-20261124/README.md)：包含全路由请求体契约、事务/锁抽查、真实 PostgreSQL 混合压测。`backend/tests/control_plane_load.py --mixed-ui --continuous-batches` 使用模拟 Worker 驱动真实调度，重复提交、暂停/恢复、失败/重评测、幂等结果和完成；不能替代真实模型评测。Agent 心跳同时包含可合并采样与配置 ACK/事件，不能整条丢弃。API 隔离不消除跨池行锁，也未完成断联后持续执行与持久 outbox；租约 watchdog 仍生效。
 
 | 边界 | 源码 / 文档 | 关联检查 |
 | --- | --- | --- |

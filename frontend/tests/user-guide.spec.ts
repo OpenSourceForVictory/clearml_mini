@@ -13,6 +13,7 @@ test('guide search, SDK download and role filtering',async({page})=>{
  const writes=await setup(page,'member');await page.getByRole('button',{name:'用户指南',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'用户指南'});await expect(dialog).toBeVisible();
  await expect(dialog.getByRole('button',{name:'账号管理',exact:true})).toHaveCount(0);
+ await expect(dialog.getByRole('button',{name:'API 通道隔离与过载排查',exact:true})).toHaveCount(0);
  await dialog.getByLabel('搜索指南').fill('SDK');
  await dialog.getByRole('button',{name:'业务接入：选择模式与下载 SDK',exact:true}).first().click();
  await expect(dialog.getByRole('heading',{name:'业务接入：选择模式与下载 SDK'})).toBeVisible();
@@ -41,4 +42,14 @@ test('admin help and narrow screen have no horizontal overflow',async({page})=>{
  await setup(page);await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'用户指南',exact:true}).click();
  const dialog=page.getByRole('dialog');await dialog.getByRole('button',{name:'账号管理',exact:true}).click();await expect(dialog.getByRole('heading',{name:'账号管理'})).toBeVisible();
  expect(await dialog.evaluate(e=>e.scrollWidth<=e.clientWidth)).toBe(true);
+});
+
+test('administrator can find API isolation guidance without changing configuration',async({page})=>{
+ const writes=await setup(page);await page.getByRole('button',{name:'用户指南',exact:true}).click();
+ const dialog=page.getByRole('dialog');await dialog.getByLabel('搜索指南').fill('通道隔离');
+ await dialog.getByRole('button',{name:'API 通道隔离与过载排查',exact:true}).click();
+ await expect(dialog.getByRole('heading',{name:'API 通道隔离与过载排查'})).toBeVisible();
+ await expect(dialog.locator('li').filter({hasText:'仅 Worker 数据角色运行调度器'})).toBeVisible();
+ await expect(dialog.locator('li').filter({hasText:'扩大连接池不能保证提升处理能力'})).toBeVisible();
+ expect(writes).toEqual([]);
 });

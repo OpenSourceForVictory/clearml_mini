@@ -2,9 +2,11 @@
 
 此记录基于本仓库现有代码生成，不代表四角色方案已上线。使用临时测试 JWT secret 导入 FastAPI 应用，逐条列出已注册方法、路径、处理函数、当前 `request_category`、依赖、鉴权方式、请求体类型及处理函数中直接出现的锁、提交和外部 I/O 标记。完整清单见 [registered-routes.tsv](registered-routes.tsv)。鉴权依赖计数：管理员 Bearer 68、用户 Bearer 63、节点 Bearer 29、媒体短期 Cookie 4、公开 3；媒体 Cookie 在处理函数内校验，不能仅看 FastAPI 依赖。标记仅来自处理函数源码，不自动追踪被调用 helper；不能用 `False` 证明没有事务或锁。
 
-拟议类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 现在从此字段读取，所以现有部署的入口、池和网关路由不变。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，不能借用高优先级类别。四角色类别尚未接入运行中的中间件或网关。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
+类别已经写入 `backend/app/priority_route_manifest.json`，由 `backend/app/priority_routes.py` 按 HTTP 方法及完整路径匹配。同一清单的 `legacy_category` 保留既有单/双 API 分类；`db_budget.request_category` 按此字段读取。四角色模式由新的 `priority_runtime.py` 使用目标类别；只在显式选择四角色时启用。`backend/tests/test_priority_routes.py` 逐个比对 FastAPI 注册表及变更前类别，漏掉新路由时测试失败；未知路径在新方案中只得到 `fallback`，使用交互进程的页面读取额度，不能借用高优先级类别。`/suites/catalogs`、`/suites/manage` 与动态详情路由存在模式重叠，但类别相同；不同类别的重叠会拒绝分类。旧式与共享目录的产物媒体 GET/HEAD 均归批量传输。
 
-`python -m backend.app.priority_gateway` 可由相同清单生成 [四角色 Nginx 候选配置](../../../deploy/priority-api-nginx.conf)，用 `$request_method:$uri` 区分 GET/HEAD/POST 等方法；静态路径先于动态路径，未知路径只转到交互进程。`test_priority_gateway.py` 检查生成结果与清单逐项一致；Nginx 1.27 `nginx -t` 已通过。此配置尚未连入 Compose 或部署：后端角色拒绝、角色就绪检查、健康检查聚合和回退配置未完成，不能单独启用。现有双进程网关保持原样。
+`python -m backend.app.priority_gateway` 由相同清单生成 [四角色 Nginx 配置](../../../deploy/priority-api-nginx.conf)，用 `$request_method:$uri` 区分 GET/HEAD/POST 等方法；静态路径先于动态路径，未知路径只转到交互进程。`test_priority_gateway.py` 检查生成结果与清单逐项一致；Nginx 1.27 `nginx -t` 已通过。四角色运行时已接入角色拒绝、角色数据库就绪检查、配置指纹与聚合健康检查，新增可选 `priority-api-compose.yml`；隔离四进程实测通过，尚未切换本机生产部署。部署与回退见[操作指南](../../priority-api-isolation.md)。
+
+全路由声明的请求体模型、字段限制、目标角色和确认类别见 [request-contracts.json](request-contracts.json)，可用 `python -m backend.tests.priority_route_audit` 重建；它和 TSV 共同提供逐路由入口索引。JSON Schema 不包含所有自定义 validator：业务参数的 16 KiB、日志 UTF-8 字节数及响应大小等必须结合下表和处理器源码。未声明请求体不等于请求没有成本；网关没有统一字节上限，不能把字段校验当作传输层大小限制。
 
 ## 规模与当前拥塞面
 
@@ -52,7 +54,7 @@ FastAPI 路由清单不能代替客户端调用清单。后台调度在 `main.li
 
 ## 验证边界
 
-本阶段做了仓库静态审计、FastAPI 注册路由枚举和四角色分类清单；既有分类改为从同一清单读取，逐路由回归验证类别不变。分类专项 `test_priority_routes.py`、既有双进程及数据库预算专项合计 129 通过、15 跳过（需独立 PostgreSQL）；新分类模块定向行/分支覆盖均为 100%，不代表全项目覆盖。OpenSpec 2.1 已完成；1.1 的逐路由鉴权、体积、事务与重试核对仍未完成。
+本阶段做了仓库静态审计、FastAPI 注册路由枚举和四角色分类清单；既有分类改为从同一清单读取，逐路由回归验证类别不变。分类专项 `test_priority_routes.py`、既有双进程及数据库预算专项合计 129 通过、15 跳过（需独立 PostgreSQL）；新分类模块定向行/分支覆盖均为 100%，不代表全项目覆盖。这是分类阶段的历史结果；后续新增请求体契约导出、四角色运行时及真实 PostgreSQL 验证，见下文。
 
 ### 双进程混合基线第一档
 
@@ -69,4 +71,67 @@ LOG_TEST_DATABASE_URL='postgresql+psycopg://postgres@127.0.0.1:5432/postgres' \
 
 只对可销毁 PostgreSQL 实例使用此命令；脚本为每档创建并删除独立数据库。2026-11-24 本机第一次 100 Worker/30 秒运行全部通过，第二次保留的失败证据见 [mixed-baseline/summary.json](mixed-baseline/summary.json) 和 [进度记录](mixed-baseline/progress-100.jsonl)：8077 个 200、1 个 201、120 个 503；其中批次详情 1 次 `request_concurrency` 503，Agent 41、日志 24、产物 25、领取 29 次同类拒绝，执行心跳无拒绝。1500 条日志全部 ACK，最大日志积压 1.28 秒，最大心跳间隔 3.34 秒，租约过期数 0；隔离数据库测试时 `max_connections=100`，结束时活动连接 52。批次最后仍为 `PENDING`，因为模拟 Worker 都已占满卡位。此失败不是服务实例或真实模型评测故障，也不能证明长期稳定。
 
-这档尚未覆盖空闲 Worker 领取并完成新任务、结果 ACK、重新评测、长时间页面刷新、数据库 CPU/WAL/锁样本及真实业务程序；OpenSpec 1.2 因而仍未完成。它已经证明现有普通 API 容量下页面详情可被观察/批量流量挤出，下一步用完整混合场景量化四角色隔离的改善。现有运行路由和部署未因压测改变。
+**此档有配置偏差：它开启了入口准入，而现有双进程 Compose 默认关闭该开关。** 因此其 `request_concurrency` 失败不能直接代表默认部署。它也没有空闲 Worker 完成新任务、结果 ACK 或重评测，不作为完整混合基线。
+
+### 修正后的完整混合基线与四角色观察
+
+后续驱动保留总数 100 个 Worker，其中 99 个模拟持续运行的服务，1 个经真实调度器领取任务。浏览器使用独立 HTTP 客户端，每个节点的心跳、日志、Agent 可并行传输，连接池不再成为模拟多进程节点的额外串行点。客户端仅模拟业务退出和 SDK 任务结果；没有执行模型。真实 HTTP 流程包含提交、暂停/恢复、首次失败、两次同内容结果确认、用户重评测、新执行 ID 成功及页面监控；活跃租约统计排除终态执行。每 10 秒采样数据库连接/等待、未授予锁、事务与 WAL，并用 `docker stats` 记录隔离 PostgreSQL 容器 CPU、内存、块 I/O。这些是周期样本，不证明采样间没有短暂等待。
+
+- [baseline-v2-100/summary.json](baseline-v2-100/summary.json)：保留的早期失败档。默认双进程关闭准入，但驱动仍共用 HTTP 客户端，监控 2 次连接池 503、心跳间隔 17.45 秒。其 `expired_leases=2` 错误计入已结束的两次执行，不能当作活跃租约失败证据。
+- [baseline-v3-100/summary.json](baseline-v3-100/summary.json)：修正驱动后的默认双进程 60 秒对照通过。用户操作和页面无错误，活跃租约过期 0，2970 条日志全部 ACK；98 次连接池 503 分布于 Agent/领取/日志/产物。最长心跳间隔 3.55 秒，日志最大积压年龄 2.01 秒。
+- [priority-v3-100/summary.json](priority-v3-100/summary.json)：同一驱动、四角色 180 秒通过；48186 个 200、1 个 201，无 503，8910 条日志全部 ACK，日志最大积压年龄 0.073 秒。停止批量进程时网关健康 503、批量请求 502、心跳 200，重启后健康恢复 200；全部角色 `/readyz` 200，误路由 404。
+
+双进程对照命令必须带 `--split-api --role-aware-pools --no-admission --ordinary-pool 23 --control-pool 40 --observation-pool 9 --result-pool 7`；四角色使用 `--priority-api`。两者均使用 `--mixed-ui --client-per-worker --agent-telemetry --independent-logs --trace-http-phases --progress-every-30s`，数据库容器统计可加 `--postgres-container <隔离容器名>`。`--continuous-batches` 会在观察期间持续创建批次，每批次经过失败、重评测和成功，保留最后 15 秒收尾。持续批次档结果见下文；不能据单机模拟负载承诺生产容量上限。
+
+### 100 Worker 持续批次混合负载（600 秒）
+
+[完整摘要](priority-continuous-100/summary.json)与[每 30 秒记录](priority-continuous-100/progress-100.jsonl)保留本次运行证据。使用上面的四角色参数，追加 `--continuous-batches --seconds 600`，没有同时运行全量测试或镜像构建。
+
+- 94 个批次均完成首次失败、重新评测和成功，188 个执行完成，重复结果确认 188 次；暂停/恢复共 188 次。真实调度器分配新执行 ID，模拟 Worker 回报结果，没有启动真实模型。
+- HTTP 161266 个 200、94 个 201，无 503。心跳 p99 63 ms、领取 22 ms、批次监控 145 ms、用户控制 60 ms、提交 366 ms、重新评测 305 ms。
+- 29692 条日志全部确认，最终积压 0，单 Worker 最多积压 1 块，最大积压年龄 77 ms；600 秒停止采样瞬间尚有 4 块在途，随后全部确认，不能将最后一行 progress 当作最终未完成数。
+- 活跃租约过期 0、遥测过期 0；负载期间最大心跳间隔 2.20 秒，最终停止发请求后采样新鲜度为 4.08 秒。两者测量时点不同。
+- 56 个数据库样本中连接峰值 51（数据库上限 100）、未授予锁 0、死锁 0；WAL 增量约 94.7 MB，隔离 PostgreSQL CPU 样本峰值 54.69%。周期采样不排除采样间短等待，事务回滚计数包含正常只读会话关闭，不等于失败请求数。
+- 主动停止 bulk-transfer 后，公共健康检查 503、日志请求 502，执行心跳仍为 200；重启后健康恢复 200。四角色各自就绪 200，误路由 404。
+
+这验证了当前模拟工作量下没有随时间增长的日志积压或控制通道异常，不能证明任意日志量、任务规模及持续数据库故障均可承受。默认池预算暂不调整；断联继续运行和持久 outbox 仍是独立未完工作。
+
+### 专项回归
+
+真实 PostgreSQL 下运行 `test_priority_runtime.py`、`test_priority_routes.py`、`test_control_plane_metrics.py`、`test_control_plane_load_gateway.py`、`test_db_budget.py`：156 通过。包括真实应用四角色生命周期、唯一调度线程、角色池隔离、锁超时回滚、配置漂移、排队取消及全部路由分类。
+
+前端 TypeScript 检查和 `frontend/tests/user-guide.spec.ts` 4 项通过，覆盖管理员运维说明、普通用户隐藏及只读帮助操作。前端未插桩，不计入 Python 覆盖率。
+
+### 容器构建、启动与回退
+
+`backend/Dockerfile` 新构建测试镜像成功（包含前端构建）。独立 Compose 项目使用全新数据库和临时凭据，先按四角色覆盖启动，再停止旧角色并回退到双进程，最后回退到单 API；三个阶段均完成同一外部端口的健康、就绪、账号登录及当前用户查询，见 [compose-compatibility.json](compose-compatibility.json)。迁移和 bootstrap 成功，四角色公共健康响应包含全部四个正常角色。该验证没有更换生产镜像标签、修改生产数据库或重启现有节点。
+
+### 事务与并发确认
+
+追加真实 PostgreSQL 专项：批次暂停/取消与领取/调度/重试竞争、编排提交竞争、调度并发、连接池耗尽后的用户控制、日志与心跳锁竞争、任务结果契约，33 项通过。运行文件为 `integration/test_batch_controls_race.py`、`integration/test_orchestration_race.py`、`integration/test_scheduler_concurrency.py`、`test_control_operations_postgres.py`、`test_execution_logs_postgres.py`、`test_task_result_reporting.py`。这些数据库集成测试单独配置已迁移的 `TEST_DATABASE_URL`；它们的独立运行未计入全量覆盖率文件。
+
+源码核对：`batches.create` 保留调度锁→用户行锁，提交后生成响应；控制操作保留修订号和调度锁；领取空队列只读、有候选才尝试锁并重查；完成保留调度锁→执行日志锁和提交后 ACK，重复完成仅接受匹配终态与已清理状态。此次未修改上述处理器、预约顺序或结果语义。连接池隔离不消除同一行的竞争。
+
+600 秒长测日志块为 1 KiB、每 2 秒一块；单块上限 16 KiB 的高字节量及中断恢复档见下文；不能把前者当作日志上限容量验证。
+
+早期摘要顶层 `executions=100` 沿用了 Worker 数量，不能作为持续批次的执行总数；实际新执行明细在 `ui_evidence.executions`（600 秒档为 188 次）。驱动后续改为查询执行表计数，历史证据原样保留。
+
+新模块定向覆盖（77 项测试）见 [targeted-coverage.json](targeted-coverage.json)：`priority_runtime.py`、`priority_routes.py` 行/分支均 100%；`priority_gateway.py` 行 95%、分支 83.33%。未覆盖生成器的命令行入口；已独立执行生成命令及 Nginx 配置检查，但独立进程未合并覆盖率，不能计为覆盖。全项目门槛另行统计。
+
+### 全量 Python 测试与覆盖率
+
+按仓库要求执行 `python -m scripts.test_coverage`：**2790 通过、155 跳过、无失败**，耗时 2232 秒；测试退出码 0，覆盖率门槛通过。证据见 [测试及逐项跳过原因](full-suite.json)、[覆盖率表](full-coverage-summary.md)与[统计 JSON](full-coverage-summary.json)。完整覆盖率原始数据、HTML 和 JUnit 位于本机 `coverage-artifacts/priority-api-isolation/`。
+
+整体行覆盖率 92.26%、分支覆盖率 84.15%；调度与资源 98.72% / 92.48%，节点纳管与升级 95.67% / 83.65%，业务执行与结果 96.12% / 88.96%。各目录均达到原有门槛，没有降低要求或排除未测生产代码。前端与未插桩独立进程不计入。
+
+跳过项要求独立迁移数据库、真实 systemd/特权挂载、专用 Docker 镜像或旧 API checkout 等 opt-in 条件；不能视作通过。其中与本变更相关的数据库事务竞争已另配迁移后的 PostgreSQL 做前述 33 项验证，但该独立进程没有合并进全量覆盖率。全量开始后新增的故障注入工具测试另跑 25 项通过（包含正常、取消、恢复及错误分类边界）；测试辅助工具不属于生产覆盖率分母。
+
+### 16 KiB 日志与中途故障
+
+[重复字符故障档](priority-large-outage-100/summary.json)：100 Worker / 180 秒，运行约 31 秒时停止批量进程，46 秒重启；日志/产物收到 1994 次预期 502，恢复突发产生 160 次 `request_concurrency` 503（日志 120、产物 40），执行心跳、Agent、用户操作与页面无此错误。8910 块日志全部确认，最大积压 11 块/Worker、最大年龄 21.21 秒，最终积压 0；29 个批次重评测成功，活跃租约及遥测过期均为 0。
+
+该档仍沿用旧驱动的重复字符正文，压缩率很高，不能代表较难压缩日志的数据库写入压力。为排除此偏差，驱动增加 `--varied-logs`，生成逐 Worker、序号和行变化的结构化文本；重试正文保持确定性，不改变 ACK 校验。辅助测试验证字节长度、重试一致性和压缩率边界，新增工具专项合计 28 项通过。它仍是合成日志，不是真实业务日志或模型评测。
+
+[变化正文故障档](priority-varied-outage-100/summary.json)：同为 100 Worker / 180 秒、16 KiB/块、15 秒中断。26 个批次完成失败→重评测→成功；8910 块日志全部确认，最大积压 11 块/Worker、年龄 21.85 秒，最终 0。1982 次预期 502 和 165 次恢复突发 503 均仅出现在日志/产物，心跳、Agent 和用户操作无此错误；活跃租约/遥测过期 0。成功请求 p99：心跳 72 ms、用户控制 14 ms、监控 185 ms、日志 231 ms。数据库样本连接峰值 44、未授予锁峰值 0，WAL 增量约 125.1 MB（重复字符档 22.7 MB），CPU 样本峰值 60.26%。这排除了重复字符过度压缩的主要偏差，仍不等于任意真实业务量的容量保证。
+
+原始 API 诊断日志和临时网关配置保留于本机 `.runtime/priority-api-isolation-load-20261125/`；Git 保留摘要、进度、失败档及复现参数，不提交运行目录。

@@ -1,0 +1,42 @@
+{
+  "image": "mini-eval-api:priority-isolation-test",
+  "scope": "isolated Compose project, new database, no production services changed",
+  "checks": [
+    {
+      "mode": "four",
+      "public_port": 40481,
+      "health": {
+        "status": "ok",
+        "roles": {
+          "execution-control": true,
+          "interaction": true,
+          "worker-data": true,
+          "bulk-transfer": true
+        }
+      },
+      "login_status": 200,
+      "me_status": 200,
+      "ready_status": 200
+    },
+    {
+      "mode": "dual",
+      "public_port": 40481,
+      "health": {
+        "status": "ok"
+      },
+      "login_status": 200,
+      "me_status": 200,
+      "ready_status": 200
+    },
+    {
+      "mode": "single",
+      "public_port": 40481,
+      "health": {
+        "status": "ok"
+      },
+      "login_status": 200,
+      "me_status": 200,
+      "ready_status": 200
+    }
+  ]
+}

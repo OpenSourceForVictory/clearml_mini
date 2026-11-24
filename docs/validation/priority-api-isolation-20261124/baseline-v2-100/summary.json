@@ -1,0 +1,610 @@
+{
+  "hardware": {
+    "machine": "x86_64",
+    "cpu_count": 32
+  },
+  "api_processes": 2,
+  "gateway": "nginx host-network test container",
+  "pool_ordinary": 23,
+  "pool_control": 40,
+  "pool_observation": 9,
+  "pool_result": 7,
+  "pool_scheduler": 1,
+  "pool_by_process": {
+    "ordinary": {
+      "ordinary": 23,
+      "observation": 9,
+      "result": 7,
+      "scheduler": 1
+    },
+    "control": {
+      "control": 40
+    }
+  },
+  "configured_total_connections": 80,
+  "db_backpressure_enabled": true,
+  "db_admission_enabled": false,
+  "cards_per_node": 1,
+  "seconds_per_grade": 60,
+  "log_bytes_per_worker_per_cycle": 1024,
+  "target_cycle_seconds": 2,
+  "scheduler_enabled": true,
+  "priority_api": false,
+  "log_interval_seconds": 2,
+  "independent_logs": true,
+  "log_drain_seconds": 5,
+  "trace_http_phases": false,
+  "client_per_worker": false,
+  "agent_telemetry": true,
+  "mixed_ui": true,
+  "scope": "real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read/retry, real scheduler and one simulated command Worker completing two attempts; excludes real business processes",
+  "grades": [
+    {
+      "requests": {
+        "200": 8224,
+        "201": 1,
+        "503": 524
+      },
+      "busy_reasons": {
+        "connection_pool": 524
+      },
+      "requests_by_kind": {
+        "heartbeat": {
+          "200": 1137
+        },
+        "agent": {
+          "200": 915,
+          "503": 100
+        },
+        "health": {
+          "200": 1118
+        },
+        "logs": {
+          "200": 2954,
+          "503": 238
+        },
+        "claim": {
+          "200": 1062,
+          "503": 73
+        },
+        "ui_submit": {
+          "201": 1
+        },
+        "artifact": {
+          "200": 1007,
+          "503": 111
+        },
+        "ui_control": {
+          "200": 2
+        },
+        "ui_list": {
+          "200": 8
+        },
+        "ui_detail": {
+          "200": 8
+        },
+        "ui_monitor": {
+          "503": 2,
+          "200": 6
+        },
+        "result": {
+          "200": 2
+        },
+        "result_duplicate": {
+          "200": 2
+        },
+        "complete": {
+          "200": 2
+        },
+        "ui_retry": {
+          "200": 1
+        }
+      },
+      "busy_by_kind": {
+        "agent": {
+          "connection_pool": 100
+        },
+        "artifact": {
+          "connection_pool": 111
+        },
+        "claim": {
+          "connection_pool": 73
+        },
+        "logs": {
+          "connection_pool": 238
+        },
+        "ui_monitor": {
+          "connection_pool": 2
+        },
+        "heartbeat": {}
+      },
+      "successful_latency_seconds": {
+        "heartbeat": {
+          "p95": 4.5822699991986156,
+          "p99": 5.771451537963003,
+          "max": 10.261787408962846
+        },
+        "agent": {
+          "p95": 4.341234145918861,
+          "p99": 6.362849897937849,
+          "max": 10.188747762003914
+        },
+        "health": {
+          "p95": 4.131981456186622,
+          "p99": 6.072465704055503,
+          "max": 7.750569668831304
+        },
+        "logs": {
+          "p95": 4.424478566972539,
+          "p99": 6.157210206845775,
+          "max": 10.51630617491901
+        },
+        "claim": {
+          "p95": 4.9212334889452904,
+          "p99": 6.399254414951429,
+          "max": 15.035423723980784
+        },
+        "ui_submit": {
+          "p95": 0.18654788192361593,
+          "p99": 0.18654788192361593,
+          "max": 0.18654788192361593
+        },
+        "artifact": {
+          "p95": 3.7300204960629344,
+          "p99": 5.9444264031481,
+          "max": 9.303148931125179
+        },
+        "ui_control": {
+          "p95": 0.12362846499308944,
+          "p99": 0.12362846499308944,
+          "max": 0.12362846499308944
+        },
+        "ui_list": {
+          "p95": 8.088086287956685,
+          "p99": 8.088086287956685,
+          "max": 8.088086287956685
+        },
+        "ui_detail": {
+          "p95": 3.1387158900033683,
+          "p99": 3.1387158900033683,
+          "max": 3.1387158900033683
+        },
+        "ui_monitor": {
+          "p95": 5.890299340011552,
+          "p99": 5.890299340011552,
+          "max": 5.890299340011552
+        },
+        "result": {
+          "p95": 5.723248416092247,
+          "p99": 5.723248416092247,
+          "max": 5.723248416092247
+        },
+        "result_duplicate": {
+          "p95": 1.3786499078851193,
+          "p99": 1.3786499078851193,
+          "max": 1.3786499078851193
+        },
+        "complete": {
+          "p95": 5.528891146881506,
+          "p99": 5.528891146881506,
+          "max": 5.528891146881506
+        },
+        "ui_retry": {
+          "p95": 0.642852429067716,
+          "p99": 0.642852429067716,
+          "max": 0.642852429067716
+        }
+      },
+      "latency_seconds": {
+        "heartbeat": {
+          "p95": 4.582270262064412,
+          "p99": 5.771451835054904,
+          "max": 10.261787591967732
+        },
+        "agent": {
+          "p95": 4.638562249019742,
+          "p99": 6.283649763092399,
+          "max": 10.188748009968549
+        },
+        "health": {
+          "p95": 4.131981668062508,
+          "p99": 6.072465898003429,
+          "max": 7.750569942872971
+        },
+        "logs": {
+          "p95": 4.809234620071948,
+          "p99": 6.280594154028222,
+          "max": 10.516306374920532
+        },
+        "claim": {
+          "p95": 5.1253000509459525,
+          "p99": 6.42811963101849,
+          "max": 15.035423958906904
+        },
+        "ui_submit": {
+          "p95": 0.18654853478074074,
+          "p99": 0.18654853478074074,
+          "max": 0.18654853478074074
+        },
+        "artifact": {
+          "p95": 3.761055635055527,
+          "p99": 6.014246335951611,
+          "max": 9.30314927501604
+        },
+        "ui_control": {
+          "p95": 0.12362884706817567,
+          "p99": 0.12362884706817567,
+          "max": 0.12362884706817567
+        },
+        "ui_list": {
+          "p95": 8.088086592033505,
+          "p99": 8.088086592033505,
+          "max": 8.088086592033505
+        },
+        "ui_detail": {
+          "p95": 3.138716067187488,
+          "p99": 3.138716067187488,
+          "max": 3.138716067187488
+        },
+        "ui_monitor": {
+          "p95": 5.890299701830372,
+          "p99": 5.890299701830372,
+          "max": 5.890299701830372
+        },
+        "result": {
+          "p95": 5.723248657071963,
+          "p99": 5.723248657071963,
+          "max": 5.723248657071963
+        },
+        "result_duplicate": {
+          "p95": 1.3786501709837466,
+          "p99": 1.3786501709837466,
+          "max": 1.3786501709837466
+        },
+        "complete": {
+          "p95": 5.528891446068883,
+          "p99": 5.528891446068883,
+          "max": 5.528891446068883
+        },
+        "ui_retry": {
+          "p95": 0.6428526660893112,
+          "p99": 0.6428526660893112,
+          "max": 0.6428526660893112
+        }
+      },
+      "max_heartbeat_gap_seconds": 17.44902901700698,
+      "max_final_sample_age_seconds": 9.20098453387618,
+      "max_final_agent_age_seconds": 7.310648541897535,
+      "load_driver_loop_lag_seconds": {
+        "p95": 0.08646313496865332,
+        "p99": 0.12846897379495203,
+        "max": 0.25149023393169045
+      },
+      "http_phases_seconds": {},
+      "progress": [
+        {
+          "elapsed_seconds": 30.04,
+          "max_current_heartbeat_age_seconds": 14.651471205055714,
+          "worst_heartbeat_gap_seconds": 16.94114394695498,
+          "log_generated": 1485,
+          "log_accepted": 971,
+          "log_pending": 514,
+          "oldest_pending_log_seconds": 21.571570500032976,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        },
+        {
+          "elapsed_seconds": 60.0,
+          "max_current_heartbeat_age_seconds": 7.185675333021209,
+          "worst_heartbeat_gap_seconds": 17.44902901700698,
+          "log_generated": 2954,
+          "log_accepted": 2871,
+          "log_pending": 83,
+          "oldest_pending_log_seconds": 14.175884260097519,
+          "heartbeat_admission_rejections": 0,
+          "log_admission_rejections": 0,
+          "agent_admission_rejections": 0
+        }
+      ],
+      "ui_evidence": {
+        "batch_id": "8a08f7d2-be51-45bf-90a4-c242caa15ef2",
+        "control_revisions": [
+          1,
+          2
+        ],
+        "last_batch_status": "SUCCEEDED",
+        "retried": true,
+        "executions": [
+          {
+            "execution_id": "f4879ad5-816b-4f8d-ad32-6e29acf9f75f",
+            "status": "FAILED"
+          },
+          {
+            "execution_id": "ff28bef9-b7d4-49c0-bd03-98b7e5e2df02",
+            "status": "SUCCEEDED"
+          }
+        ],
+        "duplicate_results": 2,
+        "errors": [
+          {
+            "kind": "ui_monitor",
+            "status": 503,
+            "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+          },
+          {
+            "kind": "ui_monitor",
+            "status": 503,
+            "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+          }
+        ],
+        "last_monitor": [
+          {
+            "status": "SUCCEEDED",
+            "reasons": [],
+            "waiting": null
+          }
+        ]
+      },
+      "independent_logs": true,
+      "log_generation": {
+        "generated": 2954,
+        "accepted": 2954,
+        "max_pending_chunks_per_worker": 13,
+        "final_pending_chunks": 0,
+        "max_pending_age_seconds": 23.157088639913127
+      },
+      "database_samples": [
+        {
+          "activity": [
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.000155
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 3,
+            "xact_rollback": 1,
+            "blks_read": 0,
+            "blks_hit": 32454,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 137657889,
+          "postgres_container": {
+            "CPUPerc": "74.90%",
+            "MemUsage": "175.7MiB / 62.63GiB",
+            "BlockIO": "0B / 255MB",
+            "PIDs": "63"
+          },
+          "sample_seconds": 1.017477473942563,
+          "elapsed_seconds": 1.0179770910181105
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 61,
+              "max_query_age_seconds": 1.772592
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 1665,
+            "xact_rollback": 644,
+            "blks_read": 49,
+            "blks_hit": 242595,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 143869209,
+          "postgres_container": {
+            "CPUPerc": "4.67%",
+            "MemUsage": "203.6MiB / 62.63GiB",
+            "BlockIO": "0B / 262MB",
+            "PIDs": "69"
+          },
+          "sample_seconds": 1.0283820640761405,
+          "elapsed_seconds": 12.185638838913292
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 61,
+              "max_query_age_seconds": 8.369562
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.000228
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 2709,
+            "xact_rollback": 1125,
+            "blks_read": 49,
+            "blks_hit": 283956,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 144527289,
+          "postgres_container": {
+            "CPUPerc": "5.19%",
+            "MemUsage": "209.9MiB / 62.63GiB",
+            "BlockIO": "0B / 270MB",
+            "PIDs": "70"
+          },
+          "sample_seconds": 1.0180003738496453,
+          "elapsed_seconds": 23.339736117981374
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.000145
+            },
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.001107
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 60,
+              "max_query_age_seconds": 19.477623
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 4240,
+            "xact_rollback": 1791,
+            "blks_read": 49,
+            "blks_hit": 328493,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 145633247,
+          "postgres_container": {
+            "CPUPerc": "11.51%",
+            "MemUsage": "212.7MiB / 62.63GiB",
+            "BlockIO": "0B / 280MB",
+            "PIDs": "70"
+          },
+          "sample_seconds": 1.01866689696908,
+          "elapsed_seconds": 34.422388553852215
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 61,
+              "max_query_age_seconds": 7.400798
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 1,
+              "max_query_age_seconds": 0.000428
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 5814,
+            "xact_rollback": 2445,
+            "blks_read": 49,
+            "blks_hit": 373190,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 146852754,
+          "postgres_container": {
+            "CPUPerc": "13.93%",
+            "MemUsage": "214.6MiB / 62.63GiB",
+            "BlockIO": "0B / 289MB",
+            "PIDs": "70"
+          },
+          "sample_seconds": 1.0177190219983459,
+          "elapsed_seconds": 45.491573792882264
+        },
+        {
+          "activity": [
+            {
+              "state": "active",
+              "wait_event_type": "IO",
+              "connections": 1,
+              "max_query_age_seconds": 0.002438
+            },
+            {
+              "state": "active",
+              "wait_event_type": null,
+              "connections": 1,
+              "max_query_age_seconds": 0.000149
+            },
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 58,
+              "max_query_age_seconds": 18.463914
+            },
+            {
+              "state": "idle in transaction",
+              "wait_event_type": "Client",
+              "connections": 2,
+              "max_query_age_seconds": 0.000411
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 7876,
+            "xact_rollback": 3348,
+            "blks_read": 49,
+            "blks_hit": 429654,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 148397421,
+          "postgres_container": {
+            "CPUPerc": "20.50%",
+            "MemUsage": "216.5MiB / 62.63GiB",
+            "BlockIO": "0B / 305MB",
+            "PIDs": "70"
+          },
+          "sample_seconds": 1.016795314149931,
+          "elapsed_seconds": 56.54156024497934
+        },
+        {
+          "activity": [
+            {
+              "state": "idle",
+              "wait_event_type": "Client",
+              "connections": 62,
+              "max_query_age_seconds": 28.799014
+            }
+          ],
+          "waiting_locks": 0,
+          "database": {
+            "xact_commit": 8978,
+            "xact_rollback": 4018,
+            "blks_read": 49,
+            "blks_hit": 466256,
+            "deadlocks": 0,
+            "temp_bytes": 0
+          },
+          "cluster_wal_bytes": 149156164,
+          "postgres_container": {
+            "CPUPerc": "0.02%",
+            "MemUsage": "218.3MiB / 62.63GiB",
+            "BlockIO": "0B / 310MB",
+            "PIDs": "70"
+          },
+          "sample_seconds": 1.0139676360413432,
+          "elapsed_seconds": 66.86227429495193
+        }
+      ],
+      "initial_checkout_wait_ms": {
+        "p95": 250.098,
+        "p99": 250.604
+      },
+      "expired_leases": 2,
+      "telemetry_stale": 0,
+      "database_max_connections": 100,
+      "database_connections_at_end": 63,
+      "workers": 100,
+      "executions": 100,
+      "passed": false
+    }
+  ]
+}
