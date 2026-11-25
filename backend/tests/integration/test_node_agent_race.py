@@ -7,7 +7,7 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from backend.app.core import Base,User,Worker,Run,session_factory
+from backend.app.core import Base,User,Worker,Run,Slot,session_factory
 from backend.app.agent_state import record
 from backend.tests.test_execution_logs_postgres import pg
 from backend.app.scheduling import tick
@@ -127,3 +127,94 @@ def test_configuration_writer_does_not_wait_for_observation(env,monkeypatch,oper
     assert c.post('/api/v1/agent/heartbeat',headers=token,json={**body,'session':'f'*32}).status_code==409
     with factory() as s:assert record(s.get(Worker,w['id']))['samples']==body['samples']
     engine.dispose()
+
+
+def test_multicard_sampling_and_config_remain_consistent_under_concurrent_heartbeats(env, monkeypatch):
+    import time
+    from sqlalchemy import event
+    main, _, _ = env
+    factory = session_factory(os.environ['TEST_DATABASE_URL'])
+    monkeypatch.setattr(main, 'SessionLocal', factory)
+    suffix = uuid.uuid4().hex
+    with factory() as s:
+        user = User(username='multicard-'+suffix, role='admin', password_hash='unused')
+        s.add(user); s.commit(); uid = user.id
+    auth = {'Authorization': 'Bearer '+jwt.encode({'sub':uid}, main.SECRET, algorithm='HS256')}
+    c = TestClient(main.app)
+    node = c.post('/api/v1/admin/worker-credentials', headers=auth,
+                  json={'node_name':'multicard-'+suffix, 'max_concurrent':3}).json()
+    token = {'Authorization':'Bearer '+node['token']}
+    slots = []
+    for index in range(3):
+        result = c.post('/api/v1/worker/register', headers=token,
+            json={'gpu_index':index, 'gpu_uuid':f'mock:{suffix}:{index}',
+                  'gpu_model':'virtual', 'vram_gb':1})
+        assert result.status_code == 200, result.text
+        slots.append(result.json()['slot_id'])
+    registration = c.post('/api/v1/agent/register', headers=token,
+                          json={'boot_id':suffix, 'version':'1', 'resource_protocol':1})
+    assert registration.status_code == 200, registration.text
+    sample_at = time.time()
+    values = {}
+    for index in range(3):
+        prefix = f'gpu_{index}_'
+        values.update({prefix+'uuid':f'mock:{suffix}:{index}', prefix+'total_mb':1024,
+                       prefix+'free_mb':768-index, prefix+'utilization':10+index})
+    report = {'session':registration.json()['session'], 'sequence':1,
+              'applied_revision':0, 'config_status':'waiting',
+              'samples':{'gpu':{'status':'ok', 'sampled_at':sample_at, 'values':values}}}
+    barrier = Barrier(5)
+    def config():
+        barrier.wait()
+        return c.put('/api/v1/admin/nodes/'+node['id']+'/agent', headers=auth,
+                     json={'expected_revision':0, 'heartbeat_seconds':10})
+    def observe():
+        barrier.wait()
+        return c.post('/api/v1/agent/heartbeat', headers=token, json=report)
+    def beat(slot_id):
+        barrier.wait()
+        return c.post('/api/v1/worker/heartbeat', headers=token, json={'slot_id':slot_id})
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(config), executor.submit(observe)]
+        futures.extend(executor.submit(beat, slot) for slot in slots)
+        results = [future.result(timeout=10) for future in futures]
+    assert [result.status_code for result in results] == [200]*5
+    with factory() as s:
+        worker = s.get(Worker, node['id'])
+        state = record(worker)
+        assert state['revision'] == 1 and state['desired']['heartbeat_seconds'] == 10
+        assert state['sequence'] == 1 and state['samples'] == report['samples']
+        for index, slot_id in enumerate(slots):
+            slot = s.get(Slot, slot_id)
+            assert slot.free_vram_mb == 768-index
+            assert slot.gpu_utilization == 10+index
+            assert abs(slot.telemetry_at.timestamp()-sample_at) < .01
+    writes = []
+    def capture(_conn, _cursor, statement, _parameters, _context, _many):
+        if statement.lstrip().lower().startswith('update gpu_slots'):
+            writes.append(statement)
+    engine = factory.kw['bind']
+    event.listen(engine, 'before_cursor_execute', capture)
+    try:
+        repeated = c.post('/api/v1/agent/heartbeat', headers=token,
+                          json={**report, 'sequence':2, 'applied_revision':1})
+        assert repeated.status_code == 200, repeated.text
+        assert writes == [], 'unchanged sample must not lock all Slot rows again'
+    finally:
+        event.remove(engine, 'before_cursor_execute', capture)
+    assert c.post('/api/v1/agent/heartbeat', headers=token,
+                  json={**report, 'sequence':1, 'samples':{}}).status_code == 200
+    with factory() as s:
+        assert record(s.get(Worker, node['id']))['samples'] == report['samples']
+    # An admin configuration writer may hold Worker while ordinary per-card
+    # liveness still needs to commit. These reports carry no config ACK.
+    with factory() as locker:
+        locker.scalar(select(Worker).where(Worker.id == node['id']).with_for_update())
+        try:
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                pending = [executor.submit(c.post, '/api/v1/worker/heartbeat',
+                    headers=token, json={'slot_id':slot_id}) for slot_id in slots]
+                assert [future.result(timeout=2).status_code for future in pending] == [200]*3
+        finally:
+            locker.rollback()
+    factory.kw['bind'].dispose()

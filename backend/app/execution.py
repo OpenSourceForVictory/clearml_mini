@@ -383,10 +383,13 @@ def install(app, db, current):
             from .scheduling import fast_lock
             fast_lock(s)
         # Execution reports never modify Worker configuration JSON. Lock Run
-        # before Slot, matching completion/reclamation; an ordinary heartbeat
-        # still locks Worker before merging configuration acknowledgements.
+        # before Slot, matching completion/reclamation. Only configuration
+        # acknowledgements need the Worker row lock; ordinary telemetry and
+        # idle liveness from different cards must not serialize on that row.
         run = run_for(s, body.execution_id, worker) if body.execution_id else None
-        s.refresh(worker, with_for_update=not bool(body.execution_id))
+        configuration_ack = (not body.execution_id and
+                             (body.storage is not None or body.runtime is not None or body.host is not None))
+        s.refresh(worker, with_for_update=configuration_ack)
         slot = slot_for(s, body.slot_id, worker)
         s.refresh(slot, with_for_update=True)
         cancel = False

@@ -113,6 +113,37 @@ def test_two_gpu_queue_agent_heartbeat_does_not_renew_execution(env):
     assert c.post('/api/v1/agent/stop-permit',headers=t,json={'session':session,'revision':1}).json()['allowed']
 
 
+def test_agent_busy_check_uses_one_query_for_multicard_node(env):
+    from sqlalchemy import event
+    from backend.app.node_agents import busy
+    main, c, a = env
+    token, slots = node(env, count=4)
+    identity = c.get('/api/v1/admin/nodes', headers=a['admin']).json()[0]['id']
+    engine = main.SessionLocal.kw['bind']
+    statements = []
+    def count(_conn, _cursor, statement, _parameters, _context, _many):
+        statements.append(statement)
+    with main.SessionLocal() as session:
+        worker = session.get(Worker, identity)
+        event.listen(engine, 'before_cursor_execute', count)
+        try:
+            assert not busy(session, worker)
+            assert len(statements) == 1
+        finally:
+            event.remove(engine, 'before_cursor_execute', count)
+    submit(env)
+    assert claim(env, token, slots[0])
+    with main.SessionLocal() as session:
+        worker = session.get(Worker, identity)
+        event.listen(engine, 'before_cursor_execute', count)
+        statements.clear()
+        try:
+            assert busy(session, worker)
+            assert len(statements) == 1
+        finally:
+            event.remove(engine, 'before_cursor_execute', count)
+
+
 @pytest.mark.parametrize('upgrade',['SUCCEEDED','CANCELLED',None])
 def test_completed_upgrade_does_not_block_later_stop(env,upgrade):
     main,c,a=env;t,_,identity,session=setup(env);beat(c,t,session)

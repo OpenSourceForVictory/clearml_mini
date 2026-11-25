@@ -4,10 +4,9 @@ from datetime import timedelta
 from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
-from .core import Worker, Slot, now
+from sqlalchemy import select, or_
+from .core import Worker, Slot, Run, now
 from .scheduling import lock, utc
-from .storage import held
 from .administration import audit, release_reservations
 from .node_resources import resource_source, resource_values, apply_resources, host_codes
 
@@ -108,7 +107,12 @@ def view(w):
 
 
 def busy(s, w):
-    return any(held(s, x) for x in s.scalars(select(Slot).where(Slot.worker_id == w.id)))
+    # One bounded existence query for the whole node. The prior per-slot
+    # held() lookup multiplied every Agent response by the number of cards.
+    return bool(s.scalar(select(Run.id).join(Slot, Run.slot_id == Slot.id).where(
+        Slot.worker_id == w.id,
+        or_(Run.status.in_(('STARTING', 'RUNNING', 'CANCEL_REQUESTED')),
+            Run.cleanup_confirmed.is_(False))).limit(1)))
 
 
 def response(s, w, r):
