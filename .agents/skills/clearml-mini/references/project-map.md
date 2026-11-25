@@ -361,3 +361,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 恢复同步确认results_finished只锁Run→grant，不获取资源全局锁；完成/清理保留原资源锁序。对应PostgreSQL测试持有调度锁期间结果同步仍可确认。
 
 恢复退出证据：worker/recovery_runtime.py在原身份的实际退出或确认停止后原子保存runtime-exit.json，按执行/代次/launch/boot/运行身份验证重用；未知退出码保持None，不能把任意missing变成exited。重复观察不重复fsync；同执行线程共享证据写锁。recover_journals忽略此旁路文件。test_recovery_exit_evidence.py覆盖停止失败、身份替换、磁盘满、坏文件和幂等恢复；真实host/Docker监控测试覆盖停止后启动交接只恢复、不重启。
+
+恢复控制循环：RecoveryMonitor.start_control提供每执行唯一的控制HTTP线程，复用持久exchange序号/正文，和本地tick、结果调用方分离。Worker.monitor_recovery(control=True)组合启动；控制线程启动失败关闭已创建本地监督，close等待控制结束后才释放所有权。test_worker_recovery_monitor覆盖慢数据、断网、401、原请求重放、并发关闭与真实host/Docker阻塞HTTP期间停止。生产execute尚未接线，不广告能力。

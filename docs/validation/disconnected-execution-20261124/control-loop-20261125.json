@@ -1,0 +1,22 @@
+{
+  "tests": {
+    "passed": 89,
+    "skipped": 0,
+    "deselected": 3454,
+    "seconds": 35.16
+  },
+  "coverage": {
+    "worker/recovery_monitor.py": {
+      "line": 100,
+      "branch": 100
+    },
+    "worker/client.py": {
+      "line": 9.91,
+      "branch": 2.37
+    }
+  },
+  "report": "coverage-artifacts/recovery-control-loop-20261125",
+  "all_project_gate_passed": false,
+  "production_enabled": false,
+  "scope": "独立控制循环专项，真实host/Docker短程序；非完整生产批次或模型评测"
+}

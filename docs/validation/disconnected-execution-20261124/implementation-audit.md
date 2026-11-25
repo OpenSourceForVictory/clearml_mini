@@ -210,3 +210,11 @@ results-finished仅使用Run→grant行锁，不拿资源全局锁。真实Postg
 标准报告后增加真实运行+隔离FastAPI联测，宿主机/Docker分别覆盖过期旧租约继续执行和恢复取消→停止→完成→清理，共4 passed、9 deselected，9.06秒。调用实际reconcile/finish/cleanup处理与事务；退出码为未知或实际值，平台取消结论保留。此独立补测覆盖率未合并，不与307项相加冒充统一报告。未测试完整生产Worker主循环、界面或真实模型批次，未部署新能力。
 
 操作/升级说明、Skill项目索引及OpenSpec设计/任务记录已同步，strict validate通过。4.x仍未全部完成，生产execute对新领取仍保留拦截。
+
+### 独立控制循环（2026-11-25）
+
+恢复监控新增唯一控制HTTP线程，数据调用方阻塞不阻止对账；控制HTTP阻塞不阻止本地时限检查。传输异常重放原请求，401保留错误且等待凭据/服务修复，不杀业务；实际取消仍经原控制决策停止。启动/关闭串行，控制HTTP未返回不释放执行监督锁。组合入口Worker.monitor_recovery(control=True)启动失败会释放已经创建的本地监控。
+
+定向首轮28 passed。标准专项89 passed、3454 deselected、无跳过，35.16秒；worker/recovery_monitor行/分支100/100，worker/client本次选集9.91/2.37，整体门槛失败。报告coverage-artifacts/recovery-control-loop-20261125。覆盖慢数据调用方、传输失败、401、取消、原请求重放、重复启动、关闭竞态、线程启动失败、无效间隔；真实host/Docker同时验证手动/自动控制HTTP阻塞时本地有限容忍停止及原身份恢复。真实测试为短程序与故障响应，不是完整生产Worker批次或模型评测。
+
+操作/升级说明、Skill索引、OpenSpec设计与任务记录已同步。生产execute仍未接通完整新协议，服务探测重建、结果/日志全过程及发布验收未完成，不启用恢复能力、不勾选4.x完成。

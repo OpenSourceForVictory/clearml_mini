@@ -34,6 +34,9 @@ class RecoveryMonitor:
         self.stopping = threading.Event()
         self._network = threading.Lock()
         self.last_error = None
+        self.control_error = None
+        self.control_thread = None
+        self._lifecycle = threading.Lock()
         self.supervisor = RecoverySupervisor(Path(str(worker.path)+'.supervision.json'),
             execution_id=execution, generation=proof['generation'], process_identity=proof['identity'],
             tolerance=receipt['policy']['disconnect_tolerance_seconds'],
@@ -72,9 +75,49 @@ class RecoveryMonitor:
         finally:
             self._network.release()
 
+    def start_control(self, api, *, interval=2):
+        """Own control HTTP separately from result/probe/log delivery."""
+        if type(interval) not in (int, float) or not math.isfinite(interval) or interval <= 0:
+            raise ValueError('positive finite control interval required')
+        with self._lifecycle:
+            if self.stopping.is_set() or self.control_thread is not None:
+                raise RuntimeError('recovery control loop already started or closing')
+            thread = threading.Thread(target=self._control, args=(api, interval), daemon=True,
+                                      name='recovery-control-'+self.supervisor.snapshot()['execution_id'])
+            self.control_thread = thread
+            try:
+                thread.start()
+            except BaseException:
+                self.control_thread = None
+                raise
+
+    def _control(self, api, interval):
+        from .backpressure import Backoff, transient
+        retry = Backoff(maximum=2, max_total=5)
+        while not self.stopping.is_set():
+            try:
+                self.exchange(api)
+                self.control_error = None
+                retry.reset()
+            except Exception as exc:
+                self.control_error = exc
+                # Authentication/configuration errors do not prove a business
+                # failure. Keep local supervision and original pending request.
+                LOG.warning('recovery control unavailable; retaining execution (%s)', type(exc).__name__)
+                if transient(exc):
+                    retry.wait(exc, self.stopping)
+                    continue
+            self.stopping.wait(interval)
+
     def close(self, timeout=20):
         """Release supervision only after both owners stop; never kill runtime."""
-        self.stopping.set()
+        with self._lifecycle:
+            self.stopping.set()
+            control = self.control_thread
+        if control is not None:
+            control.join(timeout=timeout)
+            if control.is_alive():
+                raise RuntimeError('recovery control has not stopped; ownership retained')
         self.thread.join(timeout=timeout)
         if self.thread.is_alive():
             raise RuntimeError('local recovery observation has not stopped')

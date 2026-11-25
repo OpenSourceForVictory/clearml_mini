@@ -860,9 +860,16 @@ class Worker:
         from .recovery_start import start_or_recover
         return start_or_recover(self)
 
-    def monitor_recovery(self, launch):
+    def monitor_recovery(self, launch, *, control=False):
         from .recovery_monitor import RecoveryMonitor
-        return RecoveryMonitor(self, launch)
+        monitor = RecoveryMonitor(self, launch)
+        if control:
+            try:
+                monitor.start_control(self.api)
+            except BaseException:
+                monitor.close()
+                raise
+        return monitor
 
     def collect_recovery_results(self, outbox=None, *, output='', protocol_root=None, final=False):
         from .recovery_results import collect

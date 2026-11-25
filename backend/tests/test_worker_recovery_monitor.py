@@ -180,7 +180,8 @@ def test_thread_start_failure_releases_supervisor_lock(case,monkeypatch):
 
 @pytest.mark.skipif(__import__('os').getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker monitor opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-def test_real_runtime_stops_while_control_http_is_blocked(tmp_path,monkeypatch,mode):
+@pytest.mark.parametrize('automatic',[False,True])
+def test_real_runtime_stops_while_control_http_is_blocked(tmp_path,monkeypatch,mode,automatic):
     import json,os,uuid
     from backend.tests.test_host_backend import worker as fixture_worker
     from worker.client import Worker,docker
@@ -221,7 +222,11 @@ def test_real_runtime_stops_while_control_http_is_blocked(tmp_path,monkeypatch,m
         def exchange():
             try:m.exchange(SimpleNamespace(post=post))
             except Exception as exc:errors.append(exc)
-        thread=threading.Thread(target=exchange);thread.start();assert entered.wait(2)
+        if automatic:
+            m.start_control(SimpleNamespace(post=post),interval=.05);thread=m.control_thread
+        else:
+            thread=threading.Thread(target=exchange);thread.start()
+        assert entered.wait(2)
         assert stopped.wait(8)
         assert thread.is_alive()
         wait(lambda:m.snapshot()['state'] in ('exited','missing'))
@@ -229,10 +234,93 @@ def test_real_runtime_stops_while_control_http_is_blocked(tmp_path,monkeypatch,m
         assert RecoveryRuntime(worker,execution).inspect()['state']=='exited'
         # Recreate the adapter and startup handoff after systemd unloads the unit.
         assert Worker.start_recovery(worker)['identity']==launch['identity']
-        release.set();thread.join(2);assert errors==[]
+        release.set()
+        if automatic:
+            wait(lambda:m.snapshot()['sequence']>1)
+            assert m.control_error is None
+        else:thread.join(2)
+        assert errors==[]
     finally:
         release.set()
-        if thread:thread.join(3)
+        if thread and not automatic:thread.join(3)
         if m:m.close()
         if mode=='host':host.remove(execution)
         else:docker('rm','--force',name,check=False)
+
+
+@pytest.mark.parametrize('error',[TimeoutError('offline'),__import__('worker.backpressure',fromlist=['APIError']).APIError(401,'invalid credential')])
+def test_automatic_control_replays_outage_and_receives_cancel(case,error):
+    calls=[];online=threading.Event()
+    def post(path,body):
+        calls.append(copy.deepcopy(body))
+        if not online.is_set():raise error
+        return reply(body,'stop')
+    with monitor(case) as m:
+        m.start_control(SimpleNamespace(post=post),interval=.005)
+        wait(lambda:m.control_error is not None)
+        assert case[3]==[]
+        online.set()
+        wait(lambda:len(case[3])==1)
+        wait(lambda:m.control_error is None)
+        assert calls[0]==calls[1]
+        assert m.snapshot()['control']['directive']=='stop'
+
+
+def test_control_continues_while_data_delivery_is_blocked(case):
+    data_entered=threading.Event();release=threading.Event();calls=[]
+    def send_data():data_entered.set();release.wait(3)
+    def post(path,body):calls.append(body);return reply(body,'stop' if len(calls)>=2 else 'track')
+    data=threading.Thread(target=send_data);data.start()
+    try:
+        assert data_entered.wait(1)
+        with monitor(case) as m:
+            m.start_control(SimpleNamespace(post=post),interval=.005)
+            wait(lambda:len(case[3])==1)
+            assert data.is_alive() and len(calls)>=2
+            with pytest.raises(RuntimeError):m.start_control(None)
+    finally:release.set();data.join(2)
+
+
+def test_automatic_control_close_retains_owner_while_http_blocked(case):
+    entered=threading.Event();release=threading.Event()
+    def post(path,body):entered.set();release.wait(3);return reply(body)
+    m=monitor(case)
+    try:
+        m.start_control(SimpleNamespace(post=post),interval=.005)
+        assert entered.wait(1)
+        with pytest.raises(RuntimeError,match='control has not stopped'):m.close(timeout=0)
+        with pytest.raises(BlockingIOError):monitor(case)
+        with pytest.raises(RuntimeError):m.start_control(None)
+    finally:release.set();m.close()
+    assert case[3]==[]
+    with monitor(case):pass
+
+
+@pytest.mark.parametrize('interval',[0,-1,True,float('inf'),float('nan')])
+def test_control_interval_validation(case,interval):
+    with monitor(case) as m:
+        with pytest.raises(ValueError):m.start_control(None,interval=interval)
+
+
+def test_control_thread_start_failure_can_be_retried(case,monkeypatch):
+    with monitor(case) as m:
+        original=threading.Thread.start
+        monkeypatch.setattr(threading.Thread,'start',lambda *args:(_ for _ in ()).throw(RuntimeError('thread unavailable')))
+        with pytest.raises(RuntimeError):m.start_control(None)
+        assert m.control_thread is None
+        monkeypatch.setattr(threading.Thread,'start',original)
+        m.start_control(SimpleNamespace(post=lambda path,body:reply(body)),interval=.005)
+        wait(lambda:m.snapshot()['sequence']>1)
+
+
+def test_worker_combines_local_and_control_loops_and_cleans_start_failure(case,monkeypatch):
+    from worker.client import Worker
+    w,launch,_,_,_=case;w.api=SimpleNamespace(post=lambda path,body:reply(body,'stop'))
+    # Production clock is real: retain the original relative timing contract.
+    launch['started_at']=time.monotonic();w.state['recovery_assignment']['claim']['requested_at']=launch['started_at']
+    with Worker.monitor_recovery(w,launch,control=True) as m:
+        wait(lambda:len(case[3])==1)
+    def fail(*args):raise RuntimeError('cannot start control')
+    monkeypatch.setattr(RecoveryMonitor,'start_control',fail)
+    with pytest.raises(RuntimeError):Worker.monitor_recovery(w,launch,control=True)
+    with Worker.monitor_recovery(w,launch):pass
