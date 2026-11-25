@@ -128,6 +128,10 @@ def telemetry_fresh(slot, at):
 def runtime_mismatch(slot, job):
     """Explain the exact client/server execution requirement that this slot lacks."""
     template=(job.client_spec or {}).get('template',{})
+    if (job.client_spec or {}).get('disconnect_tolerance_seconds') is not None:
+        if (os.getenv('RECOVERY_EXECUTION_ENABLED', '0') != '1'
+                or 'disconnected_execution_v1' not in (getattr(slot, 'software', None) or {}).get('capabilities', [])):
+            return '有限断联容忍需要平台启用恢复执行，并升级该设备 Worker 的 disconnected_execution_v1 能力'
     if template.get('integration_mode')=='sdk-task-result' and slot.protocol_version<18:
         return '任务级 SDK 结果上报需要 Worker 协议 18（当前 '+str(slot.protocol_version)+'）'
     side='服务端' if getattr(job,'benchmark',None)=='inference-service' else '客户端'

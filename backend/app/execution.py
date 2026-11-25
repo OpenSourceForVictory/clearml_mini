@@ -578,7 +578,8 @@ def install(app, db, current):
         receipt = None
         if request_id:
             receipt = bind_claim(s, request_id=request_id, worker_id=worker.id,
-                                 slot_id=slot.id, run_id=run.id, task=task)
+                                 slot_id=slot.id, run_id=run.id, task=task,
+                                 tolerance=(job.client_spec or {}).get('disconnect_tolerance_seconds'))
         s.commit()
         return response(task=task, receipt=receipt)
 

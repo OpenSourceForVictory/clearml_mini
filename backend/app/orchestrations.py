@@ -85,6 +85,7 @@ def compile_submission(s,body,user):
         from .job_resources import resolve as resolve_resources,explicit
         resource,resource_sources=resolve_resources(server_pool,definition,('submission',explicit(item.resources)))
         definitions.append({**item.model_dump(exclude={'parameter_overrides','resources'}),'parameters':values,'template':definition,
+                            'disconnect_tolerance_seconds':body.disconnect_tolerance_seconds,
                             'resources':resource,'resource_sources':resource_sources,'max_instances':item.instance_count or item.max_instances or (1 if item.mode=='shared' else min(body.max_concurrent,20))})
     keys={d['key'] for d in definitions}
     for spec in configs:

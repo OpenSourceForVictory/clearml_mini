@@ -97,6 +97,21 @@ test('preflight failure is actionable and rechecking allows submission',async({p
   await expect(wizard.getByText(/最大并发 3/)).toBeVisible();
 });
 
+test('finite disconnection tolerance is visible, validated and submitted',async({page})=>{
+  const {wizard,requests}=await setup(page);
+  await expect(wizard.getByLabel('限制断联后继续执行的时间')).not.toBeChecked();
+  await wizard.getByLabel('限制断联后继续执行的时间').check();
+  await wizard.getByLabel('断联容忍秒数').fill('0');
+  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+  await expect(wizard.getByRole('alert')).toContainText('请检查标出的字段');
+  expect(requests).toHaveLength(0);
+  await wizard.getByLabel('断联容忍秒数').fill('90');
+  await wizard.getByRole('button',{name:'检查并确认',exact:true}).click();
+  await expect(wizard.getByText('断联继续执行：90 秒（客户端与托管服务共用）')).toBeVisible();
+  await wizard.getByRole('button',{name:'提交排队',exact:true}).click();
+  expect(requests[0].body.disconnect_tolerance_seconds).toBe(90);
+});
+
 test('capacity diagnosis from preflight is visible without node access',async({page})=>{
   const {wizard,setFail}=await setup(page);
   setFail('case-1：客户端与服务端无法同时分配；服务 default（客户端池 Mixed GPUs；服务端池 Server GPUs）：同卡不能同时容纳独占请求');

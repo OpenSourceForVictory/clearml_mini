@@ -132,7 +132,8 @@ def test_worker_poll_recovers_lost_api_response_into_original_journal(env,monkey
     from worker.recovery_poll import poll,CAPABILITY
     from worker.client import Worker
     main,c,_=env;token,slot=enabled(env,monkeypatch);submit(env);tick(main.SessionLocal)
-    worker=SimpleNamespace(path=tmp_path/'worker.json',slot_id=slot,children={})
+    worker=SimpleNamespace(path=tmp_path/'worker.json',slot_id=slot,children={},
+        config={'node_outbox_root':str(tmp_path/'shared-outbox')})
     def child(execution):
         path=tmp_path/(execution+'.json')
         return SimpleNamespace(path=path,state=json.loads(path.read_text()) if path.exists() else None,

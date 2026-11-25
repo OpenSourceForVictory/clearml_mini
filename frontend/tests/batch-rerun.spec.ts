@@ -37,9 +37,24 @@ test('list import preserves overrides, edit, fresh preflight and idempotent new 
  await w.getByRole('button',{name:'检查并确认',exact:true}).click();await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
  const body=c.requests[0].body;expect(body.suite_id).toBeNull();expect(body.client.timeout_seconds).toBe(0);expect(body.cases[0].parameters.speed).toBe(9);expect(body.cases[1].parameters.speed).toBe(5);expect(body.cases[0].resources.cpu_unlimited).toBe(true);
  expect(body.services[0]).toMatchObject({instance_count:2,slot_id:'fixed-slot',parameters:{count:0},resources:{accelerator_type:'npu',cpu_unlimited:true}});
+ expect(body.disconnect_tolerance_seconds).toBeNull();
  c.lose();await w.getByRole('button',{name:'提交评测批次',exact:true}).click();await expect(w.getByRole('alert')).toBeVisible();
  await w.getByRole('button',{name:'提交评测批次',exact:true}).click();await expect(w.getByRole('status')).toContainText('已提交');
  const posts=c.requests.filter(x=>x.kind==='submit');expect(posts[0].key).toBe(posts[1].key);
+});
+
+test('rerun restores finite disconnection tolerance and keeps it editable',async({page})=>{
+ const c=await setup(page);c.draft.submission.disconnect_tolerance_seconds=120;
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await expect(w.getByLabel('批次名称',{exact:true})).toHaveValue('历史批次（再次运行）');
+ for(let i=0;i<4&&await w.getByLabel('限制断联后继续执行的时间').count()===0;i++)
+   await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('限制断联后继续执行的时间')).toBeChecked();
+ await expect(w.getByLabel('断联容忍秒数')).toHaveValue('120');
+ await w.getByLabel('断联容忍秒数').fill('180');
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests[0].body.disconnect_tolerance_seconds).toBe(180);
 });
 
 test('detail entry, failed import retry and explicit issue acknowledgement',async({page})=>{

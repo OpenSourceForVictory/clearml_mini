@@ -44,6 +44,7 @@ class BatchSubmit(BaseModel):
     required_gpu_model: Optional[str] = Field(default=None, min_length=1, max_length=100)
     client: BatchClient
     max_concurrent: int = Field(default=1, ge=1, le=100)
+    disconnect_tolerance_seconds: int | None = Field(default=None, gt=0, lt=2**63, strict=True)
     suite_id: Optional[str] = None
     cases: list[Case] = Field(default_factory=list, max_length=100)
     resources: ResourceRequest = Field(default_factory=ResourceRequest)
@@ -172,6 +173,7 @@ def resolve_batch(s, body, user, initial_defaults=None):
         try: configs.append(snapshot(s, config, user.id))
         except HTTPException as exc:
             raise HTTPException(exc.status_code, f'case {case.case_id}: {exc.detail}') from exc
+        configs[-1]['disconnect_tolerance_seconds'] = body.disconnect_tolerance_seconds
         from .clients import host_episode_launch
         if configs[-1]['template'].get('task_type')=='command' and case.episodes!=1 and not host_episode_launch(configs[-1]['template']):
             raise HTTPException(400,f'case {case.case_id}: ordinary commands require episodes=1; they do not report episodes')

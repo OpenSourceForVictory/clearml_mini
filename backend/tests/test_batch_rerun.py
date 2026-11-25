@@ -77,6 +77,9 @@ def test_permission_deleted_empty_missing_and_heterogeneous(env,monkeypatch):
         j=s.scalar(select(Job).where(Job.batch_id==b['id']));j.client_spec={**j.client_spec,'timeout_seconds':777};s.commit()
     assert any(i['code']=='heterogeneous' and i['fatal'] for i in draft(env,b['id']).json()['issues'])
     with main.SessionLocal() as s:
+        j=s.scalar(select(Job).where(Job.batch_id==b['id']));j.client_spec={**j.client_spec,'disconnect_tolerance_seconds':[]};s.commit()
+    assert any(i['code']=='snapshot_invalid' and i['fatal'] for i in draft(env,b['id']).json()['issues'])
+    with main.SessionLocal() as s:
         j=s.scalar(select(Job).where(Job.batch_id==b['id']));j.client_spec=None;s.commit()
     assert draft(env,b['id']).status_code==409
     with main.SessionLocal() as s:

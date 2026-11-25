@@ -14,7 +14,8 @@ from .service_network import choose_port
 def server_job(definition,owner_id):
     resource=definition['resources']
     return SimpleNamespace(owner_id=owner_id,pool_id=definition['pool_id'],benchmark='inference-service',target_slot_id=definition.get('slot_id'),
-        client_spec={'resources':resource,'workload':'service','template':definition['template'],'task_input_version':1},gpu_mode=resource['gpu_mode'],
+        client_spec={'resources':resource,'workload':'service','template':definition['template'],'task_input_version':1,
+                     'disconnect_tolerance_seconds':definition.get('disconnect_tolerance_seconds')},gpu_mode=resource['gpu_mode'],
         requested_vram_gb=resource['requested_vram_gb'],required_gpu_model=resource.get('required_gpu_model'),
         requested_cpu=resource.get('cpus'),requested_ram_gb=resource.get('ram_gb'))
 
@@ -138,7 +139,8 @@ def create_reserved_service(s,batch,definition,server_slot,address,port,at,stopp
     item.worker_id=server_slot.worker_id;item.slot_id=server_slot.id;item.address=address;item.port=port;item.auto_stopped=False
     s.add(item);s.flush();services.enqueue(s,item,s.get(User,batch.owner_id))
     server=s.get(Job,item.current_job_id)
-    server.client_spec={**server.client_spec,'task_input_version':1}
+    server.client_spec={**server.client_spec,'task_input_version':1,
+                        'disconnect_tolerance_seconds':definition.get('disconnect_tolerance_seconds')}
     server.requested_cpu=definition['resources'].get('cpus');server.requested_ram_gb=definition['resources'].get('ram_gb')
     server.required_gpu_model=definition['resources'].get('required_gpu_model')
     sr=reserve(s,server,server_slot,at)
