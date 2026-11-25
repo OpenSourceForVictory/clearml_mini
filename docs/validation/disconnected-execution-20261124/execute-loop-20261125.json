@@ -1,0 +1,250 @@
+{
+  "scope": "Worker.execute negotiated recovery entry, isolated real host/Docker programs and recovery API/database; no production deployment or GPU/NPU model evaluation",
+  "initial_failures": [
+    {
+      "suite": "new execution main loop",
+      "passed": 0,
+      "failed": 8,
+      "cause": "Test workspace fixture omitted runs directory; corrected fixture, preserved original failure log in /tmp/recovery-execute-first.log"
+    },
+    {
+      "suite": "real host/Docker with isolated API",
+      "passed": 2,
+      "failed": 4,
+      "cause": "Seeded client_spec omitted timeout_seconds; scheduling.execution_timeout raised KeyError for running reconciliation; corrected test fixture"
+    },
+    {
+      "suite": "expanded standard coverage",
+      "passed": 805,
+      "failed": 3,
+      "skipped": 14,
+      "deselected": 2753,
+      "seconds": 346.09,
+      "cause": "Two pre-integration tests still required rejection at execute; shutdown partial child fixture had no state. Updated dispatch assertions and legacy child handling.",
+      "evidence": "execute-loop-first-failures-20261125.txt",
+      "coverage_artifact": "coverage-artifacts/recovery-execute-20261125",
+      "skips": [
+        {
+          "test": "backend.tests.integration.test_bundled_onboarding.test_bundled_executor_deployment_and_recovery",
+          "reason": "requires isolated mini-eval-onboarding-test Compose project"
+        },
+        {
+          "test": "backend.tests.test_host_backend.test_real_host_stop_and_recovery",
+          "reason": "set HOST_EXECUTION_TEST=1 for real systemd user units"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[host-raise SystemExit(23)]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[host-print('{\"final\":{\"success_rate\":1,\"episode_count\":1,\"runtime\":0}}',flush=True)]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[docker-raise SystemExit(23)]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_exit_is_failure_even_with_final_output[docker-print('{\"final\":{\"success_rate\":1,\"episode_count\":1,\"runtime\":0}}',flush=True)]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[host-False]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[host-True]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[docker-False]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_service_startup_health_deadline_stops_real_process[docker-True]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_transient_health_upload_keeps_service_until_cancel[host]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_transient_health_upload_keeps_service_until_cancel[docker]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_lost_lease_preserves_journal_until_reconnect_cleanup[host]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        },
+        {
+          "test": "backend.tests.test_service_recovery.test_lost_lease_preserves_journal_until_reconnect_cleanup[docker]",
+          "reason": "requires local Docker image and real systemd opt-in"
+        }
+      ]
+    },
+    {
+      "suite": "output reader tests",
+      "passed": 14,
+      "failed": 2,
+      "cause": "Tests imported the patched output function before monkeypatch.undo; fixed test import order."
+    },
+    {
+      "suite": "unterminated stdout reproducer",
+      "passed": 2,
+      "failed": 2,
+      "cause": "Ordinary output without newline prevented final collection sealing; protocol fragments correctly retained.",
+      "evidence": "stdout-tail-before-20261125.txt"
+    }
+  ],
+  "isolated_runs": [
+    {
+      "suite": "main-loop real complete/cancel/timeout plus 16 unit tests",
+      "passed": 22,
+      "seconds": 54.69
+    },
+    {
+      "suite": "real host/Docker service readiness then platform cancellation",
+      "passed": 2,
+      "deselected": 6,
+      "seconds": 24.72
+    },
+    {
+      "suite": "real host/Docker Worker restart while program runs",
+      "passed": 2,
+      "deselected": 8,
+      "seconds": 26.9
+    },
+    {
+      "suite": "stdout-tail fix plus complete recovery execution/results regression",
+      "passed": 67,
+      "seconds": 30.89
+    }
+  ],
+  "final_standard_run": {
+    "passed": 833,
+    "skipped": 1,
+    "deselected": 2753,
+    "seconds": 411.46,
+    "pytest_exit_code": 0,
+    "coverage_gates_passed": false,
+    "artifact": "coverage-artifacts/recovery-execute-final-20261125",
+    "functional_coverage": {
+      "调度与资源": {
+        "files": 8,
+        "lines": 1016,
+        "covered_lines": 621,
+        "branches": 452,
+        "covered_branches": 174,
+        "line_percent": 61.12204724409449,
+        "branch_percent": 38.49557522123894
+      },
+      "节点纳管与升级": {
+        "files": 18,
+        "lines": 1685,
+        "covered_lines": 730,
+        "branches": 728,
+        "covered_branches": 182,
+        "line_percent": 43.323442136498514,
+        "branch_percent": 25.0
+      },
+      "业务执行与结果": {
+        "files": 76,
+        "lines": 7637,
+        "covered_lines": 4379,
+        "branches": 3012,
+        "covered_branches": 1347,
+        "line_percent": 57.339269346602066,
+        "branch_percent": 44.721115537848604
+      },
+      "节点监控": {
+        "files": 8,
+        "lines": 360,
+        "covered_lines": 103,
+        "branches": 140,
+        "covered_branches": 13,
+        "line_percent": 28.61111111111111,
+        "branch_percent": 9.285714285714286
+      },
+      "运行模板注册管理": {
+        "files": 5,
+        "lines": 528,
+        "covered_lines": 340,
+        "branches": 222,
+        "covered_branches": 84,
+        "line_percent": 64.39393939393939,
+        "branch_percent": 37.83783783783784
+      },
+      "评测结果与批次管理": {
+        "files": 5,
+        "lines": 345,
+        "covered_lines": 100,
+        "branches": 94,
+        "covered_branches": 5,
+        "line_percent": 28.985507246376812,
+        "branch_percent": 5.319148936170213
+      },
+      "任务集合与编排": {
+        "files": 5,
+        "lines": 951,
+        "covered_lines": 497,
+        "branches": 328,
+        "covered_branches": 74,
+        "line_percent": 52.26077812828601,
+        "branch_percent": 22.5609756097561
+      }
+    },
+    "skip_reason": "requires isolated mini-eval-onboarding-test Compose project",
+    "scope": "Before ordinary unterminated stdout correction; recovery-focused selection, not full suite"
+  },
+  "not_accepted": [
+    "Production rollout/capability advertisement",
+    "GPU/NPU model evaluation",
+    "full project coverage gates",
+    "prelaunch stop settlement, invalid result synchronization convergence, global long-lived queue capacity and UI synchronization status"
+  ],
+  "close_regression": {
+    "passed": 132,
+    "skipped": 2,
+    "deselected": 3459,
+    "seconds": 72.25,
+    "artifact": "coverage-artifacts/recovery-entry-close-20261125",
+    "coverage_gates_passed": false,
+    "module_coverage": {
+      "worker/recovery_execution.py": {
+        "lines": [
+          166,
+          167
+        ],
+        "branches": [
+          62,
+          64
+        ]
+      },
+      "worker/recovery_results.py": {
+        "lines": [
+          85,
+          85
+        ],
+        "branches": [
+          46,
+          46
+        ]
+      },
+      "worker/recovery_finish.py": {
+        "lines": [
+          84,
+          84
+        ],
+        "branches": [
+          42,
+          42
+        ]
+      }
+    }
+  },
+  "orchestration_expansion": {
+    "status": "interrupted at user request to prioritize items 2 and 3",
+    "artifact": "coverage-artifacts/recovery-orchestration-20261125",
+    "acceptance": false
+  }
+}

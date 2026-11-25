@@ -1,0 +1,23 @@
+=================================== FAILURES ===================================
+______ test_worker_poll_recovers_lost_api_response_into_original_journal _______
+backend/tests/test_recovery_claim_integration.py:158: in test_worker_poll_recovers_lost_api_response_into_original_journal
+    Worker.execute(saved,saved.state['task'])
+worker/client.py:484: in execute
+    return execute(self)
+worker/recovery_execution.py:132: in execute
+    launch = worker.start_recovery()
+E   AttributeError: 'types.SimpleNamespace' object has no attribute 'start_recovery'
+__________ test_shutdown_isolates_failed_stop_and_stops_all_children ___________
+backend/tests/test_worker_execution_recovery.py:194: in test_shutdown_isolates_failed_stop_and_stops_all_children
+    worker.shutdown()
+worker/client.py:940: in shutdown
+    if child.state and child.state.get('recovery_assignment'):
+E   AttributeError: 'types.SimpleNamespace' object has no attribute 'state'
+_____ test_handoff_persists_before_legacy_start_and_blocks_legacy_watchdog _____
+backend/tests/test_worker_recovery_poll.py:48: in test_handoff_persists_before_legacy_start_and_blocks_legacy_watchdog
+    Worker.execute(child,task)
+worker/client.py:484: in execute
+    return execute(self)
+worker/recovery_execution.py:132: in execute
+    launch = worker.start_recovery()
+E   AttributeError: 'types.SimpleNamespace' object has no attribute 'start_recovery'

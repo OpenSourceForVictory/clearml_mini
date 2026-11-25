@@ -37,15 +37,17 @@ def case(tmp_path):
 SOFTWARE={'capabilities':[CAPABILITY]}
 
 
-def test_handoff_persists_before_legacy_start_and_blocks_legacy_watchdog(case):
+def test_handoff_persists_before_recovery_dispatch_and_blocks_legacy_watchdog(case,monkeypatch):
     worker,task,calls=case
     assert poll(worker,SOFTWARE)['task']==task
     child=worker.children[task['execution_id']]
     assert child.state==json.loads(child.path.read_text())
     assert child.state['recovery_assignment']['reconciliation_required'] is True
     assert json.loads(Path(str(worker.path)+'.claim.json').read_text()) is None
-    with pytest.raises(RuntimeError,match='negotiated execution supervisor'):
-        Worker.execute(child,task)
+    dispatched=[]
+    monkeypatch.setattr('worker.recovery_execution.execute',lambda value:dispatched.append(value))
+    Worker.execute(child,task)
+    assert dispatched==[child]
     assert len(calls)==1
 
 

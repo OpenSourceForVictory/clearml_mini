@@ -86,6 +86,13 @@ def collect(worker, outbox=None, *, output='', protocol_root=None, final=False):
         # Some legacy readers return True for a trailing incomplete line.
         # Never retire a recovery journal with such unread bytes remaining.
         if source == 'stdout_events':
+            from runner.sdk import EVENT_PREFIX
+            tail = output[reader.state.get(cursor, 0):]
+            # After verified exit, ordinary diagnostic text needs no newline.
+            # Retain complete or partial event prefixes for result recovery.
+            if (tail and len(tail.splitlines(keepends=True)) == 1
+                    and not tail.startswith(EVENT_PREFIX) and not EVENT_PREFIX.startswith(tail)):
+                reader.state[cursor] = len(output)
             done = reader.state.get(cursor, 0) == len(output)
         elif source in ('episode_journal', 'protocol_events'):
             from .workspace import execution_dirs

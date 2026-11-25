@@ -195,6 +195,9 @@ class RecoverySupervisor:
                     requested_at=pending['requested_at'], received_at=clock(), persist=persist)
                 r = self.snapshot()
                 r['pending'] = None
+                # Completion may proceed only after this exact exit fact was
+                # accepted; an ACK for an earlier running sample is not enough.
+                r['acknowledged'] = copy.deepcopy(pending['body'])
                 r['sequence'] += 1
                 self._commit(r)
             return True

@@ -339,27 +339,31 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 恢复结果应用：backend/app/recovery_results.py 接入 recovery/results 的显式 apply:true 分支，按 Run→恢复授权锁序应用 episodes.record 或 SDK task-result，和收据同事务。无全局调度锁，不校验旧租约、不更新终态/清理；worker/recovery_delivery.py 的 apply_results 模式只有 reconciled:true 才 ACK。test_recovery_results.py 覆盖取消/超时后补报、失败回滚、旧收据应用、真实 PostgreSQL 并发重放与调度锁独立性。仍未启用生产能力或接入完整 Worker 主循环，不能按单模块完成宣称上线。
 
-恢复收尾：backend/app/recovery_finish.py 接入 execution.py 的 complete（可选 recovery）及 cleanup（可选身份正文）。锁序全局资源锁→Run→授权；完成验证已核对退出，保存原正文幂等且不释放，cleanup确认后才清理占用。平台终态优先；旧执行维持原路径，恢复执行禁止无证明旁路。缺结果时，旧协议仍由完整性校验拒绝；恢复协议显式 pending_results 可独立收尾，结果补齐经 results-finished 校验。主循环及界面尚未接通，不能宣称完整上线。测试 test_recovery_finish.py 包括实际HTTP和PostgreSQL取消竞争。
+恢复收尾：backend/app/recovery_finish.py 接入 execution.py 的 complete（可选 recovery）及 cleanup（可选身份正文）。锁序全局资源锁→Run→授权；完成验证已核对退出，保存原正文幂等且不释放，cleanup确认后才清理占用。平台终态优先；旧执行维持原路径，恢复执行禁止无证明旁路。缺结果时，旧协议仍由完整性校验拒绝；恢复协议显式 pending_results 可独立收尾，结果补齐经 results-finished 校验。主循环现已接通，界面及发布尚未完成，不能宣称完整上线。测试 test_recovery_finish.py 包括实际HTTP和PostgreSQL取消竞争。
 
 恢复对账保留同一进程的已确认退出：相同退出可用新序号重报，退出后运行实体卸载不抹掉退出码；退出码冲突或声称重新运行进入待核对，不能据此完成/释放。此规则同样适用于平台已取消或超时后的上报。
 
-Worker 恢复收尾接线：worker/recovery_finish.py 通过原子 journal 持久化完成正文和 completion/remove/cleanup/done 阶段，Worker.finalize_recovery 调用，Worker.execute 对已有 recovery_finalization 优先恢复而不启动程序。RecoveryRuntime.remove 只接受同身份的退出实体，Docker 按完整ID删除，missing允许幂等重试；未经完成ACK不移除、未经清理ACK不清除执行记录。test_worker_recovery_finish.py 覆盖HTTP响应丢失、落盘失败、身份冲突和真实host/Docker短程序。领取和正常监督循环尚未接通，不作为功能已上线依据。
+Worker 恢复收尾接线：worker/recovery_finish.py 通过原子 journal 持久化完成正文和 completion/remove/cleanup/done 阶段，Worker.finalize_recovery 调用，Worker.execute 对已有 recovery_finalization 优先恢复而不启动程序。RecoveryRuntime.remove 只接受同身份的退出实体，Docker 按完整ID删除，missing允许幂等重试；未经完成ACK不移除、未经清理ACK不清除执行记录。test_worker_recovery_finish.py 覆盖HTTP响应丢失、落盘失败、身份冲突和真实host/Docker短程序。领取和正常监督循环已接通开发路径，仍不作为功能已上线依据。
 
 恢复领取API接线：execution.Claim的request_id与recovery_version必须成对，claim在普通候选查询前及资源锁后查询原收据，首次RESERVED→STARTING与recovery_claims.bind同事务提交。默认关闭新分配，RECOVERY_EXECUTION_ENABLED与槽位disconnected_execution_v1同时满足才测试启用；已有收据恢复不依赖开关。恢复执行不能由旧claim或新的request_id接管；恢复终态禁止裸cleanup列表，防旧Worker绕过身份证明。test_recovery_claim_integration覆盖响应重放、取消、未协商、空ACK及事务回滚；生产主循环能力未广告。
 
-Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢复请求选择原协议/持久领取；先执行 journal 后清除 claim，重复交接保留进度，停止收据保留待核对。`execute` 禁止 recovery_assignment 误入旧租约路径；完整监督入口仍待实现，不得广告能力或把此阶段当作发布完成。
+Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢复请求选择原协议/持久领取；先执行 journal 后清除 claim，重复交接保留进度，停止收据保留待核对。`execute` 禁止 recovery_assignment 误入旧租约路径；完整监督入口现见recovery_execution；仍不得广告生产能力或把主入口接线当作发布完成。
 
-`worker/recovery_start.py` / `Worker.start_recovery()` 组合持久领取、运行文件准备、平台prepare、RecoveryLaunch和RecoveryRuntime：许可请求在准备后，attempt在实际启动前，恢复只核对原标识并补回父journal身份证明。当前为未启用组合入口，生产execute仍阻止新恢复执行退回旧watchdog；完整监督与交付尚待接线。
+`worker/recovery_start.py` / `Worker.start_recovery()` 组合持久领取、运行文件准备、平台prepare、RecoveryLaunch和RecoveryRuntime：许可请求在准备后，attempt在实际启动前，恢复只核对原标识并补回父journal身份证明。组合入口已由协商execute调用，恢复执行不进入旧watchdog；生产能力仍未启用。
 
 
-`worker/recovery_monitor.py` / Worker.monitor_recovery：独立本地tick与外部exchange，原boot/执行代次/运行身份核对；异常观察重试、退出持久化、关闭时保留未结束交换的独占权。尚缺完整生产执行入口和交付收尾。
+`worker/recovery_monitor.py` / Worker.monitor_recovery：独立本地tick与外部exchange，原boot/执行代次/运行身份核对；异常观察重试、退出持久化、关闭时保留未结束交换的独占权。主入口与交付收尾现见recovery_execution；生产发布仍待完整验收。
 
 恢复结果采集：worker/recovery_results.py / test_worker_recovery_results.py，四类旧读取器先写outbox再提交游标；final采集需原实体退出，尾部不完整不封口。worker/recovery_finish.finish_results同时要求本地最终采集标记、空队列及平台应用/完整性ACK；backend/app/recovery_finish.results_finished需完成与清理已确认。同步阶段不改变Run生命周期或资源。恢复旁路JSON不能被recover_journals当成执行UUID。完整生产入口尚未启用。
 
-清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。这仅完成已有收尾记录的恢复，正常运行监督与完整生产启用仍待完成。
+清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。该恢复入口已与正常运行监督相连，完整生产启用仍待验收。
 
 恢复同步确认results_finished只锁Run→grant，不获取资源全局锁；完成/清理保留原资源锁序。对应PostgreSQL测试持有调度锁期间结果同步仍可确认。
 
 恢复退出证据：worker/recovery_runtime.py在原身份的实际退出或确认停止后原子保存runtime-exit.json，按执行/代次/launch/boot/运行身份验证重用；未知退出码保持None，不能把任意missing变成exited。重复观察不重复fsync；同执行线程共享证据写锁。recover_journals忽略此旁路文件。test_recovery_exit_evidence.py覆盖停止失败、身份替换、磁盘满、坏文件和幂等恢复；真实host/Docker监控测试覆盖停止后启动交接只恢复、不重启。
 
-恢复控制循环：RecoveryMonitor.start_control提供每执行唯一的控制HTTP线程，复用持久exchange序号/正文，和本地tick、结果调用方分离。Worker.monitor_recovery(control=True)组合启动；控制线程启动失败关闭已创建本地监督，close等待控制结束后才释放所有权。test_worker_recovery_monitor覆盖慢数据、断网、401、原请求重放、并发关闭与真实host/Docker阻塞HTTP期间停止。生产execute尚未接线，不广告能力。
+恢复控制循环：RecoveryMonitor.start_control提供每执行唯一的控制HTTP线程，复用持久exchange序号/正文，和本地tick、结果调用方分离。Worker.monitor_recovery(control=True)组合启动；控制线程启动失败关闭已创建本地监督，close等待控制结束后才释放所有权。test_worker_recovery_monitor覆盖慢数据、断网、401、原请求重放、并发关闭与真实host/Docker阻塞HTTP期间停止。execute接线现见下述recovery_execution模块；生产不广告能力。
+
+恢复主入口现状（覆盖上述各阶段的入口待办描述）：`worker/recovery_execution.py` 已由 `Worker.execute` 调用，串接启动、独立控制/本地监督、探测、采集及完成清理。RecoverySupervisor 持久 acknowledged 原请求，只有已确认 exited 才开始完成；Worker 关闭跳过协商执行的强制停止。清理前保存 `.recovery-output`，recovery_finish.resume_results 在原队列仍存在时恢复采集。协议1日志每轮最多一个请求，避免批量排空占住收尾；协议2沿用独立 Sender/Collector。测试入口 `test_worker_recovery_execution.py`、`test_recovery_execution_real.py`；真实短程序经隔离 API/数据库，不是生产批次或模型验收。生产能力仍关闭，启动前取消、异常结果收敛及长期容量等待办未据此完成；Worker 停机时不能承诺本地有限断联计时器仍运行。操作说明见 operations.md/worker-upgrades.md 的主入口接线节。
+
+普通 stdout 末尾没有换行时，恢复结果采集在核实原进程退出后允许普通诊断文本收尾；完整或部分 `MINI_EVAL_EVENT ` 前缀仍保留等待处理，不将未完整协议记录当作普通日志丢弃。原始输出在运行时清理前持久保存。回归覆盖普通文本、中文、截断事件、部分事件前缀及 Worker.execute 完整收尾。

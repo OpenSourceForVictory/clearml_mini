@@ -14,6 +14,8 @@
 
 控制面背压变更把 `backend/app/db_budget.py` 纳入“调度与资源”；四角色隔离的 `priority_runtime.py`、`priority_routes.py`、`priority_gateway.py` 也纳入同组。`worker/backpressure.py` 及执行 API `backend/app/execution.py` 纳入“业务执行与结果”；它们同时保留在目录总量中，关键功能仍按 90% / 80% 验证，不降低门槛。
 
+恢复执行主入口 `worker/recovery_execution.py` 纳入“业务执行与结果”，与目录统计同时保留；正常、断联、取消、退出补报和服务探测的组合测试从 `Worker.execute` 进入。
+
 配置在 `backend/tests/coverage-floors.json`，CI 与本地使用相同规则。任何测试失败或任一门槛未达到均返回非零；既有代码未达标也不会自动豁免。新增功能必须随代码提供正常、边界和失败路径测试。不得通过排除未测文件、mock 掉需要验证的行为或降低门槛凑数字；调整统计范围/门槛需有明确需求和评审说明。
 
 ## 运行

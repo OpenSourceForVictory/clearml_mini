@@ -1,0 +1,52 @@
+FF..                                                                     [100%]
+=================================== FAILURES ===================================
+_ test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol[finished without newline-True] _
+
+case = (<worker.client.Worker object at 0x7e1b8e35aa50>, <worker.reliable_outbox.ReliableOutbox object at 0x7e1b8e35aba0>, PosixPath('/tmp/pytest-of-dgh/pytest-1000/test_final_stdout_tail_disting0/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e1b8e2ada70>
+tail = 'finished without newline', sealed = True
+
+    @pytest.mark.parametrize('tail,sealed',[
+        ('finished without newline',True),('中文结束',True),
+        ('MINI_EVAL_EVENT {"episode_id":',False),('MINI_EVAL_',False),
+    ])
+    def test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol(case,monkeypatch,tail,sealed):
+        w,q,_=case;args,cursor,_=source(case,'stdout')
+        args['output']+=tail
+        bound={'kind':'host','boot_id':'boot','runtime_id':'a'*32}
+        w.state['recovery']={'identity':bound}
+        monkeypatch.setattr('worker.recovery_runtime.RecoveryRuntime.inspect',
+            lambda self:{'state':'exited','identity':bound,'exit_code':0})
+>       assert w.collect_recovery_results(q,final=True,**args) is sealed
+E       assert False is True
+E        +  where False = collect_recovery_results(<worker.reliable_outbox.ReliableOutbox object at 0x7e1b8e35aba0>, final=True, **{'output': 'noise\nMINI_EVAL_EVENT {"episode_id": 1, "seed": 100, "status": "STARTED"}\nfinished without newline'})
+E        +    where collect_recovery_results = <worker.client.Worker object at 0x7e1b8e35aa50>.collect_recovery_results
+
+backend/tests/test_worker_recovery_results.py:197: AssertionError
+_ test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol[\u4e2d\u6587\u7ed3\u675f-True] _
+
+case = (<worker.client.Worker object at 0x7e1b8e421590>, <worker.reliable_outbox.ReliableOutbox object at 0x7e1b8e3cf750>, PosixPath('/tmp/pytest-of-dgh/pytest-1000/test_final_stdout_tail_disting1/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e1b8e2adba0>
+tail = '中文结束', sealed = True
+
+    @pytest.mark.parametrize('tail,sealed',[
+        ('finished without newline',True),('中文结束',True),
+        ('MINI_EVAL_EVENT {"episode_id":',False),('MINI_EVAL_',False),
+    ])
+    def test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol(case,monkeypatch,tail,sealed):
+        w,q,_=case;args,cursor,_=source(case,'stdout')
+        args['output']+=tail
+        bound={'kind':'host','boot_id':'boot','runtime_id':'a'*32}
+        w.state['recovery']={'identity':bound}
+        monkeypatch.setattr('worker.recovery_runtime.RecoveryRuntime.inspect',
+            lambda self:{'state':'exited','identity':bound,'exit_code':0})
+>       assert w.collect_recovery_results(q,final=True,**args) is sealed
+E       assert False is True
+E        +  where False = collect_recovery_results(<worker.reliable_outbox.ReliableOutbox object at 0x7e1b8e3cf750>, final=True, **{'output': 'noise\nMINI_EVAL_EVENT {"episode_id": 1, "seed": 100, "status": "STARTED"}\n中文结束'})
+E        +    where collect_recovery_results = <worker.client.Worker object at 0x7e1b8e421590>.collect_recovery_results
+
+backend/tests/test_worker_recovery_results.py:197: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_worker_recovery_results.py::test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol[finished without newline-True]
+FAILED backend/tests/test_worker_recovery_results.py::test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol[\u4e2d\u6587\u7ed3\u675f-True]
+2 failed, 2 passed, 28 deselected in 0.63s

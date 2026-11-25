@@ -154,7 +154,9 @@ def test_worker_poll_recovers_lost_api_response_into_original_journal(env,monkey
     execution=recovered['task']['execution_id'];saved=worker.children[execution]
     assert saved.state['task']==recovered['task']
     assert saved.state['recovery_assignment']['claim']['receipt']==recovered['recovery_claim']
-    with pytest.raises(RuntimeError,match='negotiated execution supervisor'):
-        Worker.execute(saved,saved.state['task'])
+    dispatched=[]
+    monkeypatch.setattr('worker.recovery_execution.execute',lambda child:dispatched.append(child))
+    Worker.execute(saved,saved.state['task'])
+    assert dispatched==[saved]
     with main.SessionLocal() as s:
         assert s.scalar(select(func.count()).select_from(ExecutionRecoveryClaim))==1

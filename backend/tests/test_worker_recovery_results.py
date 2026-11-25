@@ -181,3 +181,22 @@ def test_default_outbox_has_stable_execution_owned_path(case):
     w.state=json.loads(w.path.read_text())
     assert w.collect_recovery_results(**args)
     assert len(q.pending())==1
+
+
+@pytest.mark.parametrize('tail,sealed',[
+    ('finished without newline',True),('中文结束',True),
+    ('MINI_EVAL_EVENT {"episode_id":',False),('MINI_EVAL_',False),
+    ('progress\rMINI_EVAL_EVENT {"episode_id":1}\n',False),
+])
+def test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol(case,monkeypatch,tail,sealed):
+    w,q,_=case;args,cursor,_=source(case,'stdout')
+    args['output']+=tail
+    bound={'kind':'host','boot_id':'boot','runtime_id':'a'*32}
+    w.state['recovery']={'identity':bound}
+    monkeypatch.setattr('worker.recovery_runtime.RecoveryRuntime.inspect',
+        lambda self:{'state':'exited','identity':bound,'exit_code':0})
+    assert w.collect_recovery_results(q,final=True,**args) is sealed
+    assert bool(w.state.get('recovery_results_collected')) is sealed
+    assert len(q.pending())==1 and q.pending()[0]['body']==EVENT
+    assert w.state[cursor]==len(args['output'])-(0 if sealed else len(tail))
+    assert json.loads(w.path.read_text())==w.state

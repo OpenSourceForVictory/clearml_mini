@@ -95,9 +95,16 @@ def finish_results(worker, outbox):
 def resume_results(worker):
     """One bounded post-cleanup delivery pass, never start or renew a runtime."""
     if worker.state.get('recovery_results_collected') is not True:
-        return False
+        # New main-loop executions retain the raw source before removing the
+        # runtime. Earlier helper-created journals lack it and stay pending.
+        from pathlib import Path
+        if not Path(str(worker.path)+'.recovery-output').exists():
+            return False
     from .recovery_results import execution_outbox
     from .recovery_delivery import RecoveryDelivery
     outbox = execution_outbox(worker, existing=True)
     RecoveryDelivery(worker.api, outbox, apply_results=True).step()
+    if worker.state.get('recovery_results_collected') is not True:
+        from .recovery_execution import resume_collection
+        resume_collection(worker, outbox)
     return finish_results(worker, outbox)

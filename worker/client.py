@@ -442,11 +442,11 @@ class Worker:
         self.save()
         return True
 
-    def send_logs(self, execution, output):
+    def send_logs(self, execution, output, *, max_batches=4):
         # Persist the exact pending chunk before sending; response loss cannot change a retry's body.
         output = output.encode()[:MAX_LOG_BYTES].decode(errors='ignore')
         batches = 0
-        while batches < 4 and (self.state.get('pending') or self.state['offset'] < len(output)):
+        while batches < max_batches and (self.state.get('pending') or self.state['offset'] < len(output)):
             if not self.state.get('pending'):
                 content = output[self.state['offset']:self.state['offset']+2048]
                 if not content:
@@ -480,9 +480,8 @@ class Worker:
                 resume_results(self)
             return
         if self.state and self.state.get('recovery_assignment'):
-            # Fail closed until the negotiated supervisor owns this journal.
-            # The legacy watchdog must never reinterpret its durable receipt.
-            raise RuntimeError('recovery assignment requires negotiated execution supervisor')
+            from .recovery_execution import execute
+            return execute(self)
         # Existing execution journals keep their negotiated protocol across upgrades.
         if self.state is not None:
             task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False), 'episode_timing_v1':self.state.get('task',{}).get('episode_timing_v1',False)}
@@ -938,6 +937,10 @@ class Worker:
             child.stop_event.set()
         # Stop each container independently even if its API or execution thread is blocked.
         for execution, child in self.children.items():
+            if getattr(child, 'state', None) and child.state.get('recovery_assignment'):
+                # An agent restart is not a platform cancellation. The next
+                # owner resumes the original identity and persisted deadlines.
+                continue
             try:
                 child.stop_container(execution)
             except Exception:
