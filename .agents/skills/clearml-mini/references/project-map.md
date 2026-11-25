@@ -383,3 +383,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 可靠队列长执行容量：reliable_outbox.compact_confirmed 只回收已ACK且严格落在持久源游标前的episode摘要；recovery_results在新采集前调用。SQLite retired 保存最大退休序号；游标回退报冲突，未ACK行保留。文档见worker-upgrades.md；无新平台迁移，不能删除原队列绕过冲突。
 
 3216ae0 本机发布与节点升级证据：docs/validation/log-recovery-release-20261125/README.md。四角色健康、6 个真实宿主机/Docker进程及批次页面验证通过；CUDA因批准环境缺失未执行，不等同模型验收或完整恢复能力启用。
+
+2026-11-25 追加授权后已为 local4090-151 增加独立 release_gpu_smoke 环境，PyTorch CUDA 算子批次通过；累计4批次7真实进程。原CUDA环境阻塞保留为历史证据，最新结果见同目录gpu-result.json。

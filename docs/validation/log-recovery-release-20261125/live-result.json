@@ -79,6 +79,22 @@
           "latest_tail_visible": true
         }
       ]
+    },
+    {
+      "name": "gpu-host",
+      "batch_id": "9df7e93c-197d-4994-b57e-90e70babc79e",
+      "results": [
+        {
+          "job_id": "7ad85337-7960-4808-add1-da587491e7c9",
+          "execution_id": "55b7f56b-3a79-481e-a7b5-8095c3bcb7ad",
+          "status": "SUCCEEDED",
+          "exit_code": 0,
+          "cleanup_confirmed": true,
+          "log_version": 2,
+          "log_truncated": false,
+          "latest_tail_visible": false
+        }
+      ]
     }
   ]
 }

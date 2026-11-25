@@ -1,0 +1,26 @@
+{
+  "batch_id": "9df7e93c-197d-4994-b57e-90e70babc79e",
+  "torch": "2.6.0+cu124",
+  "python": "3.10",
+  "numpy": "2.2.6",
+  "environment": "release_gpu_smoke",
+  "python_path": "/home/dgh/.local/share/mini-eval-envs/release_gpu_smoke/bin/python",
+  "configuration_revision": 20,
+  "worker_ready": true,
+  "pip_check": "passed",
+  "stdout": "GPU_SMOKE NVIDIA GeForce RTX 4090 GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f 357389824.0\n",
+  "results": [
+    {
+      "job_id": "7ad85337-7960-4808-add1-da587491e7c9",
+      "execution_id": "55b7f56b-3a79-481e-a7b5-8095c3bcb7ad",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "cleanup_confirmed": true,
+      "log_version": 2,
+      "log_truncated": false,
+      "latest_tail_visible": false
+    }
+  ],
+  "previous_environments_preserved": true,
+  "model_evaluation": false
+}

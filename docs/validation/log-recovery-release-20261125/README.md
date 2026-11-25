@@ -20,8 +20,18 @@
 
 - 验收脚本初次请求日志 limit=256 超过 API 的 100 上限，返回 400；修正为 100。
 - 初次读取 attempt.exit_code，实际返回字段为 case.outcomes.wrapper_exit_code；修正断言位置。修正后复用原批次，没有重复提交。
-- 额外 GPU 算子用例首先引用已禁用的历史模板，预检返回 400。创建独立验证模板后，预检指出 release_gpu_smoke 未批准；当前唯一批准环境 template_demo_cwd 的 Python 不含 torch（ModuleNotFoundError）。因此 CUDA 算子没有执行，不计为通过，没有修改已有环境批准配置。
+- 额外 GPU 算子用例首先引用已禁用的历史模板，预检返回 400。创建独立验证模板后，预检指出 release_gpu_smoke 未批准；当前唯一批准环境 template_demo_cwd 的 Python 不含 torch（ModuleNotFoundError）。首次验收因此未执行 CUDA 算子；后续经用户授权补充环境并通过，见下节。
 - 没有 NPU 实测、真实模型质量评测或持续容量长测；未注入生产断联。完整恢复能力仍关闭，已确认队列压缩的专项证据见 ../disconnected-execution-20261124/outbox-compaction-20261125.json。
 - 本轮部署没有修改业务代码，也没有重跑全量测试；独立业务/API 进程未收集覆盖率，不据通过数推断覆盖率。
 
 机器可读结果见 deployment.json、upgrade-result.json、live-result.json、browser-result.json、final-health.json。原始失败日志、页面截图及数据库备份保留在受保护的本机 .runtime/log-release-20261125，不提交凭据、备份或完整运行目录。
+
+## 追加 GPU 环境与真实算子验收
+
+用户授权新增 PyTorch 环境后，在 local4090-151 创建独立 Python 3.10 环境 `/home/dgh/.local/share/mini-eval-envs/release_gpu_smoke`，安装 torch 2.6.0+cu124、numpy 2.2.6；pip check 通过。包源与版本见 [PyTorch 官方安装说明](https://docs.pytorch.org/get-started/previous-versions/)。没有改项目 `.venv`、系统 Python 或原有批准环境。
+
+通过机器管理同一 API 增加批准环境 `release_gpu_smoke`，Python 为上述目录下 `bin/python`，code_root 为 `/home/dgh/Code/clearml_mini`。Worker 已回报配置 revision 20 生效且环境 ready。模板引用此环境，无需重启 API 或 Worker。
+
+平台批次 `9df7e93c-197d-4994-b57e-90e70babc79e`（日志恢复发布验收｜GPU 宿主机算子｜3216ae0）由 Worker 实际启动并通过 CUDA 张量平方求和断言，输出 RTX 4090、可见 GPU UUID 和结果 357389824.0，退出 0、清理确认。浏览器打开详情验证通过。本轮累计 4 批次、7 个真实进程用例；新增机器可读证据 gpu-result.json。这是 GPU 算子验证，不是模型评测，也没有启用完整恢复能力。
+
+保留追加准备过程的失败证据：系统 Python 3.10 缺少 ensurepip，改用已有 pip 的 `--python` 向独立环境安装；管理员会话过期返回 401，重新登录后配置成功；第一次额外日志断言错误地期待可见设备为数字 0，实际平台使用 GPU UUID，改为核对 UUID 表示后通过。业务算子首次平台执行即成功，没有为这些准备/断言问题修改业务代码或重复提交批次。

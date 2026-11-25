@@ -13,5 +13,10 @@
     "batch_id": "fc1f3524-5b7e-4ff1-97e8-44995db578be",
     "title": "日志恢复发布验收｜docker大日志与退出码｜3216ae0",
     "heading_visible": true
+  },
+  {
+    "batch_id": "9df7e93c-197d-4994-b57e-90e70babc79e",
+    "title": "日志恢复发布验收｜GPU 宿主机算子｜3216ae0",
+    "heading_visible": true
   }
 ]
