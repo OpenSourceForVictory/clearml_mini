@@ -17,6 +17,8 @@
 
 后续封口专项：`results-finished` 在 Worker 本地采集封口且 outbox 排空后是最终声明。新增缺失回合、成功率不匹配两类单元场景，Worker 收到 failed ACK 后退休 journal 的场景，以及隔离 PostgreSQL 上的 HTTP failed ACK/重放场景，最终均通过。组合回归 `backend/tests/test_recovery_finish.py`、`test_recovery_results.py`、`test_worker_recovery_finish.py` 为 108 通过、10 条条件跳过；HTTP 场景单独以隔离 PostgreSQL 补跑 1 通过。首次 HTTP 夹具在 `prepare()` 前设置了 evaluation 类型，随后被夹具改回 command 而失败；调整顺序后通过。Worker 测试首次错误地假定 journal 文件会删除，实际 `atomic_json(None)` 写入持久 null 墓碑；改为验证文件内容及内存状态后通过。这些初次失败保留为诊断边界，不计入通过数。
 
+补充主循环故障注入：从真实 `Worker.execute` 入口进入，模拟服务端对一条结果返回 `application=rejected`、最终封口返回 `result_sync=failed`，验证仅启动一次业务程序、完成及清理各一次、原恢复 journal 退休；定向 1 通过。这是本机模拟 API 的短程序，不是实际 NPU/GPU 模型断联验收。
+
 最终专项覆盖率同口径复跑：187 通过、11 条 PostgreSQL/现场条件跳过、3468 未选择；总体行 33.27% / 分支 13.02%，全项目门槛仍按完整分母退出 1。原始报告位于 `coverage-artifacts/recovery-result-sync-final-20261125/`。前端 TypeScript 检查与 OpenSpec 严格校验通过；此处不把专项覆盖率当作全量覆盖率达标。
 
 本次主要逻辑模块在最终专项中的行/分支为：`recovery_finish.py` 96/97、45/46；`recovery_results.py` 55/55、24/24；`result_sync_view.py` 25/26、9/10；`worker/recovery_finish.py` 84/84、42/42。其余全项目代码未由专项覆盖，仍需完整回归。

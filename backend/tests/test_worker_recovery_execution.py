@@ -39,7 +39,8 @@ def case(tmp_path, monkeypatch):
     raw = [None]
     calls = []
     output = ['hello\n', '']
-    fault = {'outage':False, 'cancel':False, 'results':False, 'logs':False, 'lose_completion':False}
+    fault = {'outage':False, 'cancel':False, 'results':False, 'logs':False,
+             'lose_completion':False, 'reject_result':False, 'sync_failed':False}
     completed = threading.Event()
     def create(task):
         calls.append('create')
@@ -83,7 +84,8 @@ def case(tmp_path, monkeypatch):
             if fault['results']:raise TimeoutError('result path offline')
             from worker.recovery_results import execution_outbox
             record = next(r for r in execution_outbox(w).pending() if r['sequence']==body['sequence'])
-            return {'digest':record['digest'],'reconciled':True,'application':'applied'}
+            return {'digest':record['digest'],'reconciled':True,
+                    'application':'rejected' if fault['reject_result'] else 'applied'}
         if path.endswith('/complete'):
             calls.append('complete')
             assert any(isinstance(c,tuple) and c[0].endswith('/recovery/reconcile') and c[1]['state']=='exited' for c in calls)
@@ -96,7 +98,8 @@ def case(tmp_path, monkeypatch):
             calls.append('cleanup');completed.set()
             return {'status':'SUCCEEDED','cleanup_confirmed':True,'duplicate':False}
         if path.endswith('/recovery/results-finished'):
-            return {'status':'SUCCEEDED','cleanup_confirmed':True,'duplicate':False,'result_sync':'complete'}
+            return {'status':'SUCCEEDED','cleanup_confirmed':True,'duplicate':False,
+                    'result_sync':'failed' if fault['sync_failed'] else 'complete'}
         if path.endswith('/logs'):
             if fault['logs']:raise TimeoutError('logs offline')
             return {}
@@ -176,6 +179,20 @@ def test_result_and_log_outage_cannot_prevent_cleanup(case):
     case.fault['results']=False
     case.worker.execute(case.worker.state['task'])
     assert case.worker.state is None and case.calls.count('start')==1
+
+
+def test_rejected_result_and_failed_final_sync_do_not_restart_business(case):
+    case.output[0] = 'MINI_EVAL_EVENT '+json.dumps({
+        'episode_id':1, 'seed':1, 'status':'STARTED'})+'\n'
+    case.fault.update(reject_result=True, sync_failed=True)
+    thread, errors = launch(case)
+    case.exit()
+    finish(case, thread, errors)
+    assert case.worker.state is None
+    assert case.calls.count('start') == 1
+    assert case.calls.count('complete') == case.calls.count('cleanup') == 1
+    assert any(isinstance(call, tuple) and call[0].endswith('/recovery/results-finished')
+               for call in case.calls)
 
 
 def test_completion_ack_lost_reentry_does_not_launch(case):
