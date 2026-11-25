@@ -169,3 +169,18 @@ def test_rejected_completion_fails_permanently_but_outages_keep_journal(tmp_path
         assert [c['status'] for c in completions]==['SUCCEEDED','FAILED']
         assert 'episode results missing' in completions[-1]['error']
         assert removed==[execution] and w.state is None
+
+
+def test_recovery_sidecars_are_not_loaded_as_execution_journals(tmp_path):
+    from pathlib import Path
+    parent=Worker({},tmp_path/'state')
+    execution=str(uuid.uuid4());child=parent.child(execution)
+    child.state={'task':{'execution_id':execution},'offset':7};child.save()
+    sidecars=[]
+    for suffix in ('.launch.json','.supervision.json'):
+        path=Path(str(child.path)+suffix);path.write_text('{"owner":"original"}')
+        sidecars.append(path)
+    restored=Worker({},tmp_path/'state');restored.recover_journals()
+    assert list(restored.children)==[execution]
+    assert restored.children[execution].state['offset']==7
+    assert all(path.read_text()=='{"owner":"original"}' for path in sidecars)

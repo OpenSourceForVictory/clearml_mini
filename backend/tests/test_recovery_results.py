@@ -181,3 +181,46 @@ def test_postgres_cancel_then_late_result_preserves_cancel(pg):
         run=s.get(Run,'r')
         assert run.status=='CANCEL_REQUESTED' and run.result_json['success']
         assert not run.cleanup_confirmed
+
+
+@pytest.mark.parametrize('state',['CANCELLED','TIMED_OUT','RUNNING'])
+def test_real_worker_reader_outbox_http_replay_preserves_platform_state(execution,tmp_path,state):
+    import json
+    from worker.client import Worker
+    factory,generation=execution;setup(factory)
+    with factory() as s:
+        s.get(Run,'r').status=state;s.commit()
+    worker=object.__new__(Worker);worker.path=tmp_path/'worker.json'
+    worker.state={'task':{'execution_id':'e','benchmark':'cs-client','log_protocol':2,
+        'client_spec':{'template':{'integration_mode':'direct'}}},
+        'recovery_assignment':{'claim':{'receipt':{'execution_id':'e','generation':generation}}}}
+    root=tmp_path/'protocol';root.mkdir()
+    event={'episode_id':1,'seed':100,'status':'STARTED'}
+    (root/'events.jsonl').write_text(json.dumps(event)+'\n')
+    q=ReliableOutbox(tmp_path/'outbox')
+    assert worker.collect_recovery_results(q,protocol_root=root)
+    app=FastAPI()
+    def db():
+        with factory() as s:yield s
+    recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+    with TestClient(app) as client:
+        replies=[]
+        def post(path,body):
+            response=client.post('/api/v1/'+path,json=body)
+            assert response.status_code==200,response.text
+            replies.append(response.json())
+            if len(replies)==1:raise TimeoutError('applied but ACK lost')
+            return response.json()
+        delivery=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+        with pytest.raises(TimeoutError):delivery.step()
+        assert len(q.pending())==1
+        worker.state=json.loads(worker.path.read_text())
+        assert worker.collect_recovery_results(q,protocol_root=root)
+        assert delivery.step()==1 and q.pending()==[]
+        assert replies[-1]['duplicate'] and replies[-1]['reconciled']
+    with factory() as s:
+        stored=s.get(EpisodeRecord,('r',1)).started
+        assert {k:stored[k] for k in event}==event
+        assert stored['_platform_received_at']
+        assert s.get(Run,'r').status==state
+        assert not s.get(Run,'r').cleanup_confirmed

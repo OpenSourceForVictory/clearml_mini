@@ -64,5 +64,29 @@ def finalize(worker, body=None):
         advance('done')
     if pending['phase'] != 'done':
         raise ValueError('unknown recovery completion phase')
-    persist(None)
+    if not pending['body'].get('pending_results'):
+        persist(None)
+    return True
+
+
+def finish_results(worker, outbox):
+    """Retire only after queued business results and their final ACK arrive."""
+    state = worker.state
+    pending = state.get('recovery_finalization') if state else None
+    if not pending or pending['phase'] != 'done' or not pending['body'].get('pending_results'):
+        raise ValueError('deferred result journal after cleanup required')
+    if pending['proof'] != state['recovery']:
+        raise ValueError('result synchronization proof changed')
+    if state.get('recovery_results_collected') is not True:
+        return False
+    if outbox.pending(limit=1):
+        return False
+    execution = state['task']['execution_id']
+    reply = worker.api.post(f'worker/executions/{execution}/recovery/results-finished', pending['proof'])
+    if (not isinstance(reply, dict) or reply.get('result_sync') != 'complete'
+            or reply.get('cleanup_confirmed') is not True or reply.get('status') not in TERMINAL
+            or type(reply.get('duplicate')) is not bool):
+        raise ValueError('invalid result synchronization acknowledgement')
+    atomic_json(worker.path, None)
+    worker.state = None
     return True

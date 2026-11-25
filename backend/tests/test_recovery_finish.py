@@ -211,3 +211,93 @@ def test_cancel_then_retry_old_reports_cannot_change_new_attempt(execution):
         assert s.get(Job,'j').status=='PENDING'
         assert s.get(Run,new_id).status=='PENDING'
         assert s.get(Run,'r').status=='CANCELLED'
+
+
+def sync_results(factory,proof):
+    with factory() as s:
+        result=finish.results_finished(s,worker_id='w',execution_id='e',proof=proof)
+        s.commit();return result
+
+
+def test_cleanup_releases_before_result_delivery_and_sync_requires_complete_data(execution):
+    from backend.app.recovery_results import apply
+    factory,generation=execution;proof=prepare(factory,generation)
+    with factory() as s:
+        job=s.get(Job,'j');job.episodes=1
+        job.client_spec={'seed':100,'template':{'task_type':'evaluation','episode_reporting':True}}
+        s.commit()
+    metrics={'success_rate':1,'episode_count':1,'runtime':1}
+    assert complete(factory,proof,metrics=metrics,pending_results=True)['status']=='SUCCEEDED'
+    assert cleanup(factory,proof)['cleanup_confirmed']
+    with factory() as s:
+        assert s.get(ExecutionRecoveryControl,'e').snapshot['result_sync']=='pending'
+        assert s.get(Run,'r').cleanup_confirmed
+    with pytest.raises(HTTPException) as exc:sync_results(factory,proof)
+    assert exc.value.status_code==400
+    events=[{'episode_id':1,'seed':100,'status':'STARTED'},
+        {'episode_id':1,'seed':100,'status':'COMPLETED','success':True,'metrics':{},'runtime':1,'artifacts':[]}]
+    for sequence,body in enumerate(events):
+        with factory() as s:
+            apply(s,worker_id='w',execution_id='e',generation=generation,kind='episode',sequence=sequence,body=body);s.commit()
+    assert sync_results(factory,proof)['result_sync']=='complete'
+    assert sync_results(factory,proof)['duplicate']
+    assert complete(factory,proof,metrics=metrics,pending_results=True)['duplicate']
+    with factory() as s:
+        assert s.get(Run,'r').status=='SUCCEEDED' and s.get(Run,'r').cleanup_confirmed
+
+
+def test_pending_sync_does_not_reopen_cancelled_attempt_after_retry(execution):
+    from backend.app.retries import retry_job
+    factory,generation=execution;proof=prepare(factory,generation)
+    with factory() as s:s.get(Run,'r').status=s.get(Job,'j').status='CANCEL_REQUESTED';s.commit()
+    assert complete(factory,proof,pending_results=True)['status']=='CANCELLED'
+    cleanup(factory,proof)
+    with factory() as s:new_id=retry_job(s,s.get(Job,'j')).id;s.commit()
+    assert sync_results(factory,proof)['status']=='CANCELLED'
+    with factory() as s:
+        assert s.get(Job,'j').status=='PENDING' and s.get(Run,new_id).status=='PENDING'
+
+
+def test_result_sync_before_completion_is_rejected(execution):
+    factory,generation=execution;proof=prepare(factory,generation)
+    with pytest.raises(HTTPException) as exc:sync_results(factory,proof)
+    assert exc.value.status_code==409
+
+
+def test_pending_results_still_requires_valid_final_metrics(execution):
+    factory,generation=execution;proof=prepare(factory,generation)
+    with factory() as s:s.get(Job,'j').client_spec={'template':{'task_type':'evaluation'}};s.commit()
+    with pytest.raises(HTTPException):complete(factory,proof,pending_results=True)
+
+
+def test_result_sync_before_cleanup_does_not_mark_complete(execution):
+    factory,generation=execution;proof=prepare(factory,generation)
+    complete(factory,proof,pending_results=True)
+    with pytest.raises(HTTPException) as error:sync_results(factory,proof)
+    assert error.value.status_code==409
+    with factory() as s:
+        assert s.get(ExecutionRecoveryControl,'e').snapshot['result_sync']=='pending'
+        assert not s.get(Run,'r').cleanup_confirmed
+
+
+def test_legacy_http_cannot_defer_required_results(api):
+    client,headers,factory=api
+    reply=client.post('/api/v1/worker/executions/e/complete',headers=headers,
+        json={'status':'SUCCEEDED','exit_code':0,'pending_results':True})
+    assert reply.status_code==400,reply.text
+
+
+def test_result_sync_http_ack_and_replay(api):
+    from backend.app.recovery_records import grant
+    client,headers,factory=api
+    with factory() as s:
+        run=s.get(Run,'r');run.status='STARTING'
+        generation=grant(s,run,'w').generation;s.commit()
+    proof=prepare(factory,generation)
+    complete(factory,proof,pending_results=True);cleanup(factory,proof)
+    url='/api/v1/worker/executions/e/recovery/results-finished'
+    for duplicate in (False,True):
+        reply=client.post(url,headers=headers,json=proof.model_dump())
+        assert reply.status_code==200,reply.text
+        assert reply.json()=={'status':'SUCCEEDED','cleanup_confirmed':True,
+            'result_sync':'complete','duplicate':duplicate}

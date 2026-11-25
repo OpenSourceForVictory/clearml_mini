@@ -74,6 +74,21 @@
       ],
       "confirmation": "state/lease confirmation; retry original execution identity",
       "source": "backend.app.recovery_launch.prepare_launch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/results-finished",
+      "category": "worker_result",
+      "role": "worker-data",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.execution.RecoveryProof'>"
+        }
+      ],
+      "confirmation": "reliable result acknowledgement; duplicate content must match",
+      "source": "backend.app.execution.results_finished"
     }
   ],
   "body_schemas": {
@@ -133,6 +148,19 @@
           ],
           "title": "Kind",
           "type": "string"
+        },
+        "apply": {
+          "anyOf": [
+            {
+              "const": true,
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apply"
         }
       },
       "required": [
@@ -315,6 +343,333 @@
       ],
       "title": "LaunchRequest",
       "type": "object"
+    },
+    "typing.Optional[backend.app.execution.Claim]": {
+      "$defs": {
+        "Claim": {
+          "properties": {
+            "known_execution_ids": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 1024,
+              "title": "Known Execution Ids",
+              "type": "array"
+            },
+            "request_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Request Id"
+            },
+            "recovery_version": {
+              "anyOf": [
+                {
+                  "const": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recovery Version"
+            }
+          },
+          "title": "Claim",
+          "type": "object"
+        }
+      },
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Claim"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "<class 'backend.app.execution.Finish'>": {
+      "$defs": {
+        "Metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "success_rate": {
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Success Rate",
+              "type": "number"
+            },
+            "episode_count": {
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Episode Count",
+              "type": "integer"
+            },
+            "runtime": {
+              "minimum": 0,
+              "title": "Runtime",
+              "type": "number"
+            }
+          },
+          "required": [
+            "success_rate",
+            "episode_count",
+            "runtime"
+          ],
+          "title": "Metrics",
+          "type": "object"
+        },
+        "ProcessIdentity": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "host",
+                "docker"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "boot_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Boot Id",
+              "type": "string"
+            },
+            "runtime_id": {
+              "pattern": "^[0-9a-f]{32}$|^[0-9a-f]{64}$",
+              "title": "Runtime Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "boot_id",
+            "runtime_id"
+          ],
+          "title": "ProcessIdentity",
+          "type": "object"
+        },
+        "RecoveryProof": {
+          "additionalProperties": false,
+          "properties": {
+            "generation": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Generation",
+              "type": "string"
+            },
+            "identity": {
+              "$ref": "#/$defs/ProcessIdentity"
+            }
+          },
+          "required": [
+            "generation",
+            "identity"
+          ],
+          "title": "RecoveryProof",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "recovery": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecoveryProof"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pending_results": {
+          "default": false,
+          "title": "Pending Results",
+          "type": "boolean"
+        },
+        "log_gap": {
+          "default": false,
+          "title": "Log Gap",
+          "type": "boolean"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "maximum": 255,
+              "minimum": -255,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "status": {
+          "enum": [
+            "SUCCEEDED",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metrics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Finish",
+      "type": "object"
+    },
+    "<class 'backend.app.execution.RecoveryProof'>": {
+      "$defs": {
+        "ProcessIdentity": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "host",
+                "docker"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "boot_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Boot Id",
+              "type": "string"
+            },
+            "runtime_id": {
+              "pattern": "^[0-9a-f]{32}$|^[0-9a-f]{64}$",
+              "title": "Runtime Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "boot_id",
+            "runtime_id"
+          ],
+          "title": "ProcessIdentity",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/ProcessIdentity"
+        }
+      },
+      "required": [
+        "generation",
+        "identity"
+      ],
+      "title": "RecoveryProof",
+      "type": "object"
+    },
+    "backend.app.execution.RecoveryProof | None": {
+      "$defs": {
+        "ProcessIdentity": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "host",
+                "docker"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "boot_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Boot Id",
+              "type": "string"
+            },
+            "runtime_id": {
+              "pattern": "^[0-9a-f]{32}$|^[0-9a-f]{64}$",
+              "title": "Runtime Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "boot_id",
+            "runtime_id"
+          ],
+          "title": "ProcessIdentity",
+          "type": "object"
+        },
+        "RecoveryProof": {
+          "additionalProperties": false,
+          "properties": {
+            "generation": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Generation",
+              "type": "string"
+            },
+            "identity": {
+              "$ref": "#/$defs/ProcessIdentity"
+            }
+          },
+          "required": [
+            "generation",
+            "identity"
+          ],
+          "title": "RecoveryProof",
+          "type": "object"
+        }
+      },
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoveryProof"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "legacy_routes": [
@@ -342,6 +697,28 @@
       "method": "POST",
       "path": "/api/v1/worker/executions/{execution_id}/recovery/prepare",
       "current_category": "control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/results-finished",
+      "current_category": "result"
+    }
+  ],
+  "route_overrides": [
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/cleanup",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": false,
+          "schema": "backend.app.execution.RecoveryProof | None"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.execution.cleanup"
     }
   ]
 }

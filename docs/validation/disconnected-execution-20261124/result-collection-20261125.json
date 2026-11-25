@@ -1,0 +1,33 @@
+{
+  "scope": "专项，非全量；真实host/Docker短程序及隔离PostgreSQL，非真实模型批次",
+  "tests": {
+    "passed": 309,
+    "deselected": 3195,
+    "skipped": 0
+  },
+  "coverage": {
+    "worker/recovery_results.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "worker/recovery_finish.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "backend/app/recovery_finish.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "worker/client.py": {
+      "line": 49.89,
+      "branch": 36.7
+    },
+    "backend/app/execution.py": {
+      "line": 40.69,
+      "branch": 9.13
+    }
+  },
+  "all_project_gate_passed": false,
+  "report": "coverage-artifacts/recovery-results-complete-20261125",
+  "production_enabled": false
+}

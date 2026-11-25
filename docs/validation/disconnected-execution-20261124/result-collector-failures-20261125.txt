@@ -1,0 +1,826 @@
+recovery-collector-first.log
+FFFFFFFFFFFFFF..FF                                                       [100%]
+=================================== FAILURES ===================================
+_ test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[protocol] _
+
+case = (<worker.client.Worker object at 0x725f9961ea50>, <worker.reliable_outbox.ReliableOutbox object at 0x725f9961eba0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu0/protocol'))
+mode = 'protocol'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_all_protocol_readers_queue_before_advancing_and_do_not_use_http(case,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu0/workspace/runs/d04cd9c4-0491-4a94-b82c-ae03fd091f73')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu0/workspace/runs/d04cd9c4-0491-4a94-b82c-ae03fd091f73'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_ test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[journal] _
+
+case = (<worker.client.Worker object at 0x725f996c9590>, <worker.reliable_outbox.ReliableOutbox object at 0x725f995df610>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu1/protocol'))
+mode = 'journal'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_all_protocol_readers_queue_before_advancing_and_do_not_use_http(case,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu1/workspace/runs/2e4b6bf6-d9c7-4898-a439-9c4bbe7cb833')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu1/workspace/runs/2e4b6bf6-d9c7-4898-a439-9c4bbe7cb833'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_ test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[stdout] _
+
+case = (<worker.client.Worker object at 0x725f995df9d0>, <worker.reliable_outbox.ReliableOutbox object at 0x725f995dfed0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu2/protocol'))
+mode = 'stdout'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_all_protocol_readers_queue_before_advancing_and_do_not_use_http(case,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu2/workspace/runs/71fc73a4-132d-474f-88b0-b444ae7a02c3')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu2/workspace/runs/71fc73a4-132d-474f-88b0-b444ae7a02c3'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__ test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[task] __
+
+case = (<worker.client.Worker object at 0x725f995069e0>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99506b10>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu3/protocol'))
+mode = 'task'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_all_protocol_readers_queue_before_advancing_and_do_not_use_http(case,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu3/workspace/runs/4521050c-afe5-4835-97c3-270b8aeecb96')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_all_protocol_readers_queu3/workspace/runs/4521050c-afe5-4835-97c3-270b8aeecb96'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_________ test_cursor_write_failure_replays_same_outbox_key[protocol] __________
+
+case = (<worker.client.Worker object at 0x725f99506d70>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99506ea0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl0/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f99506fd0>
+mode = 'protocol'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_cursor_write_failure_replays_same_outbox_key(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl0/workspace/runs/f81af1c4-f6ce-41e9-a67a-e35695058475')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl0/workspace/runs/f81af1c4-f6ce-41e9-a67a-e35695058475'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__________ test_cursor_write_failure_replays_same_outbox_key[journal] __________
+
+case = (<worker.client.Worker object at 0x725f99545eb0>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99544290>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl1/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f99507230>
+mode = 'journal'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_cursor_write_failure_replays_same_outbox_key(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl1/workspace/runs/60e1717d-9686-492b-b912-a5201886f295')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl1/workspace/runs/60e1717d-9686-492b-b912-a5201886f295'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__________ test_cursor_write_failure_replays_same_outbox_key[stdout] ___________
+
+case = (<worker.client.Worker object at 0x725f99530d10>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99531040>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl2/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f99546210>
+mode = 'stdout'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_cursor_write_failure_replays_same_outbox_key(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl2/workspace/runs/cd25f520-91c5-405f-a314-41d8daccb02c')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl2/workspace/runs/cd25f520-91c5-405f-a314-41d8daccb02c'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+___________ test_cursor_write_failure_replays_same_outbox_key[task] ____________
+
+case = (<worker.client.Worker object at 0x725f99533680>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99533790>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl3/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f995338a0>
+mode = 'task'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_cursor_write_failure_replays_same_outbox_key(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl3/workspace/runs/0987ba35-743f-4464-a444-f6ca6c528dd2')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_cursor_write_failure_repl3/workspace/runs/0987ba35-743f-4464-a444-f6ca6c528dd2'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_________ test_outbox_full_does_not_advance_or_drop_results[protocol] __________
+
+case = (<worker.client.Worker object at 0x725f9956c650>, <worker.reliable_outbox.ReliableOutbox object at 0x725f9956c450>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva0/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f99532f10>
+mode = 'protocol'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_outbox_full_does_not_advance_or_drop_results(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva0/workspace/runs/7918f4ff-9ad8-4b71-baa7-20dec9f88ac0')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva0/workspace/runs/7918f4ff-9ad8-4b71-baa7-20dec9f88ac0'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__________ test_outbox_full_does_not_advance_or_drop_results[journal] __________
+
+case = (<worker.client.Worker object at 0x725f9956d050>, <worker.reliable_outbox.ReliableOutbox object at 0x725f9956d150>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva1/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f9956d250>
+mode = 'journal'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_outbox_full_does_not_advance_or_drop_results(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva1/workspace/runs/90502e15-567f-4414-8b40-67fb8b6185e1')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva1/workspace/runs/90502e15-567f-4414-8b40-67fb8b6185e1'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__________ test_outbox_full_does_not_advance_or_drop_results[stdout] ___________
+
+case = (<worker.client.Worker object at 0x725f995567b0>, <worker.reliable_outbox.ReliableOutbox object at 0x725f995558b0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva2/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f9956d950>
+mode = 'stdout'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_outbox_full_does_not_advance_or_drop_results(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva2/workspace/runs/7371b03f-a6fb-4e70-b670-e1b4303e2b57')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva2/workspace/runs/7371b03f-a6fb-4e70-b670-e1b4303e2b57'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+___________ test_outbox_full_does_not_advance_or_drop_results[task] ____________
+
+case = (<worker.client.Worker object at 0x725f99557e30>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99557f20>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva3/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f995a4050>
+mode = 'task'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_outbox_full_does_not_advance_or_drop_results(case,monkeypatch,mode):
+>       w,outbox,_=case;args,cursor,_=source(case,mode)
+
+backend/tests/test_worker_recovery_results.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva3/workspace/runs/5c81432a-cc92-499d-b14a-10b9084d3fd8')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_outbox_full_does_not_adva3/workspace/runs/5c81432a-cc92-499d-b14a-10b9084d3fd8'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+____________ test_partial_line_waits_and_batch_limit_preserves_tail ____________
+
+case = (<worker.client.Worker object at 0x725f995374d0>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99536eb0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_partial_line_waits_and_ba0/protocol'))
+
+    def test_partial_line_waits_and_batch_limit_preserves_tail(case):
+>       w,outbox,root=case;args,cursor,line=source(case,'protocol')
+
+backend/tests/test_worker_recovery_results.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_partial_line_waits_and_ba0/workspace/runs/bd4a7400-c9c2-4111-85d9-703be264a03c')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_partial_line_waits_and_ba0/workspace/runs/bd4a7400-c9c2-4111-85d9-703be264a03c'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_______________ test_changed_result_source_or_assignment_refused _______________
+
+case = (<worker.client.Worker object at 0x725f99590830>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99590050>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_changed_result_source_or_0/protocol'))
+
+    def test_changed_result_source_or_assignment_refused(case):
+>       w,outbox,_=case;args,_,_=source(case,'protocol')
+
+backend/tests/test_worker_recovery_results.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_changed_result_source_or_0/workspace/runs/a9147b2e-3de8-470f-b7b4-12a5dffd9c81')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_changed_result_source_or_0/workspace/runs/a9147b2e-3de8-470f-b7b4-12a5dffd9c81'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+__________ test_modified_same_offset_cannot_overwrite_durable_result ___________
+
+case = (<worker.client.Worker object at 0x725f99525910>, <worker.reliable_outbox.ReliableOutbox object at 0x725f995250d0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_modified_same_offset_cann0/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f995549b0>
+
+    def test_modified_same_offset_cannot_overwrite_durable_result(case,monkeypatch):
+>       w,outbox,root=case;args,cursor,_=source(case,'protocol')
+
+backend/tests/test_worker_recovery_results.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_modified_same_offset_cann0/workspace/runs/ad315dc7-602c-4255-9407-45f77823908c')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_modified_same_offset_cann0/workspace/runs/ad315dc7-602c-4255-9407-45f77823908c'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+_________________ test_reader_cannot_send_non_result_requests __________________
+
+case = (<worker.client.Worker object at 0x725f99575b20>, <worker.reliable_outbox.ReliableOutbox object at 0x725f99575bd0>, PosixPath('/tmp/pytest-of-dgh/pytest-972/test_reader_cannot_send_non_re0/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725f99592eb0>
+
+    def test_reader_cannot_send_non_result_requests(case,monkeypatch):
+>       w,outbox,_=case;args,_,_=source(case,'task')
+
+backend/tests/test_worker_recovery_results.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_worker_recovery_results.py:34: in source
+    work=execution_dirs(w.workspace,task['execution_id'])/'work';work.mkdir(parents=True,exist_ok=True)
+worker/workspace.py:23: in execution_dirs
+    directory.mkdir(exist_ok=True, mode=0o700)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/pytest-of-dgh/pytest-972/test_reader_cannot_send_non_re0/workspace/runs/75ca1238-f39c-4748-abc6-cf205be44952')
+mode = 448, parents = False, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-dgh/pytest-972/test_reader_cannot_send_non_re0/workspace/runs/75ca1238-f39c-4748-abc6-cf205be44952'
+
+/opt/anaconda3/lib/python3.13/pathlib/_local.py:722: FileNotFoundError
+=========================== short test summary info ============================
+FAILED backend/tests/test_worker_recovery_results.py::test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[protocol]
+FAILED backend/tests/test_worker_recovery_results.py::test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[journal]
+FAILED backend/tests/test_worker_recovery_results.py::test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[stdout]
+FAILED backend/tests/test_worker_recovery_results.py::test_all_protocol_readers_queue_before_advancing_and_do_not_use_http[task]
+FAILED backend/tests/test_worker_recovery_results.py::test_cursor_write_failure_replays_same_outbox_key[protocol]
+FAILED backend/tests/test_worker_recovery_results.py::test_cursor_write_failure_replays_same_outbox_key[journal]
+FAILED backend/tests/test_worker_recovery_results.py::test_cursor_write_failure_replays_same_outbox_key[stdout]
+FAILED backend/tests/test_worker_recovery_results.py::test_cursor_write_failure_replays_same_outbox_key[task]
+FAILED backend/tests/test_worker_recovery_results.py::test_outbox_full_does_not_advance_or_drop_results[protocol]
+FAILED backend/tests/test_worker_recovery_results.py::test_outbox_full_does_not_advance_or_drop_results[journal]
+FAILED backend/tests/test_worker_recovery_results.py::test_outbox_full_does_not_advance_or_drop_results[stdout]
+FAILED backend/tests/test_worker_recovery_results.py::test_outbox_full_does_not_advance_or_drop_results[task]
+FAILED backend/tests/test_worker_recovery_results.py::test_partial_line_waits_and_batch_limit_preserves_tail
+FAILED backend/tests/test_worker_recovery_results.py::test_changed_result_source_or_assignment_refused
+FAILED backend/tests/test_worker_recovery_results.py::test_modified_same_offset_cannot_overwrite_durable_result
+FAILED backend/tests/test_worker_recovery_results.py::test_reader_cannot_send_non_result_requests
+16 failed, 2 passed in 1.11s
+
+
+recovery-collector-second.log
+......F...........                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_cursor_write_failure_replays_same_outbox_key[stdout] ___________
+
+case = (<worker.client.Worker object at 0x7670a6234730>, <worker.reliable_outbox.ReliableOutbox object at 0x7670a61f9370>, PosixPath('/tmp/pytest-of-dgh/pytest-973/test_cursor_write_failure_repl2/protocol'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7670a620db50>
+mode = 'stdout'
+
+    @pytest.mark.parametrize('mode',['protocol','journal','stdout','task'])
+    def test_cursor_write_failure_replays_same_outbox_key(case,monkeypatch,mode):
+        w,outbox,_=case;args,cursor,_=source(case,mode)
+        def fail(path,state):
+            if state.get(cursor):raise OSError('cursor commit failed')
+            atomic_json(path,state)
+        monkeypatch.setattr('worker.recovery_results.atomic_json',fail)
+        with pytest.raises(OSError):w.collect_recovery_results(outbox,**args)
+        assert cursor not in w.state
+>       records=outbox.pending();assert len(records)==1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_worker_recovery_results.py:65: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_worker_recovery_results.py::test_cursor_write_failure_replays_same_outbox_key[stdout]
+1 failed, 17 passed in 3.07s
+
+
+recovery-collector-api.log
+............................................FFF                          [100%]
+=================================== FAILURES ===================================
+_ test_real_worker_reader_outbox_http_replay_preserves_platform_state[CANCELLED] _
+
+execution = (sessionmaker(class_='Session', bind=Engine(sqlite://), autoflush=True, expire_on_commit=False), 'eaf263b6-b78f-481e-8e32-cb2e0652724e')
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-975/test_real_worker_reader_outbox0')
+state = 'CANCELLED'
+
+    @pytest.mark.parametrize('state',['CANCELLED','TIMED_OUT','RUNNING'])
+    def test_real_worker_reader_outbox_http_replay_preserves_platform_state(execution,tmp_path,state):
+        import json
+        from worker.client import Worker
+        factory,generation=execution;setup(factory)
+        with factory() as s:
+            s.get(Run,'r').status=state;s.commit()
+        worker=object.__new__(Worker);worker.path=tmp_path/'worker.json'
+        worker.state={'task':{'execution_id':'e','benchmark':'cs-client','log_protocol':2,
+            'client_spec':{'template':{'integration_mode':'direct'}}},
+            'recovery_assignment':{'claim':{'receipt':{'execution_id':'e','generation':generation}}}}
+        root=tmp_path/'protocol';root.mkdir()
+        event={'episode_id':1,'seed':100,'status':'STARTED'}
+        (root/'events.jsonl').write_text(json.dumps(event)+'\n')
+        q=ReliableOutbox(tmp_path/'outbox')
+        assert worker.collect_recovery_results(q,protocol_root=root)
+        app=FastAPI()
+        def db():
+            with factory() as s:yield s
+        recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+        with TestClient(app) as client:
+            replies=[]
+            def post(path,body):
+                response=client.post('/api/v1/'+path,json=body)
+                assert response.status_code==200,response.text
+                replies.append(response.json())
+                if len(replies)==1:raise TimeoutError('applied but ACK lost')
+                return response.json()
+            delivery=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+            with pytest.raises(TimeoutError):delivery.step()
+            assert len(q.pending())==1
+            worker.state=json.loads(worker.path.read_text())
+            assert worker.collect_recovery_results(q,protocol_root=root)
+            assert delivery.step()==1 and q.pending()==[]
+            assert replies[-1]['duplicate'] and replies[-1]['reconciled']
+        with factory() as s:
+>           assert s.get(EpisodeRecord,('r',1)).started==event
+E           AssertionError: assert {'_platform_r...s': 'STARTED'} == {'episode_id'...s': 'STARTED'}
+E             
+E             Omitting 3 identical items, use -vv to show
+E             Left contains 1 more item:
+E             {'_platform_received_at': '2026-11-25T02:35:25.602096+00:00'}
+E             Use -v to get more diff
+
+backend/tests/test_recovery_results.py:222: AssertionError
+_ test_real_worker_reader_outbox_http_replay_preserves_platform_state[TIMED_OUT] _
+
+execution = (sessionmaker(class_='Session', bind=Engine(sqlite://), autoflush=True, expire_on_commit=False), '8a0e86dd-a25f-46d1-9889-e96ecaf69c8d')
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-975/test_real_worker_reader_outbox1')
+state = 'TIMED_OUT'
+
+    @pytest.mark.parametrize('state',['CANCELLED','TIMED_OUT','RUNNING'])
+    def test_real_worker_reader_outbox_http_replay_preserves_platform_state(execution,tmp_path,state):
+        import json
+        from worker.client import Worker
+        factory,generation=execution;setup(factory)
+        with factory() as s:
+            s.get(Run,'r').status=state;s.commit()
+        worker=object.__new__(Worker);worker.path=tmp_path/'worker.json'
+        worker.state={'task':{'execution_id':'e','benchmark':'cs-client','log_protocol':2,
+            'client_spec':{'template':{'integration_mode':'direct'}}},
+            'recovery_assignment':{'claim':{'receipt':{'execution_id':'e','generation':generation}}}}
+        root=tmp_path/'protocol';root.mkdir()
+        event={'episode_id':1,'seed':100,'status':'STARTED'}
+        (root/'events.jsonl').write_text(json.dumps(event)+'\n')
+        q=ReliableOutbox(tmp_path/'outbox')
+        assert worker.collect_recovery_results(q,protocol_root=root)
+        app=FastAPI()
+        def db():
+            with factory() as s:yield s
+        recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+        with TestClient(app) as client:
+            replies=[]
+            def post(path,body):
+                response=client.post('/api/v1/'+path,json=body)
+                assert response.status_code==200,response.text
+                replies.append(response.json())
+                if len(replies)==1:raise TimeoutError('applied but ACK lost')
+                return response.json()
+            delivery=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+            with pytest.raises(TimeoutError):delivery.step()
+            assert len(q.pending())==1
+            worker.state=json.loads(worker.path.read_text())
+            assert worker.collect_recovery_results(q,protocol_root=root)
+            assert delivery.step()==1 and q.pending()==[]
+            assert replies[-1]['duplicate'] and replies[-1]['reconciled']
+        with factory() as s:
+>           assert s.get(EpisodeRecord,('r',1)).started==event
+E           AssertionError: assert {'_platform_r...s': 'STARTED'} == {'episode_id'...s': 'STARTED'}
+E             
+E             Omitting 3 identical items, use -vv to show
+E             Left contains 1 more item:
+E             {'_platform_received_at': '2026-11-25T02:35:25.777215+00:00'}
+E             Use -v to get more diff
+
+backend/tests/test_recovery_results.py:222: AssertionError
+_ test_real_worker_reader_outbox_http_replay_preserves_platform_state[RUNNING] _
+
+execution = (sessionmaker(class_='Session', bind=Engine(sqlite://), autoflush=True, expire_on_commit=False), '54587979-1a63-4efe-adec-93eb6635c54a')
+tmp_path = PosixPath('/tmp/pytest-of-dgh/pytest-975/test_real_worker_reader_outbox2')
+state = 'RUNNING'
+
+    @pytest.mark.parametrize('state',['CANCELLED','TIMED_OUT','RUNNING'])
+    def test_real_worker_reader_outbox_http_replay_preserves_platform_state(execution,tmp_path,state):
+        import json
+        from worker.client import Worker
+        factory,generation=execution;setup(factory)
+        with factory() as s:
+            s.get(Run,'r').status=state;s.commit()
+        worker=object.__new__(Worker);worker.path=tmp_path/'worker.json'
+        worker.state={'task':{'execution_id':'e','benchmark':'cs-client','log_protocol':2,
+            'client_spec':{'template':{'integration_mode':'direct'}}},
+            'recovery_assignment':{'claim':{'receipt':{'execution_id':'e','generation':generation}}}}
+        root=tmp_path/'protocol';root.mkdir()
+        event={'episode_id':1,'seed':100,'status':'STARTED'}
+        (root/'events.jsonl').write_text(json.dumps(event)+'\n')
+        q=ReliableOutbox(tmp_path/'outbox')
+        assert worker.collect_recovery_results(q,protocol_root=root)
+        app=FastAPI()
+        def db():
+            with factory() as s:yield s
+        recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+        with TestClient(app) as client:
+            replies=[]
+            def post(path,body):
+                response=client.post('/api/v1/'+path,json=body)
+                assert response.status_code==200,response.text
+                replies.append(response.json())
+                if len(replies)==1:raise TimeoutError('applied but ACK lost')
+                return response.json()
+            delivery=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+            with pytest.raises(TimeoutError):delivery.step()
+            assert len(q.pending())==1
+            worker.state=json.loads(worker.path.read_text())
+            assert worker.collect_recovery_results(q,protocol_root=root)
+            assert delivery.step()==1 and q.pending()==[]
+            assert replies[-1]['duplicate'] and replies[-1]['reconciled']
+        with factory() as s:
+>           assert s.get(EpisodeRecord,('r',1)).started==event
+E           AssertionError: assert {'_platform_r...s': 'STARTED'} == {'episode_id'...s': 'STARTED'}
+E             
+E             Omitting 3 identical items, use -vv to show
+E             Left contains 1 more item:
+E             {'_platform_received_at': '2026-11-25T02:35:25.941731+00:00'}
+E             Use -v to get more diff
+
+backend/tests/test_recovery_results.py:222: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_recovery_results.py: 28 warnings
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:945: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    cursor.execute(statement, parameters)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_recovery_results.py::test_real_worker_reader_outbox_http_replay_preserves_platform_state[CANCELLED]
+FAILED backend/tests/test_recovery_results.py::test_real_worker_reader_outbox_http_replay_preserves_platform_state[TIMED_OUT]
+FAILED backend/tests/test_recovery_results.py::test_real_worker_reader_outbox_http_replay_preserves_platform_state[RUNNING]
+3 failed, 44 passed, 2 deselected, 29 warnings in 4.16s
+
+
+recovery-result-final-verify.log
+........................................................................ [ 55%]
+................F........................................                [100%]
+=================================== FAILURES ===================================
+______ test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack ______
+backend/tests/test_worker_recovery_finish.py:214: in test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack
+    assert finish_results(w,q) and w.state is None
+E   AssertionError: assert (False)
+E    +  where False = <function finish_results at 0x75a0db1b7ce0>(namespace(state={'task': {'execution_id': 'e'}, 'recovery': {'generation': 'g', 'identity': {'kind': 'docker', 'boot_i...ce(post=<function test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack.<locals>.post at 0x75a0d8001940>)), namespace(pending=<function test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack.<locals>.<lambda> at 0x75a0d83b94e0>))
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_recovery_results.py: 28 warnings
+backend/tests/test_recovery_finish.py: 32 warnings
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:945: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    cursor.execute(statement, parameters)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_worker_recovery_finish.py::test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack
+1 failed, 128 passed, 61 warnings in 18.96s
+
+
+/tmp/recovery-results-standard-coverage.log
+
+==================================== ERRORS ====================================
+__________ ERROR collecting backend/tests/test_bundled_onboarding.py ___________
+import file mismatch:
+imported module 'test_bundled_onboarding' has this __file__ attribute:
+  /home/dgh/Code/clearml_mini/backend/tests/integration/test_bundled_onboarding.py
+which is not the same as the test file we want to collect:
+  /home/dgh/Code/clearml_mini/backend/tests/test_bundled_onboarding.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/recovery-results-final-20261125/tests.xml -
+=========================== short test summary info ============================
+ERROR backend/tests/test_bundled_onboarding.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+3189 deselected, 1 warning, 1 error in 1.27s
+
+
+/tmp/recovery-results-standard-retry.log
+..FF.................................................................... [ 23%]
+........................................................................ [ 47%]
+........................................................................ [ 70%]
+........................................................................ [ 94%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+______________ test_legacy_categories_match_prechange_route_audit ______________
+backend/tests/test_priority_routes.py:36: in test_legacy_categories_match_prechange_route_audit
+    assert len(rows) == len(manifest())
+E   AssertionError: assert 172 == 173
+E    +  where 172 = len([{'auth': 'public', 'body_models': '', 'current_category': 'ordinary', 'dependency_names': '', ...}, {'auth': 'public'...ser_bearer', 'body_models': '', 'current_category': 'ordinary', 'dependency_names': 'HTTPBearer,current,db', ...}, ...])
+E    +  and   173 = len((('GET', '/healthz', 'health', 'ordinary', re.compile('^/healthz$')), ('GET', '/readyz', 'health', 'ordinary', re.comp...e.compile('^/api/v1/auth/me$')), ('GET', '/api/v1/pools', 'page_read', 'ordinary', re.compile('^/api/v1/pools$')), ...))
+E    +    where (('GET', '/healthz', 'health', 'ordinary', re.compile('^/healthz$')), ('GET', '/readyz', 'health', 'ordinary', re.comp...e.compile('^/api/v1/auth/me$')), ('GET', '/api/v1/pools', 'page_read', 'ordinary', re.compile('^/api/v1/pools$')), ...) = manifest()
+____ test_request_contract_audit_covers_current_routes_and_declared_limits _____
+backend/tests/test_priority_routes.py:57: in test_request_contract_audit_covers_current_routes_and_declared_limits
+    assert expected == actual
+E   assert {'body_schema...anual audit.'} == {'body_schema...anual audit.'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'body_schemas': {"<class 'backend.app.administration.AccountUpdate'>": {'additionalProperties': False, 'properties': ... 'Expected Revision', 'type': 'integer'}}, 'required': ['action', 'expected_revision'], 'title': 'Control', ...}, ...}} != {'body_schemas': {"<class 'backend.app.administration.AccountUpdate'>": {'additionalProperties': False, 'properties': ... 'Expected Revision', 'type': 'integer'}}, 'required': ['action', 'expected_revision'], 'title': 'Control', ...}, ...}}
+E     {'routes': [{'body': [{'name': 'b...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_recovery_finish.py: 32 warnings
+backend/tests/test_recovery_results.py: 28 warnings
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:945: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    cursor.execute(statement, parameters)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/recovery-results-retry-20261125/tests.xml -
+=========================== short test summary info ============================
+FAILED backend/tests/test_priority_routes.py::test_legacy_categories_match_prechange_route_audit
+FAILED backend/tests/test_priority_routes.py::test_request_contract_audit_covers_current_routes_and_declared_limits
+2 failed, 304 passed, 3198 deselected, 61 warnings in 36.03s
+
+
+/tmp/recovery-results-standard-verified.log
+.F....F................................................................. [ 23%]
+........................................................................ [ 46%]
+........................................................................ [ 69%]
+........................................................................ [ 93%]
+.....................                                                    [100%]
+=================================== FAILURES ===================================
+___________ test_checked_in_gateway_is_generated_from_route_manifest ___________
+backend/tests/test_priority_gateway.py:10: in test_checked_in_gateway_is_generated_from_route_manifest
+    assert config == render()
+E   AssertionError: assert '# Generated ...;\n    }\n}\n' == '# Generated ...;\n    }\n}\n'
+E     
+E     Skipping 3376 identical leading characters in diff, use -v to show
+E     - ons/[^/]+/recovery/results\-finished$ worker-data-api:8000;
+E     -     ~^POST:/api/v1/worker/executions/[^/]+/service\-probe\-session$ execution-control-api:8000;
+E     ? ---------------------------------
+E     + ons/[^/]+/service\-probe\-session$ execution-control-api:8000;
+E           ~^GET:/api/v1/jobs/[^/]+/attempts/[^/]+/shared\-artifacts/media/[^/]+$ bulk-transfer-api:8000;...
+E     
+E     ...Full output truncated (131 lines hidden), use '-vv' to show
+____ test_request_contract_audit_covers_current_routes_and_declared_limits _____
+backend/tests/test_priority_routes.py:57: in test_request_contract_audit_covers_current_routes_and_declared_limits
+    assert expected == actual
+E   assert {'body_schema...anual audit.'} == {'body_schema...anual audit.'}
+E     
+E     Omitting 3 identical items, use -vv to show
+E     Differing items:
+E     {'routes': [{'body': [{'name': 'body', 'required': True, 'schema': "<class 'backend.app.administration.Revision'>"}], ...e_read', 'confirmation': 'read response; retry refresh, do not infer mutation completion', 'method': 'GET', ...}, ...]} != {'routes': [{'body': [{'name': 'body', 'required': True, 'schema': "<class 'backend.app.administration.Revision'>"}], ...e_read', 'confirmation': 'read response; retry refresh, do not infer mutation completion', 'method': 'GET', ...}, ...]}
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:37
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_recovery_finish.py: 32 warnings
+backend/tests/test_recovery_results.py: 28 warnings
+  /home/dgh/Code/clearml_mini/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:945: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    cursor.execute(statement, parameters)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/dgh/Code/clearml_mini/coverage-artifacts/recovery-results-verified-20261125/tests.xml -
+=========================== short test summary info ============================
+FAILED backend/tests/test_priority_gateway.py::test_checked_in_gateway_is_generated_from_route_manifest
+FAILED backend/tests/test_priority_routes.py::test_request_contract_audit_covers_current_routes_and_declared_limits
+2 failed, 307 passed, 3195 deselected, 61 warnings in 36.09s

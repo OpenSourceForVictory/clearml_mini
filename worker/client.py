@@ -861,6 +861,10 @@ class Worker:
         from .recovery_monitor import RecoveryMonitor
         return RecoveryMonitor(self, launch)
 
+    def collect_recovery_results(self, outbox, *, output='', protocol_root=None, final=False):
+        from .recovery_results import collect
+        return collect(self, outbox, output=output, protocol_root=protocol_root, final=final)
+
     def child(self, execution):
         identity = str(uuid.UUID(execution))
         directory = Path(str(self.path) + '.runs')
@@ -889,6 +893,10 @@ class Worker:
         directory = Path(str(self.path) + '.runs')
         if directory.exists():
             for path in directory.glob('*.json'):
+                # Per-execution recovery sidecars are not execution journals.
+                # Their owners validate them after loading the UUID journal.
+                if path.name.endswith(('.json.launch.json', '.json.supervision.json')):
+                    continue
                 child = self.child(path.stem)
                 if child.state:
                     self.children[path.stem] = child

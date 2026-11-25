@@ -48,6 +48,9 @@ def test_request_contract_audit_covers_current_routes_and_declared_limits(monkey
     expected = json.loads(audit.read_text())
     extra = json.loads((audit.parents[1] / 'disconnected-execution-20261124/recovery-route-contracts.json').read_text())
     expected['routes'].extend(extra['routes'])
+    overrides = {(row['method'], row['path']):row for row in extra.get('route_overrides', [])}
+    assert set(overrides) <= {(row['method'], row['path']) for row in expected['routes']}
+    expected['routes'] = [overrides.get((row['method'], row['path']), row) for row in expected['routes']]
     expected['body_schemas'].update(extra['body_schemas'])
     # Historical isolation evidence remains immutable; additions are audited
     # separately and every route/schema is still compared exhaustively.

@@ -184,3 +184,13 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 
 
 2026-11-25 监督组合入口：标准专项107 passed、3354 deselected、无跳过，报告coverage-artifacts/worker-recovery-monitor-20261125；recovery_monitor行/分支100/100，worker/client本次选集9.53/2.14，整体覆盖率门槛失败。真实host/Docker停止测试使用API响应替身，不能替代平台批次验收。首次2 failed/15 passed的证据见monitor-first-failure-20261125.txt，修正测试后17 passed。未部署，生产execute仍保留安全拦截。
+
+### 结果采集与独立同步（2026-11-25）
+
+新增四种读取器可靠入队接线及原子游标；最终采集必须核对原实体退出、完整读取并持久封口。空队列不能替代采集结束。pending_results允许完成/清理和结果应用分离；同步确认需完成、清理及完整性校验，旧协议不能使用此旁路。取消后重新评测的旧结果不影响新尝试。恢复扫描修正launch/supervision旁路JSON被当成执行ID的问题。
+
+标准脚本专项309 passed、3195 deselected、无跳过，36.09秒；开启RECOVERY_RUNTIME_TEST和独立PostgreSQL。新采集模块、Worker收尾及后端收尾行/分支均100/100；全项目门槛仍失败。具体入口覆盖率见result-collection-20261125.json，完整报告coverage-artifacts/recovery-results-complete-20261125。真实测试是systemd/Docker短程序与收尾，不是完整平台断联批次或真实模型评测。
+
+失败证据见result-collector-failures-20261125.txt：初始测试夹具缺runs目录、游标失败注入位置错误；API回合记录会增加平台时间戳，断言已改为核对业务字段及时间戳；新增最终采集标志测试必须落盘后模拟重启。标准首轮遗漏importlib导致同名测试收集冲突，按现有文档补参数；扩大检查发现契约清单和生成网关未同步，已补齐新路由及旧cleanup可选身份正文的覆盖记录，未改历史审计原件。最终上述专项全部通过。
+
+同步worker-upgrades、operations、Skill项目索引、OpenSpec设计及任务记录；strict validate通过。生产execute尚未接通正常监督、延后交付及界面状态，任务4.x不勾选，未部署、未广告能力。本阶段不新增迁移。

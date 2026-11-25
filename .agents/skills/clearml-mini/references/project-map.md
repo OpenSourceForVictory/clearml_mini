@@ -339,7 +339,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 恢复结果应用：backend/app/recovery_results.py 接入 recovery/results 的显式 apply:true 分支，按 Run→恢复授权锁序应用 episodes.record 或 SDK task-result，和收据同事务。无全局调度锁，不校验旧租约、不更新终态/清理；worker/recovery_delivery.py 的 apply_results 模式只有 reconciled:true 才 ACK。test_recovery_results.py 覆盖取消/超时后补报、失败回滚、旧收据应用、真实 PostgreSQL 并发重放与调度锁独立性。仍未启用生产能力或接入完整 Worker 主循环，不能按单模块完成宣称上线。
 
-恢复收尾：backend/app/recovery_finish.py 接入 execution.py 的 complete（可选 recovery）及 cleanup（可选身份正文）。锁序全局资源锁→Run→授权；完成验证已核对退出，保存原正文幂等且不释放，cleanup确认后才清理占用。平台终态优先；旧执行维持原路径，恢复执行禁止无证明旁路。缺结果的协议成功仍由现有完整性校验拒绝，未完成独立同步状态/主循环，不能宣称完整上线。测试 test_recovery_finish.py 包括实际HTTP和PostgreSQL取消竞争。
+恢复收尾：backend/app/recovery_finish.py 接入 execution.py 的 complete（可选 recovery）及 cleanup（可选身份正文）。锁序全局资源锁→Run→授权；完成验证已核对退出，保存原正文幂等且不释放，cleanup确认后才清理占用。平台终态优先；旧执行维持原路径，恢复执行禁止无证明旁路。缺结果时，旧协议仍由完整性校验拒绝；恢复协议显式 pending_results 可独立收尾，结果补齐经 results-finished 校验。主循环及界面尚未接通，不能宣称完整上线。测试 test_recovery_finish.py 包括实际HTTP和PostgreSQL取消竞争。
 
 恢复对账保留同一进程的已确认退出：相同退出可用新序号重报，退出后运行实体卸载不抹掉退出码；退出码冲突或声称重新运行进入待核对，不能据此完成/释放。此规则同样适用于平台已取消或超时后的上报。
 
@@ -353,3 +353,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 
 
 `worker/recovery_monitor.py` / Worker.monitor_recovery：独立本地tick与外部exchange，原boot/执行代次/运行身份核对；异常观察重试、退出持久化、关闭时保留未结束交换的独占权。尚缺完整生产执行入口和交付收尾。
+
+恢复结果采集：worker/recovery_results.py / test_worker_recovery_results.py，四类旧读取器先写outbox再提交游标；final采集需原实体退出，尾部不完整不封口。worker/recovery_finish.finish_results同时要求本地最终采集标记、空队列及平台应用/完整性ACK；backend/app/recovery_finish.results_finished需完成与清理已确认。同步阶段不改变Run生命周期或资源。恢复旁路JSON不能被recover_journals当成执行UUID。完整生产入口尚未启用。

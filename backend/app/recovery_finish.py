@@ -31,6 +31,8 @@ def finish(s, *, worker_id, execution_id, body):
     run, grant, control = locked(s, worker_id, execution_id, body.recovery)
     snapshot = control.snapshot
     fact = body.model_dump(mode='json', exclude={'recovery'})
+    if not fact['pending_results']:
+        fact.pop('pending_results')  # Preserve receipts written before this field existed.
     previous = snapshot.get('completion')
     if previous is not None:
         if previous != fact:
@@ -50,7 +52,7 @@ def finish(s, *, worker_id, execution_id, body):
             status = 'TIMED_OUT'
         else:
             from .execution import validate_finish
-            validate_finish(s, run, body)
+            validate_finish(s, run, body, require_results=not body.pending_results)
             status = body.status
         if status == 'SUCCEEDED' and body.metrics:
             run.result_json = body.metrics.model_dump()
@@ -62,7 +64,8 @@ def finish(s, *, worker_id, execution_id, body):
             logs = RunLogState(run_id=run.id)
             s.add(logs)
         logs.truncated = True
-    control.snapshot = {**snapshot, 'completion':fact}
+    control.snapshot = {**snapshot, 'completion':fact,
+                        'result_sync':'pending' if body.pending_results else 'complete'}
     s.flush()
     # Completion alone does not authorize resource reuse.
     return {'status':run.status, 'cleanup_confirmed':run.cleanup_confirmed, 'duplicate':False}
@@ -86,3 +89,20 @@ def cleanup(s, *, worker_id, execution_id, proof):
         from . import memberships
         memberships.reconcile(s)
     return {'status':run.status, 'cleanup_confirmed':True, 'duplicate':duplicate}
+
+
+def results_finished(s, *, worker_id, execution_id, proof):
+    """Confirm late business data independently of already released resources."""
+    run, grant, control = locked(s, worker_id, execution_id, proof)
+    snapshot = control.snapshot
+    if not snapshot.get('completion') or run.status not in TERMINAL or not run.cleanup_confirmed:
+        raise HTTPException(409, 'result synchronization requires acknowledged completion and cleanup')
+    duplicate = snapshot.get('result_sync') == 'complete'
+    if not duplicate:
+        from .execution import Finish, validate_finish
+        body = Finish.model_validate(snapshot['completion'])
+        validate_finish(s, run, body)
+        control.snapshot = {**snapshot, 'result_sync':'complete'}
+        s.flush()
+    return {'status':run.status, 'cleanup_confirmed':run.cleanup_confirmed,
+            'result_sync':'complete', 'duplicate':duplicate}

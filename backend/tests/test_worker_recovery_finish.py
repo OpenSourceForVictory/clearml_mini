@@ -191,3 +191,40 @@ def test_real_runtime_finalization_after_cleanup_reply_loss(tmp_path,mode):
         w.state=original
         if mode=='host':host.remove(execution)
         else:docker('rm','--force',name,check=False)
+
+
+def test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack(case):
+    from worker.recovery_finish import finish_results
+    w,calls,_=case
+    finalize(w,{'status':'SUCCEEDED','exit_code':0,'pending_results':True})
+    assert w.state['recovery_finalization']['phase']=='done'
+    queued=[{'body':{}}];q=SimpleNamespace(pending=lambda limit:queued)
+    assert not finish_results(w,q)
+    w.state['recovery_results_collected']=True
+    atomic_json(w.path,w.state)
+    assert not finish_results(w,q)
+    queued.clear();requests=[]
+    def post(path,data):
+        requests.append((path,data))
+        if len(requests)==1:raise TimeoutError('sync ACK lost')
+        return {'status':'SUCCEEDED','cleanup_confirmed':True,'result_sync':'complete','duplicate':True}
+    w.api.post=post
+    with pytest.raises(TimeoutError):finish_results(w,q)
+    assert w.state is not None
+    w.state=json.loads(w.path.read_text())
+    assert finish_results(w,q) and w.state is None
+    assert requests[0]==requests[1]
+
+
+@pytest.mark.parametrize('fault',['missing','phase','proof','ack'])
+def test_result_sync_refuses_invalid_state_or_ack(case,fault):
+    from worker.recovery_finish import finish_results
+    w,_,_=case
+    if fault!='missing':finalize(w,{'status':'SUCCEEDED','exit_code':0,'pending_results':True})
+    if fault=='phase':w.state['recovery_finalization']['phase']='completion'
+    if fault=='proof':w.state['recovery']={'generation':'other','identity':w.state['recovery']['identity']}
+    if fault=='ack':
+        w.state['recovery_results_collected']=True
+        w.api.post=lambda *args:{'result_sync':'complete'}
+    with pytest.raises(ValueError):finish_results(w,SimpleNamespace(pending=lambda limit:[]))
+    assert w.state is not None
