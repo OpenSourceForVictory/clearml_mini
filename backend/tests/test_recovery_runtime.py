@@ -177,9 +177,11 @@ def test_real_process_continues_across_failed_control_then_stops_or_finishes(tmp
 
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker API reconciliation opt-in')
-@pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('cancel',[False,True])
-def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,monkeypatch,mode,cancel):
+@pytest.mark.parametrize('mode,cancel,stop_failure',
+    [(mode, cancel, False) for mode in ('host', 'docker') for cancel in (False, True)] +
+    [(mode, True, True) for mode in ('host', 'docker')])
+def test_real_runtime_reconciles_original_identity_after_lease_expiry(
+        tmp_path,monkeypatch,mode,cancel,stop_failure):
     from datetime import timedelta
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -256,6 +258,15 @@ def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,m
                 assert runtime.inspect()['state']=='running'
                 with factory() as db:db.get(Run,'r').status='CANCEL_REQUESTED';db.commit()
                 supervisor.exchange(SimpleNamespace(post=post),clock=lambda:36)
+                if stop_failure:
+                    def unconfirmed(_):
+                        raise RuntimeError('injected stop did not confirm termination')
+                    with pytest.raises(RuntimeError, match='did not confirm'):
+                        supervisor.tick(runtime.inspect,unconfirmed,at=36)
+                    assert runtime.inspect()['state']=='running'
+                    with factory() as db:
+                        run=db.get(Run,'r')
+                        assert run.status=='CANCEL_REQUESTED' and not run.cleanup_confirmed
                 assert supervisor.tick(runtime.inspect,runtime.stop,at=36)=='stop'
                 assert supervisor.tick(runtime.inspect,runtime.stop,at=37)=='retain'
                 supervisor.exchange(SimpleNamespace(post=post),clock=lambda:37)
