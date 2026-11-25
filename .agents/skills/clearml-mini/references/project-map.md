@@ -393,3 +393,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 2026-11-25 追加授权后已为 local4090-151 增加独立 release_gpu_smoke 环境，PyTorch CUDA 算子批次通过；累计4批次7真实进程。原CUDA环境阻塞保留为历史证据，最新结果见同目录gpu-result.json。
 
 恢复工作当前状态以 docs/validation/disconnected-execution-20261124/current-status-20261125.md 为准：24项是复合验收，5项勾选不等于19项未实现；Worker.execute已经接线，完整能力仍未启用。历史阶段记录须按时间区分，不能重述过时缺口。
+
+原执行终态补传验收：Worker 凭据为静态 `wk_`，轮换后需原节点更新配置；同一 Worker 身份以新凭据可重放原执行/代次的终态收据，但撤销和重纳管后的旧身份不获授权。批次删除后的业务结果应用仅显式确认 `discarded`，不复活已删除数据；封口后清除原始收据，最小身份/终态快照支持最终 ACK 丢失重放。见 docs/validation/disconnected-execution-20261124/terminal-receipt-acceptance-20261125.md。完整恢复能力尚未生产启用。

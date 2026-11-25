@@ -328,3 +328,32 @@ def test_real_api_authentication_and_no_implicit_grant(pg_api):
     with factory() as s:
         s.get(Worker,'w').revoked_at=now();s.commit()
     assert client.post(path,headers=headers,json=body).status_code==401
+
+
+def test_original_terminal_receipt_survives_worker_credential_rotation(pg_api):
+    from backend.app.execution import token_hash
+    client, old_headers, factory = pg_api
+    path = '/api/v1/worker/executions/e/recovery/control'
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'STARTING'
+        run.lease_expires_at = now() - timedelta(days=1)
+        generation = records.grant(session, run, 'w').generation
+        run.status = 'CANCELLED'
+        original_lease = run.lease_expires_at
+        session.commit()
+    body = {'generation': generation, 'sequence': 1, 'body': {'stopped': True}}
+    first = client.post(path, headers=old_headers, json=body)
+    assert first.status_code == 200 and not first.json()['duplicate']
+    new_headers = {'Authorization': 'Bearer wk_rotated_local_test'}
+    with factory() as session:
+        session.get(Worker, 'w').token_hash = token_hash('wk_rotated_local_test')
+        session.commit()
+    assert client.post(path, headers=old_headers, json=body).status_code == 401
+    replay = client.post(path, headers=new_headers, json=body)
+    assert replay.status_code == 200 and replay.json()['duplicate']
+    with factory() as session:
+        run = session.get(Run, 'r')
+        assert run.status == 'CANCELLED' and run.lease_expires_at == original_lease
+        assert not run.cleanup_confirmed
+        assert session.get(ExecutionRecovery, 'e').received_records == 1
