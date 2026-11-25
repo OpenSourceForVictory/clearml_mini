@@ -385,3 +385,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 3216ae0 本机发布与节点升级证据：docs/validation/log-recovery-release-20261125/README.md。四角色健康、6 个真实宿主机/Docker进程及批次页面验证通过；CUDA因批准环境缺失未执行，不等同模型验收或完整恢复能力启用。
 
 2026-11-25 追加授权后已为 local4090-151 增加独立 release_gpu_smoke 环境，PyTorch CUDA 算子批次通过；累计4批次7真实进程。原CUDA环境阻塞保留为历史证据，最新结果见同目录gpu-result.json。
+
+恢复工作当前状态以 docs/validation/disconnected-execution-20261124/current-status-20261125.md 为准：24项是复合验收，5项勾选不等于19项未实现；Worker.execute已经接线，完整能力仍未启用。历史阶段记录须按时间区分，不能重述过时缺口。
