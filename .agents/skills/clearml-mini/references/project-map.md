@@ -327,7 +327,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。仅收据业务入口也核对当前 Slot.worker_id 与批次删除标记，防止旧身份在重纳管或删除后取得业务 ACK；控制证据仍要求原 Worker 鉴权。`worker/recovery_delivery.py` 匹配摘要后确认本地 outbox，收据不等于运行许可或清理确认。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK、身份变更与删除标记；运维和迁移边界见 docs/operations.md、docs/database-migration.md。生产完整恢复能力尚未启用。
 
-断联恢复默认值（开发中）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。当前已实现基础模块、补报收据、控制对账与本地监督，完整领取/监督/结果恢复链路尚未启用，修改默认值不会改变现网执行。
+断联恢复默认值（新协议尚未生产启用）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。Worker.execute 已接入原领取、监督、控制及结果补报；恢复监控关闭/重建保持原单调截止，停止失败保留原执行并重试。真实 host/Docker 短程序已分别验证容忍期内恢复和超限停止；Worker 整个进程停机期间无本地线程，重启后核对原启动身份与截止。生产能力声明仍关闭，不能据此认为现网旧执行得到断联容忍；详见 docs/validation/disconnected-execution-20261124/current-status-20261125.md。
 
 调度恢复保护：scheduling.reconcile 对匹配执行 ID、Run ID、槽位的显式恢复授权，不再因旧租约或缺少启动上报将任务终结；撤销授权也不能充当进程已停止的证明。业务总执行时限仍独立生效，资源继续占用直至清理确认，旧协议及未领取预约维持原规则。批量读取使用相关 EXISTS，锁后重新核对授权与执行状态，不为每条执行增添独立授权查询。本次尚不向实际任务发放恢复授权，不能据此宣称端到端断联恢复已启用；回归见 test_recovery_scheduling.py。部署必须先完成 ae185f6 迁移。
 

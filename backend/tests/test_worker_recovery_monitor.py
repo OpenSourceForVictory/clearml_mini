@@ -93,6 +93,40 @@ def test_unlimited_outage_keeps_running_and_persists_offline_exit(case):
     assert stops==[]
 
 
+def test_worker_monitor_restart_keeps_original_finite_deadline(case):
+    worker, _, runtime, stops, clock = case
+    worker.state['recovery_assignment']['claim']['receipt']['policy']['disconnect_tolerance_seconds'] = 10
+    with monitor(case) as first:
+        clock[0] = 9
+        wait(lambda: first.snapshot()['last_observed_at'] == 9)
+        assert runtime['state'] == 'running' and stops == []
+    # Closing the Worker monitor does not stop or reassign the business process.
+    assert runtime['state'] == 'running' and stops == []
+    clock[0] = 10
+    with monitor(case) as resumed:
+        wait(lambda: resumed.snapshot()['state'] == 'exited')
+        assert resumed.snapshot()['stop_reason'] == 'disconnection_timeout'
+        assert len(stops) == 1
+
+
+def test_failed_local_stop_retains_original_execution_and_retries(case, monkeypatch):
+    worker, _, runtime, stops, clock = case
+    worker.state['recovery_assignment']['claim']['receipt']['policy']['disconnect_tolerance_seconds'] = 1
+    original_stop = RecoveryRuntime.stop
+    def unavailable(self, proof):
+        assert proof == worker.state['recovery']['identity']
+        raise OSError('runtime stop temporarily unavailable')
+    monkeypatch.setattr(RecoveryRuntime, 'stop', unavailable)
+    with monitor(case) as watched:
+        clock[0] = 1
+        wait(lambda: watched.last_error is not None)
+        assert runtime['state'] == 'running' and stops == []
+        assert watched.snapshot()['stop_reason'] == 'disconnection_timeout'
+        monkeypatch.setattr(RecoveryRuntime, 'stop', original_stop)
+        wait(lambda: watched.snapshot()['state'] == 'exited')
+        assert len(stops) == 1
+
+
 def test_control_retry_after_does_not_pause_local_observation(case):
     _, _, runtime, _, clock = case
     calls = []
