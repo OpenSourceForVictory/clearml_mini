@@ -29,6 +29,19 @@ def test_recovery_pending_delayed_complete_and_log_gap(execution):
         assert not for_runs(session, [run], at=at)['r']['delayed']
 
 
+def test_sync_delay_warning_starts_after_full_five_minutes(execution):
+    factory, _ = execution
+    at = now()
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'FAILED'
+        run.finished_at = at - timedelta(minutes=5)
+        session.add(ExecutionRecoveryControl(execution_id='e', snapshot={'result_sync': 'pending'}))
+        session.commit()
+        assert not for_runs(session, [run], at=at)['r']['delayed']
+        assert for_runs(session, [run], at=at + timedelta(microseconds=1))['r']['delayed']
+
+
 def test_legacy_and_unconfirmed_recovery_are_distinct(execution):
     factory, _ = execution
     with factory() as session:
