@@ -23,7 +23,7 @@ from .resource_limits import execution_pids_limit
 from .workspace import prepare, execution_dirs, read_events, disk_status, validate_storage
 from .storage import Storage
 from .retention import Retention
-from .backpressure import APIError, Backoff, transient
+from .backpressure import APIError, Backoff, RetryWindow, transient
 from .image_runtime import Runtime
 from .host_environments import HostEnvironments
 from .host_backend import HostBackend
@@ -972,6 +972,7 @@ class Worker:
         self.process_logs=LogService(self);self.process_logs.start()
         had_task = bool(self.children)
         retry = Backoff(max_total=3.0)
+        heartbeat_window, claim_window = RetryWindow(), RetryWindow()
         while True:
             try:
                 for execution, child in list(self.children.items()):
@@ -989,9 +990,17 @@ class Worker:
                     self.process_logs.close()
                     return
                 self.control.adopt()
+                if heartbeat_window.remaining():
+                    self.stop_event.wait(min(2, heartbeat_window.remaining()))
+                    continue
                 body = {'slot_id': self.slot_id, **self.control.report(),
                         'software': {**metadata(),'probe_references':probe_references(self.config)}}
-                reply = self.api.post('worker/heartbeat', body)
+                try:
+                    reply = self.api.post('worker/heartbeat', body)
+                except APIError as exc:
+                    heartbeat_window.defer(exc)
+                    raise
+                heartbeat_window.reset()
                 self.control.source = reply.get('resource_source', 'worker')
                 # Never claim while background configuration can change paths.
                 # Readiness is checked before scheduling the next control cycle.
@@ -1004,8 +1013,17 @@ class Worker:
                     self.control.refresh(reply)
                     time.sleep(2)
                     continue
+                if claim_window.remaining():
+                    self.control.refresh(reply)
+                    self.stop_event.wait(min(2, claim_window.remaining()))
+                    continue
                 from .recovery_poll import poll
-                response = poll(self, metadata())
+                try:
+                    response = poll(self, metadata())
+                except APIError as exc:
+                    claim_window.defer(exc)
+                    raise
+                claim_window.reset()
                 for execution in response['cleanup']:
                     # An active thread owns its cleanup; signal it rather than racing its journal.
                     if execution in self.children:

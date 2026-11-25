@@ -243,6 +243,53 @@ def test_once_loop_registers_claims_and_releases_completed_child(execution,monke
     assert retention_events==[str(worker.workspace),task['execution_id']]
     assert worker.children=={} and controller.source=='agent'
 
+
+@pytest.mark.parametrize('route', ['heartbeat', 'claim'])
+def test_idle_retry_after_keeps_other_control_work_running(execution, monkeypatch, route):
+    import time
+    from worker import accelerators, control, probe_credentials
+    worker, task, _ = execution
+    worker.config.update(mock=True, node_name='virtual-test')
+    controller = SimpleNamespace(source=None, refresh=lambda *a: None,
+        adopt=lambda: None, report=lambda: {}, ready=lambda: True)
+    monkeypatch.setattr(control, 'Control', lambda *a: controller)
+    monkeypatch.setattr(accelerators, 'capabilities', lambda cfg: [])
+    monkeypatch.setattr(probe_credentials, 'available', lambda cfg: [])
+    monkeypatch.setattr(client, 'Retention', lambda *a: SimpleNamespace(
+        start=lambda: None, remember=lambda root: None, mark_ready=lambda e: None))
+    monkeypatch.setattr(client.time, 'sleep', lambda seconds: None)
+    claims, beats, rejected = [], [], []
+    def post(path, body=None):
+        if path == 'worker/register':
+            return {'slot_id': str(uuid.uuid4())}
+        if path == 'worker/heartbeat':
+            beats.append(time.monotonic())
+            if route == 'heartbeat' and not rejected:
+                rejected.append(beats[-1])
+                raise client.APIError(503, 'busy', '1')
+            return {}
+        if path.endswith('/claim'):
+            claims.append(time.monotonic())
+            if route == 'claim' and not rejected:
+                rejected.append(claims[-1])
+                raise client.APIError(503, 'busy', '1')
+            return {'cleanup': [], 'task': task}
+        raise AssertionError(path)
+    worker.api.post = post
+    def launch(child, task):
+        child.state = None
+        worker.children[task['execution_id']] = child
+    monkeypatch.setattr(worker, 'launch', launch)
+    try:
+        worker.run(once=True)
+    finally:
+        if hasattr(worker, 'slot_lock'):
+            worker.slot_lock.close()
+    assert len(rejected) == 1
+    assert len(claims) == (2 if route == 'claim' else 1)
+    assert len(beats) >= 2
+    assert (claims[1] if route == 'claim' else beats[1]) - rejected[0] >= 1
+
 @pytest.mark.parametrize('outcome',['success','cancel','expired','stop','denied'])
 def test_initial_busy_handshake_is_bounded_and_never_launches_early(execution,monkeypatch,outcome):
     worker,task,events=execution

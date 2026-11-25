@@ -8,6 +8,7 @@ import pytest
 
 from worker.recovery_monitor import RecoveryMonitor
 from worker.recovery_runtime import RecoveryRuntime
+from worker.backpressure import APIError
 
 
 def wait(predicate):
@@ -90,6 +91,25 @@ def test_unlimited_outage_keeps_running_and_persists_offline_exit(case):
         assert sent[0]['state']=='exited' and sent[0]['exit_code']==0
         assert sent[0]['elapsed_seconds']==100000
     assert stops==[]
+
+
+def test_control_retry_after_does_not_pause_local_observation(case):
+    _, _, runtime, _, clock = case
+    calls = []
+    def post(path, body):
+        calls.append(time.monotonic())
+        if len(calls) == 1:
+            raise APIError(503, 'busy', '1')
+        return reply(body)
+    with monitor(case) as m:
+        m.start_control(SimpleNamespace(post=post), interval=.01)
+        wait(lambda: len(calls) == 1)
+        clock[0] = 8
+        wait(lambda: m.snapshot()['last_observed_at'] == 8)
+        runtime.update(state='exited', exit_code=0)
+        wait(lambda: m.snapshot()['state'] == 'exited')
+        wait(lambda: len(calls) >= 2)
+        assert calls[1] - calls[0] >= 1
 
 
 def test_reconnected_cancel_stops_original_runtime(case):

@@ -95,6 +95,40 @@ def test_claim_retry_caps_total_wait_but_keeps_retrying(monkeypatch):
     assert stop.delays[-1] == 2
 
 
+def test_retry_window_preserves_long_server_floor_with_short_waits(monkeypatch):
+    stop = ClockStop()
+    monkeypatch.setattr(bp.time, 'monotonic', lambda: stop.now)
+    monkeypatch.setattr(bp.random, 'uniform', lambda low, high: high)
+    window = bp.RetryWindow()
+    retry = bp.Backoff(max_total=3)
+    error = APIError(503, 'busy', '60')
+    window.defer(error)
+    assert window.remaining() == pytest.approx(60.25)
+    assert retry.wait(error, stop)
+    assert stop.delays == [3]
+    assert window.remaining() == pytest.approx(57.25)
+    # Caller can keep heartbeats or local monitoring alive while the same
+    # claim/control endpoint remains blocked until the server's floor.
+    while window.remaining() > 0:
+        stop.wait(min(2, window.remaining()))
+    assert stop.now == pytest.approx(60.25)
+    assert window.remaining() == 0
+    window.reset()
+    assert window.remaining() == 0
+
+
+def test_retry_window_never_shortens_existing_hint_or_tracks_permanent_error(monkeypatch):
+    stop = ClockStop()
+    monkeypatch.setattr(bp.time, 'monotonic', lambda: stop.now)
+    monkeypatch.setattr(bp.random, 'uniform', lambda low, high: low)
+    window = bp.RetryWindow()
+    window.defer(APIError(429, 'busy', '10'))
+    stop.now = 2
+    window.defer(APIError(503, 'busy', '1'))
+    window.defer(APIError(401, 'unauthorized', '100'))
+    assert window.remaining() == pytest.approx(8.125)
+
+
 @pytest.mark.parametrize('limit', [0, -1, float('nan'), float('inf')])
 def test_invalid_total_backoff_bound(limit):
     with pytest.raises(ValueError):

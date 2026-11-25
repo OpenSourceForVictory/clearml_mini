@@ -67,7 +67,8 @@ class Backoff:
         hint = getattr(error, 'retry_after', None)
         # Keep jitter after Retry-After; taking max(jitter, hint) synchronizes
         # every early retry when the server returns the same one-second hint.
-        # The local exponential component is capped, not the server minimum.
+        # A caller that caps the whole sleep must retain the server minimum
+        # separately (RetryWindow) before retrying that same endpoint.
         delay = (hint or 0) + random.uniform(ceiling / 2, ceiling)
         if self.max_total is not None:
             delay = min(delay, self.max_total)
@@ -76,3 +77,26 @@ class Backoff:
         if stop.wait(delay):
             return False
         return deadline is None or time.monotonic() < deadline
+
+
+class RetryWindow:
+    """Remember a server retry floor while a caller does other useful work.
+
+    A short Backoff(max_total=...) sleep must not cause the next request to
+    violate a longer Retry-After. The caller checks remaining() before that
+    same request; heartbeats and local supervision can continue meanwhile.
+    """
+    def __init__(self):
+        self.not_before = 0.0
+
+    def defer(self, error):
+        hint = getattr(error, 'retry_after', None)
+        if transient(error) and hint is not None and hint > 0:
+            self.not_before = max(self.not_before,
+                                  time.monotonic() + hint + random.uniform(.125, .25))
+
+    def remaining(self):
+        return max(0.0, self.not_before - time.monotonic())
+
+    def reset(self):
+        self.not_before = 0.0

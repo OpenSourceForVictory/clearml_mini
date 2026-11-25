@@ -92,19 +92,25 @@ class RecoveryMonitor:
                 raise
 
     def _control(self, api, interval):
-        from .backpressure import Backoff, transient
+        from .backpressure import Backoff, RetryWindow, transient
         retry = Backoff(maximum=2, max_total=5)
+        window = RetryWindow()
         while not self.stopping.is_set():
+            if window.remaining():
+                self.stopping.wait(min(5, window.remaining()))
+                continue
             try:
                 self.exchange(api)
                 self.control_error = None
                 retry.reset()
+                window.reset()
             except Exception as exc:
                 self.control_error = exc
                 # Authentication/configuration errors do not prove a business
                 # failure. Keep local supervision and original pending request.
                 LOG.warning('recovery control unavailable; retaining execution (%s)', type(exc).__name__)
                 if transient(exc):
+                    window.defer(exc)
                     retry.wait(exc, self.stopping)
                     continue
             self.stopping.wait(interval)
