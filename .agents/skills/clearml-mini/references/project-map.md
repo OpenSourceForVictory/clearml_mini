@@ -17,6 +17,8 @@
 | 业务评测向导与集合 | frontend/src/run-wizard.tsx、suites.tsx；backend/app/batches.py；docs/suite-management.md | 模板版本、参数快照、服务绑定、预检 |
 
 向导断联容忍：BatchSubmit 顶层 `disconnect_tolerance_seconds` 仅接受 null 或正整数秒；batches.resolve_batch 写入每个客户端 Job.client_spec，orchestrations.compile_submission 与 orchestration_scheduler 写入托管服务快照；execution.claim 在原事务授予恢复策略，batch_rerun 回显历史值（缺失按 null）。scheduling.runtime_mismatch 阻止有限值在未启用 RECOVERY_EXECUTION_ENABLED 或旧 Worker 上静默降级；默认 null 保持旧任务兼容。前端资源步骤和确认页显示同一策略。生产开关仍关闭，不能据向导字段宣称断联执行已上线。操作见 docs/suite-management.md、docs/operations.md；专项 test_disconnect_tolerance_submission.py 和 run-wizard.spec.ts/batch-rerun.spec.ts。
+
+有限断联短程序补测：test_recovery_execution_real.py 的 finite_disconnect 在真实隔离宿主机 systemd 与 Docker 中阻断控制 API，节点本地到期停止，重连后原执行上报 TIMED_OUT、确认清理；result_sync=complete 仅指已有数据同步完成，不表示回合/业务成功。证据见 docs/validation/disconnected-execution-20261124/disconnect-policy-wizard-20261125.md。仍未生产启用。
 | 模板和参数 | frontend/src/templates.tsx、command-mappings.tsx；runner/template_contract.py、parameter_contract.py、task_input.py；docs/runtime-templates.md、task-input.md | 类型、覆盖权限、argv/env 冲突、目录解析；业务字段已绑定时仍可在映射选择框定位现有配置，见 template-guidance.spec.ts |
 | SDK 与直接协议 | runner/sdk.py、task_result_contract.py、command_sdk.py、episode_contract.py、cs_entry.py；examples/integration | Worker 按执行 ID 隔离转发任务级/回合事件；API 幂等与权限；final 和退出码独立 |
 | 机器和节点程序 | frontend/src/administration.tsx、node-agent.tsx、ssh-onboarding.tsx；docs/node-agent.md、node-reenrollment.md | 心跳/遥测、期望与生效配置、排空、升级 |

@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','service','restart','pre_cancel'])
+@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','finite_disconnect','service','restart','pre_cancel'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -68,7 +68,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             db.add(ServiceInstance(id='svc',name='recovery-test',worker_id='w',slot_id='s',address='127.0.0.1',port=port,
                                    template_snapshot={},current_job_id='j'))
             db.flush()
-        receipt=recovery_claims.bind(db,request_id=str(uuid.uuid4()),worker_id='w',slot_id='s',run_id='r',task=original)
+        receipt=recovery_claims.bind(db,request_id=str(uuid.uuid4()),worker_id='w',slot_id='s',run_id='r',task=original,
+                                     tolerance=1 if scenario=='finite_disconnect' else None)
         db.commit()
     w.state.update(created=False,offset=0,sequence=0,pending=None,recovery_assignment={
         'reconciliation_required':True,'claim':{'slot_id':'s','boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
@@ -186,9 +187,14 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert w.state is None
             with factory() as db:
                 run=db.get(Run,'r')
-                assert run.status=={'complete':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED','timeout':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED'}[scenario]
+                assert run.status=={'complete':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
+                    'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
-                assert db.get(ExecutionRecoveryControl,execution).snapshot['result_sync']=='complete'
+                control=db.get(ExecutionRecoveryControl,execution).snapshot
+                assert control['result_sync']=='complete'
+                if scenario=='finite_disconnect':
+                    assert control['stop_reason']=='disconnection_timeout'
+                    assert db.get(EpisodeRecord,('r',1)).result is None
                 if scenario in ('complete','offline_complete','restart'):assert db.get(EpisodeRecord,('r',1)).result==result
             assert calls.count('create')==1
     finally:

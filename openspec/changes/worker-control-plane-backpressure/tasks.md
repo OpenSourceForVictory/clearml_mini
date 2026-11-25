@@ -114,3 +114,5 @@
 2026-11-25 断联容忍配置阶段：向导支持默认不限/可选有限值，客户端与托管服务快照传至原领取授权；历史批次回显和旧记录缺失兼容，有限值在旧 Worker 或恢复开关关闭时阻止分配。后端 59 项、前端 24 项及构建通过；测试夹具初次失败和生产能力关闭的边界见 docs/validation/disconnected-execution-20261124/disconnect-policy-wizard-20261125.md。4.6 仍需完整断联监督/取消/重连矩阵，不勾选。
 
 2026-11-25 业务收据身份补缝：仅收据入口与结果应用一致核对当前槽位 Worker 归属及批次删除，保留原身份控制证据。SQLite 专项 63 通过/6 PostgreSQL 条件跳过，隔离 PostgreSQL 补跑 69 通过；完整撤销、丢弃确认、重纳管与发布验收仍属于 4.3/4.9，不勾选。见 docs/validation/disconnected-execution-20261124/receipt-identity-20261125.md。
+
+2026-11-25 有限断联真运行补测：真实隔离 host systemd/Docker 各1条，控制请求持续拒绝超1秒时由本地停止，重连后按原身份上报 TIMED_OUT 并清理；定向2通过、同文件完整16通过。首次2项因把同步完成误作业务成功而断言失败，证据在 disconnect-policy-wizard-20261125.md。仍缺 4.6 的服务关联、Worker 停机和取消叠加完整矩阵，不勾选。
