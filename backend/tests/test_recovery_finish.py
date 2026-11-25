@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy import select, func
 
 from backend.app import recovery_finish as finish
@@ -122,6 +123,18 @@ def test_protocol_success_validates_results_before_lifecycle(execution):
     with factory() as s:assert s.get(Run,'r').result_json['success_rate']==1
 
 
+@pytest.mark.parametrize('extra', [
+    {'error':'x'*1001},
+    {'exit_code':256},
+    {'metrics':{'success_rate':float('inf'), 'episode_count':1, 'runtime':1}},
+    {'metrics':{'success_rate':1, 'episode_count':1, 'runtime':1, 'raw_output':'x'}},
+    {'raw_output':'x'*2000},
+])
+def test_completion_summary_rejects_unbounded_or_unknown_payload(extra):
+    with pytest.raises(ValidationError):
+        Finish.model_validate({'status':'SUCCEEDED', 'exit_code':0, **extra})
+
+
 def test_foreign_worker_cannot_finish(execution):
     factory,generation=execution;proof=prepare(factory,generation)
     with factory() as s,pytest.raises(HTTPException):
@@ -148,6 +161,14 @@ def test_http_completion_cleanup_and_legacy_bypass_rejected(api):
     assert response.status_code==200,response.text
     assert response.json()['cleanup_confirmed']
     assert client.post(base+'cleanup',headers=headers,json=proof.model_dump()).json()['duplicate']
+
+
+def test_http_completion_rejects_unknown_summary_fields(api):
+    client, headers, _ = api
+    response = client.post('/api/v1/worker/executions/e/complete', headers=headers,
+                           json={'status':'FAILED', 'exit_code':1, 'raw_output':'must stay on node'})
+    assert response.status_code == 400
+    assert response.json()['detail'] == 'invalid request parameters'
 
 
 def test_postgres_cancel_lock_then_late_completion(pg):

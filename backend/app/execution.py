@@ -91,6 +91,7 @@ class RecoveryProof(BaseModel):
 
 
 class Finish(BaseModel):
+    model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
     recovery: RecoveryProof | None = None
     pending_results: bool = False
     log_gap: bool = False
