@@ -15,6 +15,8 @@ RECOVERY_RUNTIME_TEST=1 .venv/bin/python -m pytest -q backend/tests/test_recover
 118 passed, 10 skipped
 LOG_TEST_DATABASE_URL=<隔离 PostgreSQL DSN> .venv/bin/python -m pytest -q backend/tests/test_recovery_control.py backend/tests/test_recovery_scheduling.py --tb=short
 86 passed
+RECOVERY_RUNTIME_TEST=1 .venv/bin/python -m pytest -q backend/tests/test_recovery_execution_real.py backend/tests/test_worker_recovery_finish.py --tb=short
+60 passed
 ```
 
 第二组跳过包含隔离 PostgreSQL 和真实后端条件项；上面的隔离 PostgreSQL 补跑覆盖数据库条件项，其余真实后端条件项的专项证据见相邻记录。这里的真实执行仅为短业务程序，未运行真实 GPU/NPU 模型。Worker 整个进程停机期间没有本地监控线程；重启后按原持久身份和截止恢复，不能承诺停机期间精确停止。完整故障矩阵、混合版本灰度、长测与全量覆盖率分别保留在 4.7、4.10 和 5.x；此验收不会打开 `disconnected_execution_v1` 能力声明。
