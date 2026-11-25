@@ -1,0 +1,16 @@
+........................................................................ [ 46%]
+..................................F..................................... [ 92%]
+............                                                             [100%]
+=================================== FAILURES ===================================
+___________ test_http_completion_cleanup_and_legacy_bypass_rejected ____________
+backend/tests/test_recovery_finish.py:131: in test_http_completion_cleanup_and_legacy_bypass_rejected
+    proof=prepare(factory,generation)
+backend/tests/test_recovery_finish.py:19: in prepare
+    observe(factory,generation,state='exited',exit_code=0)
+backend/tests/test_recovery_control.py:34: in apply
+    result = control.reconcile(s, worker_id='w', execution_id='e',
+backend/app/recovery_control.py:70: in reconcile
+    fast_lock(s)
+backend/app/scheduling.py:42: in fast_lock
+    raise HTTPException(503, 'control plane busy; retry shortly', headers={'Retry-After':'1'})
+E   fastapi.exceptions.HTTPException: 503: control plane busy; retry shortly

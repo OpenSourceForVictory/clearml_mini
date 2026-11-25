@@ -105,6 +105,11 @@ def reconcile(s, *, worker_id, execution_id, observation):
     # Do not direct a worker to stop an unrelated/reused runtime identity.
     if mismatch or not owns or previous.get('identity_conflict'):
         action, reason = 'inspect', 'process_or_assignment_identity_changed'
+    elif previous.get('observed_state') in ('exited', 'missing') and observation.state == 'running':
+        action, reason = 'inspect', 'process_completion_is_irreversible'
+    elif (previous.get('observed_state') == 'exited' and observation.state == 'exited'
+          and previous.get('exit_code') != observation.exit_code):
+        action, reason = 'inspect', 'process_exit_code_changed'
     elif platform_stop_reason(run, grant):
         action, reason = 'stop', platform_stop_reason(run, grant)
     elif previous.get('stop_requested'):
@@ -115,8 +120,6 @@ def reconcile(s, *, worker_id, execution_id, observation):
         action, reason = 'stop', observation.stop_reason
     elif observation.state == 'running' and observation.elapsed_seconds < previous.get('elapsed_seconds', 0):
         action, reason = 'inspect', 'elapsed_time_moved_backwards'
-    elif previous.get('observed_state') in ('exited', 'missing'):
-        action, reason = 'inspect', 'process_completion_is_irreversible'
     elif observation.state != 'running':
         action, reason = 'retain', 'exit_or_absence_recorded_pending_cleanup'
     else:
@@ -165,6 +168,8 @@ def reconcile(s, *, worker_id, execution_id, observation):
     if action != 'inspect':
         snapshot.update(identity=identity, observed_state=observation.state, exit_code=observation.exit_code,
                         worker_stop_reason=observation.stop_reason)
+        if previous.get('observed_state') == 'exited' and observation.state == 'missing':
+            snapshot.update(observed_state='exited', exit_code=previous.get('exit_code'))
     if action == 'inspect':
         snapshot['identity_conflict'] = True
     if observation.elapsed_seconds is not None and action != 'inspect':

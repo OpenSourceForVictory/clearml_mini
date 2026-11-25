@@ -72,12 +72,36 @@ class Metrics(BaseModel):
     runtime: float = Field(ge=0)
 
 
+from .recovery_control import ProcessIdentity
+
+
+class RecoveryProof(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    generation: str = Field(min_length=1, max_length=36)
+    identity: ProcessIdentity
+
+
 class Finish(BaseModel):
+    recovery: RecoveryProof | None = None
     log_gap: bool = False
     exit_code: int | None = Field(default=None, strict=True, ge=-255, le=255)
     status: Literal['SUCCEEDED', 'FAILED', 'CANCELLED']
     metrics: Optional[Metrics] = None
     error: Optional[str] = Field(default=None, max_length=1000)
+
+
+def validate_finish(s, run, body):
+    job = s.get(Job, run.job_id)
+    command=(job.client_spec or {}).get('template',{}).get('task_type')=='command' and job.benchmark!='inference-service'
+    if command and body.metrics:raise HTTPException(400,'ordinary commands do not report evaluation metrics')
+    if body.status == 'SUCCEEDED' and not command and (not body.metrics or body.metrics.episode_count != job.episodes):
+        raise HTTPException(400, 'successful execution requires complete metrics')
+    job = s.get(Job, run.job_id)
+    if body.status == 'SUCCEEDED' and job.client_spec and job.client_spec['template'].get('episode_reporting'):
+        from .episodes import progress
+        p = progress(s, run)
+        if p['completed'] != job.episodes or (not command and abs(p['success_rate'] - body.metrics.success_rate) > 1e-9):
+            raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
 
 
 class TaskResult(BaseModel):
@@ -567,8 +591,16 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/executions/{execution_id}/complete')
     def complete(execution_id: str, body: Finish, worker=Depends(worker_auth), s: Session = Depends(db)):
+        if body.recovery is not None:
+            from .recovery_finish import finish
+            result = finish(s, worker_id=worker.id, execution_id=execution_id, body=body)
+            s.commit()
+            return result
         lock(s)
         run = run_for(s, execution_id, worker)
+        from .core import ExecutionRecovery
+        if s.get(ExecutionRecovery, execution_id):
+            raise HTTPException(409, 'recovery execution requires identity proof')
         from .execution_logs import terminal_log_lock
         terminal_log_lock(s, run.id)
         if run.status in TERMINAL:
@@ -576,17 +608,7 @@ def install(app, db, current):
                 return {'status': run.status}
             raise HTTPException(409, 'execution already ended')
         live(run)
-        job = s.get(Job, run.job_id)
-        command=(job.client_spec or {}).get('template',{}).get('task_type')=='command' and job.benchmark!='inference-service'
-        if command and body.metrics:raise HTTPException(400,'ordinary commands do not report evaluation metrics')
-        if body.status == 'SUCCEEDED' and not command and (not body.metrics or body.metrics.episode_count != job.episodes):
-            raise HTTPException(400, 'successful execution requires complete metrics')
-        job = s.get(Job, run.job_id)
-        if body.status == 'SUCCEEDED' and job.client_spec and job.client_spec['template'].get('episode_reporting'):
-            from .episodes import progress
-            p = progress(s, run)
-            if p['completed'] != job.episodes or (not command and abs(p['success_rate'] - body.metrics.success_rate) > 1e-9):
-                raise HTTPException(400, 'successful execution requires all planned episode results and consistent metrics')
+        validate_finish(s, run, body)
         status = 'CANCELLED' if run.status == 'CANCEL_REQUESTED' else body.status
         if body.log_gap:
             from .core import RunLogState
@@ -627,9 +649,17 @@ def install(app, db, current):
         return {'accepted': True, 'duplicate': False}
 
     @app.post('/api/v1/worker/executions/{execution_id}/cleanup')
-    def cleanup(execution_id: str, worker=Depends(worker_auth), s: Session = Depends(db)):
+    def cleanup(execution_id: str, body: RecoveryProof | None = None, worker=Depends(worker_auth), s: Session = Depends(db)):
+        if body is not None:
+            from .recovery_finish import cleanup as recovery_cleanup
+            result = recovery_cleanup(s, worker_id=worker.id, execution_id=execution_id, proof=body)
+            s.commit()
+            return result
         lock(s)
         run = run_for(s, execution_id, worker)
+        from .core import ExecutionRecovery
+        if s.get(ExecutionRecovery, execution_id):
+            raise HTTPException(409, 'recovery execution requires identity proof')
         from .execution_logs import terminal_log_lock
         terminal_log_lock(s, run.id)
         if run.status not in TERMINAL:
