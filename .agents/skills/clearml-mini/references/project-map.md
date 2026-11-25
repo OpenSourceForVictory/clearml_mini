@@ -335,7 +335,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 控制对账：backend/app/recovery_control.py + worker/recovery_control.py，迁移 af296a7 保存可变决策，原授权保持不可变。平台已生效取消/超时/终态优先于迟到节点结果；退出码仅保留事实，不能释放资源或撤销终态。API 决策核对执行/代次/boot/运行身份，重复响应不续期，节点先持久化再采纳。test_recovery_control.py / test_worker_recovery_control.py 覆盖容忍边界、长期迟到、身份冲突、取消锁竞争、API 提交回复丢失后重建叠加用户取消、重复及持久化失败；完整恢复仍未启用。操作边界见 docs/operations.md。
 
 
-节点监督开发阶段：worker/recovery_supervisor.py 以执行级 flock、原子 fsync journal 保存控制时钟、原始业务起点、进程绑定、退出事实和精确重放请求。tick 本地观察/停止与 exchange HTTP 分开，不在网络期间持有监督锁。worker/recovery_runtime.py 使用 HostBackend.inspect(recovery=True) 的 InvocationID / Docker 完整 ID；缺少可信身份不接管，同名重建不停止，退出后卸载不抹掉原退出码。尚未接入 Worker.execute 或广告恢复能力。test_recovery_runtime.py 的 RECOVERY_RUNTIME_TEST=1 用真实 systemd 用户服务和本机镜像进行短程序+模拟时钟测试，API 联测为隔离 TestClient/SQLite，不是生产批次或 GPU/NPU 模型评测；不得将该测试当作功能已上线。
+节点监督开发阶段：worker/recovery_supervisor.py 以执行级 flock、原子 fsync journal 保存控制时钟、原始业务起点、进程绑定、退出事实和精确重放请求。tick 本地观察/停止与 exchange HTTP 分开，不在网络期间持有监督锁。worker/recovery_runtime.py 使用 HostBackend.inspect(recovery=True) 的 InvocationID / Docker 完整 ID；缺少可信身份不接管，同名重建不停止，退出后卸载不抹掉原退出码。协商执行已接入 Worker.execute，但仍未广告生产恢复能力。test_recovery_runtime.py 的 RECOVERY_RUNTIME_TEST=1 用真实 systemd 服务和本机镜像进行短程序+模拟时钟测试，并覆盖同节点两个同名服务实例、两个客户端执行的运行实体隔离；API 联测为隔离 TestClient/SQLite，不是生产批次或 GPU/NPU 模型评测；不得将该测试当作功能已上线。
 
 领取恢复：backend/app/recovery_claims.py 保存/查询原任务快照，迁移 b03a7b8；worker/recovery_claim.py 持久请求与幂等交接。查询走 execution_control，不取全局锁、不续租；收据 launch_authorized=false，平台取消/超时/撤销优先。已接入协商执行的 Worker 主循环，但当前不广告生产能力。test_recovery_claims.py / test_worker_recovery_claim.py 覆盖 HTTP 响应丢失、真实 PostgreSQL 并发及迁移、身份/摘要、重启与磁盘失败。4.8 验收及边界见 docs/validation/disconnected-execution-20261124/claim-launch-acceptance-20261125.md；操作和迁移限制见 docs/operations.md、docs/database-migration.md。
 

@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import uuid
 from types import SimpleNamespace
 
 import pytest
@@ -10,6 +11,75 @@ from worker.recovery_supervisor import RecoverySupervisor
 from worker.host_backend import HostBackend
 from worker.client import Worker, docker
 from backend.tests.test_host_backend import worker as host_worker
+
+
+@pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST') != '1',
+                    reason='real host/Docker multi-execution isolation opt-in')
+@pytest.mark.parametrize('mode', ['host', 'docker'])
+def test_real_same_name_services_and_clients_keep_distinct_runtime_identity(tmp_path, mode):
+    """Two same-name services and two clients on one node never share control."""
+    entries = []
+    script = 'import time; print("ready", flush=True); time.sleep(60)'
+    try:
+        for index, role in enumerate(('service', 'service', 'client', 'client')):
+            root = tmp_path / f'slot{index}'
+            root.mkdir()
+            (root / 'business.py').write_text(script)
+            worker = host_worker(root, ['python3', 'business.py'], timeout=0)
+            worker.host_mode = lambda value=mode: value == 'host'
+            task = worker.state['task']
+            task['service_instance_id'] = str(uuid.uuid4()) if role == 'service' else None
+            task['service_name'] = 'shared-display-name' if role == 'service' else None
+            task['device_index'] = index
+            execution = task['execution_id']
+            backend = HostBackend(worker)
+            name = 'mini-eval-' + execution
+            if mode == 'host':
+                backend.create(task)
+                path = backend.root / 'launch.json'
+                launch = json.loads(path.read_text())
+                launch['command'] = ['/usr/bin/python3', str(root / 'business.py')]
+                path.write_text(json.dumps(launch))
+                backend.start(task)
+            else:
+                docker('run', '--detach', '--name', name,
+                       '--label', 'mini-eval.execution=' + execution,
+                       '--label', 'mini-eval.service_name=shared-display-name',
+                       '--entrypoint', 'python',
+                       os.getenv('RECOVERY_RUNTIME_IMAGE', 'mini-eval-api:recovery-foundations-20261125'),
+                       '-c', script)
+                worker.name = lambda item: 'mini-eval-' + item
+                worker.inspect = lambda item, owner=worker: Worker.inspect(owner, item)
+            runtime = RecoveryRuntime(worker, execution)
+            entries.append((role, task['service_instance_id'], runtime, backend, name))
+
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            observed = [entry[2].inspect() for entry in entries]
+            if all(value['state'] == 'running' for value in observed):
+                break
+            time.sleep(.05)
+        assert all(value['state'] == 'running' for value in observed)
+        assert len({value['identity']['runtime_id'] for value in observed}) == 4
+        assert entries[0][1] != entries[1][1]
+        for entry, value in zip(entries, observed):
+            entry[2].worker.state['recovery'] = {
+                'generation': 'isolated-multicard-test', 'identity': value['identity']}
+
+        entries[1][2].stop(observed[1]['identity'])
+        assert entries[1][2].inspect()['state'] == 'exited'
+        assert all(entries[i][2].inspect()['state'] == 'running' for i in (0, 2, 3))
+    finally:
+        for _, _, runtime, backend, name in reversed(entries):
+            try:
+                current = runtime.inspect()
+                if current['state'] == 'running':
+                    runtime.stop(current['identity'])
+            finally:
+                if mode == 'host':
+                    backend.remove(runtime.execution_id)
+                else:
+                    docker('rm', '--force', name, check=False)
 
 
 @pytest.mark.parametrize('host',[True,False])
