@@ -171,6 +171,42 @@ def test_http_commits_before_reply(execution):
     with factory() as s:assert s.get(ExecutionRecoveryControl,'e').snapshot['reply']==response.json()
 
 
+def test_lost_control_ack_after_api_restart_observes_platform_cancel(execution):
+    from types import SimpleNamespace
+    factory, generation = execution
+    initial = observation(generation).model_dump()
+
+    def app_instance():
+        def db():
+            with factory() as session:
+                yield session
+        app = FastAPI()
+        control.install(app, db, lambda: SimpleNamespace(id='w'))
+        return app
+
+    with TestClient(app_instance()) as first_api:
+        first = first_api.post('/api/v1/worker/executions/e/recovery/reconcile', json=initial)
+        assert first.status_code == 200 and first.json()['action'] == 'track'
+        # The committed reply never reaches the Worker.
+    with factory() as session:
+        run = session.get(Run, 'r')
+        original_lease = run.lease_expires_at
+        run.status = 'CANCEL_REQUESTED'
+        session.commit()
+    with TestClient(app_instance()) as restarted_api:
+        replay = restarted_api.post('/api/v1/worker/executions/e/recovery/reconcile', json=initial)
+        assert replay.status_code == 200
+        assert replay.json()['duplicate'] and replay.json()['action'] == 'stop'
+        assert replay.json()['reason'] == 'cancelled'
+        fresh = restarted_api.post('/api/v1/worker/executions/e/recovery/reconcile',
+                                   json=observation(generation, sequence=2).model_dump())
+        assert fresh.status_code == 200 and fresh.json()['action'] == 'stop'
+    with factory() as session:
+        run = session.get(Run, 'r')
+        assert run.status == 'CANCEL_REQUESTED' and run.lease_expires_at == original_lease
+        assert not run.cleanup_confirmed
+
+
 def test_postgres_duplicate_control_concurrency(pg):
     from concurrent.futures import ThreadPoolExecutor
     factory=seed(pg[0])
