@@ -342,3 +342,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 恢复收尾：backend/app/recovery_finish.py 接入 execution.py 的 complete（可选 recovery）及 cleanup（可选身份正文）。锁序全局资源锁→Run→授权；完成验证已核对退出，保存原正文幂等且不释放，cleanup确认后才清理占用。平台终态优先；旧执行维持原路径，恢复执行禁止无证明旁路。缺结果的协议成功仍由现有完整性校验拒绝，未完成独立同步状态/主循环，不能宣称完整上线。测试 test_recovery_finish.py 包括实际HTTP和PostgreSQL取消竞争。
 
 恢复对账保留同一进程的已确认退出：相同退出可用新序号重报，退出后运行实体卸载不抹掉退出码；退出码冲突或声称重新运行进入待核对，不能据此完成/释放。此规则同样适用于平台已取消或超时后的上报。
+
+Worker 恢复收尾接线：worker/recovery_finish.py 通过原子 journal 持久化完成正文和 completion/remove/cleanup/done 阶段，Worker.finalize_recovery 调用，Worker.execute 对已有 recovery_finalization 优先恢复而不启动程序。RecoveryRuntime.remove 只接受同身份的退出实体，Docker 按完整ID删除，missing允许幂等重试；未经完成ACK不移除、未经清理ACK不清除执行记录。test_worker_recovery_finish.py 覆盖HTTP响应丢失、落盘失败、身份冲突和真实host/Docker短程序。领取和正常监督循环尚未接通，不作为功能已上线依据。

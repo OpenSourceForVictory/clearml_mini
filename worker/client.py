@@ -471,6 +471,11 @@ class Worker:
         return self.state['offset'] >= len(output)
 
     def execute(self, task):
+        if self.state and self.state.get('recovery_finalization'):
+            # A completion ACK may have been lost after the program finished.
+            # Resume only its durable cleanup, never enter the startup loop.
+            self.finalize_recovery()
+            return
         # Existing execution journals keep their negotiated protocol across upgrades.
         if self.state is not None:
             task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False), 'episode_timing_v1':self.state.get('task',{}).get('episode_timing_v1',False)}
@@ -839,6 +844,10 @@ class Worker:
             if probe_runner:probe_runner.close()
             done.set()
             thread.join(timeout=15)
+
+    def finalize_recovery(self, body=None):
+        from .recovery_finish import finalize
+        return finalize(self, body)
 
     def child(self, execution):
         identity = str(uuid.UUID(execution))

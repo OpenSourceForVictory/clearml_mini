@@ -49,6 +49,20 @@ class RecoveryRuntime:
             from .client import docker
             docker('stop', '--time', '10', expected_identity['runtime_id'], timeout=15)
 
+    def remove(self, expected_identity):
+        """Only after durable completion; never kill or remove a reused runtime."""
+        identity(expected_identity)
+        observed = self.inspect()
+        if observed['state'] == 'missing':
+            return
+        if observed['identity'] != expected_identity or observed['state'] != 'exited':
+            raise RuntimeError('refusing cleanup of an unconfirmed or different runtime')
+        if self.worker.host_mode():
+            HostBackend(self.worker).remove(self.execution_id)
+        else:
+            from .client import docker
+            docker('rm', expected_identity['runtime_id'])
+
     def _marker(self, value, expected):
         if str(uuid.UUID(expected)) != expected or self.worker.state['task'].get('recovery_launch_id') != expected:
             raise ValueError('runtime launch marker does not match original task')
