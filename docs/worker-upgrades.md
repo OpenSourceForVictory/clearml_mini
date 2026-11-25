@@ -181,3 +181,6 @@ HostBackend 的服务 Description 和 Docker 创建 label 现支持可选 recove
 Worker 的领取主循环现经 recovery_poll 统一分流：未声明能力且没有待恢复领取文件时仍发原协议请求；已有 .claim.json 时即使当前版本不声明能力，也必须先按原 request_id 恢复，不能绕过待确认分配领取新任务。收据先落盘，再幂等写入执行 journal 的 recovery_assignment，最后清除领取请求。磁盘写入失败、快照冲突、停止处置均保留证据；不得手工删除文件以绕过。完整监督入口尚未接线，带 recovery_assignment 的执行会拒绝进入旧 watchdog/启动路径；这不是已启用断联执行，禁止手工添加能力标识。
 
 启动恢复组合入口 `Worker.start_recovery()`（开发中，未从生产 execute 调用）使用原领取快照、原 boot、launch journal 和运行实体标识。准备运行文件完成后才请求短时启动确认；启动前持久写 attempt，API/运行时响应丢失后不刷新许可、不重复创建或启动。已绑定运行实例以原 InvocationID/容器 ID 恢复，父执行 journal 写入失败可以从 launch journal 补回身份。`created=true` 但实体不存在时保持待核对，不当作安全重启许可。机器重启、停止处置及身份冲突仍需完整控制核对；不要手工修改这些文件解除阻塞。
+
+
+Worker.monitor_recovery绑定原启动账本与运行身份，复用原请求/启动单调时间，重启不重新计算期限。关闭监控不会杀业务；若本地检查或网络交换尚未结束则保留独占权，不能启动第二个监督者。该组合入口尚未从生产execute调用，不可手动广告恢复能力。

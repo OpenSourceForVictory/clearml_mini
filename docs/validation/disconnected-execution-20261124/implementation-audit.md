@@ -181,3 +181,6 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 - 标准专项140 passed、1 skipped、3303 deselected，pytest成功；覆盖率报告 `coverage-artifacts/worker-recovery-start-20261125/`。新增recovery_start行/分支100%/100%；本次选集worker/client为20.44%/12.03%，整体覆盖率门槛仍失败。未降低门槛或排除业务代码。
 - 跳过项为PostgreSQL启动/取消锁竞争，随后新建独立PostgreSQL16.8补跑1 passed，无跳过；补跑未合并进覆盖率。容器测试资源清理，未操作生产数据库。
 - 同步操作/升级文档、Skill索引、OpenSpec设计与任务说明；未新增迁移，未启用或部署新恢复能力。持续监督、未启动停止处置、结果交付和清理的完整入口仍待接通，不能用本阶段替代整体断联验收。
+
+
+2026-11-25 监督组合入口：标准专项107 passed、3354 deselected、无跳过，报告coverage-artifacts/worker-recovery-monitor-20261125；recovery_monitor行/分支100/100，worker/client本次选集9.53/2.14，整体覆盖率门槛失败。真实host/Docker停止测试使用API响应替身，不能替代平台批次验收。首次2 failed/15 passed的证据见monitor-first-failure-20261125.txt，修正测试后17 passed。未部署，生产execute仍保留安全拦截。

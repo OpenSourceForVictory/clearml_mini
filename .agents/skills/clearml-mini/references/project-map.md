@@ -350,3 +350,6 @@ Worker 恢复收尾接线：worker/recovery_finish.py 通过原子 journal 持�
 Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢复请求选择原协议/持久领取；先执行 journal 后清除 claim，重复交接保留进度，停止收据保留待核对。`execute` 禁止 recovery_assignment 误入旧租约路径；完整监督入口仍待实现，不得广告能力或把此阶段当作发布完成。
 
 `worker/recovery_start.py` / `Worker.start_recovery()` 组合持久领取、运行文件准备、平台prepare、RecoveryLaunch和RecoveryRuntime：许可请求在准备后，attempt在实际启动前，恢复只核对原标识并补回父journal身份证明。当前为未启用组合入口，生产execute仍阻止新恢复执行退回旧watchdog；完整监督与交付尚待接线。
+
+
+`worker/recovery_monitor.py` / Worker.monitor_recovery：独立本地tick与外部exchange，原boot/执行代次/运行身份核对；异常观察重试、退出持久化、关闭时保留未结束交换的独占权。尚缺完整生产执行入口和交付收尾。

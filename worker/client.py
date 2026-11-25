@@ -857,6 +857,10 @@ class Worker:
         from .recovery_start import start_or_recover
         return start_or_recover(self)
 
+    def monitor_recovery(self, launch):
+        from .recovery_monitor import RecoveryMonitor
+        return RecoveryMonitor(self, launch)
+
     def child(self, execution):
         identity = str(uuid.UUID(execution))
         directory = Path(str(self.path) + '.runs')

@@ -1,0 +1,5 @@
+First real monitor run: 2 failed, 15 passed in 18.95s.
+Host: assertion expected exited, but a stopped systemd unit may unload and is correctly reported missing without inventing exit evidence.
+Docker: test waited 8s although docker stop allows 10s SIGTERM grace. The Python PID1 fixture had no SIGTERM handler. Cleanup then found exchange still active and correctly retained ownership.
+Correction: test accepts missing/exited after confirmed stop, installs SIGTERM handler in test program, and joins exchange within the runtime stop bound. No production limit or safety assertion was relaxed.
+Retry: 17 passed, including real host and Docker.
