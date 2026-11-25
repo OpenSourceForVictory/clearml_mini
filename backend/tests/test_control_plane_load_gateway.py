@@ -7,8 +7,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from backend.app.db_budget import Settings
-from backend.app.core import ClientTemplate
-from backend.tests.control_plane_load import api_log_names, pool_profiles, render_gateway_config, render_priority_gateway_config, seed
+from backend.app.core import ClientTemplate, ExecutionRecovery, ExecutionRecoveryClaim, ExecutionRecoveryControl, Run, Slot, Worker
+from backend.tests.control_plane_load import api_log_names, pool_profiles, recovery_database_counts, render_gateway_config, render_priority_gateway_config, seed
 from backend.app.priority_runtime import ROLE_POOLS
 
 
@@ -32,6 +32,39 @@ def test_mixed_load_seed_adds_published_command_template_without_changing_worker
     assert len(identities) == 2
     assert [(t.id, t.task_type, t.status) for t in templates] == [
         ('load-template', 'command', 'published')]
+    engine.dispose()
+
+
+def test_recovery_load_seed_binds_original_claim_and_keeps_ui_worker_separate():
+    engine = create_engine('sqlite://')
+    identities, grants, groups = seed(engine, 3, mixed_ui=True, agent_telemetry=True,
+                                     recovery_load=True, cards_per_node=2)
+    assert len(identities) == 3 and set(grants) == {identities[0][0], identities[1][0]}
+    assert groups[identities[0][0]]['worker_id'] == groups[identities[1][0]]['worker_id']
+    assert groups[identities[2][0]]['worker_id'] != groups[identities[0][0]]['worker_id']
+    with Session(engine) as session:
+        for identity in grants:
+            run = session.get(Run, identity)
+            grant = session.get(ExecutionRecovery, identity)
+            receipt = session.get(ExecutionRecoveryClaim, grants[identity]['request_id'])
+            assert run.status == 'STARTING' and not run.cleanup_confirmed
+            assert grant.generation == grants[identity]['generation']
+            assert receipt.execution_id == identity
+            assert session.get(Slot, identity).worker_id == groups[identity]['worker_id']
+        assert session.get(Slot, identities[0][0]).gpu_index == 0
+        assert session.get(Slot, identities[1][0]).gpu_index == 1
+        assert len(session.scalars(select(Worker)).all()) == 2
+        assert session.get(Run, identities[-1][0]) is None
+        assert recovery_database_counts(session) == {
+            'completed':0,'cleanup_confirmed':0,'result_sync_complete':0}
+        run = session.get(Run, identities[0][0])
+        run.status = 'SUCCEEDED'
+        run.cleanup_confirmed = True
+        session.add(ExecutionRecoveryControl(execution_id=identities[0][0],
+                                             snapshot={'result_sync':'complete'}))
+        session.flush()
+        assert recovery_database_counts(session) == {
+            'completed':1,'cleanup_confirmed':1,'result_sync_complete':1}
     engine.dispose()
 
 

@@ -19,16 +19,19 @@ import uuid
 
 import httpx
 import jwt
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
-from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, now
+from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, ExecutionRecovery, ExecutionRecoveryControl, now
 from backend.app import priority_runtime, priority_gateway
 from backend.tests.control_plane_metrics import observe, with_outage
 
 
-def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
+def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
+         recovery_load=False, cards_per_node=1):
+    if type(cards_per_node) is not int or cards_per_node < 1:
+        raise ValueError('cards_per_node must be a positive integer')
     Base.metadata.create_all(engine)
     with sessionmaker(engine).begin() as s:
         s.add(User(id='u', username='load-test', password_hash='unused'))
@@ -38,19 +41,32 @@ def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
                                  command=['true'], protocols=[], task_type='command',
                                  integration_mode='sdk-task-result', status='published'))
     identities = []
+    recovery_grants = {}
+    nodes, node_groups = {}, {}
     for i in range(count):
         identity, token = uuid.uuid4().hex, 'wk_' + uuid.uuid4().hex
         agent_session = uuid.uuid4().hex
+        node_index = i//cards_per_node
+        first_card = node_index not in nodes
+        if first_card:
+            nodes[node_index] = {'worker_id':identity, 'token':token,
+                                 'session':agent_session, 'slots':[]}
+        node = nodes[node_index]
+        token, agent_session = node['token'], node['session']
+        node['slots'].append(identity)
+        node_groups[identity] = node
         with sessionmaker(engine).begin() as s:
             connection = {'agent': {'session': agent_session, 'boot_id': uuid.uuid4().hex,
                                     'resource_protocol': 1, 'revision': 0,
                                     'desired': {'heartbeat_seconds': 5, 'sample_seconds': 15, 'programs': 'running'}}} if agent_telemetry else {}
-            s.add(Worker(id=identity, node_name='load-'+str(i), token_hash=hashlib.sha256(token.encode()).hexdigest(),
-                         connection=connection))
-            s.flush()
-            if agent_telemetry:
-                s.add(AgentObservation(worker_id=identity, session=agent_session, payload={}))
-            s.add(Slot(id=identity, worker_id=identity, pool_id='p', node_name='load-'+str(i), queue_name='load-'+identity, gpu_index=0,
+            if first_card:
+                s.add(Worker(id=node['worker_id'], node_name='load-'+str(node_index),
+                             token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                             max_concurrent=cards_per_node, connection=connection))
+                s.flush()
+                if agent_telemetry:
+                    s.add(AgentObservation(worker_id=node['worker_id'], session=agent_session, payload={}))
+            s.add(Slot(id=identity, worker_id=node['worker_id'], pool_id='p', node_name='load-'+str(node_index), queue_name='load-'+identity, gpu_index=i%cards_per_node,
                        gpu_uuid='mock:'+identity, gpu_model='virtual', vram_mb=1024,
                        protocol_version=18 if mixed_ui and i == count-1 else 1,
                        client_images=['load:command']))
@@ -58,20 +74,46 @@ def seed(engine, count, *, agent_telemetry=False, mixed_ui=False):
             if mixed_ui and i == count-1:
                 identities.append((identity, token, agent_session) if agent_telemetry else (identity, token))
                 continue
-            s.add(ServiceInstance(id=identity, name='load', worker_id=identity, slot_id=identity,
+            s.add(ServiceInstance(id=identity, name='load', worker_id=node['worker_id'], slot_id=identity,
                                   address='127.0.0.1', port=19000, template_snapshot={}, current_job_id=identity))
             s.flush()
             s.add(Job(id=identity, owner_id='u', pool_id='p', title='load', benchmark='mock', model_ref='mock',
-                      episodes=1, status='RUNNING', service_instance_id=identity))
+                      episodes=1, status='RUNNING', service_instance_id=identity,
+                      client_spec=({'template':{'task_type':'command',
+                                                'integration_mode':'sdk-task-result'},
+                                    'timeout_seconds':0} if recovery_load else {})))
             s.flush()
             s.add(Run(id=identity, job_id=identity, slot_id=identity, execution_id=identity, attempt=1,
-                      status='RUNNING', lease_expires_at=now()+timedelta(seconds=30)))
+                      status='STARTING' if recovery_load else 'RUNNING',
+                      cleanup_confirmed=not recovery_load,
+                      enqueued_at=now() if recovery_load else None,
+                      lease_expires_at=now()+timedelta(seconds=30)))
+            s.flush()
+            if recovery_load:
+                from backend.app.recovery_claims import bind
+                receipt = bind(s, request_id=str(uuid.uuid4()), worker_id=node['worker_id'],
+                               slot_id=identity, run_id=identity,
+                               task={'execution_id':identity,'run_id':identity,'job_id':identity,
+                                     'benchmark':'mock','episodes':1}, tolerance=None)
+                recovery_grants[identity] = receipt
         identities.append((identity, token, agent_session) if agent_telemetry else (identity, token))
-    return identities
+    return (identities, recovery_grants, node_groups) if recovery_load else identities
 
 
 def percentile(values, fraction):
     return sorted(values)[min(len(values)-1, int(len(values)*fraction))] if values else None
+
+
+def recovery_database_counts(connection):
+    rows = connection.execute(select(Run.status, Run.cleanup_confirmed,
+                                     ExecutionRecoveryControl.snapshot)
+        .join(ExecutionRecovery, ExecutionRecovery.run_id == Run.id)
+        .outerjoin(ExecutionRecoveryControl,
+                   ExecutionRecoveryControl.execution_id == ExecutionRecovery.execution_id)).all()
+    return {'completed':sum(status == 'SUCCEEDED' for status, _, _ in rows),
+            'cleanup_confirmed':sum(bool(cleanup) for _, cleanup, _ in rows),
+            'result_sync_complete':sum(bool(snapshot and snapshot.get('result_sync') == 'complete')
+                                        for _, _, snapshot in rows)}
 
 
 def render_gateway_config(template, ordinary_port, control_port, gateway_port):
@@ -139,7 +181,8 @@ def acceptable_responses(by_kind, *, mixed_ui, bulk_outage):
 
 async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0,
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
-                   progress_path=None, log_interval=2, user_token=None, continuous_batches=False, varied_logs=False):
+                   progress_path=None, log_interval=2, user_token=None, continuous_batches=False,
+                   varied_logs=False, recovery_grants=None, node_groups=None):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -155,6 +198,14 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                    'retried': False, 'retry_count':0, 'batch_count':0, 'completed_batches':[],
                    'executions': [], 'duplicate_results': 0, 'errors': []}
     running_identities = identities[:-1] if user_token else identities
+    recovery_grants = recovery_grants or {}
+    node_groups = node_groups or {}
+    lifecycle_ids = set(item[0] for item in running_identities[:max(1, len(running_identities)//10)]) if recovery_grants else set()
+    recovered = set()
+    recovery_evidence = {'target_lifecycle':len(lifecycle_ids), 'completed':0,
+                         'cleanup_confirmed':0, 'result_sync_complete':0,
+                         'duplicate_results':0, 'errors':[]}
+    release_latencies = []
     started = time.monotonic()
     async with AsyncExitStack() as stack:
         if client_per_worker:
@@ -288,12 +339,17 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             await asyncio.sleep(random.uniform(0, 1))
             while time.monotonic() - started < seconds:
                 sampled = time.time()
+                cards = node_groups[identity]['slots'] if identity in node_groups else [identity]
+                gpu_values = {key:value for index, slot in enumerate(cards) for key,value in (
+                    (f'gpu_{index}_uuid', 'mock:'+slot),
+                    (f'gpu_{index}_total_mb', 1024),
+                    (f'gpu_{index}_free_mb', 1024),
+                    (f'gpu_{index}_utilization', 0))}
                 reply = await post('agent', identity, token, 'agent/heartbeat', {
                     'session': session, 'sequence': sequence, 'applied_revision': 0,
                     'config_status': 'applied',
                     'samples': {'gpu': {'status': 'ok', 'sampled_at': sampled,
-                                        'values': {'gpu_0_uuid': 'mock:'+identity, 'gpu_0_total_mb': 1024,
-                                                   'gpu_0_free_mb': 1024, 'gpu_0_utilization': 0}},
+                                        'values': gpu_values},
                                 'host': {'status': 'ok', 'sampled_at': sampled,
                                          'values': {'cpu_count': 32, 'memory_total_mb': 65536,
                                                     'memory_available_mb': 65536}}}})
@@ -315,7 +371,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             await asyncio.sleep(random.uniform(0, 1))
             while time.monotonic()-started < seconds:
                 cycle = time.monotonic()
-                reply = await post('heartbeat', identity, token, 'worker/heartbeat', {'slot_id':identity, 'execution_id':identity,
+                reply = await post('heartbeat', identity, token, 'worker/heartbeat', {'slot_id':identity,
+                                    **({} if recovery_grants else {'execution_id':identity}),
                                     'telemetry': {'free_vram_mb':1024, 'gpu_utilization':0}})
                 age = time.monotonic()-latest_heartbeat[identity]
                 worst_heartbeat_age = max(worst_heartbeat_age, age)
@@ -329,6 +386,9 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                     await asyncio.sleep((hint or 0) + random.uniform(retry / 2, retry))
                     retry = min(2, retry * 2)
                     continue
+                if identity in recovered:
+                    await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)))
+                    continue
                 await post('health', identity, token, f'worker/executions/{identity}/service-health', {'ready':True})
                 if not independent_logs:
                     reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2',
@@ -336,8 +396,90 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                     if reply is not None and reply.status_code == 200:
                         seq = reply.json()['next_sequence']
                 await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
-                await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
+                if recovery_grants:
+                    receipt = recovery_grants[identity]
+                    await post('claim', identity, token, f'worker/slots/{identity}/recovery/claim',
+                               {'request_id':receipt['request_id']})
+                else:
+                    await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
                 await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)) + random.uniform(0,.1))
+
+        async def recovery_control(identity, token):
+            receipt = recovery_grants[identity]
+            generation = receipt['generation']
+            bound = {'kind':'host', 'boot_id':'simulated-load-boot',
+                     'runtime_id':hashlib.md5(identity.encode()).hexdigest()}
+            path = f'worker/executions/{identity}'
+            sequence = 1
+            deadline = started + seconds + max(10, drain_seconds)
+            finish_at = started + seconds*.6 if identity in lifecycle_ids else float('inf')
+
+            async def reliable(kind, suffix, body):
+                retry = .25
+                while time.monotonic() < deadline:
+                    reply = await post(kind, identity, token, path+suffix, body)
+                    if reply is not None and reply.status_code == 200:
+                        return reply.json()
+                    if reply is not None and reply.status_code not in (429, 502, 503, 504):
+                        recovery_evidence['errors'].append({'identity':identity, 'kind':kind,
+                                                            'status':reply.status_code,
+                                                            'detail':reply.text[:160]})
+                        return None
+                    hint = parse_retry_after(reply.headers.get('Retry-After')) if reply is not None else None
+                    await asyncio.sleep((hint or 0) + random.uniform(retry/2, retry))
+                    retry = min(2, retry*2)
+                recovery_evidence['errors'].append({'identity':identity,'kind':kind,'reason':'deadline'})
+                return None
+
+            await asyncio.sleep(random.uniform(0, 1))
+            while time.monotonic() < min(finish_at, started+seconds):
+                body = {'generation':generation, 'sequence':sequence, 'identity':bound,
+                        'state':'running', 'elapsed_seconds':max(0,time.monotonic()-started)}
+                reply = await reliable('recovery_control', '/recovery/reconcile', body)
+                if reply is None or reply.get('action') != 'track':
+                    recovery_evidence['errors'].append({'identity':identity,
+                                                        'kind':'recovery_control',
+                                                        'reason':'track_not_confirmed'})
+                    return
+                sequence += 1
+                await asyncio.sleep(2)
+            if identity not in lifecycle_ids:
+                return
+            exit_fact = {'generation':generation, 'sequence':sequence, 'identity':bound,
+                         'state':'exited', 'exit_code':0,
+                         'elapsed_seconds':max(0,time.monotonic()-started)}
+            reply = await reliable('recovery_exit', '/recovery/reconcile', exit_fact)
+            if reply is None or reply.get('action') != 'retain':
+                recovery_evidence['errors'].append({'identity':identity,
+                                                    'kind':'recovery_exit',
+                                                    'reason':'exit_not_retained'})
+                return
+            recovered.add(identity)
+            proof = {'generation':generation, 'identity':bound}
+            complete = await reliable('recovery_complete', '/complete',
+                                      {'recovery':proof,'pending_results':True,
+                                       'status':'SUCCEEDED','exit_code':0})
+            if complete is None or complete.get('status') != 'SUCCEEDED':
+                return
+            recovery_evidence['completed'] += 1
+            completed_at = time.monotonic()
+            cleanup = await reliable('recovery_cleanup', '/cleanup', proof)
+            if cleanup is None or not cleanup.get('cleanup_confirmed'):
+                return
+            recovery_evidence['cleanup_confirmed'] += 1
+            release_latencies.append(time.monotonic()-completed_at)
+            result = {'generation':generation,'kind':'task_result','sequence':0,'apply':True,
+                      'body':{'success':True,'metrics':{},'summary':'simulated load result'}}
+            accepted = await reliable('recovery_result', '/recovery/results', result)
+            if accepted is None or accepted.get('application') != 'applied':
+                return
+            duplicate = await reliable('recovery_result_duplicate', '/recovery/results', result)
+            if duplicate is None or not duplicate.get('duplicate'):
+                return
+            recovery_evidence['duplicate_results'] += 1
+            sealed = await reliable('recovery_results_finished', '/recovery/results-finished', proof)
+            if sealed is not None and sealed.get('result_sync') == 'complete':
+                recovery_evidence['result_sync_complete'] += 1
         async def command_worker(identity, token):
             nonlocal worst_heartbeat_age
             current, result_sent = None, False
@@ -456,16 +598,21 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                         if batch_id is None:
                             return
                 await asyncio.sleep(2)
-        log_tasks = ([asyncio.create_task(task) for item in running_identities for task in
+        log_tasks = ([asyncio.create_task(task) for item in running_identities
+                      if item[0] not in lifecycle_ids for task in
                       (produce_logs(item[0]), send_logs(*item[:2]))] if independent_logs else [])
-        agent_tasks = [asyncio.create_task(agent(*item)) for item in identities] if agent_telemetry else []
+        agent_identities = ([item for item in identities
+                             if not node_groups or item[0] == node_groups[item[0]]['slots'][0]]
+                            if agent_telemetry else [])
+        agent_tasks = [asyncio.create_task(agent(*item)) for item in agent_identities]
         loop_task = asyncio.create_task(sample_loop_lag())
         progress_task = asyncio.create_task(sample_progress()) if progress_path else None
         ui_task = asyncio.create_task(ui_traffic()) if user_token else None
         worker_tasks = [worker(*item[:2]) for item in running_identities]
+        control_tasks = [recovery_control(*item[:2]) for item in running_identities] if recovery_grants else []
         if user_token:
             worker_tasks.append(command_worker(*identities[-1][:2]))
-        await asyncio.gather(*worker_tasks)
+        await asyncio.gather(*worker_tasks, *control_tasks)
         end = time.monotonic()
         await loop_task
         if progress_task:
@@ -492,6 +639,11 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                                          'max': max(v), 'samples': len(v)} for k, v in http_phases.items()},
             'progress': progress,
             'ui_evidence': ui_evidence if user_token else None,
+            'recovery_evidence': ({**recovery_evidence,
+                'release_latency_seconds':{'p95':percentile(release_latencies,.95),
+                                           'p99':percentile(release_latencies,.99),
+                                           'max':max(release_latencies,default=None)}}
+                                  if recovery_grants else None),
             'independent_logs': independent_logs,
             'log_generation': {**dict(log_stats), 'max_pending_chunks_per_worker': max_log_pending,
                                'final_pending_chunks': sum(len(queue) for queue in log_queues.values()),
@@ -517,6 +669,10 @@ def main():
     parser.add_argument('--agent-telemetry', action='store_true')
     parser.add_argument('--mixed-ui', action='store_true',
                         help='enable real scheduler plus authenticated batch submit/control/list/detail')
+    parser.add_argument('--recovery-load', action='store_true',
+                        help='simulate negotiated execution reconciliation, completion, cleanup and late reliable results')
+    parser.add_argument('--cards-per-node', type=int, default=1,
+                        help='group simulated card slots under one node identity (recovery load only)')
     parser.add_argument('--continuous-batches', action='store_true', help='repeat submit/fail/retry/succeed during mixed UI load')
     parser.add_argument('--bulk-outage-seconds', type=int, default=0, help='stop bulk role 30 seconds into load, then restart')
     parser.add_argument('--postgres-container', help='optional disposable PostgreSQL container for read-only docker stats')
@@ -537,6 +693,11 @@ def main():
         parser.error('--bulk-outage-seconds requires four roles, independent logs and at least 60 + outage seconds')
     if args.continuous_batches and (not args.mixed_ui or args.seconds < 30):
         parser.error('--continuous-batches requires --mixed-ui and at least 30 seconds')
+    if args.recovery_load and (not args.priority_api or not args.mixed_ui or
+                               not args.agent_telemetry or args.seconds < 30):
+        parser.error('--recovery-load requires four roles, mixed UI, Agent telemetry and at least 30 seconds')
+    if args.cards_per_node < 1 or (args.cards_per_node != 1 and not args.recovery_load):
+        parser.error('--cards-per-node must be positive and currently requires --recovery-load')
     if args.priority_api and (args.split_api or args.role_aware_pools or args.no_admission or args.no_backpressure):
         parser.error('--priority-api requires its own pools and admission, without --split-api')
     if args.role_aware_pools and not args.split_api:
@@ -569,7 +730,7 @@ def main():
                'configured_total_connections':sum(sum(p.values()) for p in profiles.values()),
                'db_backpressure_enabled':not args.no_backpressure,
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
-               'cards_per_node':1,
+               'cards_per_node':args.cards_per_node,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'log_payload_style':'varied-structured' if args.varied_logs else 'repeated-character',
                'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui or args.priority_api,
@@ -580,8 +741,13 @@ def main():
                'client_per_worker':args.client_per_worker,
                'agent_telemetry':args.agent_telemetry,
                'mixed_ui':args.mixed_ui,
+               'recovery_load':args.recovery_load,
                'continuous_batches':args.continuous_batches, 'bulk_outage_seconds':args.bulk_outage_seconds,
-               'scope':('real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read/retry, '
+               'scope':('real HTTP/PostgreSQL, simulated negotiated recovery control/finish/cleanup/late result; '
+                        'about 10% of device slots complete during independent log traffic, others remain active; '
+                        'real scheduler plus authenticated Web/Agent; excludes real business processes'
+                        if args.recovery_load else
+                        'real HTTP/PostgreSQL, simulated running services, authenticated batch submit/control/read/retry, '
                         'real scheduler and one simulated command Worker completing two attempts; excludes real business processes'
                         if args.mixed_ui else
                         'real HTTP/PostgreSQL, simulated running services and Agent telemetry; '
@@ -601,7 +767,10 @@ def main():
             role_processes = {}
             gateway = None
             try:
-                identities = seed(engine, count, agent_telemetry=args.agent_telemetry, mixed_ui=args.mixed_ui)
+                seeded = seed(engine, count, agent_telemetry=args.agent_telemetry,
+                              mixed_ui=args.mixed_ui, recovery_load=args.recovery_load,
+                              cards_per_node=args.cards_per_node)
+                identities, recovery_grants, node_groups = seeded if args.recovery_load else (seeded, None, None)
                 with engine.begin() as c:
                     c.execute(text("UPDATE evaluation_runs SET lease_expires_at=now()+interval '30 seconds'"))
                 def free_port():
@@ -686,6 +855,7 @@ def main():
                                                   progress_path=output/f'progress-{count}.jsonl' if args.progress_every_30s else None,
                                                   log_interval=args.log_interval,
                                                   continuous_batches=args.continuous_batches, varied_logs=args.varied_logs,
+                                                  recovery_grants=recovery_grants, node_groups=node_groups,
                                                   user_token=jwt.encode({'sub':'u', 'exp':int(time.time())+3600}, jwt_secret,
                                                                         algorithm='HS256') if args.mixed_ui else None)
                     if args.bulk_outage_seconds:
@@ -731,7 +901,12 @@ def main():
                     result['database_max_connections'] = int(c.scalar(text('SHOW max_connections')))
                     result['database_connections_at_end'] = c.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()"))
                     result['executions'] = c.scalar(text('SELECT count(*) FROM evaluation_runs'))
+                    if args.recovery_load:
+                        result['recovery_database'] = recovery_database_counts(c)
                 result['workers'] = count
+                result['device_workers'] = count
+                result['node_count'] = (len({group['worker_id'] for group in node_groups.values()})
+                                        if node_groups else count)
                 result['passed'] = (result['expired_leases'] == 0 and result['telemetry_stale'] == 0 and
                     result['max_heartbeat_gap_seconds'] < 10 and all(v['p99'] < 5 for v in result['latency_seconds'].values()) and
                     acceptable_responses(result['requests_by_kind'], mixed_ui=args.mixed_ui, bulk_outage=args.bulk_outage_seconds))
@@ -742,7 +917,8 @@ def main():
                                         and not logs.get('permanent_error', 0) and not logs.get('unexpected_ack', 0))
                 if args.agent_telemetry:
                     result['passed'] = (result['passed'] and result['max_final_agent_age_seconds'] < 10
-                                        and result['requests_by_kind'].get('agent', {}).get('200', 0) >= count)
+                                        and result['requests_by_kind'].get('agent', {}).get('200', 0) >=
+                                        (count + args.cards_per_node - 1)//args.cards_per_node)
                 if args.mixed_ui:
                     ui = result['ui_evidence']
                     result['passed'] = (result['passed'] and ui['batch_id'] is not None
@@ -752,6 +928,19 @@ def main():
                                         and [e['status'] for e in ui['executions']] == ['FAILED', 'SUCCEEDED']*ui['batch_count']
                                         and ui['duplicate_results'] == 2*ui['batch_count']
                                         and result['requests_by_kind'].get('ui_detail', {}).get('200', 0) > 0)
+                if args.recovery_load:
+                    recovery = result['recovery_evidence']
+                    target = recovery['target_lifecycle']
+                    result['passed'] = (result['passed'] and target > 0 and not recovery['errors']
+                                        and recovery['completed'] == recovery['cleanup_confirmed'] ==
+                                        recovery['result_sync_complete'] == recovery['duplicate_results'] == target
+                                        and result['recovery_database'] == {
+                                            'completed':target,'cleanup_confirmed':target,
+                                            'result_sync_complete':target}
+                                        and result['requests_by_kind'].get('recovery_control', {}).get('200', 0) >= count-1
+                                        and result['successful_latency_seconds'].get('recovery_control', {}).get('p99', 999) < 5
+                                        and recovery['release_latency_seconds']['max'] is not None
+                                        and recovery['release_latency_seconds']['max'] < 9)
                 if args.priority_api:
                     result['passed'] = (result['passed'] and all(row['ready_status'] == 200 and row['wrong_route_status'] == 404
                                          for row in result['role_topology'].values()) and result['role_failure'] == {

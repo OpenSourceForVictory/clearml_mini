@@ -299,6 +299,8 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 执行锁范围：运行中续租按 Run → Slot 行锁，不修改 Worker JSON；非执行配置确认仍锁 Worker。日志/回合/旧产物/任务结果按 Run 串行化，首次启动转换及资源分配/释放仍用全局调度锁。恢复对账的稳态 RUNNING 且租约尚未到期路径只取 Run → 原授权行；STARTING 转换和租约到期仍先取全局资源锁，完成与清理保留全局资源锁 → Run → 原授权行。单 Run 锁忙返回可重试 503；预读后状态/租约变化则重试，不能无锁改变分配或服务就绪。迟到结果与最终同步采用 Run → 原授权行，不改变分配。超时回收取行锁后刷新租约并复核，忙执行留到下次 tick。回归见 `backend/tests/test_execution_lock_scope.py` 及恢复控制/收尾/领取测试；完整审计见 `docs/validation/disconnected-execution-20261124/lock-audit-20261125.md`，运维边界见 `docs/operations.md`。断联删除仍须独立验收。
 
+恢复混合负载：`backend/tests/control_plane_load.py --recovery-load --priority-api --mixed-ui --agent-telemetry --cards-per-node 4 --independent-logs --continuous-batches --varied-logs --client-per-worker` 在隔离 PostgreSQL 上模拟每节点多卡、原授权对账、完成/清理、可靠结果、日志/产物写入和页面查询。`--client-per-worker` 是现场近似，所有卡共用一个客户端仅用于连接队列压力诊断。100 卡位/25 节点/90 秒独立客户端短测通过，仍有可重试 503；共用客户端短测因心跳最大间隔超标失败。见 `docs/validation/disconnected-execution-20261124/recovery-control-load-20261125.md`；未覆盖真实业务、页面产物浏览或30分钟基线。
+
 控制面预算新增 DB_OBSERVATION_POOL_SIZE / DB_RESULT_POOL_SIZE / DB_SCHEDULER_POOL_SIZE，完成与清理属于控制池，Agent 监控不借控制预留。AgentObservation/agent_state.py 与 ad074e5 迁移分离期望配置和最新观察；隔离 PostgreSQL 空库、历史回填、降级合并、失败回滚及旧协议专项见 docs/validation/disconnected-execution-20261124/agent-migration-20261125.md；旧 API 不可混写，发布前检查迁移及同节点竞争专项。断联继续执行已实现计时、收据、控制对账与本地监督模块，完整执行循环和终态补传仍未接通，不能用当前重试代码宣称已启用。
 
 2026-11-24 重新验证已部署版本：真机宿主机 SDK 单任务及同卡三任务排队均成功，100 仿真 Worker 混合上报完成 30 分钟；心跳无 503、日志最终无积压，普通通道仍有 97 次连接池 503。具体口径、全量回归与失败/跳过边界见 [真机与稳定性复测](../../../../docs/validation/real-load-full-20261124/README.md)。

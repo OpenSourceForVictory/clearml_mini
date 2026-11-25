@@ -59,6 +59,8 @@ docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/spli
 
 隔离混合负载可用 `backend/tests/control_plane_load.py --split-api --role-aware-pools --no-admission --ordinary-pool 23 --control-pool 40 --observation-pool 9 --result-pool 7 --client-per-worker --agent-telemetry --independent-logs` 复现；它会新建并删除独立测试数据库，在随机本机端口启动两个 API 和临时 Nginx，**不得指向生产数据库**。此前 26 连接配置下 100 Worker 60 秒短测通过，最长心跳间隔 3.59 秒，全部 3000 条日志最终确认，仍有 247 次连接池 503 和 682 次领取调度锁 503。40/40 配置的专项结果见[双进程混合负载专项](validation/split-control-api-process-20261123/load/README.md)。观察池大小是同进程观察类数据库连接上限，并非可接入节点数；双进程下 Agent 只进入普通 API。不要按短测宣称生产 100/200 Worker 容量。
 
+新恢复协议的隔离负载使用 `LOG_TEST_DATABASE_URL` 指向**一次性 PostgreSQL 管理库**后运行 `.venv/bin/python -m backend.tests.control_plane_load --grades 100 --seconds 90 --output /tmp/mini-eval-recovery-load --priority-api --mixed-ui --agent-telemetry --recovery-load --cards-per-node 4 --independent-logs --continuous-batches --varied-logs --client-per-worker --progress-every-30s`。脚本创建并删除独立测试库，启动四角色 API 和临时网关；约 10% 的模拟执行完成、清理和补报，其余持续心跳、恢复对账、日志、产物写入及页面查询/控制。`--client-per-worker` 表示独立节点 HTTP 客户端，符合节点各自连接的现场形态；共用客户端保留为更苛刻的连接队列压力诊断，不能把两者混称同一容量结果。脚本校验心跳间隔 <10 秒、逐类请求 P99 <5 秒、恢复控制成功 P99 <5 秒、完成到清理最大 <9 秒、日志最终无积压及数据库结果计数。90 秒通过只是短测，30 分钟及真实程序场景仍需另验，见[专项记录](validation/disconnected-execution-20261124/recovery-control-load-20261125.md)。
+
 排查期间可临时设置 `DB_BUDGET_DIAGNOSTICS=1` 并重建 API，输出每请求首次借连接的 `wait_ms`、池内 `checked_out` 和请求 `elapsed_ms`，不输出 SQL 参数或业务内容。该诊断会增加日志量，平时默认关闭；commit 后再次借连接仍受池预算限制，但不计入首次借连接指标。
 
 现有平台升级、数据库备份、Compose 自动迁移及失败处理见 [数据库迁移与 Compose 升级指南](database-migration.md)。可在其他部署机器按该文档执行，须沿用该机器的环境文件、项目名与覆盖配置。
