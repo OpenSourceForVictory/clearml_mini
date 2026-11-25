@@ -307,7 +307,8 @@ def test_pending_sync_does_not_reopen_cancelled_attempt_after_retry(execution):
     assert complete(factory,proof,pending_results=True)['status']=='CANCELLED'
     cleanup(factory,proof)
     with factory() as s:new_id=retry_job(s,s.get(Job,'j')).id;s.commit()
-    assert sync_results(factory,proof)['status']=='CANCELLED'
+    sealed = sync_results(factory,proof)
+    assert sealed['status']=='CANCELLED' and sealed['result_sync']=='complete'
     with factory() as s:
         assert s.get(Job,'j').status=='PENDING' and s.get(Run,new_id).status=='PENDING'
 
@@ -468,6 +469,25 @@ def test_postgres_deleted_batch_final_ack_remains_idempotent(pg):
         assert session.get(Job, 'j') is None
         assert session.get(Run, 'r') is None
         assert session.get(ExecutionRecovery, 'e') is not None
+
+
+def test_postgres_platform_cancelled_late_success_seals_without_missing_metrics(pg):
+    from backend.app.recovery_records import grant
+    factory = seed(pg[0])
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'STARTING'
+        generation = grant(session, run, 'w').generation
+        session.commit()
+    proof = prepare(factory, generation)
+    with factory() as session:
+        job = session.get(Job, 'j')
+        job.benchmark = 'inference-service'
+        job.status = session.get(Run, 'r').status = 'CANCEL_REQUESTED'
+        session.commit()
+    assert complete(factory, proof, pending_results=True)['status'] == 'CANCELLED'
+    assert cleanup(factory, proof)['cleanup_confirmed']
+    assert sync_results(factory, proof)['result_sync'] == 'complete'
 
 
 def test_result_sync_http_seal_reports_missing_episode_as_failed(api):
