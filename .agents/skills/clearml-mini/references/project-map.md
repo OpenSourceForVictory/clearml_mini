@@ -377,3 +377,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 新增恢复控制接口必须同时同步 `priority_route_manifest.json`、生成的 `deploy/priority-api-nginx.conf`、兼容双进程的 `deploy/split-api-nginx.conf` 和独立接口审计。`recovery/not-started` 两种网关均指向控制进程；全量曾捕获两份配置遗漏，修复与证据见 `docs/validation/disconnected-execution-20261124/full-20261125.json`。
 
 日志积压恢复：worker/log_stream.py 在准备新 v2 上传块前将待传范围收缩到最新 32 条环形记录（最多 64 KiB），跳过历史时报告 gap；已持久化 pending 原样重试以保持摘要幂等。协议事件和节点独立日志不随上传窗口淘汰。见 docs/execution-logs.md、test_log_sender.py；不代表多节点恢复容量已验收。
+
+日志重连集中验证：test_log_reconnect_postgres.py 使用 LOG_TEST_DATABASE_URL 的一次性数据库、四角色真实 HTTP 和 100 个 Sender；包含提交后 ACK 丢失、心跳/结果/任务列表并行。只验证预置积压恢复与幂等，不代表真实业务、网关或持续容量已验收。

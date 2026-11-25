@@ -1,0 +1,106 @@
+{
+  "command": "LOG_TEST_DATABASE_URL=<disposable PostgreSQL admin URL> .venv/bin/python -m pytest backend/tests/test_log_reconnect_postgres.py -q -s --import-mode=importlib",
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "test_seconds": 34.04,
+  "cases": [
+    {
+      "lost_first_ack": false,
+      "workers": 100,
+      "roles": 4,
+      "pool_sizes": {
+        "execution_control": 24,
+        "user_action": 10,
+        "user_long": 4,
+        "page_read": 10,
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1,
+        "bulk_transfer": 10
+      },
+      "scope": "real Sender/HTTP/PostgreSQL; synthetic seeded executions; no gateway or real business program",
+      "elapsed_seconds": 13.986744040856138,
+      "log_rejections": {
+        "503": 50
+      },
+      "log_requests": 600,
+      "database_log_chunks": 600,
+      "episode_results": 100,
+      "heartbeat_seconds": {
+        "count": 1300,
+        "max": 1.9240931540261954,
+        "p95": 0.08956339699216187,
+        "p99": 1.8902016959618777
+      },
+      "page_seconds": {
+        "count": 13,
+        "max": 0.03817444806918502,
+        "p95": 0.03817444806918502,
+        "p99": 0.03817444806918502
+      }
+    },
+    {
+      "lost_first_ack": true,
+      "workers": 100,
+      "roles": 4,
+      "pool_sizes": {
+        "execution_control": 24,
+        "user_action": 10,
+        "user_long": 4,
+        "page_read": 10,
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1,
+        "bulk_transfer": 10
+      },
+      "scope": "real Sender/HTTP/PostgreSQL; synthetic seeded executions; no gateway or real business program",
+      "elapsed_seconds": 13.016215067822486,
+      "log_rejections": {
+        "503": 50
+      },
+      "log_requests": 700,
+      "database_log_chunks": 600,
+      "episode_results": 100,
+      "heartbeat_seconds": {
+        "count": 1400,
+        "max": 0.11482326593250036,
+        "p95": 0.08809507801197469,
+        "p99": 0.1062954559456557
+      },
+      "page_seconds": {
+        "count": 14,
+        "max": 0.039710125187411904,
+        "p95": 0.039710125187411904,
+        "p99": 0.039710125187411904
+      }
+    }
+  ],
+  "failures_retained": [
+    {
+      "attempt": 1,
+      "error": "GET /api/v1/jobs returned 500; KeyError: endpoint",
+      "cause": "test client_spec omitted service_mode; fixture corrected to service_mode=none",
+      "product_change": false
+    },
+    {
+      "attempt": 2,
+      "error": "expected 5 database log chunks, actual 6",
+      "cause": "test expected 16 KiB coalescing; existing sender stops coalescing at 14 KiB: 32 records need 5 new blocks plus 1 pending block",
+      "product_change": false
+    }
+  ],
+  "coverage": "API subprocess coverage not collected or merged; no new project coverage claim",
+  "boundaries": [
+    "no production deployment",
+    "synthetic preseeded running executions",
+    "direct role HTTP ports, no Nginx",
+    "prepopulated backlog, not elapsed long disconnection",
+    "no new capability advertisement",
+    "no real GPU/NPU model",
+    "short burst, not 30-minute capacity acceptance",
+    "no new business implementation changes in this commit"
+  ]
+}

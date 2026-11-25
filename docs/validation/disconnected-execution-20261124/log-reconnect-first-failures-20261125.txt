@@ -1,0 +1,11 @@
+Attempt first
+E                       AssertionError: Internal Server Error
+E                       assert 500 == 200
+E                        +  where 500 = <Response [500 Internal Server Error]>.status_code
+FAILED backend/tests/test_log_reconnect_postgres.py::test_100_senders_reconnect_with_heartbeats_results_and_page_reads
+1 failed in 6.56s
+Attempt second
+E                       assert 6 == 5
+E                        +  where 6 = len([<backend.app.core.RunLogChunk object at 0x795b2d5658b0>, <backend.app.core.RunLogChunk object at 0x795b2d1d7d10>, <ba...6d0>, <backend.app.core.RunLogChunk object at 0x795b2d5d0440>, <backend.app.core.RunLogChunk object at 0x795b2d58f020>])
+FAILED backend/tests/test_log_reconnect_postgres.py::test_100_senders_reconnect_with_heartbeats_results_and_page_reads
+1 failed in 17.46s
