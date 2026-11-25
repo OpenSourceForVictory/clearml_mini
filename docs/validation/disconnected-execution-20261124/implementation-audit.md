@@ -173,3 +173,11 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 - 新增16项测试覆盖响应丢失、无能力恢复未决请求、交接提交后清除失败重放保留offset、子journal落盘失败、已有journal冲突、无效ACK、停止收据、空ACK和旧协议兼容。API+Worker联测另1通过：真实API事务提交后丢响应，重试原快照落入执行journal，授权只创建一次；不是部署批次。
 - 标准专项199 passed、2 skipped、3223 deselected，pytest成功，覆盖率门槛失败。报告 `coverage-artifacts/worker-recovery-poll-20261125/`；新模块行/分支100%/100%，本次选集中 worker/client.py 为57.33%/38.24%，不能据此宣称整个Worker达标。两项跳过为真实运行后端opt-in，随后启用本机systemd用户服务/Docker短程序测试，2 passed，无跳过。单独补跑与API联测未并入覆盖率。
 - 同步运维指南、升级指南、Skill索引与OpenSpec。没有新增数据库迁移，没有部署或广告新能力。接下来仍需完整监督入口、停止/未启动收据收尾、结果未齐收尾及界面接线；恢复执行不能退回旧watchdog作为临时替代。
+
+## 2026-11-25 恢复启动组合入口（未启用）
+
+- 新增 `worker/recovery_start.py` 与 Worker.start_recovery，组合原领取快照校验、运行准备、平台prepare、持久启动尝试、真实身份绑定和父journal身份证明提交。生产execute尚未调用该入口，原安全拦截仍在。
+- 19项定向测试通过，覆盖正常/重复绑定、启动响应丢失、父身份写入失败、创建调用结果未知、已创建对象响应丢失、取消/冲突、原确认窗口过期、boot/slot/任务/标识/身份篡改和已有运行实例。两项为本机systemd用户服务与Docker短Python程序：调用真实RecoveryRuntime.start后注入响应丢失，从磁盘恢复仅绑定同一InvocationID/容器ID，程序退出0后再恢复也不重启。prepare API响应为测试替身，未作为真实平台批次或模型评测。
+- 标准专项140 passed、1 skipped、3303 deselected，pytest成功；覆盖率报告 `coverage-artifacts/worker-recovery-start-20261125/`。新增recovery_start行/分支100%/100%；本次选集worker/client为20.44%/12.03%，整体覆盖率门槛仍失败。未降低门槛或排除业务代码。
+- 跳过项为PostgreSQL启动/取消锁竞争，随后新建独立PostgreSQL16.8补跑1 passed，无跳过；补跑未合并进覆盖率。容器测试资源清理，未操作生产数据库。
+- 同步操作/升级文档、Skill索引、OpenSpec设计与任务说明；未新增迁移，未启用或部署新恢复能力。持续监督、未启动停止处置、结果交付和清理的完整入口仍待接通，不能用本阶段替代整体断联验收。

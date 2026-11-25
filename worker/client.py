@@ -853,6 +853,10 @@ class Worker:
         from .recovery_finish import finalize
         return finalize(self, body)
 
+    def start_recovery(self):
+        from .recovery_start import start_or_recover
+        return start_or_recover(self)
+
     def child(self, execution):
         identity = str(uuid.UUID(execution))
         directory = Path(str(self.path) + '.runs')
