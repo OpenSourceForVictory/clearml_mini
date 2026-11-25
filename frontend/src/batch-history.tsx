@@ -13,7 +13,7 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
  const dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{if(deleting)dialog.current?.showModal();},[deleting]);
  const visible=batches.filter(b=>(!status||b.status===status)&&(!query.trim()||`${b.title} ${b.id}`.toLowerCase().includes(query.trim().toLowerCase())));
- const remove=async()=>{if(!deleting||busy)return;setBusy(true);setDeleteError('');try{await api('batches/'+deleting.id,'DELETE');onDeleted(deleting.id);setNotice('批次及其任务已删除，审计记录保留。');setDeleting(null);}catch(e){setDeleteError(String(e));}finally{setBusy(false);}};
+ const remove=async()=>{if(!deleting||busy)return;setBusy(true);setDeleteError('');try{const result=await api<{pending_cleanup?:boolean}>('batches/'+deleting.id,'DELETE');onDeleted(deleting.id);setNotice(result?.pending_cleanup?'批次已隐藏并请求停止；执行记录将在清理和结果同步确认后删除。':'批次及其任务已删除，审计记录保留。');setDeleting(null);}catch(e){setDeleteError(String(e));}finally{setBusy(false);}};
  const savePriority=async(batch:Batch)=>{const value=Number(priorityDraft[batch.id]??batch.priority??0);setPriorityError('');setPriorityBusy(batch.id);try{const updated=await api<Batch>('batches/'+batch.id+'/priority','PATCH',{priority:value,expected_revision:batch.control_revision??0});onPriorityChanged(updated);setPriorityDraft(old=>({...old,[batch.id]:String(updated.priority??0)}));}catch(e){setPriorityError(String(e));}finally{setPriorityBusy('');}};
  return <section className="panel batch-history" aria-label="评测批次记录">
   <div className="history-heading"><div><h2>批次进度</h2><p className="muted">查看执行进度，进入批次查看参数、服务、任务与结果。</p></div><span className="history-live">每 2 秒更新</span></div>
@@ -33,10 +33,10 @@ export function BatchHistory({batches,page,loading,error,compareIds,onCompareCha
     <td>{b.max_concurrent??'—'}</td>
     <td className="history-progress"><span>已结束 {b.finished}/{b.total}</span><progress aria-label={b.title+' 任务完成进度'} value={percent} max={100}/><small>任务正常完成 {b.succeeded} · 未结束 {Math.max(0,b.total-b.finished)}</small></td>
     <td><ExecutionOutcome value={b.outcomes}/></td><td><ProtocolOutcome value={b.outcomes}/></td>
-    <td><div className="history-actions"><button onClick={()=>onOpen(b.id)}>查看批次</button>{onRerun&&<button onClick={()=>onRerun(b.id)}>基于此批次创建</button>}<button className="history-delete" disabled={!terminal.has(b.status)} title={!terminal.has(b.status)?'请先进入批次取消任务，等待停止并清理后删除':'删除批次及其任务，保留审计数据'} onClick={()=>{setDeleting(b);setDeleteError('');setNotice('');}}>删除批次</button></div></td>
+    <td><div className="history-actions"><button onClick={()=>onOpen(b.id)}>查看批次</button>{onRerun&&<button onClick={()=>onRerun(b.id)}>基于此批次创建</button>}<button className="history-delete" title="删除批次；运行中的任务会先请求停止并等待清理" onClick={()=>{setDeleting(b);setDeleteError('');setNotice('');}}>删除批次</button></div></td>
    </tr>;
   })}</tbody></table></div>}
   <div className="pagination"><button disabled={page===1||loading} onClick={()=>onPage(page-1)}>上一页</button><span>第 {page} 页</span><button disabled={batches.length<20||loading} onClick={()=>onPage(page+1)}>下一页</button></div>
-  {deleting&&<dialog ref={dialog} onCancel={e=>{e.preventDefault();if(!busy)setDeleting(null);}} className="history-confirm" aria-labelledby="delete-batch-title"><h3 id="delete-batch-title">删除评测批次</h3><p>确认删除「{deleting.title}」？</p><p>批次下的任务、运行记录、日志和产物会删除，审计记录和删除状态会保留。运行任务或关联服务尚未清理时无法删除。此操作不清除节点工作目录，不释放磁盘空间。</p>{deleteError&&<p role="alert" className="error">{deleteError}</p>}<button disabled={busy} onClick={()=>void remove()}>{busy?'正在删除…':'确认删除批次'}</button><button disabled={busy} onClick={()=>setDeleting(null)}>暂不删除</button></dialog>}
+  {deleting&&<dialog ref={dialog} onCancel={e=>{e.preventDefault();if(!busy)setDeleting(null);}} className="history-confirm" aria-labelledby="delete-batch-title"><h3 id="delete-batch-title">删除评测批次</h3><p>确认删除「{deleting.title}」？</p><p>批次会立即从列表隐藏并请求停止任务和关联服务；执行记录、日志和产物元数据在停止、清理及结果同步确认后删除。审计记录和删除状态会保留。此操作不清除节点工作目录，不释放磁盘空间。</p>{deleteError&&<p role="alert" className="error">{deleteError}</p>}<button disabled={busy} onClick={()=>void remove()}>{busy?'正在删除…':'确认删除批次'}</button><button disabled={busy} onClick={()=>setDeleting(null)}>暂不删除</button></dialog>}
   </section>;
 }

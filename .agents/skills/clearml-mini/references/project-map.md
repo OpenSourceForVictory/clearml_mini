@@ -128,7 +128,7 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 
 节点组件升级界面：worker-upgrades.tsx 统一说明 Worker/Runner/Agent；发布标签沿用 Worker 版本，Runner 无独立版本，Agent 托管有条件。运行适配器复制新版 Runner，旧镜像内置 Runner 需重建。见 docs/worker-upgrades.md、指南 upgrades、worker-upgrades.spec.ts；不要把节点升级描述成镜像或驱动更新。
 
-删除批次诊断：HTTP 500 的文本响应由 frontend/src/api.ts 显示为“请求失败 (500)”，不再出现 JSON 解析错误。失败时保留批次及比较选择；记录批次 ID、请求时间并检查 API 异常日志，必要时刷新确认状态后再重试。409 仍展示未清理或关联服务未停止的业务原因。节点工作目录不由该接口清除。测试见 batch-history.spec.ts、test_batch_deletion_records.py；前端错误展示修复不代表现场后台 500 根因已修复。
+删除批次诊断：HTTP 500 的文本响应由 frontend/src/api.ts 显示为“请求失败 (500)”，不再出现 JSON 解析错误。失败时保留批次及比较选择；记录批次 ID、请求时间并检查 API 异常日志，必要时刷新确认状态后再重试。运行中的批次可删除并立即隐藏；平台请求停止，保留原执行/资源占用至清理和可靠结果封口确认，之后调度轮询安全清除任务数据。原始补报收据和领取快照在封口后清除，仅留最小原身份和终态确认供最终 ACK 丢失后重放；删除后的业务结果仅作显式丢弃确认。节点工作目录不由该接口清除。测试见 batch-history.spec.ts、test_batch_deletion.py、test_recovery_finish.py；前端错误展示修复不代表现场后台 500 根因已修复。
 
 客户端启动前连通性诊断：更新客户端 Worker 后，journal 中 `client connectivity passed/failed` 记录目标 origin（协议、主机、端口）、检查耗时、超时上限，成功记录方式（HEAD/TCP/TLS）与 HTTP 状态（TCP/TLS 为 -），失败记录异常类型和原因分类；任务错误保留 `client_service_unreachable` 并附带分类（timeout、dns、connection_refused、tls、http_response 等）。不记录路径、查询、凭据、响应正文或原始异常文本。HTTP(S) HEAD 收到 405 仍判定可达。WS 所有路径仅检查 TCP，WSS 检查 TCP/TLS 并使用系统默认信任校验证书；不再发送 HEAD 或 WebSocket 握手，不验证路径、业务认证、子协议或模型就绪。DNS 结果逐项校验并固定数值地址后连接；业务是否就绪仍以服务端就绪检查为准。此修复针对 WS 服务拒绝 HEAD 导致 unsupported http method: HEAD / ClientResponseError 400 的误判。默认 3 秒、不读取环境代理不变。查看客户端 `journalctl -u 'mini-eval-worker-*' --since '10 minutes ago'` 并对照失败时间。无需数据库迁移；仅更新平台 API 不会更新已纳管节点的 Worker。
 

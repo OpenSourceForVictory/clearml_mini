@@ -256,6 +256,18 @@ def tick(factory, at=None):
         reconcile(s, at)
         from . import orchestration_scheduler
         orchestration_scheduler.reconcile(s,at)
+        from .batch_deletion import purge_if_safe
+        from .core import ServiceInstance
+        pending_deletions = select(EvaluationBatch).where(
+            EvaluationBatch.deleted_at.is_not(None),
+            or_(
+                exists(select(Job.id).where(Job.batch_id == EvaluationBatch.id)),
+                exists(select(ServiceInstance.id).where(
+                    ServiceInstance.orchestration_batch_id == EvaluationBatch.id)),
+            ),
+        )
+        for deleted_batch in s.scalars(pending_deletions):
+            purge_if_safe(s, deleted_batch)
         memberships.reconcile(s)
         s.flush()
         # A timed-out worker may still be running its container. Keep its global,

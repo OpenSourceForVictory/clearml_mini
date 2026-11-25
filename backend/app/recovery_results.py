@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from .core import ExecutionRecovery, ExecutionRecoveryReceipt, Job, Run, Slot
-from .recovery_records import receive
+from .recovery_records import batch_deleted, receive
 
 
 def apply(s, *, worker_id, execution_id, generation, kind, sequence, body):
@@ -30,9 +30,19 @@ def apply(s, *, worker_id, execution_id, generation, kind, sequence, body):
         raise HTTPException(410, 'recovery business data is no longer accepted')
     # The receipt keeps the original payload even when business validation
     # rejects it; only successful application or durable rejection may be ACKed.
+    deleted = batch_deleted(s, job)
     reply = receive(s, worker_id=worker_id, execution_id=execution_id,
-                    generation=generation, kind=kind, sequence=sequence, body=body)
+                    generation=generation, kind=kind, sequence=sequence, body=body,
+                    allow_deleted=deleted)
     receipt = s.get(ExecutionRecoveryReceipt, (execution_id, kind, sequence))
+    if deleted:
+        # Explicitly acknowledge dropping original business data only after
+        # the deleted-batch tombstone and its immutable digest are committed.
+        # A retry of a previously applied receipt keeps its original history.
+        if receipt.application_state is None:
+            receipt.application_state = 'discarded'
+            s.flush()
+        return {**reply, 'reconciled': True, 'application': 'discarded'}
     if receipt.application_state == 'rejected':
         return {**reply, 'reconciled': True, 'application': 'rejected',
                 'reason': receipt.rejection_reason}

@@ -8,6 +8,7 @@ async function setup(page:Page,outcomes?:any){
   if(path==='batches')data=[{id:'done',title:'完成批次',status:'SUCCEEDED',total:3,finished:3,succeeded:3,total_episodes:30,max_concurrent:2,created_at:'2026-11-16T01:00:00Z',cases:[{episode_reporting:true,progress:{completed:12}}]},{id:'active',title:'运行批次'+'long'.repeat(100),status:'RUNNING',total:3,finished:1,succeeded:1,total_episodes:30,pending_count:2,priority:0,control_revision:0,cases:[]}].filter(b=>!deleted.includes(b.id)).map(b=>({...b,outcomes}));
   if(path==='batches/active/priority'&&route.request().method()==='PATCH'){priorityUpdates.push(route.request().postDataJSON());data={id:'active',priority:7,pending_count:2,control_revision:1};}
   if(path==='batches/done'&&route.request().method()==='DELETE'){if(reject){await route.fulfill({status:409,json:{detail:'batch services must be stopped and cleaned before deletion'}});return;}deleted.push('done');data={deleted:true};}
+  if(path==='batches/active'&&route.request().method()==='DELETE'){deleted.push('active');data={deleted:true,pending_cleanup:true};}
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/results');await expect(page.getByRole('row',{name:'批次 完成批次',exact:true})).toBeVisible();
@@ -21,15 +22,25 @@ test('queued batch priority is editable and saved with the current revision',asy
  await expect(row.getByRole('combobox')).toHaveValue('7');
  expect(ctl.priorityUpdates).toEqual([{priority:7,expected_revision:0}]);
 });
-test('scoped filters, reported progress, responsive long titles and active deletion disabled',async({page})=>{
+test('scoped filters, reported progress, responsive long titles and active deletion available',async({page})=>{
  await setup(page);
  const done=page.getByRole('row',{name:'批次 完成批次',exact:true});
  await expect(done).toContainText('回合结果待上报');
- await expect(page.getByRole('row',{name:/^批次 /}).nth(1).getByRole('button',{name:'删除批次'})).toBeDisabled();
+ await expect(page.getByRole('row',{name:/^批次 /}).nth(1).getByRole('button',{name:'删除批次'})).toBeEnabled();
  await page.getByLabel('当前页状态').selectOption('RUNNING');await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(1);
  await page.getByLabel('搜索当前页').fill('不存在');await expect(page.getByText('当前页没有匹配的批次。')).toBeVisible();
  await page.getByRole('button',{name:'清除筛选'}).click();await expect(page.getByRole('row',{name:/^批次 /})).toHaveCount(2);
  for(const width of [1440,390]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);const row=done;expect((await row.boundingBox())!.height).toBeLessThan(90);if(width===390)expect(await page.locator('.history-table-scroll').evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);}
+});
+test('active batch deletion reports pending cleanup without claiming records are gone',async({page})=>{
+ const ctl=await setup(page);
+ const row=page.getByRole('row',{name:/^批次 运行批次/});
+ await row.getByRole('button',{name:'删除批次'}).click();
+ await expect(page.getByRole('dialog')).toContainText('停止、清理及结果同步确认后删除');
+ await page.getByRole('button',{name:'确认删除批次'}).click();
+ await expect(row).toHaveCount(0);
+ await expect(page.getByRole('status')).toContainText('批次已隐藏并请求停止');
+ expect(ctl.deleted).toContain('active');
 });
 test('delete confirmation cancel, conflict preserves row, retry clears comparison selection',async({page})=>{
  const ctl=await setup(page);const row=page.getByRole('row',{name:'批次 完成批次',exact:true});

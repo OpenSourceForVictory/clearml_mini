@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from sqlalchemy import select, func
 
 from backend.app import recovery_finish as finish
-from backend.app.core import ExecutionRecovery, ExecutionRecoveryControl, Job, Run, Slot, RunLogState, Event, now
+from backend.app.core import ExecutionRecovery, ExecutionRecoveryClaim, ExecutionRecoveryControl, ExecutionRecoveryReceipt, EvaluationBatch, Job, Run, Slot, RunLogState, Event, User, now
 from backend.app.execution import Finish, RecoveryProof
 from backend.tests.test_recovery_control import execution, apply as observe, observation
 from backend.tests.test_execution_logs_postgres import pg, seed, api
@@ -404,6 +404,70 @@ def test_result_sync_http_ack_and_replay(api):
         assert reply.status_code==200,reply.text
         assert reply.json()=={'status':'SUCCEEDED','cleanup_confirmed':True,
             'result_sync':'complete','duplicate':duplicate}
+
+
+def test_deleted_batch_keeps_final_ack_after_safe_purge(execution):
+    from backend.app.batch_deletion import remove
+    from backend.app.scheduling import tick
+    factory, generation = execution
+    proof = prepare(factory, generation)
+    with factory() as session:
+        session.add(ExecutionRecoveryClaim(request_id='claim', execution_id='e',
+            digest='a'*64, task_snapshot={'command': ['private-business-command']}))
+        session.add(ExecutionRecoveryReceipt(execution_id='e', kind='control',
+            sequence=0, digest='b'*64, payload={'business_detail': 'private'}))
+        reply = remove(session, 'b', session.get(User, 'u'))
+        assert reply['pending_cleanup']
+        assert session.get(EvaluationBatch, 'b').deleted_at is not None
+        assert session.get(Run, 'r') is not None
+        session.commit()
+    assert complete(factory, proof, pending_results=True)['status'] == 'CANCELLED'
+    assert cleanup(factory, proof)['cleanup_confirmed']
+    first = sync_results(factory, proof)
+    assert first['result_sync'] == 'complete'
+    tick(factory)
+    with factory() as session:
+        assert session.get(Job, 'j') is None
+        assert session.get(Run, 'r') is None
+        assert session.get(ExecutionRecovery, 'e') is not None
+        assert session.get(ExecutionRecoveryClaim, 'claim') is None
+        assert session.get(ExecutionRecoveryReceipt, ('e', 'control', 0)) is None
+        assert set(session.get(ExecutionRecoveryControl, 'e').snapshot) == {
+            'identity', 'cleanup_confirmed', 'result_sync', 'platform_status'}
+    assert sync_results(factory, proof) == {**first, 'duplicate': True}
+    with factory() as session:
+        assert session.get(Job, 'j') is None
+        with pytest.raises(HTTPException):
+            finish.results_finished(session, worker_id='foreign', execution_id='e', proof=proof)
+        wrong = proof.model_copy(update={'generation': 'other'})
+        with pytest.raises(HTTPException):
+            finish.results_finished(session, worker_id='w', execution_id='e', proof=wrong)
+
+
+def test_postgres_deleted_batch_final_ack_remains_idempotent(pg):
+    from backend.app.batch_deletion import remove
+    from backend.app.recovery_records import grant
+    from backend.app.scheduling import tick
+    factory = seed(pg[0])
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'STARTING'
+        generation = grant(session, run, 'w').generation
+        session.commit()
+    proof = prepare(factory, generation)
+    with factory() as session:
+        assert remove(session, 'b', session.get(User, 'u'))['pending_cleanup']
+        session.commit()
+    assert complete(factory, proof, pending_results=True)['status'] == 'CANCELLED'
+    cleanup(factory, proof)
+    first = sync_results(factory, proof)
+    assert first['result_sync'] == 'complete'
+    tick(factory)
+    assert sync_results(factory, proof) == {**first, 'duplicate': True}
+    with factory() as session:
+        assert session.get(Job, 'j') is None
+        assert session.get(Run, 'r') is None
+        assert session.get(ExecutionRecovery, 'e') is not None
 
 
 def test_result_sync_http_seal_reports_missing_episode_as_failed(api):

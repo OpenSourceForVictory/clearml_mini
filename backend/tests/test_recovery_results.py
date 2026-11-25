@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, func, text
 
 from backend.app import recovery_records, recovery_results
-from backend.app.core import EpisodeRecord, ExecutionRecovery, ExecutionRecoveryReceipt, Job, Run, Slot, now
+from backend.app.core import EvaluationBatch, EpisodeRecord, ExecutionRecovery, ExecutionRecoveryReceipt, Job, Run, Slot, now
 from backend.tests.test_recovery_control import execution
 from backend.tests.test_execution_logs_postgres import pg
 from worker.recovery_delivery import RecoveryDelivery
@@ -129,6 +129,35 @@ def test_http_and_delivery_apply_before_ack(execution,tmp_path):
         assert sender.step()==1 and replies[0]['reconciled']
         assert q.pending()==[]
     with factory() as s:assert s.get(Run,'r').result_json['success']
+
+
+def test_deleted_batch_acknowledges_explicit_discard_without_resurrecting_result(execution,tmp_path):
+    factory,generation=execution;setup(factory)
+    with factory() as s:
+        s.get(EvaluationBatch,'b').deleted_at=now()
+        s.get(Run,'r').status='CANCEL_REQUESTED'
+        s.commit()
+    app=FastAPI()
+    def db():
+        with factory() as s:yield s
+    recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+    queue=ReliableOutbox(tmp_path/'discarded')
+    event={'episode_id':1,'seed':100,'status':'STARTED'}
+    queue.put('e',generation,'episode',1,event)
+    with TestClient(app) as client:
+        def post(path,body):
+            response=client.post('/api/v1/'+path,json=body)
+            assert response.status_code==200,response.text
+            return response.json()
+        assert RecoveryDelivery(SimpleNamespace(post=post),queue,apply_results=True).step()==1
+        assert queue.pending()==[]
+        reply=post('worker/executions/e/recovery/results',{
+            'generation':generation,'kind':'episode','sequence':1,'body':event,'apply':True})
+        assert reply['duplicate'] and reply['application']=='discarded'
+    with factory() as s:
+        assert s.get(EpisodeRecord,('r',1)) is None
+        assert s.get(Run,'r').status=='CANCEL_REQUESTED'
+        assert s.get(ExecutionRecoveryReceipt,('e','episode',1)).application_state=='discarded'
 
 
 def test_result_ack_lost_across_api_restart_reuses_original_receipt(execution, tmp_path):

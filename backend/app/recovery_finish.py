@@ -65,7 +65,7 @@ def finish(s, *, worker_id, execution_id, body):
             logs = RunLogState(run_id=run.id)
             s.add(logs)
         logs.truncated = True
-    control.snapshot = {**snapshot, 'completion':fact,
+    control.snapshot = {**snapshot, 'completion':fact, 'platform_status':run.status,
                         'result_sync':'pending' if body.pending_results else 'complete'}
     s.flush()
     # Completion alone does not authorize resource reuse.
@@ -94,6 +94,22 @@ def cleanup(s, *, worker_id, execution_id, proof):
 
 def results_finished(s, *, worker_id, execution_id, proof):
     """Confirm late business data independently of already released resources."""
+    # The visible Run/Job may have been purged after this seal committed while
+    # its HTTP response was lost. Keep the original authority/control ledger
+    # so the same Worker can recover that final ACK without reviving the batch.
+    authority = s.get(ExecutionRecovery, execution_id)
+    if authority and authority.worker_id == worker_id and authority.generation == proof.generation:
+        prior = s.get(ExecutionRecoveryControl, execution_id)
+        if (prior and prior.snapshot.get('identity') == proof.identity.model_dump()
+                and prior.snapshot.get('cleanup_confirmed') is True
+                and prior.snapshot.get('result_sync') in ('complete', 'failed')
+                and prior.snapshot.get('platform_status') in TERMINAL
+                and s.get(Run, authority.run_id) is None):
+            slot = s.get(Slot, authority.slot_id)
+            if not slot or slot.worker_id != worker_id:
+                raise HTTPException(409, 'recovery execution ownership changed')
+            return {'status':prior.snapshot['platform_status'], 'cleanup_confirmed':True,
+                    'result_sync':prior.snapshot['result_sync'], 'duplicate':True}
     # Sync acknowledgement changes no lifecycle/allocation. Match result
     # application's Run -> grant order without taking the scheduler lock.
     run, grant, control = locked(s, worker_id, execution_id, proof, resource_lock=False)

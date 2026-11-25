@@ -60,7 +60,22 @@ def grant(s, run, worker_id, tolerance=None):
     return record
 
 
-def receive(s, *, worker_id, execution_id, generation, kind, sequence, body):
+def batch_deleted(s, job):
+    batch_id = job.batch_id
+    if job.service_instance_id:
+        service = s.get(ServiceInstance, job.service_instance_id)
+        if not service:
+            raise HTTPException(410, 'recovery service is no longer accepted')
+        batch_id = service.orchestration_batch_id or batch_id
+    if not batch_id:
+        return False
+    batch = s.get(EvaluationBatch, batch_id)
+    if not batch:
+        raise HTTPException(410, 'recovery batch is no longer accepted')
+    return bool(batch.deleted_at)
+
+
+def receive(s, *, worker_id, execution_id, generation, kind, sequence, body, allow_deleted=False):
     if kind not in ('control', 'episode', 'task_result') or type(sequence) is not int or not 0 <= sequence < 2**63:
         raise HTTPException(422, 'invalid recovery record key')
     if not isinstance(body, dict):
@@ -92,16 +107,8 @@ def receive(s, *, worker_id, execution_id, generation, kind, sequence, body):
         job = s.get(Job, run.job_id)
         if not job:
             raise HTTPException(410, 'recovery business data is no longer accepted')
-        batch_id = job.batch_id
-        if job.service_instance_id:
-            service = s.get(ServiceInstance, job.service_instance_id)
-            if not service:
-                raise HTTPException(410, 'recovery service is no longer accepted')
-            batch_id = service.orchestration_batch_id or batch_id
-        if batch_id:
-            batch = s.get(EvaluationBatch, batch_id)
-            if not batch or batch.deleted_at:
-                raise HTTPException(410, 'recovery batch is no longer accepted')
+        if batch_deleted(s, job) and not allow_deleted:
+            raise HTTPException(410, 'recovery batch is no longer accepted')
     digest = hashlib.sha256(encoded).hexdigest()
     previous = s.get(ExecutionRecoveryReceipt, (execution_id, kind, sequence))
     if previous:
