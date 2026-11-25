@@ -79,14 +79,18 @@ def finish_results(worker, outbox):
         raise ValueError('result synchronization proof changed')
     if state.get('recovery_results_collected') is not True:
         return False
-    if outbox.pending(limit=1):
-        return False
     execution = state['task']['execution_id']
+    if outbox.pending(limit=1, execution=execution):
+        return False
     reply = worker.api.post(f'worker/executions/{execution}/recovery/results-finished', pending['proof'])
     if (not isinstance(reply, dict) or reply.get('result_sync') not in ('complete', 'failed')
             or reply.get('cleanup_confirmed') is not True or reply.get('status') not in TERMINAL
             or type(reply.get('duplicate')) is not bool):
         raise ValueError('invalid result synchronization acknowledgement')
+    # Keep the journal until both the platform seal and local confirmed-record
+    # retirement commit. Otherwise a shared node queue accumulates tombstones
+    # from every completed execution and eventually blocks new results.
+    outbox.forget_confirmed_execution(execution, pending['proof']['generation'])
     atomic_json(worker.path, None)
     worker.state = None
     return True
@@ -103,7 +107,8 @@ def resume_results(worker):
     from .recovery_results import execution_outbox
     from .recovery_delivery import RecoveryDelivery
     outbox = execution_outbox(worker, existing=True)
-    RecoveryDelivery(worker.api, outbox, apply_results=True).step()
+    RecoveryDelivery(worker.api, outbox, apply_results=True,
+                     execution_id=worker.state['task']['execution_id']).step()
     if worker.state.get('recovery_results_collected') is not True:
         from .recovery_execution import resume_collection
         resume_collection(worker, outbox)

@@ -149,7 +149,8 @@ def execute(worker):
         task = worker.state['task']
         execution = task['execution_id']
         outbox = execution_outbox(worker)
-        delivery = RecoveryDelivery(worker.api, outbox, apply_results=True)
+        delivery = RecoveryDelivery(worker.api, outbox, apply_results=True,
+                                    execution_id=execution)
         if task.get('log_protocol') == 2:
             root = protocol_root(worker)
             logs = root/'logs' if worker.host_mode() else execution_dirs(worker.workspace, execution)/'diagnostic-logs'

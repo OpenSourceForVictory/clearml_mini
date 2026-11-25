@@ -198,7 +198,9 @@ Worker.monitor_recovery绑定原启动账本与运行身份，复用原请求/�
 
 Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json` 和 `.json.supervision.json`；这些文件由所属执行核验，不能当作独立任务，也不能手工删除。
 
-清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。该恢复入口已与正常运行监督相连，完整生产启用仍待验收。
+清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。旧执行队列仍为`<execution-journal>.outbox/reliable.sqlite3`。新版安装器给同一纳管节点的每卡配置同一个`node_outbox_root`，新执行把实际共享队列目录先写入执行journal；重启后沿原目录恢复，不能指向新空队列。共享SQLite对整机限制64 MiB/10000条，并对单执行限制16 MiB/2500条，另预留控制记录；交付和最终排空只检查本执行ID。已有手工配置须给该节点所有卡设置同一绝对`node_outbox_root`并保持目录仅纳管账号可写；未配置的旧Worker继续按单执行队列运行，不具备整机配额。不要在任务进行中移动或删除队列。该恢复入口已与正常运行监督相连，完整生产启用仍待验收。
+
+Worker 0.21.19包含上述共享预算修正，不改变协议版本，也不增加平台数据库迁移。升级旧节点仅替换代码不会自动修改既有Worker JSON；需先确认每卡的共享根配置，再经原排空升级流程更新。执行journal已固定的旧队列不迁移；若节点回退到不认识共享队列的版本，应先完成待补传执行，不能删除原队列或强行回退在途执行。
 
 恢复执行现在将核验过身份的退出事实保存在`<execution-journal>.runtime-exit.json`。systemd成功停止后卸载单元时，记录“已停止、退出码未知”，不会伪造退出码0；仅凭单元不存在仍不能推断停止成功。读取证据核对原执行、代次、启动标识、boot和运行身份；同名新实例、其他启动周期或损坏记录不能替代原任务。证据用于重启后的核对及收尾，不能作为重启业务的许可。落盘失败保留待核对，不发送虚假清理确认。该能力仍属开发中的恢复路径，完整生产入口未启用。
 

@@ -25,14 +25,22 @@ class ReliableOutbox:
 
     def __init__(self, directory, *, max_bytes=64 * 1024 * 1024,
                  max_records=10000, control_reserve_bytes=65536,
-                 control_reserve_records=16, max_record_bytes=1048576):
+                 control_reserve_records=16, max_record_bytes=1048576,
+                 max_execution_bytes=None, max_execution_records=None):
         limits = (max_bytes, max_records, control_reserve_bytes,
                   control_reserve_records, max_record_bytes)
         if any(type(v) is not int or v <= 0 for v in limits):
             raise ValueError('outbox limits must be positive integers')
+        if any(v is not None and (type(v) is not int or v <= 0)
+               for v in (max_execution_bytes, max_execution_records)):
+            raise ValueError('per-execution outbox limits must be positive integers')
         if control_reserve_bytes >= max_bytes or control_reserve_records >= max_records:
             raise ValueError('control reserve must leave room for results')
+        if (max_execution_bytes is not None and control_reserve_bytes >= max_execution_bytes
+                or max_execution_records is not None and control_reserve_records >= max_execution_records):
+            raise ValueError('control reserve must leave per-execution room for results')
         self.max_bytes, self.max_records = max_bytes, max_records
+        self.max_execution_bytes, self.max_execution_records = max_execution_bytes, max_execution_records
         self.reserve_bytes, self.reserve_records = control_reserve_bytes, control_reserve_records
         self.max_record_bytes = max_record_bytes
         directory = Path(directory)
@@ -40,6 +48,7 @@ class ReliableOutbox:
         self.path = directory / 'reliable.sqlite3'
         if directory.is_symlink() or self.path.is_symlink():
             raise ValueError('outbox path must not be a symlink')
+        created = not self.path.exists()
         fd = os.open(self.path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
         os.close(fd)
         with self._transaction() as db:
@@ -48,9 +57,20 @@ class ReliableOutbox:
                 id INTEGER PRIMARY KEY, execution TEXT NOT NULL, kind TEXT NOT NULL,
                 sequence INTEGER NOT NULL, digest TEXT NOT NULL, payload TEXT,
                 size INTEGER NOT NULL, UNIQUE(execution, kind, sequence))''')
+            db.execute('''CREATE INDEX IF NOT EXISTS messages_pending_execution
+                ON messages(execution, id) WHERE payload IS NOT NULL''')
             db.execute('''CREATE TABLE IF NOT EXISTS retired (
                 execution TEXT NOT NULL, kind TEXT NOT NULL, through_sequence INTEGER NOT NULL,
                 PRIMARY KEY(execution, kind))''')
+        if created:
+            # SQLite synced its content; make the new filename and directory
+            # durable before a result reader can advance its source cursor.
+            for folder in (directory, directory.parent):
+                folder_fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                try:
+                    os.fsync(folder_fd)
+                finally:
+                    os.close(folder_fd)
 
     @contextmanager
     def _transaction(self, *, write=True):
@@ -103,6 +123,16 @@ class ReliableOutbox:
                 count_limit -= self.reserve_records
             if usage['bytes'] + len(encoded) > byte_limit or usage['count'] + 1 > count_limit:
                 raise OutboxFull('reliable outbox capacity reached; record not accepted')
+            if self.max_execution_bytes is not None or self.max_execution_records is not None:
+                own = db.execute('''SELECT COUNT(*) AS count, COALESCE(SUM(size),0) AS bytes
+                    FROM messages WHERE execution=?''', (execution,)).fetchone()
+                own_bytes = self.max_execution_bytes or self.max_bytes
+                own_records = self.max_execution_records or self.max_records
+                if kind != 'control':
+                    own_bytes -= self.reserve_bytes
+                    own_records -= self.reserve_records
+                if own['bytes'] + len(encoded) > own_bytes or own['count'] + 1 > own_records:
+                    raise OutboxFull('execution outbox capacity reached; record not accepted')
             db.execute('INSERT OR IGNORE INTO executions VALUES (?,?)', (execution, generation))
             db.execute('INSERT INTO messages (execution,kind,sequence,digest,payload,size) VALUES (?,?,?,?,?,?)',
                        (execution, kind, sequence, digest, payload, len(encoded)))
@@ -135,12 +165,20 @@ class ReliableOutbox:
                 AND payload IS NULL AND sequence<?''', (execution, before))
             return row['count']
 
-    def pending(self, limit=100):
+    def pending(self, limit=100, *, execution=None):
         if type(limit) is not int or not 1 <= limit <= 1000:
             raise ValueError('invalid outbox page limit')
+        if execution is not None and (not isinstance(execution, str) or not execution):
+            raise ValueError('invalid outbox execution scope')
         with self._transaction(write=False) as db:
-            rows = db.execute('''SELECT m.*, e.generation FROM messages m JOIN executions e USING(execution)
-                WHERE payload IS NOT NULL ORDER BY (kind='control') DESC, id LIMIT ?''', (limit,)).fetchall()
+            query = '''SELECT m.*, e.generation FROM messages m JOIN executions e USING(execution)
+                WHERE payload IS NOT NULL'''
+            args = []
+            if execution is not None:
+                query += ' AND m.execution=?'
+                args.append(execution)
+            rows = db.execute(query + " ORDER BY (kind='control') DESC, id LIMIT ?",
+                              (*args, limit)).fetchall()
         return [{'execution_id': row['execution'], 'generation': row['generation'],
                  'kind': row['kind'], 'sequence': row['sequence'], 'digest': row['digest'],
                  'body': json.loads(row['payload'])} for row in rows]

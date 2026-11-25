@@ -14,6 +14,7 @@ def test_multigpu_selection_and_independent_paths(tmp_path, monkeypatch):
         discover({'mock': True}, 'all')
     values = plan({'workspace_root': '/srv/work'}, 'node', 'all', [0, 2], tmp_path)
     assert len({v['state_path'] for _, _, v in values}) == 2
+    assert len({v['node_outbox_root'] for _, _, v in values}) == 1
     assert values[0][2]['workspace_root'] != values[1][2]['workspace_root']
     assert plan({}, 'old', None, [0], tmp_path)[0][0] == 'old'
 

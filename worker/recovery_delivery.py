@@ -7,13 +7,14 @@ from .reliable_outbox import OutboxConflict
 
 
 class RecoveryDelivery:
-    def __init__(self, api, outbox, *, apply_results=False):
+    def __init__(self, api, outbox, *, apply_results=False, execution_id=None):
         self.api, self.outbox = api, outbox
         self.apply_results = apply_results
+        self.execution_id = execution_id
 
     def step(self, limit=16):
         delivered = 0
-        for record in self.outbox.pending(limit):
+        for record in self.outbox.pending(limit, execution=self.execution_id):
             kind = record['kind']
             endpoint = 'control' if kind == 'control' else 'results'
             body = {'generation': record['generation'], 'sequence': record['sequence'],

@@ -199,7 +199,9 @@ def test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack(case):
     w,calls,_=case
     finalize(w,{'status':'SUCCEEDED','exit_code':0,'pending_results':True})
     assert w.state['recovery_finalization']['phase']=='done'
-    queued=[{'body':{}}];q=SimpleNamespace(pending=lambda limit:queued)
+    queued=[{'body':{}}];q=SimpleNamespace(
+        pending=lambda limit, execution=None:queued,
+        forget_confirmed_execution=lambda *args:True)
     assert not finish_results(w,q)
     w.state['recovery_results_collected']=True
     atomic_json(w.path,w.state)
@@ -227,7 +229,9 @@ def test_failed_result_sync_ack_retires_journal_without_restarting_business(case
         'status': 'SUCCEEDED', 'cleanup_confirmed': True,
         'result_sync': 'failed', 'duplicate': False}
     before = calls.count('start')
-    assert finish_results(w, SimpleNamespace(pending=lambda limit: []))
+    assert finish_results(w, SimpleNamespace(
+        pending=lambda limit, execution=None: [],
+        forget_confirmed_execution=lambda *args:True))
     assert w.state is None and json.loads(w.path.read_text()) is None
     assert calls.count('start') == before
 
@@ -242,7 +246,8 @@ def test_result_sync_refuses_invalid_state_or_ack(case,fault):
     if fault=='ack':
         w.state['recovery_results_collected']=True
         w.api.post=lambda *args:{'result_sync':'complete'}
-    with pytest.raises(ValueError):finish_results(w,SimpleNamespace(pending=lambda limit:[]))
+    with pytest.raises(ValueError):finish_results(w,SimpleNamespace(
+        pending=lambda limit, execution=None:[]))
     assert w.state is not None
 
 

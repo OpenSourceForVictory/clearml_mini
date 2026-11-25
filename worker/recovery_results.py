@@ -1,5 +1,6 @@
 """Reuse protocol readers, committing to a durable outbox before cursor advance."""
 import copy
+import hashlib
 from pathlib import Path
 
 from .storage import atomic_json
@@ -7,10 +8,34 @@ from .storage import atomic_json
 
 def execution_outbox(worker, *, existing=False):
     from .reliable_outbox import ReliableOutbox
-    directory = Path(str(worker.path)+'.outbox')
+    state = worker.state or {}
+    config = getattr(worker, 'config', {})
+    legacy = Path(str(worker.path)+'.outbox')
+    pinned = state.get('recovery_outbox_dir')
+    if pinned is not None:
+        directory = Path(pinned)
+        if not directory.is_absolute():
+            raise ValueError('recovery outbox path must be absolute')
+    elif (legacy/'reliable.sqlite3').is_file() or existing or not config.get('node_outbox_root'):
+        directory = legacy
+    else:
+        root = Path(config['node_outbox_root'])
+        if not root.is_absolute() or root.is_symlink():
+            raise ValueError('node outbox root must be an absolute non-symlink path')
+        name = config.get('node_name')
+        if not isinstance(name, str) or not name:
+            raise ValueError('node outbox identity is required')
+        directory = root / hashlib.sha256(name.encode('utf-8')).hexdigest()
+        # Pin before creating the shared DB. A crash in between must retain
+        # the journal and report the missing queue, never substitute an empty one.
+        candidate = {**state, 'recovery_outbox_dir':str(directory)}
+        atomic_json(worker.path, candidate)
+        worker.state = candidate
     if existing and not (directory/'reliable.sqlite3').is_file():
         raise RuntimeError('original result outbox is missing; retaining recovery journal')
-    return ReliableOutbox(directory)
+    shared = pinned is not None or directory != legacy
+    return ReliableOutbox(directory, **({'max_execution_bytes':16*1024*1024,
+                                        'max_execution_records':2500} if shared else {}))
 
 
 def collect(worker, outbox=None, *, output='', protocol_root=None, final=False):

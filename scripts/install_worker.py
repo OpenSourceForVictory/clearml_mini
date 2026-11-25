@@ -57,6 +57,7 @@ def plan(config, instance, selection, indices, home, update=False):
         if selection is not None and config.get('workspace_root'):
             value['workspace_root'] = str(Path(config['workspace_root'])/name)
         value['state_path'] = str(home/'.local/state/mini-eval'/(name+'.json'))
+        value.setdefault('node_outbox_root', str(home/'.local/state/mini-eval'/'reliable-outbox'))
         if target.exists():
             if not update:
                 raise ValueError(f'instance {name} already exists; use --update only after stopping idle instances')

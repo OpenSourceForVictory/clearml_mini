@@ -15,6 +15,11 @@ def poll(worker, software):
     path = Path(str(worker.path)+'.claim.json')
     pending = json.loads(path.read_text()) if path.exists() else None
     negotiated = CAPABILITY in software.get('capabilities', [])
+    if negotiated and pending is None:
+        root = worker.config.get('node_outbox_root')
+        if (not isinstance(root, str) or not root or not Path(root).is_absolute()
+                or Path(root).is_symlink()):
+            raise ValueError('negotiated recovery requires a shared node outbox root')
     endpoint = f'worker/slots/{worker.slot_id}/claim'
     if not negotiated and pending is None:
         response = worker.api.post(endpoint, {'known_execution_ids':list(worker.children)})

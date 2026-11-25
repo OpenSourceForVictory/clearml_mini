@@ -315,7 +315,7 @@ Worker 恢复收尾（开发中）：执行记录包含 recovery 身份及 recov
 
 Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json` 和 `.json.supervision.json`；这些文件由所属执行核验，不能当作独立任务，也不能手工删除。
 
-清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。该恢复入口已与正常运行监督相连，完整生产启用仍待验收。
+清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox中本执行ID的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。新安装多卡共享整机队列和容量，原执行journal固定实际路径；旧未配置`node_outbox_root`的实例维持`<execution-journal>.outbox/reliable.sqlite3`。共享队列满会延迟结果游标，不会静默丢弃；检查各卡配置根路径、journal中的`recovery_outbox_dir`和磁盘余量，不要删库解堵。完整生产启用仍待验收。
 
 `results-finished`属于可靠结果通道，只更新原执行同步标记，不竞争调度全局锁；完成与清理仍按资源转换锁序处理。
 
