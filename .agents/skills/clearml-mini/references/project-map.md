@@ -373,3 +373,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 协商恢复任务在启动前收到平台停止决定时，不再永久停留在启动准备状态。Worker 核对从未越过持久启动边界，清理原未启动对象后，通过独立控制接口 `recovery/not-started` 确认；平台保留取消或超时等既有决定，释放原执行资源，不伪造退出码或回合结果。响应丢失时只重放确认，不重新创建或启动业务。已有启动尝试、进程身份冲突或启动账本缺失仍要求对账，不自动释放。
 
 原领取响应丢失且平台已取消时，若本机没有移交执行或启动账本，可以直接确认未启动；若已有执行记录，恢复原执行流程。删除、撤销与身份冲突的收据仍保留待对账。本次没有新增数据库迁移，依赖既有恢复协议迁移；生产能力开关保持关闭。
+
+新增恢复控制接口必须同时同步 `priority_route_manifest.json`、生成的 `deploy/priority-api-nginx.conf`、兼容双进程的 `deploy/split-api-nginx.conf` 和独立接口审计。`recovery/not-started` 两种网关均指向控制进程；全量曾捕获两份配置遗漏，修复与证据见 `docs/validation/disconnected-execution-20261124/full-20261125.json`。

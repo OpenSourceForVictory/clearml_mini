@@ -1,0 +1,47 @@
+  1) tests/batch-monitoring.spec.ts:32:1 › direct navigation, refresh, draft preservation, filtering and offline recovery
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "监控更新失败"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      37 |   await page.getByRole('button',{name:'查看批次',exact:true}).click();
+      38 |   await page.getByLabel('任务状态',{exact:true}).selectOption('PENDING');await expect(page.locator('td p').filter({hasText:'GPU 已占用'})).toBeVisible();
+    > 39 |   ctl.offline(true);await expect(page.getByRole('alert')).toContainText('监控更新失败');ctl.offline(false);await expect(page.getByRole('alert')).toHaveCount(0);
+         |                                                           ^
+      40 |   await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('PENDING');
+      41 |   await page.getByRole('button',{name:'返回批次列表'}).click();await expect(page.getByLabel('批次名称',{exact:true})).toHaveValue('保留草稿');
+      42 |   await page.getByRole('button',{name:'查看批次',exact:true}).click();await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('PENDING');
+        at /home/dgh/Code/clearml_mini/frontend/tests/batch-monitoring.spec.ts:39:59
+
+    Error Context: test-results/batch-monitoring-direct-na-425ac-tering-and-offline-recovery/error-context.md
+
+  2) tests/run-wizard.spec.ts:59:1 › draft survives navigation and polling; queued submit and independent trial preserve full suite
+
+    Test timeout of 45000ms exceeded.
+
+    Error: page.waitForResponse: Test timeout of 45000ms exceeded.
+
+      64 |   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+      65 |   // Wait for an actual list refresh, rather than relying on a fixed sleep.
+    > 66 |   await page.waitForResponse(r=>r.url().includes('/client-templates'));
+         |              ^
+      67 |   await expect(wizard.getByLabel('推理服务地址',{exact:true})).toHaveValue('ws://inference:8000');
+      68 |   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
+      69 |   await expect(wizard.getByLabel('最大并发任务数')).toHaveValue('2');
+        at /home/dgh/Code/clearml_mini/frontend/tests/run-wizard.spec.ts:66:14
+
+    Error Context: test-results/run-wizard-draft-survives--a7e2e-t-trial-preserve-full-suite/error-context.md
+
+  2 failed
+    tests/batch-monitoring.spec.ts:32:1 › direct navigation, refresh, draft preservation, filtering and offline recovery
+    tests/run-wizard.spec.ts:59:1 › draft survives navigation and polling; queued submit and independent trial preserve full suite
+  10 skipped
+  254 passed (5.3m)

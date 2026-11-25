@@ -56,14 +56,16 @@ test('preflight names client environment and per-card server blockers',async({pa
  await expect(server).toContainText('等待现有任务释放资源');
 });
 
-test('draft survives navigation and polling; queued submit and independent trial preserve full suite',async({page})=>{
+test('draft survives navigation and option refresh; queued submit and independent trial preserve full suite',async({page})=>{
   const {wizard,requests}=await setup(page);
   await wizard.getByRole('button',{name:'上一步',exact:true}).click();
   await wizard.getByRole('button',{name:'上一步',exact:true}).click();
   await expect(wizard.getByLabel('启动变量覆盖 JSON')).toHaveValue('{"MODE":"test"}');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
-  // Wait for an actual list refresh, rather than relying on a fixed sleep.
-  await page.waitForResponse(r=>r.url().includes('/client-templates'));
+  // Static options refresh on focus; periodic batch polling no longer reloads them.
+  const refreshed=page.waitForResponse(r=>r.url().includes('/client-templates'));
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await refreshed;
   await expect(wizard.getByLabel('推理服务地址',{exact:true})).toHaveValue('ws://inference:8000');
   await wizard.getByRole('button',{name:'下一步',exact:true}).click();
   await expect(wizard.getByLabel('最大并发任务数')).toHaveValue('2');

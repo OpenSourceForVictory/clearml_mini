@@ -1,0 +1,560 @@
+{
+  "source_commits": [
+    "265f4bf",
+    "48112d8"
+  ],
+  "python": {
+    "passed": 3534,
+    "failed": 2,
+    "skipped": 92,
+    "seconds": 2782.28,
+    "artifact": "coverage-artifacts/full-recovery-20261125",
+    "pytest_exit_code": 1,
+    "coverage_gates_passed": true,
+    "coverage": {
+      "total": {
+        "files": 207,
+        "lines": 19719,
+        "covered_lines": 18362,
+        "branches": 7138,
+        "covered_branches": 6147,
+        "line_percent": 93.11831228764136,
+        "branch_percent": 86.116559260297
+      },
+      "directories": {
+        "backend/app": {
+          "files": 67,
+          "lines": 8032,
+          "covered_lines": 7780,
+          "branches": 2730,
+          "covered_branches": 2388,
+          "line_percent": 96.86254980079681,
+          "branch_percent": 87.47252747252747
+        },
+        "worker": {
+          "files": 45,
+          "lines": 5102,
+          "covered_lines": 4818,
+          "branches": 2026,
+          "covered_branches": 1781,
+          "line_percent": 94.43355546844374,
+          "branch_percent": 87.90720631786772
+        },
+        "node_agent": {
+          "files": 8,
+          "lines": 360,
+          "covered_lines": 330,
+          "branches": 140,
+          "covered_branches": 118,
+          "line_percent": 91.66666666666667,
+          "branch_percent": 84.28571428571429
+        },
+        "runner": {
+          "files": 32,
+          "lines": 2085,
+          "covered_lines": 1983,
+          "branches": 850,
+          "covered_branches": 739,
+          "line_percent": 95.10791366906474,
+          "branch_percent": 86.94117647058823
+        },
+        "onboarding": {
+          "files": 9,
+          "lines": 716,
+          "covered_lines": 698,
+          "branches": 328,
+          "covered_branches": 276,
+          "line_percent": 97.48603351955308,
+          "branch_percent": 84.14634146341463
+        },
+        "scripts": {
+          "files": 46,
+          "lines": 3424,
+          "covered_lines": 2753,
+          "branches": 1064,
+          "covered_branches": 845,
+          "line_percent": 80.40303738317758,
+          "branch_percent": 79.4172932330827
+        }
+      },
+      "functions": {
+        "调度与资源": {
+          "files": 8,
+          "lines": 1016,
+          "covered_lines": 1003,
+          "branches": 452,
+          "covered_branches": 418,
+          "line_percent": 98.72047244094489,
+          "branch_percent": 92.47787610619469
+        },
+        "节点纳管与升级": {
+          "files": 18,
+          "lines": 1685,
+          "covered_lines": 1612,
+          "branches": 728,
+          "covered_branches": 609,
+          "line_percent": 95.66765578635015,
+          "branch_percent": 83.65384615384616
+        },
+        "业务执行与结果": {
+          "files": 78,
+          "lines": 7767,
+          "covered_lines": 7547,
+          "branches": 3068,
+          "covered_branches": 2825,
+          "line_percent": 97.16750354062057,
+          "branch_percent": 92.07953063885267
+        },
+        "节点监控": {
+          "files": 8,
+          "lines": 360,
+          "covered_lines": 330,
+          "branches": 140,
+          "covered_branches": 118,
+          "line_percent": 91.66666666666667,
+          "branch_percent": 84.28571428571429
+        },
+        "运行模板注册管理": {
+          "files": 5,
+          "lines": 528,
+          "covered_lines": 497,
+          "branches": 222,
+          "covered_branches": 173,
+          "line_percent": 94.12878787878788,
+          "branch_percent": 77.92792792792793
+        },
+        "评测结果与批次管理": {
+          "files": 5,
+          "lines": 345,
+          "covered_lines": 338,
+          "branches": 94,
+          "covered_branches": 85,
+          "line_percent": 97.97101449275362,
+          "branch_percent": 90.42553191489361
+        },
+        "任务集合与编排": {
+          "files": 5,
+          "lines": 951,
+          "covered_lines": 916,
+          "branches": 328,
+          "covered_branches": 271,
+          "line_percent": 96.31966351209253,
+          "branch_percent": 82.6219512195122
+        }
+      }
+    },
+    "skips": [
+      {
+        "test": "backend.tests.integration.test_agent_mount_loss.test_workspace_mount_loss_does_not_break_local_agent_state",
+        "reason": "disposable privileged mount namespace required"
+      },
+      {
+        "test": "backend.tests.integration.test_batch_controls_migration.test_batch_controls_upgrade_and_guarded_downgrade",
+        "reason": "separate disposable migration database required"
+      },
+      {
+        "test": "backend.tests.integration.test_bundled_onboarding.test_bundled_executor_deployment_and_recovery",
+        "reason": "requires isolated mini-eval-onboarding-test Compose project"
+      },
+      {
+        "test": "backend.tests.integration.test_endpoint_migration.test_endpoint_backfill_constraint_and_downgrade_guard",
+        "reason": "dedicated migration database required"
+      },
+      {
+        "test": "backend.tests.integration.test_endpoint_race.test_endpoint_scheduler_claim_cancel_cleanup_retry_races",
+        "reason": "dedicated PostgreSQL required"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-host-docker]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[shared-docker-host]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-host-docker]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_execution.test_real_two_logical_nodes_three_cases_multiple_batches[exclusive-docker-host]",
+        "reason": "real process/container execution opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_orchestration_migration.test_template_migration_upgrade_and_downgrade",
+        "reason": "dedicated disposable orchestration migration database required"
+      },
+      {
+        "test": "backend.tests.integration.test_resource_migration.test_resource_contract_migration_and_downgrade_guard",
+        "reason": "dedicated disposable resource migration database required"
+      },
+      {
+        "test": "backend.tests.integration.test_retention_migration.test_retention_upgrade_defaults_and_downgrade_guard",
+        "reason": "separate disposable migration database required"
+      },
+      {
+        "test": "backend.tests.integration.test_retention_mounts.test_same_filesystem_directory_and_file_bind_mount_boundaries",
+        "reason": "explicit disposable mount-namespace test required"
+      },
+      {
+        "test": "backend.tests.integration.test_retention_race.test_postgres_confirm_replay_policy_begin_and_storage_serialization",
+        "reason": "dedicated PostgreSQL required"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[shared-host]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[shared-docker]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[exclusive-host]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_shipped_sample[exclusive-docker]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[failure-host]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[failure-docker]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[cancel-host]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.integration.test_scheduling_sample.test_sample_failure_and_cancel_release_resources[cancel-docker]",
+        "reason": "real host/docker sample opt-in"
+      },
+      {
+        "test": "backend.tests.test_artifact_layout.test_real_docker_sdk_outputs_survive_deletion",
+        "reason": "opt-in real independent artifact Docker test"
+      },
+      {
+        "test": "backend.tests.test_artifact_reader.test_real_docker_output_survives_container_removal",
+        "reason": "opt-in real local Docker artifact test"
+      },
+      {
+        "test": "backend.tests.test_backpressure_compatibility.test_new_worker_with_previous_api[host]",
+        "reason": "requires previous API checkout, PostgreSQL and local host/Docker"
+      },
+      {
+        "test": "backend.tests.test_backpressure_compatibility.test_new_worker_with_previous_api[docker]",
+        "reason": "requires previous API checkout, PostgreSQL and local host/Docker"
+      },
+      {
+        "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[transient-host]",
+        "reason": "requires local systemd user manager and approved Docker test image"
+      },
+      {
+        "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[transient-docker]",
+        "reason": "requires local systemd user manager and approved Docker test image"
+      },
+      {
+        "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[lease-expiry-host]",
+        "reason": "requires local systemd user manager and approved Docker test image"
+      },
+      {
+        "test": "backend.tests.test_backpressure_real.test_real_process_survives_busy_reports_but_stops_at_lease[lease-expiry-docker]",
+        "reason": "requires local systemd user manager and approved Docker test image"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv0-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv1-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv2-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv3-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv4-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-direct]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-sdk-command]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_generic_commands.test_docker_real_command_matrix[argv5-service]",
+        "reason": "opt-in real Docker matrix"
+      },
+      {
+        "test": "backend.tests.test_managed_host.test_real_business_permission_denied_before_launch",
+        "reason": "requires root, systemd and provisioned mini-eval test account"
+      },
+      {
+        "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[direct]",
+        "reason": "requires root, systemd and provisioned mini-eval test account"
+      },
+      {
+        "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[sdk-command]",
+        "reason": "requires root, systemd and provisioned mini-eval test account"
+      },
+      {
+        "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[command]",
+        "reason": "requires root, systemd and provisioned mini-eval test account"
+      },
+      {
+        "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[service]",
+        "reason": "requires root, systemd and provisioned mini-eval test account"
+      },
+      {
+        "test": "backend.tests.test_migration_driver_scripts.test_real_migration_driver_creates_isolated_database[check_suite_migration.py]",
+        "reason": "requires dedicated disposable PostgreSQL server"
+      },
+      {
+        "test": "backend.tests.test_migration_driver_scripts.test_real_migration_driver_creates_isolated_database[check_membership_migration.py]",
+        "reason": "requires dedicated disposable PostgreSQL server"
+      },
+      {
+        "test": "backend.tests.test_migration_driver_scripts.test_real_migration_driver_creates_isolated_database[check_image_runtime_migration.py]",
+        "reason": "requires dedicated disposable PostgreSQL server"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-direct-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-sdk-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[none-stop-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-direct-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-sdk-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-stop-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-direct-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-sdk-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[exit-continue-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-direct-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-sdk-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-stop-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-direct-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-sdk-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_process_log_launch_modes[missing-continue-command-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[success-docker-whole_task-stop]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[business_false-docker-whole_task-stop]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[exception-docker-whole_task-stop]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[invalid_result-docker-whole_task-stop]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_process_log_pipeline.test_native_sdk_process_logs[exit-docker-whole_task-stop]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker integration"
+      },
+      {
+        "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[success-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+      },
+      {
+        "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[nonzero-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+      },
+      {
+        "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[missing-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+      },
+      {
+        "test": "backend.tests.test_service_process_log_entry.test_service_entry_capture_lifecycle[cancel-docker]",
+        "reason": "set PROCESS_LOG_TEST_IMAGE for real Docker entrypoint checks"
+      },
+      {
+        "test": "backend.tests.test_template_examples.test_docker_examples_with_isolated_loopback_service",
+        "reason": "requires built mini-eval-template-examples:v1 image"
+      },
+      {
+        "test": "backend.tests.test_worker_storage.test_real_probe",
+        "reason": "set STORAGE_PROBE_TEST_IMAGE for real Docker probe"
+      }
+    ],
+    "failure_evidence": "python-full-first-failures-20261125.txt",
+    "failure_cause": "Both split and priority gateway configurations omitted the new not-started control route. Both configs corrected after preserving the complete run.",
+    "post_fix_regression": {
+      "passed": 106,
+      "failed": 0,
+      "seconds": 1.72,
+      "scope": "priority gateway, split process, route audit, backend/Worker unstarted cleanup; full suite not rerun after config-only correction"
+    }
+  },
+  "frontend": {
+    "initial": {
+      "passed": 254,
+      "failed": 2,
+      "skipped": 10,
+      "minutes": 5.3,
+      "evidence": "ui-first-failures-20261125.txt"
+    },
+    "related_retest": {
+      "passed": 50,
+      "minutes": 1.2
+    },
+    "final": {
+      "passed": 256,
+      "failed": 0,
+      "skipped": 10,
+      "minutes": 4.4
+    },
+    "skips": [
+      "-   92 tests/cs-framework.spec.ts:4:1 › save reusable suite and run with concurrency; view partial episode results",
+      "-  107 tests/fleet-production.spec.ts:5:1 › production fleet: member wizard, actual execution, logs and owner isolation",
+      "-  128 tests/orchestration-live.spec.ts:4:1 › real API: publish template copy, create suite and queue managed orchestration atomically",
+      "-  162 tests/run-wizard-live.spec.ts:4:1 › real trial, three-case formal execution and empty-pool queue through wizard",
+      "-  202 tests/suites-live.spec.ts:4:1 › RoboTwin subset, drafts, publish, copies, export and archive through real API",
+      "-  203 tests/suites-live.spec.ts:56:1 › YAML defaults and field errors have no implicit persistence",
+      "-  227 tests/templates-live.spec.ts:5:1 › real API persists client/server Docker/host template contracts",
+      "-  263 tests/workbench.spec.ts:4:1 › GPU environment check reports real rendering results",
+      "-  264 tests/workbench.spec.ts:25:1 › login, submit, cancel, retry, resources and administration",
+      "-  265 tests/workbench.spec.ts:104:1 › configure heterogeneous shared pool and submit GPU requirements"
+    ],
+    "typecheck": "passed",
+    "build": "passed; warning: minified JS chunk exceeds 500 kB",
+    "coverage": "Frontend not instrumented; passing tests do not establish line/branch coverage"
+  },
+  "deployment": "Not deployed; recovery capability remains disabled"
+}

@@ -1,0 +1,20 @@
+=================================== FAILURES ===================================
+___________ test_checked_in_gateway_is_generated_from_route_manifest ___________
+backend/tests/test_priority_gateway.py:10: in test_checked_in_gateway_is_generated_from_route_manifest
+    assert config == render()
+E   AssertionError: assert '# Generated ...;\n    }\n}\n' == '# Generated ...;\n    }\n}\n'
+E
+E     Skipping 3825 identical leading characters in diff, use -v to show
+E       00;
+E     -     ~^POST:/api/v1/worker/executions/[^/]+/recovery/not\-started$ execution-control-api:8000;
+E           ~^GET:/api/v1/admin/nodes/[^/]+/execution\-data/operations$ interaction-api:8000;
+E           ~^POST:/api/v1/worker/slots/[^/]+/execution\-data/inventory$ worker-data-api:8000;
+E           ~^POST:/api/v1/worker/executions/[^/]+/recovery/reconcile$ execution-control-api:8000;...
+E
+E     ...Full output truncated (125 lines hidden), use '-vv' to show
+________ test_every_registered_api_route_reaches_its_classified_process ________
+backend/tests/test_split_api_process.py:57: in test_every_registered_api_route_reaches_its_classified_process
+    assert gateway_control_path(path) is expected, (method, route.path)
+E   AssertionError: ('POST', '/api/v1/worker/executions/{execution_id}/recovery/not-started')
+E   assert False is True
+E    +  where False = gateway_control_path('/api/v1/worker/executions/sample/recovery/not-started')

@@ -30,13 +30,16 @@ async function setup(page:Page,detailMode?:'execution'|'episodes'){
   return {requests,setRun:()=>{run='r-new';},lose:()=>{lose=true;},offline:(v:boolean)=>{offline=v;},delay:()=>{delay=true;}};
 }
 test('direct navigation, refresh, draft preservation, filtering and offline recovery',async({page})=>{
+  await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
   const ctl=await setup(page);await page.reload();await expect(page.getByRole('region',{name:'程序执行统计'})).toContainText('正常结束 3 次');
   await expect(page.getByRole('region',{name:'平台协议回合结果统计'})).toContainText('结果校验异常 3');
   await expect(page.getByRole('region',{name:'任务级 SDK 业务结果'})).toContainText('业务成功 1 · 业务失败 1');
   await page.getByRole('button',{name:'返回批次列表'}).click();await page.getByRole('button',{name:'业务评测向导',exact:true}).click();await page.getByLabel('批次名称',{exact:true}).fill('保留草稿');await page.getByRole('button',{name:'评测运行与结果',exact:true}).click();
   await page.getByRole('button',{name:'查看批次',exact:true}).click();
   await page.getByLabel('任务状态',{exact:true}).selectOption('PENDING');await expect(page.locator('td p').filter({hasText:'GPU 已占用'})).toBeVisible();
-  ctl.offline(true);await expect(page.getByRole('alert')).toContainText('监控更新失败');ctl.offline(false);await expect(page.getByRole('alert')).toHaveCount(0);
+  ctl.offline(true);await page.clock.runFor(5000);await expect(page.getByRole('alert')).toContainText('监控更新失败');
+  ctl.offline(false);await page.clock.runFor(11000);await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('PENDING');
   await page.getByRole('button',{name:'返回批次列表'}).click();await expect(page.getByLabel('批次名称',{exact:true})).toHaveValue('保留草稿');
   await page.getByRole('button',{name:'查看批次',exact:true}).click();await expect(page.getByLabel('任务状态',{exact:true})).toHaveValue('PENDING');
