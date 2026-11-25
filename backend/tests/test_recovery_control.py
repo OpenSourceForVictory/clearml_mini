@@ -364,6 +364,32 @@ def test_postgres_cancel_lock_contention_and_retry(pg):
     assert apply(factory,generation,sequence=2)['action']=='stop'
 
 
+def test_postgres_running_control_avoids_global_lock_but_expired_lease_rechecks(pg):
+    from backend.app.scheduling import lock
+    factory=seed(pg[0])
+    with factory() as session:
+        run=session.get(Run,'r')
+        run.status='STARTING';run.enqueued_at=now()
+        generation=recovery_records.grant(session,run,'w').generation
+        session.commit()
+    assert apply(factory,generation)['action']=='track'
+    with factory() as scheduler:
+        lock(scheduler)
+        # The scheduler's global lock cannot reject ordinary RUNNING reports.
+        assert apply(factory,generation,sequence=2)['action']=='track'
+        scheduler.rollback()
+    with factory() as session:
+        session.get(Run,'r').lease_expires_at=now()-timedelta(seconds=1)
+        session.commit()
+    with factory() as scheduler:
+        lock(scheduler)
+        with pytest.raises(HTTPException) as error:
+            apply(factory,generation,sequence=3)
+        assert error.value.status_code==503
+        scheduler.rollback()
+    assert apply(factory,generation,sequence=3)['action']=='track'
+
+
 def test_http_to_worker_reconciliation_persists_stop_after_deadline(execution,monkeypatch):
     from types import SimpleNamespace
     from worker.disconnection import DisconnectionClock

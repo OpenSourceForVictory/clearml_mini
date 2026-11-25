@@ -7,6 +7,7 @@ from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from .core import ExecutionRecovery, ExecutionRecoveryControl, Job, Run, ServiceInstance, Slot, now
 from .scheduling import TERMINAL, execution_timeout, fast_lock, seconds, transition, utc
@@ -65,13 +66,28 @@ def reconcile(s, *, worker_id, execution_id, observation):
         raise HTTPException(404, 'recovery execution not found')
     if grant.generation != observation.generation:
         raise HTTPException(409, 'recovery assignment generation does not match')
-    # Same order as cancellation and allocation: scheduler -> Run -> grant.
-    # Receipt writers lock only grant and never lock Run.
-    fast_lock(s)
-    run = s.scalar(select(Run).where(Run.id == grant.run_id).with_for_update()
-                   .execution_options(populate_existing=True))
-    grant = s.scalar(select(ExecutionRecovery).where(ExecutionRecovery.execution_id == execution_id)
-                     .with_for_update().execution_options(populate_existing=True))
+    # RUNNING observations only renew the original execution and its control
+    # cursor. They do not allocate or release resources, so serialize on this
+    # Run/authority instead of contending with every scheduler transaction.
+    # STARTING transitions and an expired lease (which may invalidate service
+    # readiness) retain the scheduler -> Run -> grant order.
+    candidate = s.get(Run, grant.run_id)
+    at_entry = now()
+    global_required = (not candidate or candidate.status != 'RUNNING'
+                       or not candidate.lease_expires_at
+                       or utc(candidate.lease_expires_at) <= at_entry + timedelta(seconds=1))
+    if global_required:
+        fast_lock(s)
+    try:
+        run = s.scalar(select(Run).where(Run.id == grant.run_id).with_for_update(nowait=True)
+                       .execution_options(populate_existing=True))
+        grant = s.scalar(select(ExecutionRecovery).where(ExecutionRecovery.execution_id == execution_id)
+                         .with_for_update(nowait=True).execution_options(populate_existing=True))
+    except OperationalError as exc:
+        if getattr(exc.orig, 'sqlstate', None) != '55P03':
+            raise
+        raise HTTPException(503, 'control plane busy; retry shortly',
+                            headers={'Retry-After': '1'}) from exc
     control = s.get(ExecutionRecoveryControl, execution_id)
     previous = control.snapshot if control else {}
     data = observation.model_dump(mode='json')
@@ -79,6 +95,14 @@ def reconcile(s, *, worker_id, execution_id, observation):
     slot = s.get(Slot, grant.slot_id)
     owns = bool(run and run.execution_id == execution_id and run.slot_id == grant.slot_id
                 and slot and slot.worker_id == worker_id)
+    # If a transition or lease expiry happened after the unlocked pre-read,
+    # retry from a new transaction rather than changing allocation/readiness
+    # without the global lock. Cancellation/terminal decisions can still stop.
+    if (not global_required and run and run.status in ('STARTING', 'RUNNING')
+            and (run.status == 'STARTING' or not run.lease_expires_at
+                 or utc(run.lease_expires_at) <= now())):
+        raise HTTPException(503, 'control plane busy; retry shortly',
+                            headers={'Retry-After':'1'})
     # Replayed responses never renew the lease, nor grant new control time.
     if observation.sequence <= previous.get('sequence', 0):
         if observation.sequence == previous['sequence'] and digest == previous['digest']:
