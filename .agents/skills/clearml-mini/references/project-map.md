@@ -332,7 +332,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 调度恢复保护：scheduling.reconcile 对匹配执行 ID、Run ID、槽位的显式恢复授权，不再因旧租约或缺少启动上报将任务终结；撤销授权也不能充当进程已停止的证明。业务总执行时限仍独立生效，资源继续占用直至清理确认，旧协议及未领取预约维持原规则。批量读取使用相关 EXISTS，锁后重新核对授权与执行状态，不为每条执行增添独立授权查询。本次尚不向实际任务发放恢复授权，不能据此宣称端到端断联恢复已启用；回归见 test_recovery_scheduling.py。部署必须先完成 ae185f6 迁移。
 
 
-控制对账：backend/app/recovery_control.py + worker/recovery_control.py，迁移 af296a7 保存可变决策，原授权保持不可变。平台已生效取消/超时/终态优先于迟到节点结果；退出码仅保留事实，不能释放资源或撤销终态。API 决策核对执行/代次/boot/运行身份，重复响应不续期，节点先持久化再采纳。test_recovery_control.py / test_worker_recovery_control.py 覆盖容忍边界、长期迟到、身份冲突、取消锁竞争、API 提交回复丢失后重建叠加用户取消、重复及持久化失败；完整恢复仍未启用。操作边界见 docs/operations.md。
+控制对账：backend/app/recovery_control.py + worker/recovery_control.py，迁移 af296a7 保存可变决策，原授权保持不可变。平台已生效取消/超时/终态优先于迟到节点结果；退出码仅保留事实，不能释放资源或撤销终态。API 决策核对执行/代次/boot/运行身份，重复响应不续期，节点先持久化再采纳。test_recovery_control.py / test_worker_recovery_control.py 覆盖容忍边界、长期迟到、身份冲突、取消锁竞争、API 提交回复丢失后重建叠加用户取消、重复及持久化失败；隔离 PostgreSQL 的真实 HTTP 鉴权测试确认旧凭据 401、新凭据可按原序列重放，再继续对账。完整恢复仍未启用。操作边界见 docs/operations.md。
 
 
 节点监督开发阶段：worker/recovery_supervisor.py 以执行级 flock、原子 fsync journal 保存控制时钟、原始业务起点、进程绑定、退出事实和精确重放请求。tick 本地观察/停止与 exchange HTTP 分开，不在网络期间持有监督锁。worker/recovery_runtime.py 使用 HostBackend.inspect(recovery=True) 的 InvocationID / Docker 完整 ID；缺少可信身份不接管，同名重建不停止，退出后卸载不抹掉原退出码。协商执行已接入 Worker.execute，但仍未广告生产恢复能力。test_recovery_runtime.py 的 RECOVERY_RUNTIME_TEST=1 用真实 systemd 服务和本机镜像进行短程序+模拟时钟测试，并覆盖同节点两个同名服务实例、两个客户端执行的运行实体隔离；API 联测为隔离 TestClient/SQLite，不是生产批次或 GPU/NPU 模型评测；不得将该测试当作功能已上线。

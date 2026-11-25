@@ -1,4 +1,5 @@
 from datetime import timedelta
+import time
 import pytest
 from fastapi import HTTPException, FastAPI
 from fastapi.testclient import TestClient
@@ -8,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend.app import recovery_control as control, recovery_records
 from backend.app.core import ExecutionRecovery, ExecutionRecoveryControl, Job, Run, ServiceInstance, now
-from backend.tests.test_execution_logs_postgres import seed, pg
+from backend.tests.test_execution_logs_postgres import seed, pg, api as pg_api
 
 
 @pytest.fixture
@@ -205,6 +206,45 @@ def test_lost_control_ack_after_api_restart_observes_platform_cancel(execution):
         run = session.get(Run, 'r')
         assert run.status == 'CANCEL_REQUESTED' and run.lease_expires_at == original_lease
         assert not run.cleanup_confirmed
+
+
+def test_control_reconnect_after_worker_credential_rotation(pg_api):
+    """A stale credential cannot resume control; the new one replays the same fact."""
+    from backend.app.core import Worker
+    from backend.app.execution import token_hash
+    client, old_headers, factory = pg_api
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'STARTING'
+        run.enqueued_at = now()
+        generation = recovery_records.grant(session, run, 'w').generation
+        session.commit()
+    path = '/api/v1/worker/executions/e/recovery/reconcile'
+    def send(headers, body):
+        for _ in range(5):
+            response = client.post(path, headers=headers, json=body)
+            if response.status_code != 503:
+                return response
+            time.sleep(.05)
+        return response
+    first_body = observation(generation).model_dump(mode='json')
+    first = send(old_headers, first_body)
+    assert first.status_code == 200 and first.json()['action'] == 'track', first.text
+    with factory() as session:
+        original_lease = session.get(Run, 'r').lease_expires_at
+        session.get(Worker, 'w').token_hash = token_hash('wk_rotated_control_test')
+        session.commit()
+    assert send(old_headers, first_body).status_code == 401
+    new_headers = {'Authorization': 'Bearer wk_rotated_control_test'}
+    replay = send(new_headers, first_body)
+    assert replay.status_code == 200 and replay.json()['duplicate']
+    second = send(new_headers, observation(generation, sequence=2).model_dump(mode='json'))
+    assert second.status_code == 200 and second.json()['action'] == 'track'
+    with factory() as session:
+        run = session.get(Run, 'r')
+        assert run.status == 'RUNNING' and not run.cleanup_confirmed
+        assert session.get(ExecutionRecoveryControl, 'e').snapshot['sequence'] == 2
+        assert run.lease_expires_at >= original_lease
 
 
 def test_postgres_duplicate_control_concurrency(pg):
