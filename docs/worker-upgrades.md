@@ -222,3 +222,5 @@ Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json`
 长任务持续上报时，已确认消息的摘要原来也占用默认10000条额度。Worker 现在只回收已确认且被持久源游标越过的回合摘要，保留压缩序号边界，未确认结果不删。异常恢复到旧游标时明确报告 `result cursor moved behind confirmed retirement boundary`，应保留 journal、原协议文件和 outbox 核对，不能删队列或重新启动业务绕过。
 
 此更新自动为本地 outbox SQLite 增加 retired 表，不新增平台数据库迁移；原未确认记录保持兼容，控制/任务结果摘要不参与回合压缩。不要手工恢复旧 journal 配合新队列，或单独降级正在恢复的 Worker。真实待报结果达到字节/条数上限仍会报告容量错误并保留源文件，不能把压缩解释为无限容量。
+
+2026-11-25 已通过界面同一升级 API 验证 local4090-151 升级至 3216ae0 对应发布摘要，6 个宿主机/容器真实进程用例通过；没有批量升级其他节点。API 实际迁移 ae185f6 → b03a7b8，完整恢复能力仍关闭。详见[发布验收](validation/log-recovery-release-20261125/README.md)。

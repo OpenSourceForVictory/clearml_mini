@@ -1,0 +1,25 @@
+{
+  "commit": "3216ae0",
+  "image": "mini-eval-api:log-recovery-3216ae0",
+  "version_before": "ae185f6",
+  "version_after": "b03a7b8",
+  "health": {
+    "status": "ok",
+    "roles": {
+      "execution-control": true,
+      "interaction": true,
+      "worker-data": true,
+      "bulk-transfer": true
+    }
+  },
+  "page_statuses": {
+    "auth/me": 200,
+    "batches?view=summary": 200,
+    "admin/nodes": 200
+  },
+  "worker_slots_reconnected": 13,
+  "agents_reconnected": 6,
+  "recovery_grants": 0,
+  "full_recovery_enabled": false,
+  "deployed_at": "2026-11-25T06:40:19.517511+00:00"
+}

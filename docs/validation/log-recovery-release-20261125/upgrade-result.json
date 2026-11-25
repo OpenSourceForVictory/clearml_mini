@@ -1,0 +1,13 @@
+{
+  "node": "local4090-151",
+  "node_id": "a6101438-91bf-42e6-94c2-67379b485a3a",
+  "operation": "2329aaef-6a37-4902-a898-213ffacbccf9",
+  "state": "SUCCEEDED",
+  "release_id": "218731dd8649e543a44a8e7001c378888fd14a3cfddbc61adf879a634585f947",
+  "version": "0.21.17",
+  "slot_ids": [
+    "0784bacf-b35e-4ad8-b4e4-5e19cd609ebe"
+  ],
+  "same_api_as_ui": true,
+  "browser_clicked": false
+}

@@ -381,3 +381,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 日志重连集中验证：test_log_reconnect_postgres.py 使用 LOG_TEST_DATABASE_URL 的一次性数据库、四角色真实 HTTP 和 100 个 Sender；包含提交后 ACK 丢失、心跳/结果/任务列表并行。只验证预置积压恢复与幂等，不代表真实业务、网关或持续容量已验收。
 
 可靠队列长执行容量：reliable_outbox.compact_confirmed 只回收已ACK且严格落在持久源游标前的episode摘要；recovery_results在新采集前调用。SQLite retired 保存最大退休序号；游标回退报冲突，未ACK行保留。文档见worker-upgrades.md；无新平台迁移，不能删除原队列绕过冲突。
+
+3216ae0 本机发布与节点升级证据：docs/validation/log-recovery-release-20261125/README.md。四角色健康、6 个真实宿主机/Docker进程及批次页面验证通过；CUDA因批准环境缺失未执行，不等同模型验收或完整恢复能力启用。

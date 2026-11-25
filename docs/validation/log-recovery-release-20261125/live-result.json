@@ -1,0 +1,84 @@
+{
+  "model_evaluation": false,
+  "full_recovery_enabled": false,
+  "batches": [
+    {
+      "name": "host-sdk",
+      "batch_id": "1dde1d0a-9d1a-48c4-8353-3b255ad27b67",
+      "results": [
+        {
+          "job_id": "a05bfda8-48b5-4f80-8532-fb006193b47b",
+          "execution_id": "191ad0e8-48d3-4876-a291-f64cde002d15",
+          "status": "SUCCEEDED",
+          "exit_code": 0,
+          "cleanup_confirmed": true,
+          "log_version": 1,
+          "log_truncated": false,
+          "latest_tail_visible": false
+        },
+        {
+          "job_id": "7ef04ad8-2d77-44e9-86a1-9925f27d4518",
+          "execution_id": "8b536828-1689-4451-854c-d024afe91130",
+          "status": "SUCCEEDED",
+          "exit_code": 0,
+          "cleanup_confirmed": true,
+          "log_version": 1,
+          "log_truncated": false,
+          "latest_tail_visible": false
+        }
+      ]
+    },
+    {
+      "name": "host-logs",
+      "batch_id": "38b3f39d-23b7-45dd-bd7b-1923cbe74d16",
+      "results": [
+        {
+          "job_id": "60367fc2-ca6e-4f99-8354-72cd7db920ef",
+          "execution_id": "b701fe9d-a22a-44a6-9dad-944b0a60f887",
+          "status": "SUCCEEDED",
+          "exit_code": 0,
+          "cleanup_confirmed": true,
+          "log_version": 2,
+          "log_truncated": true,
+          "latest_tail_visible": true
+        },
+        {
+          "job_id": "18b89eaa-c6a2-4ed7-b25c-95371eddd28d",
+          "execution_id": "dafebd23-df18-4843-a9ce-23fef5de31fb",
+          "status": "FAILED",
+          "exit_code": 1,
+          "cleanup_confirmed": true,
+          "log_version": 2,
+          "log_truncated": true,
+          "latest_tail_visible": true
+        }
+      ]
+    },
+    {
+      "name": "docker-logs",
+      "batch_id": "fc1f3524-5b7e-4ff1-97e8-44995db578be",
+      "results": [
+        {
+          "job_id": "cd0d8c41-112e-450a-8e13-80795c11d8cf",
+          "execution_id": "e1d28b86-ed49-4768-87aa-22261784641f",
+          "status": "SUCCEEDED",
+          "exit_code": 0,
+          "cleanup_confirmed": true,
+          "log_version": 2,
+          "log_truncated": true,
+          "latest_tail_visible": true
+        },
+        {
+          "job_id": "664abea4-5190-42f6-9daa-1c9d74f1a028",
+          "execution_id": "162830d2-ac38-4030-97ab-4992a3cd9957",
+          "status": "FAILED",
+          "exit_code": 1,
+          "cleanup_confirmed": true,
+          "log_version": 2,
+          "log_truncated": true,
+          "latest_tail_visible": true
+        }
+      ]
+    }
+  ]
+}

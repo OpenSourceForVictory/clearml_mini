@@ -107,3 +107,7 @@ Worker 0.21.16 的日志发送遇到 429/502/503/504 或传输超时时保留未
 ### 集中恢复专项验证
 
 `backend/tests/test_log_reconnect_postgres.py` 在一次性 PostgreSQL 和四个真实 API 进程中启动 100 个真实 Sender，预置积压日志及未确认块，同步恢复上传，同时上报心跳和回合结果、读取任务列表。另注入数据库提交后的 ACK 丢失，检查重放不会增加数据库块数。测试直连各角色端口，不包含 Nginx、真实业务程序或长时间断联计时；不可替代 30 分钟容量验收。配置与指标见 [集中补传记录](validation/disconnected-execution-20261124/log-reconnect-20261125.json)。
+
+### 2026-11-25 本机发布验证
+
+最新日志窗口已随 3216ae0 部署到本机平台并升级 local4090-151；宿主机和 Docker 各验证退出 0/1、大量输出后的最新尾部及截断提示。其他节点需单独升级才获得新版发送行为。完整断联恢复能力仍未启用，边界和批次见[发布记录](validation/log-recovery-release-20261125/README.md)。
