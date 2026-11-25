@@ -131,6 +131,45 @@ def test_http_and_delivery_apply_before_ack(execution,tmp_path):
     with factory() as s:assert s.get(Run,'r').result_json['success']
 
 
+def test_result_ack_lost_across_api_restart_reuses_original_receipt(execution, tmp_path):
+    factory, generation = execution
+    setup(factory, True)
+    queue = ReliableOutbox(tmp_path/'outbox')
+    queue.put('e', generation, 'task_result', 0, {'success': True})
+
+    def app_instance():
+        app = FastAPI()
+        def db():
+            with factory() as session:
+                yield session
+        recovery_records.install(app, db, lambda: SimpleNamespace(id='w'))
+        return app
+
+    with TestClient(app_instance()) as first_api:
+        def lose_ack(path, body):
+            response = first_api.post('/api/v1/'+path, json=body)
+            assert response.status_code == 200, response.text
+            raise TimeoutError('API committed result before response was lost')
+        with pytest.raises(TimeoutError):
+            RecoveryDelivery(SimpleNamespace(post=lose_ack), queue, apply_results=True).step()
+    assert len(queue.pending()) == 1
+
+    with TestClient(app_instance()) as restarted_api:
+        def post(path, body):
+            response = restarted_api.post('/api/v1/'+path, json=body)
+            assert response.status_code == 200, response.text
+            return response.json()
+        reply = post('worker/executions/e/recovery/results', {
+            'generation': generation, 'kind': 'task_result', 'sequence': 0,
+            'body': {'success': True}, 'apply': True})
+        assert reply['duplicate'] and reply['application'] == 'applied'
+        assert RecoveryDelivery(SimpleNamespace(post=post), queue, apply_results=True).step() == 1
+    assert queue.pending() == []
+    with factory() as session:
+        assert session.get(Run, 'r').result_json['success'] is True
+        assert session.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt)) == 1
+
+
 @pytest.mark.parametrize('reply_state', [False, True, 'missing_application'])
 def test_delivery_keeps_unconfirmed_result_pending(tmp_path, reply_state):
     q=ReliableOutbox(tmp_path/'outbox')

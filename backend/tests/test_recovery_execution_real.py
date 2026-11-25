@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','cancel','timeout','service','restart','pre_cancel'])
+@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','service','restart','pre_cancel'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -52,7 +52,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     result={**event,'status':'COMPLETED','success':True,'metrics':{},'runtime':.4,'artifacts':[]}
     script='import time,signal,sys\nsignal.signal(signal.SIGTERM,lambda *a:sys.exit(0))\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(event))+',flush=True)\n'
-    script+='time.sleep('+('2' if scenario=='complete' else '5' if scenario=='restart' else '30')+')\n'
+    script+='time.sleep('+('2' if scenario in ('complete','offline_complete') else '5' if scenario=='restart' else '30')+')\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(result))+',flush=True)\n'
     script+='print('+repr(json.dumps({'final':{'success_rate':1.,'episode_count':1,'runtime':2.}}))+',flush=True)\n'
     if scenario=='service':
@@ -147,6 +147,16 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert Path(str(w.path)+'.supervision.json').exists(),errors
             time.sleep(1.3)  # Exceeds this task's legacy one-second lease.
             assert thread.is_alive() and not errors
+            if scenario=='offline_complete':
+                end=time.monotonic()+10
+                while time.monotonic()<end:
+                    observed=w.inspect(execution)
+                    if observed and not observed['State']['Running']:break
+                    time.sleep(.05)
+                assert observed and not observed['State']['Running'],errors
+                time.sleep(1.3)
+                assert thread.is_alive() and not errors
+                assert calls.count('create')==1
             if scenario=='restart':
                 w.stop_event.set();thread.join(6)
                 assert not thread.is_alive() and not errors
@@ -176,10 +186,10 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert w.state is None
             with factory() as db:
                 run=db.get(Run,'r')
-                assert run.status=={'complete':'SUCCEEDED','cancel':'CANCELLED','timeout':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED'}[scenario]
+                assert run.status=={'complete':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED','timeout':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
                 assert db.get(ExecutionRecoveryControl,execution).snapshot['result_sync']=='complete'
-                if scenario in ('complete','restart'):assert db.get(EpisodeRecord,('r',1)).result==result
+                if scenario in ('complete','offline_complete','restart'):assert db.get(EpisodeRecord,('r',1)).result==result
             assert calls.count('create')==1
     finally:
         offline.clear();w.stop_event.set()

@@ -291,6 +291,55 @@ def test_pending_sync_does_not_reopen_cancelled_attempt_after_retry(execution):
         assert s.get(Job,'j').status=='PENDING' and s.get(Run,new_id).status=='PENDING'
 
 
+@pytest.mark.parametrize('platform_status,final_status', [
+    ('CANCEL_REQUESTED', 'CANCELLED'),
+    ('TIMED_OUT', 'TIMED_OUT'),
+])
+def test_late_results_after_platform_stop_and_retry_belong_only_to_old_attempt(
+        execution, platform_status, final_status):
+    from backend.app.recovery_results import apply
+    from backend.app.retries import retry_job
+    from backend.app.core import EpisodeRecord
+    factory, generation = execution
+    proof = prepare(factory, generation)
+    with factory() as session:
+        job = session.get(Job, 'j')
+        job.episodes = 1
+        job.client_spec = {'seed': 100, 'template': {
+            'task_type': 'evaluation', 'episode_reporting': True}}
+        run = session.get(Run, 'r')
+        run.status = job.status = platform_status
+        session.commit()
+    metrics = {'success_rate': 1, 'episode_count': 1, 'runtime': 1}
+    first = complete(factory, proof, metrics=metrics, pending_results=True)
+    assert first['status'] == final_status
+    assert cleanup(factory, proof)['cleanup_confirmed']
+    with factory() as session:
+        new_run = retry_job(session, session.get(Job, 'j'))
+        new_id = new_run.id
+        session.commit()
+    events = [
+        {'episode_id': 1, 'seed': 100, 'status': 'STARTED'},
+        {'episode_id': 1, 'seed': 100, 'status': 'COMPLETED',
+         'success': True, 'metrics': {}, 'runtime': 1, 'artifacts': []},
+    ]
+    for sequence, body in enumerate(events):
+        with factory() as session:
+            reply = apply(session, worker_id='w', execution_id='e', generation=generation,
+                          kind='episode', sequence=sequence, body=body)
+            assert reply['application'] == 'applied'
+            session.commit()
+    assert sync_results(factory, proof)['result_sync'] == 'complete'
+    with factory() as session:
+        old_run = session.get(Run, 'r')
+        new_run = session.get(Run, new_id)
+        assert old_run.status == final_status and old_run.cleanup_confirmed
+        assert session.get(EpisodeRecord, ('r', 1)).result == events[1]
+        assert session.get(EpisodeRecord, (new_id, 1)) is None
+        assert new_run.status == session.get(Job, 'j').status == 'PENDING'
+        assert new_run.execution_id is None and new_run.slot_id is None
+
+
 def test_result_sync_before_completion_is_rejected(execution):
     factory,generation=execution;proof=prepare(factory,generation)
     with pytest.raises(HTTPException) as exc:sync_results(factory,proof)
