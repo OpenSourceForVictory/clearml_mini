@@ -1,0 +1,8 @@
+首次扩大专项失败证据（去除测试请求头，只保留断言）：
+
+test_real_http_worker_auth_and_slot_boundaries
+assert client.post(path, headers=headers, json={'request_id':'bad'}).status_code == 422
+AssertionError: assert 400 == 422
+1 failed, 359 passed, 2881 deselected, 105 warnings in 119.77s
+
+核对 backend/app/main.py 的 RequestValidationError 处理器：平台已有统一 400 返回约定。修正测试预期为 400，未修改处理器或放宽校验。补充非规范 UUID 拒绝测试后重跑。

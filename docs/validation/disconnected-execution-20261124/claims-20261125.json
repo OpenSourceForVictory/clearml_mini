@@ -1,0 +1,56 @@
+{
+  "stage": "claim recovery foundations; not enabled in production",
+  "date": "2026-11-25",
+  "tests": {
+    "passed": 361,
+    "skipped": 0,
+    "deselected": 2881,
+    "seconds": 118.05
+  },
+  "method": "python -m scripts.test_coverage; targeted selection; PostgreSQL 16 isolated container",
+  "selection": "recovery_claim or recovery_control or recovery_records or recovery_scheduling or recovery_supervisor or disconnected_execution_foundations or priority_routes or priority_gateway or split_api_process or execution_lock_scope or service_instance_claim_identity",
+  "coverage": {
+    "worker/recovery_claim.py": {
+      "covered_lines": 101,
+      "num_statements": 101,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 52,
+      "num_partial_branches": 0,
+      "covered_branches": 52,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "backend/app/recovery_claims.py": {
+      "covered_lines": 71,
+      "num_statements": 71,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 26,
+      "num_partial_branches": 0,
+      "covered_branches": 26,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    }
+  },
+  "whole_project_gate": "not met by targeted run; script exit 1; pytest exit 0",
+  "previous_failure": "claim-failure-20261125.txt",
+  "migration": "b03a7b8; isolated PostgreSQL upgrade/downgrade/nonempty downgrade rejection only",
+  "deployment": "none; production Worker loop unchanged",
+  "remaining": [
+    "prelaunch reconciliation and durable launch identity",
+    "production claim capability negotiation and Worker loop",
+    "reliable result application and cleanup acknowledgement",
+    "full real batch offline recovery validation"
+  ]
+}

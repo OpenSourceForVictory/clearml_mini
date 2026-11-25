@@ -267,6 +267,15 @@ class ExecutionRecoveryControl(Base):
     snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
 
 
+class ExecutionRecoveryClaim(Base):
+    """Immutable original claim response; never a renewed launch permission."""
+    __tablename__ = 'execution_recovery_claims'
+    request_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    execution_id: Mapped[str] = mapped_column(ForeignKey('execution_recovery.execution_id'), unique=True)
+    digest: Mapped[str] = mapped_column(String(64))
+    task_snapshot: Mapped[dict] = mapped_column(JSON_TYPE)
+
+
 class ExecutionRecoveryReceipt(Base):
     __tablename__ = 'execution_recovery_receipts'
     execution_id: Mapped[str] = mapped_column(ForeignKey('execution_recovery.execution_id'), primary_key=True)

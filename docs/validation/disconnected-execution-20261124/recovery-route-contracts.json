@@ -44,6 +44,21 @@
       ],
       "confirmation": "state/lease confirmation; retry original execution identity",
       "source": "backend.app.recovery_control.control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/slots/{slot_id}/recovery/claim",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_claims.Lookup'>"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.recovery_claims.recover_claim"
     }
   ],
   "body_schemas": {
@@ -226,6 +241,21 @@
       ],
       "title": "Observation",
       "type": "object"
+    },
+    "<class 'backend.app.recovery_claims.Lookup'>": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id"
+      ],
+      "title": "Lookup",
+      "type": "object"
     }
   },
   "legacy_routes": [
@@ -242,6 +272,11 @@
     {
       "method": "POST",
       "path": "/api/v1/worker/executions/{execution_id}/recovery/reconcile",
+      "current_category": "control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/slots/{slot_id}/recovery/claim",
       "current_category": "control"
     }
   ]

@@ -157,3 +157,7 @@ Worker 协议编号仍为 18，新增可选能力 episode_timing_v1。新 API �
 ## 断联本地监督开发阶段（未启用）
 
 新增 recovery_supervisor / recovery_runtime 模块，宿主机恢复读取 systemd InvocationID，Docker 使用完整容器 ID。journal 与单调计时持久化、执行级文件锁阻止双监督者；网络对账不能阻塞本地停止判断。普通旧执行仍走原看门狗，更新代码不会给在途执行追溯启用不限断联。生产领取能力协商、主循环接线、结果/清理应用及界面仍待完成，当前不要手工添加授权或删除 journal。验证范围见 [断联恢复实施核对](validation/disconnected-execution-20261124/implementation-audit.md)。
+
+### 领取请求账本（开发阶段，未接入主循环）
+
+`worker/recovery_claim.py` 在发送前持久化 request_id、Slot、boot ID、单调时间及已知执行列表；响应丢失或重启沿用原请求。收到原分配后先验证摘要、代次与策略，再交给幂等执行 journal；目标 journal 落盘成功后才清除领取请求。持久化失败保留待恢复记录，回调只能写 journal，不能启动程序。收据不是启动许可，后续仍须控制对账。当前更新 Worker 不会启用该流程，不要删除旧执行或领取记录尝试恢复。

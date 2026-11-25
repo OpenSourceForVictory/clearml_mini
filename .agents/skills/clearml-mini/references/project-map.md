@@ -330,3 +330,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 
 节点监督开发阶段：worker/recovery_supervisor.py 以执行级 flock、原子 fsync journal 保存控制时钟、原始业务起点、进程绑定、退出事实和精确重放请求。tick 本地观察/停止与 exchange HTTP 分开，不在网络期间持有监督锁。worker/recovery_runtime.py 使用 HostBackend.inspect(recovery=True) 的 InvocationID / Docker 完整 ID；缺少可信身份不接管，同名重建不停止，退出后卸载不抹掉原退出码。尚未接入 Worker.execute 或广告恢复能力。test_recovery_runtime.py 的 RECOVERY_RUNTIME_TEST=1 用真实 systemd 用户服务和本机镜像进行短程序+模拟时钟测试，API 联测为隔离 TestClient/SQLite，不是生产批次或 GPU/NPU 模型评测；不得将该测试当作功能已上线。
+
+领取恢复基础：backend/app/recovery_claims.py 保存/查询原任务快照，迁移 b03a7b8；worker/recovery_claim.py 持久请求与幂等交接。查询走 execution_control，不取全局锁、不续租；收据 launch_authorized=false，平台取消/超时/撤销优先。绑定仅供后续领取事务集成，当前不广告能力、不接入生产主循环。test_recovery_claims.py / test_worker_recovery_claim.py 覆盖 HTTP 响应丢失、真实 PostgreSQL 并发及迁移、身份/摘要、重启与磁盘失败。操作和迁移限制见 docs/operations.md、docs/database-migration.md。
