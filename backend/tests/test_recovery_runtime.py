@@ -19,8 +19,10 @@ def test_runtime_binding_and_stop_uses_immutable_id(tmp_path,monkeypatch,host):
     calls=[]
     w.inspect=lambda e:data
     monkeypatch.setattr(HostBackend,'inspect',lambda *a,**kw:data)
-    monkeypatch.setattr(HostBackend,'stop',lambda *a:calls.append('host-stop'))
-    monkeypatch.setattr('worker.client.docker',lambda *a,**kw:calls.append(a))
+    def stopped(value):
+        calls.append(value);data['State']['Running']=False
+    monkeypatch.setattr(HostBackend,'stop',lambda *a:stopped('host-stop'))
+    monkeypatch.setattr('worker.client.docker',lambda *a,**kw:stopped(a))
     runtime=RecoveryRuntime(w,w.state['task']['execution_id'])
     bound=runtime.inspect()['identity']
     assert bound['kind']==('host' if host else 'docker')
@@ -106,7 +108,8 @@ def test_real_process_continues_across_failed_control_then_stops_or_finishes(tmp
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker API reconciliation opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,monkeypatch,mode):
+@pytest.mark.parametrize('cancel',[False,True])
+def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,monkeypatch,mode,cancel):
     from datetime import timedelta
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -119,18 +122,28 @@ def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,m
     w=host_worker(tmp_path,['python3','business.py'],timeout=0)
     w.host_mode=lambda:mode=='host'
     task=w.state['task'];execution=task['execution_id'];name='mini-eval-'+execution
-    script='import time;print("started",flush=True);time.sleep(3);print("completed",flush=True)'
+    script='import time,signal,sys;signal.signal(signal.SIGTERM,lambda *a:sys.exit(0));print("started",flush=True);time.sleep('+str(30 if cancel else 3)+');print("completed",flush=True)'
     (tmp_path/'business.py').write_text(script)
     host=HostBackend(w)
     engine=create_engine('sqlite://',connect_args={'check_same_thread':False},poolclass=StaticPool)
     factory=seed(engine);at=now()
     with factory() as db:
         run=db.get(Run,'r');run.execution_id=execution;run.status='STARTING';run.enqueued_at=at
-        db.get(Job,'j').client_spec={'timeout_seconds':0}
+        db.get(Job,'j').client_spec={'timeout_seconds':0,'template':{'task_type':'command'}}
         generation=recovery_records.grant(db,run,'w',60).generation;db.commit()
     def database():
         with factory() as db:yield db
     app=FastAPI();recovery_control.install(app,database,lambda:SimpleNamespace(id='w'))
+    from backend.app import recovery_finish
+    from backend.app.execution import Finish,RecoveryProof
+    @app.post('/api/v1/worker/executions/{execution_id}/complete')
+    def complete(execution_id:str,body:Finish):
+        with factory() as db:
+            reply=recovery_finish.finish(db,worker_id='w',execution_id=execution_id,body=body);db.commit();return reply
+    @app.post('/api/v1/worker/executions/{execution_id}/cleanup')
+    def cleanup(execution_id:str,body:RecoveryProof):
+        with factory() as db:
+            reply=recovery_finish.cleanup(db,worker_id='w',execution_id=execution_id,proof=body);db.commit();return reply
     supervisor=None
     if mode=='host':
         host.create(task)
@@ -142,6 +155,7 @@ def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,m
         w.name=lambda e:'mini-eval-'+e;w.inspect=lambda e:Worker.inspect(w,e)
     try:
         runtime=RecoveryRuntime(w,execution);bound=runtime.inspect()['identity']
+        w.state['recovery']={'generation':generation,'identity':bound}
         supervisor=RecoverySupervisor(tmp_path/'supervision',execution_id=execution,generation=generation,
             process_identity=bound,tolerance=60,started_at=0,requested_at=0)
         with TestClient(app) as client:
@@ -168,6 +182,23 @@ def test_real_runtime_reconciles_original_identity_after_lease_expiry(tmp_path,m
                 assert run.execution_id==execution and run.status=='RUNNING'
                 assert not run.cleanup_confirmed
                 assert scheduling.utc(run.started_at)==at
+            if cancel:
+                assert runtime.inspect()['state']=='running'
+                with factory() as db:db.get(Run,'r').status='CANCEL_REQUESTED';db.commit()
+                supervisor.exchange(SimpleNamespace(post=post),clock=lambda:36)
+                assert supervisor.tick(runtime.inspect,runtime.stop,at=36)=='stop'
+                assert supervisor.tick(runtime.inspect,runtime.stop,at=37)=='retain'
+                supervisor.exchange(SimpleNamespace(post=post),clock=lambda:37)
+                actual=runtime.inspect()
+                assert actual['state']=='exited'
+                w.api=SimpleNamespace(post=post)
+                Worker.finalize_recovery(w,{'status':'CANCELLED','exit_code':actual['exit_code']})
+                assert w.state is None
+                with factory() as db:
+                    run=db.get(Run,'r')
+                    assert run.status=='CANCELLED' and run.cleanup_confirmed
+                    assert run.exit_code==actual['exit_code']
+                return
             end=time.monotonic()+8
             while runtime.inspect()['state']=='running' and time.monotonic()<end:time.sleep(.05)
             assert supervisor.tick(runtime.inspect,runtime.stop,at=40)=='retain'

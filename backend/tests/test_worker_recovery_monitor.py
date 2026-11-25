@@ -226,7 +226,9 @@ def test_real_runtime_stops_while_control_http_is_blocked(tmp_path,monkeypatch,m
         assert thread.is_alive()
         wait(lambda:m.snapshot()['state'] in ('exited','missing'))
         assert m.snapshot()['stop_reason']=='disconnection_timeout'
-        assert not RecoveryRuntime(worker,execution).inspect()['state']=='running'
+        assert RecoveryRuntime(worker,execution).inspect()['state']=='exited'
+        # Recreate the adapter and startup handoff after systemd unloads the unit.
+        assert Worker.start_recovery(worker)['identity']==launch['identity']
         release.set();thread.join(2);assert errors==[]
     finally:
         release.set()

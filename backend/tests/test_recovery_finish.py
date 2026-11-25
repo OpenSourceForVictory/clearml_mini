@@ -317,3 +317,17 @@ def test_postgres_result_sync_does_not_compete_for_global_scheduler_lock(pg):
         assert sync_results(factory,proof)['result_sync']=='complete'
         assert sync_results(factory,proof)['duplicate']
         scheduling.rollback()
+
+
+@pytest.mark.parametrize('platform_status',['CANCEL_REQUESTED','TIMED_OUT'])
+def test_confirmed_stop_without_exit_code_can_finish_without_inventing_success(execution,platform_status):
+    factory,generation=execution
+    with factory() as s:
+        s.get(Job,'j').client_spec={'template':{'task_type':'command'}}
+        s.get(Run,'r').status=platform_status;s.commit()
+    observe(factory,generation,state='exited',exit_code=None)
+    proof=RecoveryProof(generation=generation,identity=observation(generation).identity)
+    expected='CANCELLED' if platform_status=='CANCEL_REQUESTED' else 'TIMED_OUT'
+    assert complete(factory,proof,status='CANCELLED',exit_code=None)['status']==expected
+    assert cleanup(factory,proof)['cleanup_confirmed']
+    with factory() as s:assert s.get(Run,'r').exit_code is None

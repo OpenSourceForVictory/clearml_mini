@@ -316,3 +316,5 @@ Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json`
 清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。这仅完成已有收尾记录的恢复，正常运行监督与完整生产启用仍待完成。
 
 `results-finished`属于可靠结果通道，只更新原执行同步标记，不竞争调度全局锁；完成与清理仍按资源转换锁序处理。
+
+恢复执行现在将核验过身份的退出事实保存在`<execution-journal>.runtime-exit.json`。systemd成功停止后卸载单元时，记录“已停止、退出码未知”，不会伪造退出码0；仅凭单元不存在仍不能推断停止成功。读取证据核对原执行、代次、启动标识、boot和运行身份；同名新实例、其他启动周期或损坏记录不能替代原任务。证据用于重启后的核对及收尾，不能作为重启业务的许可。落盘失败保留待核对，不发送虚假清理确认。该能力仍属开发中的恢复路径，完整生产入口未启用。

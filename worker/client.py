@@ -898,7 +898,7 @@ class Worker:
             for path in directory.glob('*.json'):
                 # Per-execution recovery sidecars are not execution journals.
                 # Their owners validate them after loading the UUID journal.
-                if path.name.endswith(('.json.launch.json', '.json.supervision.json')):
+                if path.name.endswith(('.json.launch.json', '.json.supervision.json', '.json.runtime-exit.json')):
                     continue
                 child = self.child(path.stem)
                 if child.state:

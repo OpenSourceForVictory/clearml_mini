@@ -1,0 +1,28 @@
+{
+  "scope": "恢复退出证据及收尾；真实host/Docker短程序，隔离API，不是完整生产批次或模型评测",
+  "standard_tests": {
+    "passed": 307,
+    "skipped": 0,
+    "deselected": 3221,
+    "seconds": 50.78
+  },
+  "additional_real_api_tests": {
+    "passed": 4,
+    "deselected": 9,
+    "seconds": 9.06,
+    "coverage_merged": false
+  },
+  "coverage": {
+    "worker/recovery_runtime.py": {
+      "line": 100,
+      "branch": 100
+    },
+    "worker/client.py": {
+      "line": 50.05,
+      "branch": 37.04
+    }
+  },
+  "report": "coverage-artifacts/recovery-exit-20261125",
+  "all_project_gate_passed": false,
+  "production_enabled": false
+}

@@ -181,7 +181,8 @@ def test_real_runtime_finalization_after_cleanup_reply_loss(tmp_path,mode):
         w.api=SimpleNamespace(post=post)
         with pytest.raises(ConnectionError):Worker.finalize_recovery(w,body())
         assert w.state['recovery_finalization']['phase']=='cleanup'
-        assert r.inspect()['state']=='missing'
+        assert r.inspect()['state']=='exited' and r.inspect()['retained']
+        assert r._raw() is None or r._raw()['State'].get('Recovered')
         w.state=json.loads(w.path.read_text())
         w.finalize_recovery=lambda:Worker.finalize_recovery(w)
         Worker.execute(w,w.state['task'])

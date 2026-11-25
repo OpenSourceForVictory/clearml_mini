@@ -177,7 +177,7 @@ def test_recovery_sidecars_are_not_loaded_as_execution_journals(tmp_path):
     execution=str(uuid.uuid4());child=parent.child(execution)
     child.state={'task':{'execution_id':execution},'offset':7};child.save()
     sidecars=[]
-    for suffix in ('.launch.json','.supervision.json'):
+    for suffix in ('.launch.json','.supervision.json','.runtime-exit.json'):
         path=Path(str(child.path)+suffix);path.write_text('{"owner":"original"}')
         sidecars.append(path)
     restored=Worker({},tmp_path/'state');restored.recover_journals()

@@ -359,3 +359,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。这仅完成已有收尾记录的恢复，正常运行监督与完整生产启用仍待完成。
 
 恢复同步确认results_finished只锁Run→grant，不获取资源全局锁；完成/清理保留原资源锁序。对应PostgreSQL测试持有调度锁期间结果同步仍可确认。
+
+恢复退出证据：worker/recovery_runtime.py在原身份的实际退出或确认停止后原子保存runtime-exit.json，按执行/代次/launch/boot/运行身份验证重用；未知退出码保持None，不能把任意missing变成exited。重复观察不重复fsync；同执行线程共享证据写锁。recover_journals忽略此旁路文件。test_recovery_exit_evidence.py覆盖停止失败、身份替换、磁盘满、坏文件和幂等恢复；真实host/Docker监控测试覆盖停止后启动交接只恢复、不重启。

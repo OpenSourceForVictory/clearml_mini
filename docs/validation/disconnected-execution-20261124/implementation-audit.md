@@ -200,3 +200,13 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 Worker.execute恢复已清理的finalization时，以原执行outbox继续可靠结果交付和最终同步确认，不再进入启动/续租流程。每轮最多16条；没有最终采集标志保持待处理，原队列文件丢失报错保留journal，不能新建空队列假装成功。测试覆盖结果ACK与最终同步ACK丢失、进程重启重放、队列缺失和稳定执行路径。
 
 results-finished仅使用Run→grant行锁，不拿资源全局锁。真实PostgreSQL测试持有调度锁时，首次及重复结果同步仍成功；完成/清理的资源锁不变。标准专项315 passed、3195 deselected、无跳过，38.44秒；三个直接修改的恢复模块行/分支均100/100，完整入口及全项目门槛仍未达标。报告coverage-artifacts/recovery-results-entry-final-20261125；真实host/Docker短程序均通过，不能替代完整平台断联批次。同步操作/升级文档、Skill、OpenSpec，strict validate通过。未启用生产领取能力、未部署完整恢复功能。
+
+### 停止后实体卸载的恢复证据（2026-11-25）
+
+修正已核验原身份、停止成功后systemd卸载单元导致恢复路径只见missing、无法完成收尾的问题。新增runtime-exit旁路证据，绑定执行/代次/launch/boot/运行身份，未知退出码保留null；任意missing、停止失败、身份替换、坏文件及磁盘满不生成确认。原退出事实不可被不同退出码覆盖，多线程证据写入串行且重复观察不重复fsync。配套文件不进入执行journal扫描；退出证据支持重启后启动交接只核对、不再次启动。若停止后落盘前崩溃且实体已消失，仍保留待核对，未假装解决不可判定窗口。
+
+首轮定向102 passed；标准专项307 passed、3221 deselected、无跳过，50.78秒，开启真实host/Docker与隔离PostgreSQL。worker/recovery_runtime.py行/分支100/100；worker/client.py 50.05/37.04，整体门槛仍失败。报告coverage-artifacts/recovery-exit-20261125。旧stop替身修正为模拟真实停止后的状态；实体卸载后断言区分物理不存在和已保留退出事实，未放宽身份验证。
+
+标准报告后增加真实运行+隔离FastAPI联测，宿主机/Docker分别覆盖过期旧租约继续执行和恢复取消→停止→完成→清理，共4 passed、9 deselected，9.06秒。调用实际reconcile/finish/cleanup处理与事务；退出码为未知或实际值，平台取消结论保留。此独立补测覆盖率未合并，不与307项相加冒充统一报告。未测试完整生产Worker主循环、界面或真实模型批次，未部署新能力。
+
+操作/升级说明、Skill项目索引及OpenSpec设计/任务记录已同步，strict validate通过。4.x仍未全部完成，生产execute对新领取仍保留拦截。
