@@ -4,12 +4,13 @@ import base64
 import binascii
 import os
 import secrets
+import uuid
 from . import log_policy
 from datetime import timedelta
 from typing import Literal, Optional
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
@@ -50,6 +51,14 @@ class DiskTelemetry(BaseModel):
 
 class Claim(BaseModel):
     known_execution_ids: list[str] = Field(default_factory=list, max_length=1024)
+    request_id: uuid.UUID | None = None
+    recovery_version: Literal[1] | None = None
+
+    @model_validator(mode='after')
+    def paired_recovery(self):
+        if (self.request_id is None) != (self.recovery_version is None):
+            raise ValueError('recovery claim requires both version and request ID')
+        return self
 
 
 class Heartbeat(BaseModel):
@@ -418,6 +427,28 @@ def install(app, db, current):
     def claim(slot_id: str, body: Optional[Claim] = None, worker=Depends(worker_auth), s: Session = Depends(db)):
         slot = slot_for(s, slot_id, worker)
         known = body.known_execution_ids if body else []
+        request_id = str(body.request_id) if body and body.request_id else None
+        from .core import ExecutionRecoveryClaim, ExecutionRecovery
+        from .recovery_claims import lookup as recover_claim, bind as bind_claim
+
+        def previous_claim():
+            if request_id and s.get(ExecutionRecoveryClaim, request_id):
+                receipt = recover_claim(s, worker_id=worker.id, slot_id=slot.id, request_id=request_id)
+                return {'task':receipt['task'], 'cleanup':[], 'recovery_claim':receipt, 'request_id':request_id}
+            return None
+
+        def response(task=None, cleanup=None, receipt=None):
+            value = {'task':task, 'cleanup':cleanup or []}
+            if request_id:
+                value.update(request_id=request_id, recovery_claim=receipt)
+            return value
+
+        previous = previous_claim()
+        if previous is not None:
+            return previous
+        if request_id and (os.getenv('RECOVERY_EXECUTION_ENABLED', '0') != '1'
+                           or 'disconnected_execution_v1' not in (slot.software or {}).get('capabilities', [])):
+            raise HTTPException(409, 'recovery execution is not negotiated')
         # Idle polling only reads the assigned slot. A reservation committed
         # after this check is seen on the next poll; no state is changed here.
         candidate = s.scalar(select(Run.id).where(
@@ -428,54 +459,63 @@ def install(app, db, current):
             ),
         ).limit(1))
         if candidate is None:
-            return {'task': None, 'cleanup': []}
+            return response()
         if os.getenv('DB_BACKPRESSURE_ENABLED', '0') == '1':
             if not lock(s, wait=False):
-                return {'task': None, 'cleanup': []}
+                return response()
         else:
             lock(s)
         # Read committed sees changes made while we waited for the lock.
         s.refresh(slot)
+        previous = previous_claim()
+        if previous is not None:
+            return previous
         cleanup = list(s.scalars(select(Run.execution_id).where(Run.slot_id == slot.id, Run.cleanup_confirmed.is_(False), Run.status.in_(TERMINAL))))
         if cleanup:
-            return {'task': None, 'cleanup': cleanup}
+            if any(s.get(ExecutionRecovery, value) for value in cleanup):
+                raise HTTPException(409, 'recovery cleanup requires original execution journals')
+            return response(cleanup=cleanup)
         run = s.scalar(select(Run).where(Run.slot_id == slot.id, Run.status.in_(ACTIVE),
             or_(Run.waiting_service.is_(False),Run.status!='RESERVED'),
             Run.execution_id.not_in(known)).order_by(Run.reserved_at, Run.id).limit(1))
         if not run or not online(slot) or slot.quarantined:
-            return {'task': None, 'cleanup': []}
+            return response()
+        if not request_id and s.get(ExecutionRecovery, run.execution_id):
+            raise HTTPException(409, 'recovery execution requires its original claim request')
+        if request_id and run.status != 'RESERVED':
+            raise HTTPException(409, 'claimed execution requires its original request ID')
         fresh_artifact_plan=run.status=='RESERVED'
         if run.status == 'RESERVED':
             s.refresh(worker)
             if not worker.enabled or not slot.enabled or worker.upgrade_state in worker_upgrades.BLOCKING or not node_agents.admission(worker):
-                return {'task': None, 'cleanup': []}
+                return response()
             job = s.get(Job, run.job_id)
             from .service_dependencies import binding_ready
-            if not binding_ready(s,run):return {'task':None,'cleanup':[]}
+            if not binding_ready(s,run):return response()
             run.waiting_service=False
             if job.batch_id and s.get(EvaluationBatch, job.batch_id).scheduling_paused:
-                return {'task': None, 'cleanup': []}
+                return response()
             s.refresh(worker)
             from .scheduling import workload_codes, runtime_mismatch
-            if runtime_mismatch(slot, job):return {'task':None,'cleanup':[]}
+            if runtime_mismatch(slot, job):return response()
             if workload_codes(worker, slot, s.get(Job, run.job_id)):
-                return {'task': None, 'cleanup': []}
+                return response()
             if image_runtime.blockers(worker, slot, s.get(Job, run.job_id).client_spec, now()):
-                return {'task': None, 'cleanup': []}
+                return response()
             if not memberships.ready(slot) or not storage_protocol.ready(worker, slot, now()):
-                return {'task': None, 'cleanup': []}
+                return response()
             if slot.disk_min_free_mb is not None and (slot.disk_free_mb is None or slot.disk_free_mb < slot.disk_min_free_mb
                     or not recent(slot.disk_at, now(), RESOURCE_SAMPLE_SECONDS)):
-                return {'task': None, 'cleanup': []}
+                return response()
             if node_agents.resource_source(worker):
                 from types import SimpleNamespace
                 from .scheduling import telemetry_fresh
                 requested = SimpleNamespace(cpu_per_job=run.reserved_cpu, ram_gb_per_job=run.reserved_ram_gb)
                 if (node_agents.host_codes(worker, requested, 0, 0)
                         or (job.requested_vram_gb and not telemetry_fresh(slot, now()))):
-                    return {'task': None, 'cleanup': []}
+                    return response()
             if utc(run.reservation_expires_at) <= now():
-                return {'task': None, 'cleanup': []}
+                return response()
             run.enqueued_at = now()
             run.lease_expires_at = now() + timedelta(seconds=seconds('LEASE_SECONDS', 30))
             run.cleanup_confirmed = False
@@ -528,8 +568,12 @@ def install(app, db, current):
             from .shared_storage import mappings, allows_node
             if any(allows_node(m, worker.node_name) for m in mappings()):
                 task['artifact_transport'] = 'shared'
+        receipt = None
+        if request_id:
+            receipt = bind_claim(s, request_id=request_id, worker_id=worker.id,
+                                 slot_id=slot.id, run_id=run.id, task=task)
         s.commit()
-        return {'task': task, 'cleanup': []}
+        return response(task=task, receipt=receipt)
 
     from . import execution_logs
     execution_logs.install(app, db, worker_auth)

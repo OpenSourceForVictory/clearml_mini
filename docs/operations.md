@@ -296,3 +296,5 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 取消后重新评测：原执行必须终结且 cleanup_confirmed=true 才能创建下一次运行；新的Run在调度时获得新的execution_id。旧执行的取消及迟到补报不得作用于新运行。恢复收尾专项覆盖旧完成/清理/对账在重新评测之后重放不改变新任务PENDING。
 
 Worker 恢复收尾（开发中）：执行记录包含 recovery 身份及 recovery_finalization 阶段时，execute 优先恢复完成/移除/清理，不再经过启动流程。完成正文先落盘；收到有效完成确认才移除已确认退出的原运行实体；收到清理确认才清除 Worker 执行记录。任一步骤网络/落盘失败均保留原阶段，重放不重新启动；移除失败不发送清理确认。该入口仅接通收尾，正常领取、监督主循环及结果未齐收尾仍未全部接通。
+
+恢复领取事务（开发中）：claim 请求必须同时携带 request_id（UUID）和 recovery_version=1；返回原 request_id 与 recovery_claim。首次分配和不可变快照同事务提交，重复请求在取消后仍可查回处置、但不再提供启动快照。新分配须同时满足 RECOVERY_EXECUTION_ENABLED=1 与槽位 disconnected_execution_v1 能力；该开关目前仅用于隔离测试，不要在生产手工启用，Worker 尚未广告完整能力。关闭新分配开关不阻断已存在收据的恢复查询。恢复执行不能经旧claim重新接管或通过裸cleanup列表收尾，须保留原执行journal。

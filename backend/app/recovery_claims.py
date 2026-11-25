@@ -30,7 +30,7 @@ def key(value):
 def bind(s, *, request_id, worker_id, slot_id, run_id, task, tolerance=None):
     """Within the claim transaction, before its response is committed.
 
-    No production caller until launch/result/cleanup negotiation is complete.
+    Claim API calls this only behind explicit experimental negotiation.
     Caller must roll back on any error; grant and snapshot commit together.
     """
     request_id = key(request_id)

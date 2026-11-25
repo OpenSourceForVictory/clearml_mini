@@ -158,3 +158,11 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 初轮26项通过；标准专项93通过、无跳过、3305未选（29.52秒）。扩大旧Worker启动、服务执行、过载、交付、恢复和Docker契约回归274通过、无跳过、3124未选（72.25秒）。最终报告coverage-artifacts/worker-recovery-finish-expanded-20261125：新收尾及runtime模块行/分支100%，worker/client.py为79.42%/70.16%，尚未达到关键模块门槛；标准入口仍因全项目门槛退出1，pytest退出0。没有修改覆盖率分母或合并未插桩子进程。
 
 真实systemd用户服务和Docker短程序均执行完退出0，移除后模拟清理响应丢失，再由Worker.execute恢复原cleanup正文，未重启程序。控制响应为测试替身，非现网批次、真实断网或GPU/NPU模型验收；其余实际运行后端恢复测试也同时通过。无新增迁移，未部署，现网默认行为未切换。
+
+## 2026-11-25 领取接口事务接线（未启用）
+
+- 原 claim 接口增加成对的 recovery_version=1/request_id 协商。新授权仅测试开关 `RECOVERY_EXECUTION_ENABLED=1` 且节点声明 `disconnected_execution_v1` 时创建；实际 Worker 尚未声明此能力。已创建收据在关闭开关后仍可恢复查询。
+- 分配状态与不可变领取快照同事务提交；注入绑定后异常验证全部回滚。同请求重放不续租、不修改原快照；取消后只返回停止处置。旧请求不能领取重新评测产生的新尝试；旧协议不能绕过恢复授权领取或清理。
+- 标准覆盖率运行：169 passed、22 skipped、3216 deselected；pytest_exit_code=0，但目录/功能组覆盖率门槛未通过。报告位于 `coverage-artifacts/recovery-claim-integration-20261125/`。本次选择下 execution.py 行77.94%、分支59.22%；recovery_claims.py 行77.46%、分支53.85%。不能宣称覆盖率达标。
+- 原22项 PostgreSQL 跳过随后在独立 PostgreSQL 16.8 容器中补跑，22 passed。领取及完成专项（含新增取消后重新评测领取隔离）37 passed、2项 PostgreSQL 跳过；随后完整 recovery_finish.py 在隔离 PostgreSQL 环境补跑29 passed、无跳过。这些独立补跑未合并进覆盖率数据，不与前述通过数相加充当独立用例数。
+- 取消后重新评测的领取测试预置已清理终态，测试的是领取隔离；真实完成/清理链路另有 recovery_finish 专项。未做本阶段真机断网批次验收，未部署，不新增迁移。主循环、结果未齐收尾和界面接线仍未完成。

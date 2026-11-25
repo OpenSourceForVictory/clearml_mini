@@ -175,3 +175,5 @@ HostBackend 的服务 Description 和 Docker 创建 label 现支持可选 recove
 恢复收尾接口（开发中）要求先核对退出、complete 确认，再删除原运行实体并 cleanup 确认；complete 的 cleanup_confirmed=false 不是失败，表示仍须安全清理。重放保持原 generation、identity 和完成正文，不能根据新连接时间重建执行。原执行存在恢复授权时，无证明旧请求返回409，禁止把它当成允许旧版 Worker 强行清理。尚未广告能力或切换生产主循环。
 
 新恢复收尾 journal 使用 recovery={generation,identity} 和 recovery_finalization={proof,body,phase}。升级后 execute 可从 completion/remove/cleanup/done 原阶段恢复；不能手工删除此记录或用新执行身份覆盖。仅此代码更新并不启用断联恢复，尚需两端完整能力协商及正常执行路径接线。
+
+领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。生产版本暂不声明disconnected_execution_v1能力；不要单独设置测试用RECOVERY_EXECUTION_ENABLED开关。
