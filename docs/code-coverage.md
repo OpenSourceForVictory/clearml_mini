@@ -142,3 +142,5 @@ Worker 0.21.4 后再次全量测试：Python 1727 通过 / 104 跳过，前端 1
 前次全量中的 132 个环境跳过项已在隔离条件下补跑通过，另有 2 个索引回归通过；发现并修复了迁移降级索引回滚缺陷。见 [跳过专项验证](validation/skipped-specialists-20261124/README.md)。此次不重跑全量，不把未插桩真实进程通过数计入覆盖率。
 
 2026-11-25 四角色 API 隔离全量验证：2790 通过、155 跳过；整体行 92.26%、分支 84.15%，目录与关键功能门槛均通过。新分类/运行时/网关模块纳入“调度与资源”，未调整门槛。独立 PostgreSQL、容器和前端实测与全量统计边界见 [验收记录](validation/priority-api-isolation-20261124/README.md)。
+
+`backend/app/recovery_unstarted.py` 与 `worker/recovery_unstarted.py` 纳入“业务执行与结果”的 90% / 80% 门槛，覆盖未启动确认、拒绝不确定身份及重复收尾。

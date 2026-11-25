@@ -44,6 +44,9 @@ def start_or_recover(worker, *, clock=time.monotonic):
         if worker.state.get('recovery') and phase not in ('attempted', 'bound'):
             raise ValueError('runtime proof exists without a durable launch attempt')
         if phase == 'blocked':
+            if (launch.record.get('reply') or {}).get('action') == 'stop' and launch.record['reply'].get('reason'):
+                from .recovery_unstarted import settle
+                return settle(worker, launch)
             raise RuntimeError('launch blocked; control reconciliation required')
         if phase in ('attempted','bound'):
             # The runtime call may have succeeded even when its response or
@@ -67,6 +70,9 @@ def start_or_recover(worker, *, clock=time.monotonic):
             request = launch.request(clock())
             reply = worker.api.post(f"worker/executions/{task['execution_id']}/recovery/prepare", request)
             if not launch.accept(reply, clock()):
+                if reply['action'] == 'stop' and reply.get('reason'):
+                    from .recovery_unstarted import settle
+                    return settle(worker, launch)
                 raise RuntimeError('launch not authorized; control reconciliation required')
             with worker.start_lock:
                 bound = launch.start(clock(), runtime.start)

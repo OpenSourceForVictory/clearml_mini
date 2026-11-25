@@ -139,6 +139,8 @@ def execute(worker):
     from .recovery_finish import resume_results
 
     launch = worker.start_recovery()
+    if launch is None and worker.state is None:
+        return  # Platform acknowledged a never-started assignment.
     monitor = worker.monitor_recovery(launch, control=True)
     probe = ServiceProbe(worker, launch['started_at'])
     sender = collector = None

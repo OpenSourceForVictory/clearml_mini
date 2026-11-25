@@ -40,6 +40,23 @@ def poll(worker, software):
         if not isinstance(receipt, dict) or response['cleanup'] or response['task'] != receipt.get('task'):
             raise ValueError('claim response conflicts with recovery receipt')
         journal.accept(receipt)
+        if receipt['disposition'] == 'stop':
+            child = worker.child(receipt['execution_id'])
+            if child.state is not None:
+                old = child.state.get('recovery_assignment', {}).get('claim', {}).get('receipt', {})
+                if any(old.get(k) != receipt[k] for k in ('request_id','execution_id','generation','digest')):
+                    raise ValueError('stopped claim conflicts with existing execution journal')
+                # Lost handoff ACK: retain the original launch/monitor journal.
+                journal.handoff(lambda assignment: None)
+                worker.children[receipt['execution_id']] = child
+                return {**response, 'task':child.state['task']}
+            if Path(str(child.path)+'.launch.json').exists():
+                raise RuntimeError('launch journal exists without original execution journal')
+            from .recovery_unstarted import acknowledge
+            acknowledge(worker.api, receipt['execution_id'], {
+                'generation':receipt['generation'], 'request_id':receipt['request_id'], 'launch':None})
+            journal.handoff(lambda assignment: None)
+            return response
         if receipt['disposition'] != 'reconcile':
             # A stopped, never-started assignment needs its own control
             # reconciliation. Retain the receipt; never invent a process identity

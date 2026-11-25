@@ -1,0 +1,58 @@
+{
+  "scope": "Never-started cancellation cleanup; production capability remains disabled",
+  "initial_runs": [
+    {
+      "passed": 43,
+      "failed": 1,
+      "skipped": 2,
+      "cause": "Old poll assertion expected all stopped receipts to remain blocked; replaced with invalid ACK retention and explicit success/lost-ACK tests."
+    },
+    {
+      "passed": 85,
+      "failed": 2,
+      "skipped": 2,
+      "cause": "New control route missing from separate audited route/schema evidence; added manifest and audit entries."
+    },
+    {
+      "passed": 69,
+      "failed": 1,
+      "cause": "Body schema audit keys use qualified class strings; corrected NotStarted schema key."
+    }
+  ],
+  "real_test": {
+    "passed": 2,
+    "deselected": 10,
+    "seconds": 7.95,
+    "scenarios": [
+      "host prelaunch cancel and lost cleanup ACK",
+      "Docker prelaunch cancel and lost cleanup ACK"
+    ],
+    "limitation": "Local real runtime with isolated FastAPI/SQLite, synthetic business, not production or GPU/NPU model evaluation"
+  },
+  "coverage_run": {
+    "passed": 211,
+    "deselected": 3414,
+    "skipped": 0,
+    "seconds": 141.95,
+    "artifact": "coverage-artifacts/recovery-unstarted-20261125",
+    "full_project_gates_passed": false,
+    "module_coverage": {
+      "worker/recovery_unstarted.py": {
+        "line": 93.54838709677419,
+        "branch": 83.33333333333333
+      },
+      "backend/app/recovery_unstarted.py": {
+        "line": 98.57142857142857,
+        "branch": 92.85714285714286
+      },
+      "worker/recovery_start.py": {
+        "line": 100,
+        "branch": 100
+      }
+    }
+  },
+  "additional_boundaries": {
+    "passed": 29,
+    "seconds": 1.7
+  }
+}

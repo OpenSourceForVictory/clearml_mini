@@ -23,12 +23,12 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','cancel','timeout','service','restart'])
+@pytest.mark.parametrize('scenario',['complete','cancel','timeout','service','restart','pre_cancel'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from sqlalchemy import create_engine
-    from backend.app import recovery_control,recovery_records,recovery_launch,recovery_claims,recovery_finish,services
+    from backend.app import recovery_control,recovery_records,recovery_launch,recovery_claims,recovery_finish,recovery_unstarted,services
     from backend.app.core import Run,Job,EpisodeRecord,ExecutionRecoveryControl,ServiceInstance,now
     from backend.app.execution import Finish,RecoveryProof
     from backend.tests.test_execution_logs_postgres import seed
@@ -77,7 +77,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     def database():
         with factory() as db:yield db
     app=FastAPI()
-    for module in (recovery_control,recovery_records,recovery_launch):module.install(app,database,lambda:SimpleNamespace(id='w'))
+    for module in (recovery_control,recovery_records,recovery_launch,recovery_unstarted):module.install(app,database,lambda:SimpleNamespace(id='w'))
     services.install(app,database,lambda:None,lambda:SimpleNamespace(id='w'))
     @app.post('/api/v1/worker/executions/{execution_id}/complete')
     def complete(execution_id:str,body:Finish):
@@ -122,6 +122,25 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
                 if response.status_code!=200:raise APIError(response.status_code,response.text)
                 return response.json()
             w.api=SimpleNamespace(post=post)
+            if scenario=='pre_cancel':
+                offline.clear()
+                with factory() as db:db.get(Run,'r').status='CANCEL_REQUESTED';db.commit()
+                def lost_ack(path,body=None):
+                    result=post(path,body)
+                    if path.endswith('/recovery/not-started'):raise TimeoutError('lost cleanup ACK')
+                    return result
+                w.api=SimpleNamespace(post=lost_ack)
+                with pytest.raises(TimeoutError):w.execute(w.state['task'])
+                assert w.state is not None and w.inspect(execution) is None
+                w.api=SimpleNamespace(post=post)
+                w.execute(w.state['task'])
+                assert w.state is None and calls.count('create')==1
+                assert not Path(str(w.path)+'.supervision.json').exists()
+                with factory() as db:
+                    run=db.get(Run,'r')
+                    assert run.status=='CANCELLED' and run.cleanup_confirmed
+                    assert run.exit_code is None and run.started_at is None
+                return
             thread=threading.Thread(target=run,daemon=True);thread.start()
             end=time.monotonic()+10
             while not Path(str(w.path)+'.supervision.json').exists() and time.monotonic()<end:time.sleep(.02)

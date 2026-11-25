@@ -367,3 +367,9 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 恢复主入口现状（覆盖上述各阶段的入口待办描述）：`worker/recovery_execution.py` 已由 `Worker.execute` 调用，串接启动、独立控制/本地监督、探测、采集及完成清理。RecoverySupervisor 持久 acknowledged 原请求，只有已确认 exited 才开始完成；Worker 关闭跳过协商执行的强制停止。清理前保存 `.recovery-output`，recovery_finish.resume_results 在原队列仍存在时恢复采集。协议1日志每轮最多一个请求，避免批量排空占住收尾；协议2沿用独立 Sender/Collector。测试入口 `test_worker_recovery_execution.py`、`test_recovery_execution_real.py`；真实短程序经隔离 API/数据库，不是生产批次或模型验收。生产能力仍关闭，启动前取消、异常结果收敛及长期容量等待办未据此完成；Worker 停机时不能承诺本地有限断联计时器仍运行。操作说明见 operations.md/worker-upgrades.md 的主入口接线节。
 
 普通 stdout 末尾没有换行时，恢复结果采集在核实原进程退出后允许普通诊断文本收尾；完整或部分 `MINI_EVAL_EVENT ` 前缀仍保留等待处理，不将未完整协议记录当作普通日志丢弃。原始输出在运行时清理前持久保存。回归覆盖普通文本、中文、截断事件、部分事件前缀及 Worker.execute 完整收尾。
+
+### 恢复协议：启动前取消收尾（未启用生产）
+
+协商恢复任务在启动前收到平台停止决定时，不再永久停留在启动准备状态。Worker 核对从未越过持久启动边界，清理原未启动对象后，通过独立控制接口 `recovery/not-started` 确认；平台保留取消或超时等既有决定，释放原执行资源，不伪造退出码或回合结果。响应丢失时只重放确认，不重新创建或启动业务。已有启动尝试、进程身份冲突或启动账本缺失仍要求对账，不自动释放。
+
+原领取响应丢失且平台已取消时，若本机没有移交执行或启动账本，可以直接确认未启动；若已有执行记录，恢复原执行流程。删除、撤销与身份冲突的收据仍保留待对账。本次没有新增数据库迁移，依赖既有恢复协议迁移；生产能力开关保持关闭。

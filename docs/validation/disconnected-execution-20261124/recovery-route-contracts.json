@@ -89,6 +89,21 @@
       ],
       "confirmation": "reliable result acknowledgement; duplicate content must match",
       "source": "backend.app.execution.results_finished"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/not-started",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_unstarted.NotStarted'>"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.recovery_unstarted.not_started"
     }
   ],
   "body_schemas": {
@@ -670,6 +685,85 @@
           "type": "null"
         }
       ]
+    },
+    "<class 'backend.app.recovery_unstarted.NotStarted'>": {
+      "$defs": {
+        "LaunchRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "generation": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Generation",
+              "type": "string"
+            },
+            "request_id": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            },
+            "launch_id": {
+              "format": "uuid",
+              "title": "Launch Id",
+              "type": "string"
+            },
+            "boot_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Boot Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "host",
+                "docker"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          "required": [
+            "generation",
+            "request_id",
+            "launch_id",
+            "boot_id",
+            "kind"
+          ],
+          "title": "LaunchRequest",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "launch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LaunchRequest"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "generation",
+        "request_id"
+      ],
+      "title": "NotStarted",
+      "type": "object"
     }
   },
   "legacy_routes": [
@@ -702,6 +796,11 @@
       "method": "POST",
       "path": "/api/v1/worker/executions/{execution_id}/recovery/results-finished",
       "current_category": "result"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/not-started",
+      "current_category": "control"
     }
   ],
   "route_overrides": [

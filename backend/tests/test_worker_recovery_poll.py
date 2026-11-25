@@ -124,8 +124,8 @@ def test_stop_receipt_is_retained_without_legacy_cleanup_or_launch(case):
         value['recovery_claim']['disposition']='stop'
         return value
     worker.api.post=stopped
-    with pytest.raises(RuntimeError,match='stop reconciliation'):poll(worker,SOFTWARE)
-    assert worker.children=={} and len(calls)==1
+    with pytest.raises(ValueError,match='not-started acknowledgement'):poll(worker,SOFTWARE)
+    assert worker.children=={} and len(calls)==2
     assert json.loads(Path(str(worker.path)+'.claim.json').read_text())['receipt']['disposition']=='stop'
 
 
@@ -146,3 +146,43 @@ def test_legacy_poll_preserves_wire_contract(case):
     assert not Path(str(worker.path)+'.claim.json').exists()
     worker.api.post=lambda *args:{'task':{},'cleanup':[],'recovery_claim':{}}
     with pytest.raises(RuntimeError,match='unexpected recovery assignment'):poll(worker,{})
+
+
+@pytest.mark.parametrize('fault',[None,'lost_ack','orphan_launch'])
+def test_stopped_claim_without_handoff_acknowledges_only_never_started(case,fault):
+    worker,task,calls=case;post=worker.api.post
+    def stopped(path,body):
+        if path.endswith('/recovery/not-started'):
+            calls.append((path,copy.deepcopy(body)))
+            if fault=='lost_ack':raise TimeoutError('lost ACK')
+            return {'execution_id':task['execution_id'],'generation':body['generation'],
+                    'status':'CANCELLED','cleanup_confirmed':True,'duplicate':False}
+        value=post(path,body);value['task']=value['recovery_claim']['task']=None
+        value['recovery_claim']['disposition']='stop'
+        return value
+    worker.api.post=stopped
+    if fault=='orphan_launch':
+        Path(str(worker.child(task['execution_id']).path)+'.launch.json').write_text('{}')
+        with pytest.raises(RuntimeError,match='launch journal'):poll(worker,SOFTWARE)
+    elif fault=='lost_ack':
+        with pytest.raises(TimeoutError):poll(worker,SOFTWARE)
+    else:assert poll(worker,SOFTWARE)['task'] is None
+    assert worker.children=={}
+    assert (json.loads(Path(str(worker.path)+'.claim.json').read_text()) is None)==(fault is None)
+
+
+def test_cancelled_lost_handoff_preserves_original_execution_journal(case,monkeypatch):
+    worker,task,calls=case;save=RecoveryClaim._save;post=worker.api.post
+    def fail(self,value):
+        if value is None:raise OSError('lost handoff')
+        return save(self,value)
+    monkeypatch.setattr(RecoveryClaim,'_save',fail)
+    with pytest.raises(OSError):poll(worker,SOFTWARE)
+    child=worker.child(task['execution_id']);child.state['created']=True;atomic_json(child.path,child.state)
+    def stopped(path,body):
+        value=post(path,body);value['task']=value['recovery_claim']['task']=None
+        value['recovery_claim']['disposition']='stop';return value
+    worker.api.post=stopped;monkeypatch.setattr(RecoveryClaim,'_save',save)
+    assert poll(worker,SOFTWARE)['task']==task
+    assert worker.children[task['execution_id']].state['created'] is True
+    assert len(calls)==2  # No declaration of never-started for an existing child.
