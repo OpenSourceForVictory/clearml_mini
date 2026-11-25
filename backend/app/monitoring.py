@@ -1,4 +1,6 @@
 """Batch observability and explicit, attempt-guarded recovery."""
+from copy import deepcopy
+import json
 from . import endpoints
 from collections import Counter, defaultdict
 from fastapi import Depends, HTTPException
@@ -76,6 +78,7 @@ def monitor(s, batch):
         execution_failures=sum(j.status in ('FAILED', 'TIMED_OUT') for j in jobs),
         reporting_tasks=len(reporting), unreported_tasks=sum(not c['episode_reporting'] and c['task_type']!='command' for c in result['cases']),
         success_rate=successes/evaluated_completed if evaluated_completed else None))
+    diagnostics = {}
     for case, job in zip(result['cases'], jobs):
         run = job.runs[-1]
         slot = slots.get(run.slot_id)
@@ -83,7 +86,17 @@ def monitor(s, batch):
                     node_name=slot.node_name if slot else None, gpu_index=slot.gpu_index if slot else None,
                     waiting=None, reason_codes=[])
         if job.status == 'PENDING':
-            waiting = context.inspect(job, owner, pools.get(job.pool_id), batch)
+            # The case identifier only labels the result. Equal snapshots and
+            # requests see the same diagnostic state within this one read.
+            spec = dict(job.client_spec or {})
+            spec.pop('case_id', None)
+            key = (job.pool_id, job.benchmark, job.target_slot_id, job.gpu_mode,
+                   job.requested_vram_gb, job.required_gpu_model,
+                   job.requested_cpu, job.requested_ram_gb,
+                   json.dumps(spec, sort_keys=True, separators=(',', ':')))
+            if key not in diagnostics:
+                diagnostics[key] = context.inspect(job, owner, pools.get(job.pool_id), batch)
+            waiting = deepcopy(diagnostics[key])
             if waiting['status'] == 'ready':
                 waiting['status'] = 'awaiting_scheduler'
                 waiting['reasons'].append(reason('awaiting_scheduler'))

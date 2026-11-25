@@ -61,6 +61,8 @@ docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/spli
 
 新恢复协议的隔离负载使用 `LOG_TEST_DATABASE_URL` 指向**一次性 PostgreSQL 管理库**后运行 `.venv/bin/python -m backend.tests.control_plane_load --grades 100 --seconds 90 --output /tmp/mini-eval-recovery-load --priority-api --mixed-ui --agent-telemetry --recovery-load --cards-per-node 4 --independent-logs --continuous-batches --varied-logs --client-per-worker --progress-every-30s`。脚本创建并删除独立测试库，启动四角色 API 和临时网关；约 10% 的模拟执行完成、清理和补报，其余持续心跳、恢复对账、日志、产物写入及页面查询/控制。`--client-per-worker` 表示独立节点 HTTP 客户端，符合节点各自连接的现场形态；共用客户端保留为更苛刻的连接队列压力诊断，不能把两者混称同一容量结果。脚本校验心跳间隔 <10 秒、逐类请求 P99 <5 秒、恢复控制成功 P99 <5 秒、完成到清理最大 <9 秒、日志最终无积压及数据库结果计数。90 秒通过只是短测，30 分钟及真实程序场景仍需另验，见[专项记录](validation/disconnected-execution-20261124/recovery-control-load-20261125.md)。
 
+单批次排队专项另用 `--grades 100 --seconds 150 --batch-cases 100 --command-workers 10`，并保留上述四角色、恢复、多卡、独立日志和独立客户端选项；不要同时加 `--continuous-batches`。此档要求 100 个任务都由 10 个空闲槽位实际领取并完成，核对最大待调度数、批次详情/监控成功延迟、重复结果幂等、心跳、日志和资源释放。旧版监控对每个待调度任务重复遍历全池节点，100 任务时出现 `503 request_budget`；现在只在同一次监控请求内复用等价请求诊断，申请不同的任务仍独立检查，不改变调度器。失败与修复后的记录见[大批次验收](validation/disconnected-execution-20261124/large-batch-monitor-20261125.md)。
+
 排查期间可临时设置 `DB_BUDGET_DIAGNOSTICS=1` 并重建 API，输出每请求首次借连接的 `wait_ms`、池内 `checked_out` 和请求 `elapsed_ms`，不输出 SQL 参数或业务内容。该诊断会增加日志量，平时默认关闭；commit 后再次借连接仍受池预算限制，但不计入首次借连接指标。
 
 现有平台升级、数据库备份、Compose 自动迁移及失败处理见 [数据库迁移与 Compose 升级指南](database-migration.md)。可在其他部署机器按该文档执行，须沿用该机器的环境文件、项目名与覆盖配置。

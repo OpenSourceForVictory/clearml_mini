@@ -29,7 +29,7 @@ from backend.tests.control_plane_metrics import observe, with_outage
 
 
 def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
-         recovery_load=False, cards_per_node=1):
+         recovery_load=False, cards_per_node=1, command_workers=1):
     if type(cards_per_node) is not int or cards_per_node < 1:
         raise ValueError('cards_per_node must be a positive integer')
     Base.metadata.create_all(engine)
@@ -68,10 +68,10 @@ def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
                     s.add(AgentObservation(worker_id=node['worker_id'], session=agent_session, payload={}))
             s.add(Slot(id=identity, worker_id=node['worker_id'], pool_id='p', node_name='load-'+str(node_index), queue_name='load-'+identity, gpu_index=i%cards_per_node,
                        gpu_uuid='mock:'+identity, gpu_model='virtual', vram_mb=1024,
-                       protocol_version=18 if mixed_ui and i == count-1 else 1,
+                       protocol_version=18 if mixed_ui and i >= count-command_workers else 1,
                        client_images=['load:command']))
             s.flush()
-            if mixed_ui and i == count-1:
+            if mixed_ui and i >= count-command_workers:
                 identities.append((identity, token, agent_session) if agent_telemetry else (identity, token))
                 continue
             s.add(ServiceInstance(id=identity, name='load', worker_id=node['worker_id'], slot_id=identity,
@@ -182,7 +182,8 @@ def acceptable_responses(by_kind, *, mixed_ui, bulk_outage):
 async def exercise(base, identities, seconds, log_bytes, *, independent_logs=False, drain_seconds=0,
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
                    progress_path=None, log_interval=2, user_token=None, continuous_batches=False,
-                   varied_logs=False, recovery_grants=None, node_groups=None):
+                   varied_logs=False, recovery_grants=None, node_groups=None,
+                   command_workers=1, batch_cases=1):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -196,8 +197,9 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
     progress = []
     ui_evidence = {'batch_id': None, 'control_revisions': [], 'last_batch_status': None,
                    'retried': False, 'retry_count':0, 'batch_count':0, 'completed_batches':[],
-                   'executions': [], 'duplicate_results': 0, 'errors': []}
-    running_identities = identities[:-1] if user_token else identities
+                   'executions': [], 'duplicate_results': 0, 'artifact_seen': False,
+                   'case_count_seen': 0, 'max_pending_count': 0, 'errors': []}
+    running_identities = identities[:-command_workers] if user_token else identities
     recovery_grants = recovery_grants or {}
     node_groups = node_groups or {}
     lifecycle_ids = set(item[0] for item in running_identities[:max(1, len(running_identities)//10)]) if recovery_grants else set()
@@ -507,7 +509,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                         result_sent = False
                 else:
                     execution_id = current['execution_id']
-                    success = any(e['job_id'] == current['job_id'] for e in ui_evidence['executions'])
+                    success = (batch_cases > 1 or
+                               any(e['job_id'] == current['job_id'] for e in ui_evidence['executions']))
                     path = f'worker/executions/{execution_id}'
                     if not result_sent:
                         body = {'success':success, 'metrics':{}, 'summary':'simulated API lifecycle'}
@@ -554,9 +557,10 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                     return None
                 finally:
                     latency[kind].append(time.monotonic()-began)
-            body = {'title':'mixed-load', 'pool_id':'p',
+            body = {'title':'mixed-load', 'pool_id':'p', 'max_concurrent':command_workers,
                     'client':{'template_id':'load-template', 'service_mode':'none', 'task_name':'load'},
-                    'cases':[{'case_id':'queued-1', 'task_name':'load', 'episodes':1}]}
+                    'cases':[{'case_id':f'queued-{i+1}', 'task_name':'load', 'episodes':1}
+                             for i in range(batch_cases)]}
             async def submit_batch():
                 created = await request('ui_submit', 'POST', 'batches', body)
                 if created is None or created.status_code != 201:
@@ -576,6 +580,13 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 return
             while time.monotonic()-started < seconds:
                 await request('ui_list', 'GET', 'batches?view=summary')
+                if recovery_grants:
+                    artifact_id = running_identities[-1][0]
+                    artifacts = await request('ui_artifacts', 'GET',
+                                              f'jobs/{artifact_id}/attempts/{artifact_id}/artifacts')
+                    if artifacts is not None and artifacts.status_code == 200:
+                        ui_evidence['artifact_seen'] |= any(item['name'] == 'load.json'
+                                                            for item in artifacts.json())
                 detail = await request('ui_detail', 'GET', f'batches/{batch_id}')
                 monitor = await request('ui_monitor', 'GET', f'batches/{batch_id}/monitor')
                 if monitor is not None and monitor.status_code == 200:
@@ -583,8 +594,12 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                                                     'waiting':case['waiting']} for case in monitor.json()['cases']]
                 if detail is not None and detail.status_code == 200:
                     batch = detail.json()
+                    ui_evidence['case_count_seen'] = max(ui_evidence['case_count_seen'],
+                                                         len(batch['cases']))
+                    ui_evidence['max_pending_count'] = max(ui_evidence['max_pending_count'],
+                                                           batch['pending_count'])
                     ui_evidence['last_batch_status'] = batch['status']
-                    if batch['status'] == 'FAILED' and not ui_evidence['retried']:
+                    if batch_cases == 1 and batch['status'] == 'FAILED' and not ui_evidence['retried']:
                         failed = batch['cases'][0]
                         retry = await request('ui_retry', 'POST', f'batches/{batch_id}/retry-failed',
                                               {'items':[{'job_id':failed['job_id'], 'expected_run_id':failed['run_id']}]})
@@ -611,7 +626,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
         worker_tasks = [worker(*item[:2]) for item in running_identities]
         control_tasks = [recovery_control(*item[:2]) for item in running_identities] if recovery_grants else []
         if user_token:
-            worker_tasks.append(command_worker(*identities[-1][:2]))
+            worker_tasks.extend(command_worker(*item[:2]) for item in identities[-command_workers:])
         await asyncio.gather(*worker_tasks, *control_tasks)
         end = time.monotonic()
         await loop_task
@@ -673,6 +688,10 @@ def main():
                         help='simulate negotiated execution reconciliation, completion, cleanup and late reliable results')
     parser.add_argument('--cards-per-node', type=int, default=1,
                         help='group simulated card slots under one node identity (recovery load only)')
+    parser.add_argument('--command-workers', type=int, default=1,
+                        help='free slots that claim and complete queued batch cases')
+    parser.add_argument('--batch-cases', type=int, default=1,
+                        help='number of tasks in one submitted batch, maximum 100')
     parser.add_argument('--continuous-batches', action='store_true', help='repeat submit/fail/retry/succeed during mixed UI load')
     parser.add_argument('--bulk-outage-seconds', type=int, default=0, help='stop bulk role 30 seconds into load, then restart')
     parser.add_argument('--postgres-container', help='optional disposable PostgreSQL container for read-only docker stats')
@@ -698,6 +717,11 @@ def main():
         parser.error('--recovery-load requires four roles, mixed UI, Agent telemetry and at least 30 seconds')
     if args.cards_per_node < 1 or (args.cards_per_node != 1 and not args.recovery_load):
         parser.error('--cards-per-node must be positive and currently requires --recovery-load')
+    if (args.command_workers < 1 or (args.mixed_ui and args.command_workers >= min(grades)) or
+            args.batch_cases < 1 or args.batch_cases > 100 or
+            (args.command_workers != 1 or args.batch_cases != 1) and not args.mixed_ui or
+            args.batch_cases > 1 and args.continuous_batches):
+        parser.error('large batches require --mixed-ui, 1..100 cases, free command slots and no --continuous-batches')
     if args.priority_api and (args.split_api or args.role_aware_pools or args.no_admission or args.no_backpressure):
         parser.error('--priority-api requires its own pools and admission, without --split-api')
     if args.role_aware_pools and not args.split_api:
@@ -731,6 +755,7 @@ def main():
                'db_backpressure_enabled':not args.no_backpressure,
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
                'cards_per_node':args.cards_per_node,
+               'command_workers':args.command_workers, 'batch_cases':args.batch_cases,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'log_payload_style':'varied-structured' if args.varied_logs else 'repeated-character',
                'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui or args.priority_api,
@@ -769,7 +794,8 @@ def main():
             try:
                 seeded = seed(engine, count, agent_telemetry=args.agent_telemetry,
                               mixed_ui=args.mixed_ui, recovery_load=args.recovery_load,
-                              cards_per_node=args.cards_per_node)
+                              cards_per_node=args.cards_per_node,
+                              command_workers=args.command_workers)
                 identities, recovery_grants, node_groups = seeded if args.recovery_load else (seeded, None, None)
                 with engine.begin() as c:
                     c.execute(text("UPDATE evaluation_runs SET lease_expires_at=now()+interval '30 seconds'"))
@@ -856,6 +882,7 @@ def main():
                                                   log_interval=args.log_interval,
                                                   continuous_batches=args.continuous_batches, varied_logs=args.varied_logs,
                                                   recovery_grants=recovery_grants, node_groups=node_groups,
+                                                  command_workers=args.command_workers, batch_cases=args.batch_cases,
                                                   user_token=jwt.encode({'sub':'u', 'exp':int(time.time())+3600}, jwt_secret,
                                                                         algorithm='HS256') if args.mixed_ui else None)
                     if args.bulk_outage_seconds:
@@ -921,12 +948,22 @@ def main():
                                         (count + args.cards_per_node - 1)//args.cards_per_node)
                 if args.mixed_ui:
                     ui = result['ui_evidence']
+                    if args.batch_cases > 1:
+                        ui_ok = (ui['control_revisions'] == [1, 2] and not ui['errors']
+                                 and ui['last_batch_status'] == 'SUCCEEDED'
+                                 and len(ui['completed_batches']) == 1
+                                 and ui['max_pending_count'] >= args.batch_cases-args.command_workers
+                                 and len(ui['executions']) == args.batch_cases
+                                 and all(e['status'] == 'SUCCEEDED' for e in ui['executions'])
+                                 and ui['duplicate_results'] == args.batch_cases)
+                    else:
+                        ui_ok = (ui['control_revisions'] == [1, 2]*ui['batch_count'] and not ui['errors']
+                                 and ui['retried'] and ui['last_batch_status'] == 'SUCCEEDED'
+                                 and len(ui['completed_batches']) == ui['retry_count'] == ui['batch_count']
+                                 and [e['status'] for e in ui['executions']] == ['FAILED', 'SUCCEEDED']*ui['batch_count']
+                                 and ui['duplicate_results'] == 2*ui['batch_count'])
                     result['passed'] = (result['passed'] and ui['batch_id'] is not None
-                                        and ui['control_revisions'] == [1, 2]*ui['batch_count'] and not ui['errors']
-                                        and ui['retried'] and ui['last_batch_status'] == 'SUCCEEDED'
-                                        and len(ui['completed_batches']) == ui['retry_count'] == ui['batch_count']
-                                        and [e['status'] for e in ui['executions']] == ['FAILED', 'SUCCEEDED']*ui['batch_count']
-                                        and ui['duplicate_results'] == 2*ui['batch_count']
+                                        and ui['case_count_seen'] == args.batch_cases and ui_ok
                                         and result['requests_by_kind'].get('ui_detail', {}).get('200', 0) > 0)
                 if args.recovery_load:
                     recovery = result['recovery_evidence']
@@ -938,6 +975,8 @@ def main():
                                             'completed':target,'cleanup_confirmed':target,
                                             'result_sync_complete':target}
                                         and result['requests_by_kind'].get('recovery_control', {}).get('200', 0) >= count-1
+                                        and result['requests_by_kind'].get('artifact', {}).get('200', 0) > 0
+                                        and ui['artifact_seen']
                                         and result['successful_latency_seconds'].get('recovery_control', {}).get('p99', 999) < 5
                                         and recovery['release_latency_seconds']['max'] is not None
                                         and recovery['release_latency_seconds']['max'] < 9)

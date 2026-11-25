@@ -72,18 +72,44 @@ def test_summary_latest_attempt_weighted_results(env):
     assert old.json()['progress']['completed']==2
 
 
-def test_no_reporting_and_query_budget(env):
+def test_no_reporting_and_query_budget(env, monkeypatch):
     main,c,auth=env;body,_=setup(env)
     body['cases']=[{**body['cases'][0],'case_id':str(i)} for i in range(100)]
     b=c.post('/api/v1/batches',headers=auth['alice'],json=body).json();queries=[]
+    from backend.app.preflight import DiagnosticContext
+    original = DiagnosticContext.inspect
+    inspected = []
+    def counted(self, job, owner, pool, batch=None):
+        inspected.append(job.id)
+        return original(self, job, owner, pool, batch)
+    monkeypatch.setattr(DiagnosticContext, 'inspect', counted)
     engine=main.SessionLocal.kw['bind']
     def trace(*args):queries.append(args[2])
     event.listen(engine,'before_cursor_execute',trace)
     try:m=get(env,b)
     finally:event.remove(engine,'before_cursor_execute',trace)
     assert len(queries)<=15, len(queries)
+    assert len(inspected) == 1  # 100 equivalent pending cases share one read snapshot.
     assert m['summary']['unreported_tasks']==100 and m['summary']['success_rate'] is None
     assert m['summary']['completed_episodes']==0
+
+
+def test_monitor_diagnostics_do_not_merge_distinct_resource_requests(env, monkeypatch):
+    main,c,auth=env;b,_=batch(env)
+    with main.SessionLocal() as session:
+        second=session.get(Job,b['cases'][1]['job_id'])
+        second.requested_vram_gb=1
+        session.commit()
+    from backend.app.preflight import DiagnosticContext
+    original=DiagnosticContext.inspect
+    inspected=[]
+    def counted(self,job,owner,pool,batch=None):
+        inspected.append(job.id)
+        return original(self,job,owner,pool,batch)
+    monkeypatch.setattr(DiagnosticContext,'inspect',counted)
+    result=get(env,b)
+    assert len(inspected)==2
+    assert len(result['cases'])==2
 
 
 def test_bulk_retry_partial_cleanup_replay_and_history(env):

@@ -68,6 +68,19 @@ def test_recovery_load_seed_binds_original_claim_and_keeps_ui_worker_separate():
     engine.dispose()
 
 
+def test_large_batch_seed_keeps_ten_free_command_slots_and_ninety_recovery_runs():
+    engine = create_engine('sqlite://')
+    identities, grants, _ = seed(engine, 100, mixed_ui=True, recovery_load=True,
+                                command_workers=10, cards_per_node=4)
+    assert len(identities) == 100 and len(grants) == 90
+    with Session(engine) as session:
+        assert session.query(Run).count() == 90
+        assert all(session.get(Slot, item[0]).protocol_version == 18
+                   for item in identities[-10:])
+        assert all(session.get(Run, item[0]) is None for item in identities[-10:])
+    engine.dispose()
+
+
 def test_split_gateway_rejects_incomplete_template():
     with pytest.raises(ValueError, match='missing a required route marker'):
         render_gateway_config('listen 8000; set $ordinary_backend api:8000;', 18001, 18002, 18003)
@@ -166,6 +179,22 @@ def test_fault_arguments_reject_unsupported_runs_before_database_access(monkeypa
         main()
     assert error.value.code == 2
     assert '--bulk-outage-seconds requires' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('arguments', [
+    ['--mixed-ui','--grades','10','--batch-cases','101'],
+    ['--mixed-ui','--grades','10','--command-workers','10'],
+    ['--mixed-ui','--grades','10','--batch-cases','50','--continuous-batches','--seconds','30'],
+    ['--batch-cases','50'],
+])
+def test_large_batch_arguments_reject_invalid_or_ambiguous_load(monkeypatch,capsys,arguments):
+    from backend.tests.control_plane_load import main
+    monkeypatch.setattr('sys.argv',['load','--output','/unused',*arguments])
+    monkeypatch.delenv('LOG_TEST_DATABASE_URL',raising=False)
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert 'large batches require' in capsys.readouterr().err
 
 
 @pytest.mark.parametrize('size',[1,1024,16384])
