@@ -200,3 +200,54 @@ def test_final_stdout_tail_distinguishes_diagnostic_text_from_protocol(case,monk
     assert len(q.pending())==1 and q.pending()[0]['body']==EVENT
     assert w.state[cursor]==len(args['output'])-(0 if sealed else len(tail))
     assert json.loads(w.path.read_text())==w.state
+
+
+@pytest.mark.parametrize('mode',['protocol','journal','stdout'])
+def test_long_collection_reuses_confirmed_capacity_and_survives_restart(case,mode):
+    w,_,root=case
+    args,cursor,line=source(case,mode)
+    directory=w.path.parent/'small-outbox'
+    q=ReliableOutbox(directory,max_records=3,control_reserve_records=1)
+    output=''
+    for index in range(1,41):
+        event=json.dumps({**EVENT,'episode_id':index})+'\n'
+        if mode=='protocol':
+            (root/'events.jsonl').write_text(output+event)
+        elif mode=='journal':
+            (execution_dirs(w.workspace,w.state['task']['execution_id'])/'work'/'episodes.jsonl').write_text(output+event)
+        else:
+            event='MINI_EVAL_EVENT '+event
+            args={'output':output+event}
+        output+=event
+        assert w.collect_recovery_results(q,**args)
+        pending=q.pending();assert len(pending)==1
+        record=pending[0]
+        q.acknowledge(record['execution_id'],record['generation'],record['kind'],record['sequence'],record['digest'])
+        w.state=json.loads(w.path.read_text())
+        q=ReliableOutbox(directory,max_records=3,control_reserve_records=1)
+    assert w.state[cursor]==len(output)
+    assert q.pending()==[]
+
+
+@pytest.mark.parametrize('mode',['protocol','journal','stdout'])
+def test_ack_before_cursor_commit_does_not_allow_retirement(case,monkeypatch,mode):
+    w,q,_=case
+    args,cursor,_=source(case,mode)
+    original_put=q.put
+    def accept_and_ack(execution,generation,kind,sequence,body):
+        digest=original_put(execution,generation,kind,sequence,body)
+        q.acknowledge(execution,generation,kind,sequence,digest)
+        return digest
+    def fail(path,state):
+        if state.get(cursor,0)>(len('noise\n') if mode=='stdout' else 0):
+            raise OSError('cursor persist failed after ACK')
+        atomic_json(path,state)
+    monkeypatch.setattr(q,'put',accept_and_ack)
+    monkeypatch.setattr('worker.recovery_results.atomic_json',fail)
+    with pytest.raises(OSError):w.collect_recovery_results(q,**args)
+    w.state=json.loads(w.path.read_text())
+    monkeypatch.setattr('worker.recovery_results.atomic_json',atomic_json)
+    # Replay still compares the original digest instead of rejecting or sending again.
+    assert w.collect_recovery_results(q,**args)
+    assert q.pending()==[]
+    assert w.collect_recovery_results(q,**args)

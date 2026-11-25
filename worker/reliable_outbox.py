@@ -48,6 +48,9 @@ class ReliableOutbox:
                 id INTEGER PRIMARY KEY, execution TEXT NOT NULL, kind TEXT NOT NULL,
                 sequence INTEGER NOT NULL, digest TEXT NOT NULL, payload TEXT,
                 size INTEGER NOT NULL, UNIQUE(execution, kind, sequence))''')
+            db.execute('''CREATE TABLE IF NOT EXISTS retired (
+                execution TEXT NOT NULL, kind TEXT NOT NULL, through_sequence INTEGER NOT NULL,
+                PRIMARY KEY(execution, kind))''')
 
     @contextmanager
     def _transaction(self, *, write=True):
@@ -85,6 +88,10 @@ class ReliableOutbox:
                 if old['digest'] != digest:
                     raise OutboxConflict('reliable record changed for the same sequence')
                 return digest
+            retired = db.execute('SELECT through_sequence FROM retired WHERE execution=? AND kind=?',
+                                 (execution, kind)).fetchone()
+            if retired and sequence <= retired['through_sequence']:
+                raise OutboxConflict('result cursor moved behind confirmed retirement boundary')
             if len(encoded) > self.max_record_bytes:
                 raise OutboxFull('reliable record exceeds single-record limit')
             # ACK tombstones consume record slots too. Otherwise a long-lived
@@ -100,6 +107,33 @@ class ReliableOutbox:
             db.execute('INSERT INTO messages (execution,kind,sequence,digest,payload,size) VALUES (?,?,?,?,?,?)',
                        (execution, kind, sequence, digest, payload, len(encoded)))
         return digest
+
+    def compact_confirmed(self, execution, generation, *, before):
+        """Retire episode ACKs only below the caller's durable source cursor.
+
+        Unacknowledged records survive even below the boundary. A stale cursor
+        cannot recreate a retired event; it must be reconciled explicitly.
+        """
+        if type(before) is not int or not 0 <= before < 2**63:
+            raise ValueError('invalid durable result cursor')
+        with self._transaction() as db:
+            owner = db.execute('SELECT generation FROM executions WHERE execution=?', (execution,)).fetchone()
+            if not owner:
+                return 0
+            if owner['generation'] != generation:
+                raise OutboxConflict('execution generation changed')
+            row = db.execute('''SELECT MAX(sequence) AS last, COUNT(*) AS count FROM messages
+                WHERE execution=? AND kind='episode' AND payload IS NULL AND sequence<?''',
+                (execution, before)).fetchone()
+            if not row['count']:
+                return 0
+            db.execute('''INSERT INTO retired VALUES (?,'episode',?)
+                ON CONFLICT(execution,kind) DO UPDATE SET
+                through_sequence=MAX(through_sequence,excluded.through_sequence)''',
+                (execution, row['last']))
+            db.execute('''DELETE FROM messages WHERE execution=? AND kind='episode'
+                AND payload IS NULL AND sequence<?''', (execution, before))
+            return row['count']
 
     def pending(self, limit=100):
         if type(limit) is not int or not 1 <= limit <= 1000:
@@ -137,5 +171,6 @@ class ReliableOutbox:
             if db.execute('SELECT 1 FROM messages WHERE execution=? AND payload IS NOT NULL LIMIT 1', (execution,)).fetchone():
                 raise OutboxConflict('unconfirmed reliable records must be retained')
             db.execute('DELETE FROM messages WHERE execution=?', (execution,))
+            db.execute('DELETE FROM retired WHERE execution=?', (execution,))
             db.execute('DELETE FROM executions WHERE execution=?', (execution,))
             return True

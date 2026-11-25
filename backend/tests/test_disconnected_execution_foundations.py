@@ -312,3 +312,90 @@ def test_worker_journal_commits_directory_and_surfaces_failure(tmp_path, monkeyp
     assert calls == [False, True]
     assert json.loads(worker.path.read_text()) == worker.state
     assert not worker.path.with_suffix('.tmp').exists()
+
+
+def test_compaction_retains_unacked_and_rejects_old_cursor_after_restart(tmp_path):
+    q = ReliableOutbox(tmp_path, max_records=4, control_reserve_records=1)
+    first = put(q, 1)
+    second = put(q, 2)
+    third = put(q, 3)
+    q.acknowledge('execution','generation','episode',2,second)
+    assert q.compact_confirmed('execution','generation',before=2)==0
+    assert q.compact_confirmed('execution','generation',before=3)==1
+    q = ReliableOutbox(tmp_path, max_records=4, control_reserve_records=1)
+    assert [r['sequence'] for r in q.pending()]==[1,3]
+    assert put(q,1)==first
+    with pytest.raises(OutboxConflict,match='retirement'):
+        put(q,2)
+    with pytest.raises(OutboxConflict,match='generation'):
+        q.compact_confirmed('execution','wrong',before=4)
+    put(q,4)
+    with pytest.raises(OutboxFull):put(q,5)
+    q.acknowledge('execution','generation','episode',1,first)
+    assert q.compact_confirmed('execution','generation',before=4)==1
+    # Retiring a lower hole must not move the persisted boundary backwards.
+    with pytest.raises(OutboxConflict):put(q,2)
+    assert q.acknowledge('execution','generation','episode',3,third)
+    assert q.compact_confirmed('execution','generation',before=4)==1
+
+
+@pytest.mark.parametrize('cursor',[True,-1,2**63,'1'])
+def test_compaction_rejects_invalid_cursor(tmp_path,cursor):
+    with pytest.raises(ValueError):ReliableOutbox(tmp_path).compact_confirmed('e','g',before=cursor)
+
+
+def test_compaction_empty_control_and_retention(tmp_path):
+    q=ReliableOutbox(tmp_path)
+    assert q.compact_confirmed('missing','g',before=10)==0
+    control=put(q,1,kind='control')
+    q.acknowledge('execution','generation','control',1,control)
+    assert q.compact_confirmed('execution','generation',before=10)==0
+    event=put(q,1)
+    q.acknowledge('execution','generation','episode',1,event)
+    assert q.compact_confirmed('execution','generation',before=10)==1
+    assert q.compact_confirmed('execution','generation',before=10)==0
+    q.forget_confirmed_execution('execution','generation')
+    assert put(q,1)==event
+
+
+def test_compaction_transaction_failure_rolls_back_boundary_and_rows(tmp_path):
+    import sqlite3
+    q=ReliableOutbox(tmp_path)
+    digest=put(q,1)
+    q.acknowledge('execution','generation','episode',1,digest)
+    with sqlite3.connect(q.path) as db:
+        db.execute("CREATE TRIGGER fail_retire BEFORE DELETE ON messages BEGIN SELECT RAISE(ABORT,'injected disk failure'); END")
+    with pytest.raises(sqlite3.IntegrityError):
+        q.compact_confirmed('execution','generation',before=2)
+    with sqlite3.connect(q.path) as db:
+        assert db.execute('SELECT COUNT(*) FROM retired').fetchone()[0]==0
+        assert db.execute('SELECT COUNT(*) FROM messages').fetchone()[0]==1
+        db.execute('DROP TRIGGER fail_retire')
+    assert q.compact_confirmed('execution','generation',before=2)==1
+
+
+def test_parallel_ack_and_compaction_preserves_every_pending_record(tmp_path):
+    q=ReliableOutbox(tmp_path)
+    digests=[put(q,i) for i in range(40)]
+    def confirm(i):
+        q.acknowledge('execution','generation','episode',i,digests[i])
+    def compact(_):
+        q.compact_confirmed('execution','generation',before=40)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures=[pool.submit(confirm,i) for i in range(20)]
+        futures += [pool.submit(compact,i) for i in range(20)]
+        for future in futures:future.result(timeout=10)
+    q.compact_confirmed('execution','generation',before=40)
+    assert [r['sequence'] for r in q.pending()]==list(range(20,40))
+    for i in range(20,40):assert put(q,i)==digests[i]
+
+
+def test_old_queue_adds_retirement_table_without_changing_pending(tmp_path):
+    import sqlite3
+    q=ReliableOutbox(tmp_path)
+    put(q,1)
+    pending=q.pending()
+    with sqlite3.connect(q.path) as db:db.execute('DROP TABLE retired')
+    reopened=ReliableOutbox(tmp_path)
+    assert reopened.pending()==pending
+    assert reopened.compact_confirmed('execution','generation',before=2)==0

@@ -53,6 +53,11 @@ def collect(worker, outbox=None, *, output='', protocol_root=None, final=False):
         atomic_json(worker.path, candidate)
         worker.state = state = candidate
 
+    # Only the cursor committed by an earlier collection pass authorizes ACK
+    # compaction. Never use the reader's speculative cursor before atomic save.
+    if cursor:
+        outbox.compact_confirmed(execution, receipt['generation'], before=state.get(cursor, 0))
+
     # Readers mutate their cursor before save(). Keep those mutations private
     # until the atomic save succeeds, including after a disk-full exception.
     reader = copy.copy(worker)

@@ -379,3 +379,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 日志积压恢复：worker/log_stream.py 在准备新 v2 上传块前将待传范围收缩到最新 32 条环形记录（最多 64 KiB），跳过历史时报告 gap；已持久化 pending 原样重试以保持摘要幂等。协议事件和节点独立日志不随上传窗口淘汰。见 docs/execution-logs.md、test_log_sender.py；不代表多节点恢复容量已验收。
 
 日志重连集中验证：test_log_reconnect_postgres.py 使用 LOG_TEST_DATABASE_URL 的一次性数据库、四角色真实 HTTP 和 100 个 Sender；包含提交后 ACK 丢失、心跳/结果/任务列表并行。只验证预置积压恢复与幂等，不代表真实业务、网关或持续容量已验收。
+
+可靠队列长执行容量：reliable_outbox.compact_confirmed 只回收已ACK且严格落在持久源游标前的episode摘要；recovery_results在新采集前调用。SQLite retired 保存最大退休序号；游标回退报冲突，未ACK行保留。文档见worker-upgrades.md；无新平台迁移，不能删除原队列绕过冲突。

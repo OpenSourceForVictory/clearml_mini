@@ -1,0 +1,110 @@
+{
+  "scope": "durable cursor gated episode ACK compaction",
+  "tests": {
+    "passed": 254,
+    "skipped": 12,
+    "deselected": 3383,
+    "failed": 0,
+    "seconds": 72.45
+  },
+  "command": "PYTEST_ADDOPTS='--import-mode=importlib -k \"disconnected_execution_foundations or worker_recovery_results or worker_recovery_execution or recovery_records or recovery_results or recovery_finish\"' .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/outbox-compaction",
+  "coverage": {
+    "worker/reliable_outbox.py": {
+      "covered_lines": 122,
+      "num_statements": 122,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 46,
+      "num_partial_branches": 0,
+      "covered_branches": 46,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    },
+    "worker/recovery_results.py": {
+      "covered_lines": 87,
+      "num_statements": 87,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100.00",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100.00",
+      "num_branches": 48,
+      "num_partial_branches": 0,
+      "covered_branches": 48,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100.00"
+    }
+  },
+  "project_gate": "failed: targeted selection, full project denominator retained",
+  "skips": [
+    {
+      "name": "test_http_completion_cleanup_and_legacy_bypass_rejected",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_cancel_lock_then_late_completion",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_legacy_http_cannot_defer_required_results",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_result_sync_http_ack_and_replay",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_result_sync_does_not_compete_for_global_scheduler_lock",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_concurrent_replay_and_unrelated_scheduler_lock",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_migration_and_safe_downgrade",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_real_api_authentication_and_no_implicit_grant",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_duplicate_application_without_global_lock",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_postgres_cancel_then_late_result_preserves_cancel",
+      "reason": "requires disposable PostgreSQL server"
+    },
+    {
+      "name": "test_real_runtime_finalization_after_cleanup_reply_loss[host]",
+      "reason": "real host/Docker finalization opt-in"
+    },
+    {
+      "name": "test_real_runtime_finalization_after_cleanup_reply_loss[docker]",
+      "reason": "real host/Docker finalization opt-in"
+    }
+  ],
+  "real_runtime": {
+    "command": "RECOVERY_RUNTIME_TEST=1 .venv/bin/python -m pytest backend/tests/test_recovery_execution_real.py -q --import-mode=importlib -k 'complete or restart'",
+    "passed": 4,
+    "deselected": 8,
+    "failed": 0,
+    "seconds": 48.6,
+    "scope": "real host/systemd and Docker synthetic short programs, isolated API; not GPU/NPU models"
+  },
+  "additional_tests": {
+    "passed": 2,
+    "scope": "concurrent ACK/compaction and upgrade of existing local queue; no implementation edits after coverage run"
+  },
+  "deployment": "not deployed; capability not advertised",
+  "migration": "automatic additive local SQLite retired table; no new platform Alembic revision"
+}
