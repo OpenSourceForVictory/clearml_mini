@@ -83,7 +83,7 @@ def case(tmp_path, monkeypatch):
             if fault['results']:raise TimeoutError('result path offline')
             from worker.recovery_results import execution_outbox
             record = next(r for r in execution_outbox(w).pending() if r['sequence']==body['sequence'])
-            return {'digest':record['digest'],'reconciled':True}
+            return {'digest':record['digest'],'reconciled':True,'application':'applied'}
         if path.endswith('/complete'):
             calls.append('complete')
             assert any(isinstance(c,tuple) and c[0].endswith('/recovery/reconcile') and c[1]['state']=='exited' for c in calls)

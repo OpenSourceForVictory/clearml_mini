@@ -2,7 +2,7 @@
 from fastapi import HTTPException
 from sqlalchemy import select, func
 
-from .core import ExecutionRecovery, ExecutionRecoveryControl, Run, Slot, RunLogState
+from .core import ExecutionRecovery, ExecutionRecoveryControl, ExecutionRecoveryReceipt, Run, Slot, RunLogState
 from .scheduling import TERMINAL, fast_lock, transition
 
 
@@ -100,12 +100,21 @@ def results_finished(s, *, worker_id, execution_id, proof):
     snapshot = control.snapshot
     if not snapshot.get('completion') or run.status not in TERMINAL or not run.cleanup_confirmed:
         raise HTTPException(409, 'result synchronization requires acknowledged completion and cleanup')
-    duplicate = snapshot.get('result_sync') == 'complete'
+    duplicate = snapshot.get('result_sync') in ('complete', 'failed')
     if not duplicate:
-        from .execution import Finish, validate_finish
-        body = Finish.model_validate(snapshot['completion'])
-        validate_finish(s, run, body)
-        control.snapshot = {**snapshot, 'result_sync':'complete'}
+        rejection = s.scalar(select(ExecutionRecoveryReceipt).where(
+            ExecutionRecoveryReceipt.execution_id == execution_id,
+            ExecutionRecoveryReceipt.application_state == 'rejected')
+            .order_by(ExecutionRecoveryReceipt.received_at,
+                      ExecutionRecoveryReceipt.sequence).limit(1))
+        if rejection:
+            control.snapshot = {**snapshot, 'result_sync':'failed',
+                'result_sync_error':f'{rejection.kind} #{rejection.sequence}: {rejection.rejection_reason}'}
+        else:
+            from .execution import Finish, validate_finish
+            body = Finish.model_validate(snapshot['completion'])
+            validate_finish(s, run, body)
+            control.snapshot = {**snapshot, 'result_sync':'complete'}
         s.flush()
     return {'status':run.status, 'cleanup_confirmed':run.cleanup_confirmed,
-            'result_sync':'complete', 'duplicate':duplicate}
+            'result_sync':control.snapshot['result_sync'], 'duplicate':duplicate}

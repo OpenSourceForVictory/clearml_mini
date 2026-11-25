@@ -83,7 +83,7 @@ def finish_results(worker, outbox):
         return False
     execution = state['task']['execution_id']
     reply = worker.api.post(f'worker/executions/{execution}/recovery/results-finished', pending['proof'])
-    if (not isinstance(reply, dict) or reply.get('result_sync') != 'complete'
+    if (not isinstance(reply, dict) or reply.get('result_sync') not in ('complete', 'failed')
             or reply.get('cleanup_confirmed') is not True or reply.get('status') not in TERMINAL
             or type(reply.get('duplicate')) is not bool):
         raise ValueError('invalid result synchronization acknowledgement')

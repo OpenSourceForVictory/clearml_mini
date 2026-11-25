@@ -246,7 +246,7 @@ def test_execute_resumes_deferred_delivery_after_cleanup_without_start(case,lost
         assert path.endswith(('/results','/results-finished'))
         if kind=='result':
             assert data['apply'] is True
-            response={'digest':digest,'reconciled':True}
+            response={'digest':digest,'reconciled':True,'application':'applied'}
         else:response={'status':'SUCCEEDED','cleanup_confirmed':True,'result_sync':'complete','duplicate':dropped}
         if kind==lost and not dropped:dropped=True;raise TimeoutError('lost '+lost+' ACK')
         return response

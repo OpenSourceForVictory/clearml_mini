@@ -162,6 +162,9 @@ def detail(job: Job, *, at=None, pending=None):
     if pending is None:
         session = object_session(job)
         pending = execution_timing.pending_starts(session, [r.id for r in job.runs]) if session else {}
+    from .result_sync_view import for_runs
+    session = object_session(job)
+    sync = for_runs(session, job.runs, at=at) if session else {}
     return {'id': job.id, 'owner_id': job.owner_id, 'owner_name': job.owner.username, 'title': job.title, 'benchmark': job.benchmark,
             'client_spec': job.client_spec, 'batch_id': job.batch_id, 'case_id': job.case_id,
             'model_ref': job.model_ref, 'episodes': job.episodes, 'pool_id': job.pool_id,
@@ -170,7 +173,7 @@ def detail(job: Job, *, at=None, pending=None):
             'status': job.status, 'created_at': job.created_at, 'started_at': job.started_at,
             'finished_at': job.finished_at, 'error': job.error,
             'attempts': [{'id': r.id, 'execution_id': r.execution_id, 'attempt': r.attempt, 'status': r.status,
-            'timing': execution_timing.attempt(job, r, at, pending.get(r.id)), 'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
+            'timing': execution_timing.attempt(job, r, at, pending.get(r.id)), 'data_sync':sync.get(r.id), 'metrics': r.result_json, 'error': r.error, 'cleanup_confirmed': r.cleanup_confirmed, 'slot_id': r.slot_id, 'reserved_vram_mb': r.reserved_vram_mb,
             'log_bytes': r.log_bytes, **endpoints.view(r, job.client_spec)} for r in job.runs]}
 
 

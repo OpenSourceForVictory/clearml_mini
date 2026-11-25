@@ -26,6 +26,8 @@
 宿主机执行的控制端短时忙碌：`worker/client.py` 在执行心跳 HTTP 503 时保留正在运行的单元并重试，租约 watchdog 仍生效；其他 HTTP 拒绝不按瞬时故障吞掉。定位时对照 `backend/tests/test_worker_execution_recovery.py` 与 `docs/host-execution.md`。
 | 运行结果 | frontend/src/batch-history.tsx、batch-detail.tsx；backend/app/batch_deletion.py；docs/batch-monitoring.md、batch-reports.md、interface-pages.md | 重试历史、真实回合分母、取消与删除语义；删除批次会清理其任务/运行数据并保留删除墓碑与审计 |
 
+恢复协议数据同步：`backend/app/result_sync_view.py` 批量读取恢复控制快照和日志缺口，`batches.py`/`main.py` 输出每次尝试状态，`frontend/src/data-sync-status.tsx` 在批次页展示。业务结果 400 由 `recovery_results.py` 留存原始拒收收据与原因，Worker `recovery_delivery.py` 只确认匹配摘要及明确的 applied/rejected；网络、认证和归属失败保留本地记录。`c14d09e` 迁移先于新 API；见 `docs/batch-monitoring.md`、`docs/database-migration.md`。这不是完整断联恢复发布。
+
 批次排队优先级：`EvaluationBatch.priority` 为 0–9，批次所有者可在运行记录里修改仍有 PENDING 项的批次；调度仅在用户内部按优先级降序、创建时间升序，跨用户公平轮转保留。API、迁移和回归见 `backend/app/batch_priority.py`、`backend/alembic/versions/aa741b2_batch_priority.py`、`backend/tests/test_batch_priority.py`；操作说明见 `docs/batch-controls.md`。
 
 CPU/内存预算：资源池 cpu_per_job、ram_gb_per_job 是缺省申请而非上限；0 表示未申请的任务不预约该轴，Worker 不设置相应运行额度。模板或提交的明确申请按节点配置容量、Agent host 样本和现有预约准入。Agent host 心跳有 cpu_count、cpu_utilization、memory_total_mb、memory_available_mb；没有“剩余 CPU 核数”。验证见 test_unlimited_cpu_memory.py、test_pair_capacity_diagnostics.py、test_resource_reporting.py，说明见 docs/template-resource-requirements.md 和 docs/node-resource-reporting.md。

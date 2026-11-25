@@ -28,6 +28,8 @@ class RecoveryDelivery:
                 raise OutboxConflict('recovery receipt ACK does not match submitted data')
             if kind != 'control' and self.apply_results and response.get('reconciled') is not True:
                 raise OutboxConflict('recovery result has not been applied')
+            if kind != 'control' and self.apply_results and response.get('application') not in ('applied', 'rejected'):
+                raise OutboxConflict('recovery result ACK lacks application status')
             self.outbox.acknowledge(record['execution_id'], record['generation'], kind,
                                     record['sequence'], record['digest'])
             delivered += 1

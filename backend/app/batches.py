@@ -94,6 +94,8 @@ def batch_view(s, batch, jobs=None, progresses=None, result_rows=None, *, summar
     result_rows = load_records(s,[j.runs[-1].id for j in jobs]) if result_rows is None else result_rows
     if progresses is None:progresses = {j.runs[-1].id:summarize(result_rows[j.runs[-1].id]) for j in jobs}
     outcomes = {j.runs[-1].id:summarize_attempt(j,j.runs[-1],result_rows[j.runs[-1].id]) for j in jobs}
+    from .result_sync_view import for_runs
+    sync = {} if summary else for_runs(s, [j.runs[-1] for j in jobs], at=at)
     from .core import Slot
     from .placement import view as placement_view
     slot_ids = set() if summary else {j.runs[-1].slot_id for j in jobs if j.runs[-1].slot_id}
@@ -113,7 +115,7 @@ def batch_view(s, batch, jobs=None, progresses=None, result_rows=None, *, summar
     result = {'timing':execution_timing.batch(batch, [j.runs[-1] for j in jobs], at), 'outcomes':aggregate(outcomes.values()),'orchestrated':(s.get(EvaluationOrchestration,batch.id) is not None) if orchestrated is None else orchestrated,'scheduling_paused': batch.scheduling_paused, 'control_revision': batch.control_revision, 'control_updated_at': batch.control_updated_at, 'id': batch.id, 'suite_id': batch.suite_id, 'max_concurrent': batch.max_concurrent, 'priority': batch.priority, 'pending_count': sum(j.status == 'PENDING' for j in jobs), 'title': batch.title, 'owner_id': batch.owner_id, 'created_at': batch.created_at,
             'status': status, 'total': len(jobs), 'succeeded': succeeded, 'finished': finished,
             'total_episodes': sum(j.episodes for j in jobs if j.client_spec['template'].get('task_type')!='command' or j.client_spec['template'].get('episode_reporting')),
-            'cases': [] if summary else [{'timing':execution_timing.attempt(j,j.runs[-1],at,starts.get(j.runs[-1].id)), 'outcomes':outcomes[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
+            'cases': [] if summary else [{'timing':execution_timing.attempt(j,j.runs[-1],at,starts.get(j.runs[-1].id)), 'outcomes':outcomes[j.runs[-1].id], 'data_sync':sync[j.runs[-1].id], 'placement': placements.get(j.runs[-1].slot_id), 'job_id': j.id, 'case_id': j.case_id, 'task_name': j.client_spec['task_name'],
                        'seed': j.client_spec['seed'], 'episodes': 0 if j.client_spec['template'].get('task_type')=='command' and not j.client_spec['template'].get('episode_reporting') else j.episodes, 'status': j.status,
                        'task_type': j.client_spec['template'].get('task_type','evaluation'),
                        **endpoints.view(j.runs[-1], j.client_spec), 'attempt': j.runs[-1].attempt, 'run_id': j.runs[-1].id,

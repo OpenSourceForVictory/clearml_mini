@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 
 from backend.app import recovery_records, recovery_results
 from backend.app.core import EpisodeRecord, ExecutionRecovery, ExecutionRecoveryReceipt, Job, Run, Slot, now
@@ -87,13 +87,21 @@ def test_foreign_revoked_deleted_or_changed_assignment_rejected(execution,change
     ('task_result',{'success':'yes'},True),
     ('control',{},False),
 ])
-def test_invalid_application_rolls_back_receipt_and_budget(execution,kind,body,task):
+def test_invalid_application_retains_rejected_receipt_or_rolls_back_conflict(execution,kind,body,task):
     factory,generation=execution;setup(factory,task)
-    with pytest.raises(HTTPException):apply(factory,generation,body,kind=kind)
+    if (kind,body.get('status')) in (('episode','STARTED'),) or kind == 'task_result':
+        reply=apply(factory,generation,body,kind=kind)
+        assert reply['application']=='rejected' and reply['reconciled']
+        assert apply(factory,generation,body,kind=kind)['application']=='rejected'
+        expected=1
+    else:
+        with pytest.raises(HTTPException):apply(factory,generation,body,kind=kind)
+        expected=0
     with factory() as s:
         grant=s.get(ExecutionRecovery,'e')
-        assert grant.received_records==grant.received_bytes==0
-        assert s.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt))==0
+        assert grant.received_records==expected
+        assert bool(grant.received_bytes)==bool(expected)
+        assert s.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt))==expected
 
 
 def test_conflicting_task_result_never_overwrites(execution):
@@ -123,13 +131,84 @@ def test_http_and_delivery_apply_before_ack(execution,tmp_path):
     with factory() as s:assert s.get(Run,'r').result_json['success']
 
 
-def test_delivery_keeps_unapplied_result_pending(tmp_path):
+@pytest.mark.parametrize('reply_state', [False, True, 'missing_application'])
+def test_delivery_keeps_unconfirmed_result_pending(tmp_path, reply_state):
     q=ReliableOutbox(tmp_path/'outbox')
     q.put('e','g','task_result',1,{'success':True})
     digest=q.pending()[0]['digest']
-    sender=RecoveryDelivery(SimpleNamespace(post=lambda *a:{'digest':digest,'reconciled':False}),q,apply_results=True)
+    response={'digest':digest,'reconciled':reply_state is not False}
+    if reply_state is True:
+        response['application']='unknown'
+    sender=RecoveryDelivery(SimpleNamespace(post=lambda *a:response),q,apply_results=True)
     with pytest.raises(OutboxConflict):sender.step()
     assert len(q.pending())==1
+
+
+@pytest.mark.parametrize('status',[401,409,503])
+def test_delivery_keeps_result_on_http_failure(tmp_path,status):
+    q=ReliableOutbox(tmp_path/'outbox')
+    q.put('e','g','task_result',1,{'success':True})
+    def post(*_):
+        raise HTTPException(status,'request rejected')
+    sender=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+    with pytest.raises(HTTPException) as error:
+        sender.step()
+    assert error.value.status_code==status
+    assert len(q.pending())==1
+
+
+def test_invalid_result_is_durable_and_later_valid_result_still_arrives(execution,tmp_path):
+    from backend.app import recovery_finish
+    from backend.app.core import ExecutionRecoveryControl
+    from backend.tests.test_recovery_finish import prepare, complete, cleanup
+    factory,generation=execution
+    setup(factory)
+    proof=prepare(factory,generation)
+    with factory() as session:
+        job=session.get(Job,'j');job.episodes=1
+        job.client_spec={'seed':100,'template':{'task_type':'evaluation','integration_mode':'direct'}}
+        session.commit()
+    assert complete(factory,proof,pending_results=True,
+                    metrics={'success_rate':1,'episode_count':1,'runtime':1})['status']=='SUCCEEDED'
+    assert cleanup(factory,proof)['cleanup_confirmed']
+    q=ReliableOutbox(tmp_path/'outbox')
+    invalid={'episode_id':1,'seed':999,'status':'STARTED'}
+    start={'episode_id':1,'seed':100,'status':'STARTED'}
+    end={'episode_id':1,'seed':100,'status':'COMPLETED','success':True,
+         'metrics':{},'runtime':1,'artifacts':[]}
+    for seq,body in enumerate((invalid,start,end)):
+        q.put('e',generation,'episode',seq,body)
+    app=FastAPI()
+    def db():
+        with factory() as session:yield session
+    recovery_records.install(app,db,lambda:SimpleNamespace(id='w'))
+    with TestClient(app) as client:
+        replies=[];lost=False
+        def post(path,body):
+            nonlocal lost
+            response=client.post('/api/v1/'+path,json=body)
+            assert response.status_code==200,response.text
+            if not lost:
+                lost=True
+                raise TimeoutError('receipt committed but ACK lost')
+            replies.append(response.json())
+            return response.json()
+        sender=RecoveryDelivery(SimpleNamespace(post=post),q,apply_results=True)
+        with pytest.raises(TimeoutError):sender.step()
+        assert len(q.pending())==3
+        assert sender.step()==3
+        assert [x['application'] for x in replies]==['rejected','applied','applied']
+        assert q.pending()==[]
+    with factory() as session:
+        state=recovery_finish.results_finished(session,worker_id='w',execution_id='e',proof=proof)
+        session.commit()
+        assert state['result_sync']=='failed'
+        assert session.get(EpisodeRecord,('r',1)).result==end
+        receipt=session.get(ExecutionRecoveryReceipt,('e','episode',0))
+        assert receipt.payload==invalid and receipt.application_state=='rejected'
+        assert receipt.rejection_reason == 'episode does not match execution plan'
+        assert session.get(ExecutionRecoveryControl,'e').snapshot['result_sync']=='failed'
+        assert session.get(Run,'r').status=='SUCCEEDED' and session.get(Run,'r').cleanup_confirmed
 
 
 def test_missing_grant_rejected(execution):
@@ -181,6 +260,31 @@ def test_postgres_cancel_then_late_result_preserves_cancel(pg):
         run=s.get(Run,'r')
         assert run.status=='CANCEL_REQUESTED' and run.result_json['success']
         assert not run.cleanup_confirmed
+
+
+def test_rejected_result_migration_and_downgrade_guard(pg,monkeypatch):
+    from alembic import command
+    from alembic.config import Config
+    from backend.tests.test_execution_logs_postgres import seed
+    engine,url=pg
+    monkeypatch.setenv('DATABASE_URL',url)
+    cfg=Config('backend/alembic.ini')
+    command.upgrade(cfg,'b03a7b8')
+    command.upgrade(cfg,'c14d09e')
+    command.downgrade(cfg,'b03a7b8')
+    command.upgrade(cfg,'c14d09e')
+    factory=seed(engine,create=False)
+    with factory() as session:
+        run=session.get(Run,'r');run.status='STARTING'
+        generation=recovery_records.grant(session,run,'w').generation
+        session.commit()
+    setup(factory)
+    reply=apply(factory,generation,{'episode_id':1,'seed':999,'status':'STARTED'})
+    assert reply['application']=='rejected'
+    with pytest.raises(RuntimeError,match='rejected recovery results'):
+        command.downgrade(cfg,'b03a7b8')
+    with engine.connect() as connection:
+        assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar()=='c14d09e'
 
 
 @pytest.mark.parametrize('state',['CANCELLED','TIMED_OUT','RUNNING'])

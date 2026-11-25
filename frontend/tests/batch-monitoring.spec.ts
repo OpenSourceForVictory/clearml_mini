@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 const outcomes={execution:{normal:3,abnormal:0,running:0,unknown:0,not_started:0},protocol:{planned:3,success:0,failure:0,invalid:3,errors:0,unreported:0,not_applicable_tasks:0,valid:0,success_rate:null},task_result:{success:1,failure:1,unreported:1,not_applicable:1}};
-async function setup(page:Page,detailMode?:'execution'|'episodes'){
+async function setup(page:Page,detailMode?:'execution'|'episodes',sync?:Record<number,{state:string;delayed:boolean;log_truncated:boolean;error?:string|null}>){
   let offline=false,run='r1',lose=false,delay=false;const requests:any[]=[];
   const cases=['FAILED','TIMED_OUT','SUCCEEDED','PENDING'].map((status,i)=>({outcomes:{...outcomes,detail_mode:detailMode},job_id:'j'+i,case_id:'case'+i,task_name:'task'+i,status,run_id:i===0?run:'r'+i,attempt:1,episodes:2,seed:0,episode_reporting:true,progress:{completed:1,successes:0},placement:i===0?{id:'gpu-slot',node_name:'client-gpu',accelerator_type:'gpu',gpu_index:0,gpu_model:'Test GPU'}:null,node_name:null,gpu_index:null,reason_codes:status==='PENDING'?['gpu_busy']:[],waiting:status==='PENDING'?{reasons:[{code:'gpu_busy',message:'GPU 已占用'}],nodes:[]}:null,config:{pool_name:'mixed',client_name:'client',client_version:'1',endpoint:'http://server',gpu_mode:'exclusive',requested_vram_gb:0}}));
   await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
@@ -14,7 +14,7 @@ async function setup(page:Page,detailMode?:'execution'|'episodes'){
       if(path.includes('/private/')){await route.fulfill({status:404,json:{detail:'batch not found'}});return;}
       if(offline){await route.abort();return;}
       if(delay&&path.includes('/a/'))await new Promise(r=>setTimeout(r,900));
-      data={outcomes,id:'a',title:path.includes('/b/')?'批次 B':'批次 A',max_concurrent:2,total:4,finished:3,total_episodes:8,cases:cases.map((c,i)=>({...c,run_id:i===0?run:c.run_id})),summary:{states:{FAILED:1,TIMED_OUT:1,SUCCEEDED:1,PENDING:1},completed_episodes:3,successes:0,goal_failures:3,episode_errors:0,execution_failures:2,unreported_tasks:0,success_rate:0}};
+      data={outcomes,id:'a',title:path.includes('/b/')?'批次 B':'批次 A',max_concurrent:2,total:4,finished:3,total_episodes:8,cases:cases.map((c,i)=>({...c,run_id:i===0?run:c.run_id,...(sync?.[i]?{data_sync:sync[i]}:{})})),summary:{states:{FAILED:1,TIMED_OUT:1,SUCCEEDED:1,PENDING:1},completed_episodes:3,successes:0,goal_failures:3,episode_errors:0,execution_failures:2,unreported_tasks:0,success_rate:0}};
     }
     if(path.endsWith('/retry-failed')){requests.push(route.request().postDataJSON());if(lose){lose=false;await route.abort();return;}data={retried:0,skipped:2,items:[{job_id:'j0',outcome:'skipped',message:'尝试已变化，请刷新后重新选择',attempt:2},{job_id:'j1',outcome:'skipped',message:'旧执行尚未确认清理',attempt:1}]};}
     if(path==='jobs/j0')data={attempts:[{id:'old',attempt:1,status:'FAILED'},{id:'new',attempt:2,status:'FAILED'}]};
@@ -49,6 +49,21 @@ test('selected expected attempts survive polling and lost response; goal failure
   ctl.setRun();await page.waitForResponse(r=>r.url().endsWith('/monitor'));ctl.lose();await page.getByRole('button',{name:'补跑选中 2 项'}).click();await expect(page.getByRole('alert')).toContainText('保留原尝试选择');
   await page.getByRole('button',{name:'补跑选中 2 项'}).click();await expect(page.getByRole('status')).toContainText('旧执行尚未确认清理');
   expect(ctl.requests).toHaveLength(2);expect(ctl.requests[0]).toEqual(ctl.requests[1]);expect(ctl.requests[1].items[0].expected_run_id).toBe('r1');
+});
+test('separates recovery synchronization, delayed results, log gaps and legacy runs',async({page})=>{
+  await setup(page,undefined,{
+    0:{state:'pending',delayed:true,log_truncated:true},
+    1:{state:'failed',delayed:false,log_truncated:false,error:'结果校验失败'},
+    2:{state:'complete',delayed:false,log_truncated:false},
+    3:{state:'legacy',delayed:false,log_truncated:false},
+  });
+  await expect(page.getByRole('columnheader',{name:'数据同步'})).toBeVisible();
+  const rows=page.getByRole('row');
+  await expect(rows.filter({hasText:'case0'})).toContainText('结果待同步 · 同步延迟 · 诊断日志有缺口');
+  await expect(rows.filter({hasText:'case1'})).toContainText('结果同步失败');
+  await expect(rows.filter({hasText:'case1'})).toContainText('结果校验失败');
+  await expect(rows.filter({hasText:'case2'})).toContainText('结果同步完成');
+  await expect(rows.filter({hasText:'case3'})).toContainText('历史执行（无独立同步状态）');
 });
 test('history stays selected; delayed route responses cannot overwrite next batch; private hidden',async({page})=>{
   const ctl=await setup(page);await page.getByRole('button',{name:'排查任务',exact:true}).first().click();await page.getByLabel('执行尝试',{exact:true}).selectOption('old');
