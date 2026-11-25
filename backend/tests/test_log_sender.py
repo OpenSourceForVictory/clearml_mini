@@ -231,3 +231,61 @@ def test_execution_log_journal_is_not_a_recoverable_execution(tmp_path):
     finally:sender.close()
     recovered=Worker({},tmp_path/'state');recovered.recover_journals()
     assert set(recovered.children)=={identity}
+
+
+@pytest.mark.parametrize('count', [0, 1, 32, 33, 300])
+def test_upload_only_latest_diagnostic_window(tmp_path, count):
+    from worker.log_stream import UPLOAD_TAIL_RECORDS
+    ring = Ring(tmp_path/'logs')
+    for index in range(count):
+        ring.write('stdout', f'{index:04d}:'+'x'*2043)
+    sender = Sender.__new__(Sender)
+    sender.root = tmp_path/'logs'
+    sender.journal = tmp_path/'journal.json'
+    sender.finishing = threading.Event()
+    sender.state = {'offset':0, 'sequence':0, 'pending':None}
+    bodies = []
+    while sender.prepare():
+        bodies.append(sender.state['pending'])
+        sender.state['offset'] = sender.state.pop('pending_offset')
+        sender.state['sequence'] += 1
+        sender.state['pending'] = None
+    content = ''.join(body['content'] for body in bodies)
+    first = max(0, count-UPLOAD_TAIL_RECORDS)
+    assert content == ''.join(f'{i:04d}:'+'x'*2043 for i in range(first, count))
+    assert sum(len(body['content'].encode()) for body in bodies) <= 65536
+    assert all(len(body['content'].encode()) <= 16384 for body in bodies)
+    assert (any(body['gap'] for body in bodies)) == (count>32)
+    assert sender.state['offset'] == count
+
+
+def test_reconnect_replays_pending_then_skips_old_logs_without_touching_results(tmp_path):
+    from runner.log_capture import ProtocolCapture
+    root = tmp_path/'logs'
+    ring = Ring(root)
+    ring.write('stdout', 'previous request')
+    event = b'MINI_EVAL_EVENT {"episode_id":1,"status":"SUCCESS"}\n'
+    protocol = ProtocolCapture(tmp_path/'protocol')
+    protocol.feed(event)
+    original = protocol.event_path.read_bytes()
+    for index in range(300):
+        ring.write('stdout', f'new-{index}\n')
+    pending = {'sequence':7, 'content':'previous request', 'stream':'stdout', 'gap':False}
+    journal = tmp_path/'journal.json'
+    journal.write_text(json.dumps({'execution':'e','offset':0,'sequence':7,
+                                  'pending':pending,'pending_offset':1}))
+    calls=[]; uploaded=threading.Event()
+    class API:
+        def post(self, path, body):
+            calls.append(dict(body))
+            if len(calls)==2: uploaded.set()
+            return {'accepted':True,'next_sequence':body['sequence']+1}
+    sender=Sender(API(),'e',root,journal)
+    try:
+        assert uploaded.wait(5)
+        assert calls[0]==pending
+        assert calls[1]['sequence']==8 and calls[1]['gap']
+        assert calls[1]['content']==''.join(f'new-{i}\n' for i in range(268,300))
+        assert protocol.event_path.read_bytes()==original
+    finally:
+        sender.close()

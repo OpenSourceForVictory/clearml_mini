@@ -375,3 +375,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 原领取响应丢失且平台已取消时，若本机没有移交执行或启动账本，可以直接确认未启动；若已有执行记录，恢复原执行流程。删除、撤销与身份冲突的收据仍保留待对账。本次没有新增数据库迁移，依赖既有恢复协议迁移；生产能力开关保持关闭。
 
 新增恢复控制接口必须同时同步 `priority_route_manifest.json`、生成的 `deploy/priority-api-nginx.conf`、兼容双进程的 `deploy/split-api-nginx.conf` 和独立接口审计。`recovery/not-started` 两种网关均指向控制进程；全量曾捕获两份配置遗漏，修复与证据见 `docs/validation/disconnected-execution-20261124/full-20261125.json`。
+
+日志积压恢复：worker/log_stream.py 在准备新 v2 上传块前将待传范围收缩到最新 32 条环形记录（最多 64 KiB），跳过历史时报告 gap；已持久化 pending 原样重试以保持摘要幂等。协议事件和节点独立日志不随上传窗口淘汰。见 docs/execution-logs.md、test_log_sender.py；不代表多节点恢复容量已验收。

@@ -1,0 +1,42 @@
+{
+  "scope": "v2 diagnostic latest upload window",
+  "tests": {
+    "passed": 120,
+    "deselected": 3514,
+    "skipped": 0,
+    "failed": 0,
+    "seconds": 83.14
+  },
+  "command": "PYTEST_ADDOPTS='--import-mode=importlib -k \"log_sender or log_capture or execution_logs_v2 or worker_recovery_execution or worker_backpressure\"' .venv/bin/python -m scripts.test_coverage --output coverage-artifacts/latest-log-window",
+  "module": "worker/log_stream.py",
+  "coverage": {
+    "covered_lines": 134,
+    "num_statements": 144,
+    "percent_covered": 90.3225806451613,
+    "percent_covered_display": "90.32",
+    "missing_lines": 10,
+    "excluded_lines": 0,
+    "percent_statements_covered": 93.05555555555556,
+    "percent_statements_covered_display": "93.06",
+    "num_branches": 42,
+    "num_partial_branches": 6,
+    "covered_branches": 34,
+    "missing_branches": 8,
+    "percent_branches_covered": 80.95238095238095,
+    "percent_branches_covered_display": "80.95"
+  },
+  "project_coverage_gate": "failed: targeted selection only; not a full regression",
+  "other_checks": [
+    "27 initial targeted tests passed",
+    "frontend TypeScript check passed",
+    "OpenSpec strict validation passed"
+  ],
+  "boundaries": [
+    "not deployed",
+    "no database migration",
+    "no multi-node reconnection load test",
+    "no new GPU/NPU model evaluation",
+    "legacy log protocol unchanged",
+    "independent log files and reliable protocol events unchanged"
+  ]
+}

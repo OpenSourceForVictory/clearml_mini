@@ -12,6 +12,8 @@ from runner.log_capture import Ring, read_ring, atomic, BLOCK
 from .backpressure import Backoff, transient
 
 LOG = logging.getLogger('mini-eval-worker')
+# Diagnostic backlog only; reliable protocol events live in separate journals.
+UPLOAD_TAIL_RECORDS = 32  # at most 64 KiB before upload coalescing
 
 
 class DockerCollector:
@@ -104,7 +106,13 @@ class Sender:
                                    'stream':'system','gap':skipped}
             self.state['pending_offset']=cursor
             self.save();return True
-        row,next_offset=read_ring(self.root,offset)
+        try:
+            end=json.loads((self.root/'cursor.json').read_text())['next']
+        except FileNotFoundError:
+            end=offset
+        latest=max(offset,end-UPLOAD_TAIL_RECORDS)
+        skipped=latest>offset
+        row,next_offset=read_ring(self.root,latest)
         if row is None:return False
         row['gap']=row['gap'] or skipped
         # Coalesce adjacent records of the same stream into one <=16 KiB upload.
