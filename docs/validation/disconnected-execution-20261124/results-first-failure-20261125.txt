@@ -1,0 +1,20 @@
+=========================== short test summary info ============================
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[RUNNING]
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[CANCEL_REQUESTED]
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[CANCELLED]
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[TIMED_OUT]
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[FAILED]
+FAILED backend/tests/test_recovery_results.py::test_late_episode_does_not_change_lifecycle_or_release[SUCCEEDED]
+FAILED backend/tests/test_recovery_results.py::test_receipt_only_then_apply_and_replay[task_result]
+FAILED backend/tests/test_recovery_results.py::test_receipt_only_then_apply_and_replay[episode]
+FAILED backend/tests/test_recovery_results.py::test_foreign_revoked_deleted_or_changed_assignment_rejected[worker]
+FAILED backend/tests/test_recovery_results.py::test_foreign_revoked_deleted_or_changed_assignment_rejected[missing_job]
+FAILED backend/tests/test_recovery_results.py::test_invalid_application_rolls_back_receipt_and_budget[episode-body0-False]
+FAILED backend/tests/test_recovery_results.py::test_invalid_application_rolls_back_receipt_and_budget[episode-body1-False]
+FAILED backend/tests/test_recovery_results.py::test_invalid_application_rolls_back_receipt_and_budget[task_result-body2-False]
+FAILED backend/tests/test_recovery_results.py::test_invalid_application_rolls_back_receipt_and_budget[task_result-body3-True]
+FAILED backend/tests/test_recovery_results.py::test_invalid_application_rolls_back_receipt_and_budget[control-body4-False]
+FAILED backend/tests/test_recovery_results.py::test_conflicting_task_result_never_overwrites
+FAILED backend/tests/test_recovery_results.py::test_http_and_delivery_apply_before_ack
+FAILED backend/tests/test_recovery_results.py::test_delivery_keeps_unapplied_result_pending
+18 failed, 7 passed, 25 warnings in 1.04s

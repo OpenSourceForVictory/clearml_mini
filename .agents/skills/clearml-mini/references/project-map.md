@@ -336,3 +336,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 首次启动确认基础：backend/app/recovery_launch.py 提供 recovery/prepare（execution_control），与取消同锁序，原确认短窗口重放不延长；worker/recovery_launch.py 在副作用前持久启动意图，绑定 launch_id + boot + InvocationID/容器 ID。恢复收据不能代替该确认。recovery_control 首次运行身份额外核对确认的 boot/mode。test_recovery_launch.py / test_worker_recovery_launch.py / test_recovery_launch_runtime.py 覆盖取消、重放、落盘失败、双持有者和真实隔离运行实体；HostBackend/Docker 可选启动元数据和 RecoveryRuntime.start/inspect_launch 已接线，真实短程序验证原实例恢复；Worker 主循环仍未接线，不宣称完整恢复已上线。无新增迁移，依赖已有 af296a7/b03a7b8。
 
 启动窗口受原分配剩余有限容忍时间约束，边界及极大合法容忍值测试见 launch-20261125.json；控制对账按已过秒数比较，避免绝对截止日期溢出。首次启动窗口过期不终止已经启动的原进程。
+
+恢复结果应用：backend/app/recovery_results.py 接入 recovery/results 的显式 apply:true 分支，按 Run→恢复授权锁序应用 episodes.record 或 SDK task-result，和收据同事务。无全局调度锁，不校验旧租约、不更新终态/清理；worker/recovery_delivery.py 的 apply_results 模式只有 reconciled:true 才 ACK。test_recovery_results.py 覆盖取消/超时后补报、失败回滚、旧收据应用、真实 PostgreSQL 并发重放与调度锁独立性。仍未启用生产能力或接入完整 Worker 主循环，不能按单模块完成宣称上线。

@@ -169,3 +169,5 @@ Worker 协议编号仍为 18，新增可选能力 episode_timing_v1。新 API �
 HostBackend 的服务 Description 和 Docker 创建 label 现支持可选 recovery_launch_id，未带该字段的旧任务保持原行为。RecoveryRuntime.start 只接受同标识且尚未启动的实体，容器按完整 ID 启动；inspect_launch 核对启动标识和实际 InvocationID/容器 ID。真实 systemd 用户服务/Docker 短程序已使用该运行后端模拟启动响应丢失并恢复原实例；Docker 创建 label 另有命令契约测试。这不是业务模型评测，未接入生产 Worker 主循环。仍须完成能力协商及完整监督/结果/清理链路后统一发布。
 
 首次启动确认的有效窗口最长 30 秒，且不超过原分配剩余的有限断联容忍时间；即使确认返回成功，迟到超过这个窗口也不能启动。无限断联策略不等于允许任意迟到的首次启动许可。
+
+恢复结果交付开发接口：`RecoveryDelivery(..., apply_results=True)` 要求 API 同时返回匹配摘要和 `reconciled: true` 才推进可靠结果游标；旧 API 忽略 apply 或仅返回收据时，节点保留原记录，不静默当作应用成功。该选项只供后续能力协商的恢复执行路径使用，现有 Worker 主循环尚未调用，不可通过修改配置单边启用。

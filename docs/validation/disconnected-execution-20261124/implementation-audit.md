@@ -134,3 +134,11 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 重新开启 RECOVERY_RUNTIME_TEST=1，经标准 scripts.test_coverage 入口运行 runtime、launch runtime 和 Worker control 专项，33 通过、无跳过、3278 未选（25.95 秒）。实际 systemd 用户服务/Docker 短进程验证断联监督、原运行身份对账、启动响应丢失后不重复启动；网络失败与时间为注入，API 为隔离 TestClient，不是现网批次、真实网络中断或模型评测。另跑 supervisor 专项，30 通过、无跳过、3281 未选（2.26 秒），覆盖平台停止决定、本地业务超时不受 HTTP 阻塞、停止重试与持久化失败；此组为单元测试。
 
 原始报告分别为 coverage-artifacts/recovery-predeploy-20261125 和 coverage-artifacts/recovery-predeploy-supervisor-20261125；两个 pytest_exit_code 均为 0，标准入口因全项目覆盖率门槛仍退出 1，不合并两次报告宣称全项目达标。上线和平台可见端到端验收尚未完成。
+
+### 恢复业务结果接线（2026-11-25，未上线）
+
+已实现 recovery/results 显式 apply:true，把回合及 SDK task-result 写入原业务记录，和收据同事务；取消/超时/已结束执行仍接受原授权事实，但不续租、不改变终态和清理。Worker 交付器要求摘要及应用 ACK，旧 API 仅收据时保留待交付记录。无迁移，不改变现有 Worker 主循环或路由分类。
+
+首轮新增测试 18 失败/7 通过：测试 helper 使用 dict 重复关键字、缺完整 COMPLETED 字段、错误调用不存在的 outbox.close、ORM 删除 Job 触发非空外键；修正测试构造，保留 /tmp/recovery-results-first.log，第二轮25通过。随后增加真实 PostgreSQL 并发/取消测试和缺授权用例，统一入口专项186通过、无跳过、3153未选（20.73秒）；覆盖率来源 coverage-artifacts/recovery-results-20261125，recovery_results、recovery_records、recovery_delivery 三模块行/分支均100%。全项目门槛仍未达到，pytest退出0，标准脚本退出1，不把专项统计当全项目达标。
+
+专用 PostgreSQL16（端口32820）验证8次并发同结果仅一份收据、全局调度锁被占用时仍完成补报、取消提交后保留成功事实且平台保持取消。这不是实际平台批次或模型评测。原完成接口仍受租约检查且直接清理，后续须接入分离的完成摘要/清理与实际领取监督主循环；本轮不切换现网。

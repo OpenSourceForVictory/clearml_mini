@@ -31,6 +31,7 @@ class ControlRecord(BaseModel):
 
 class ResultRecord(ControlRecord):
     kind: Literal['episode', 'task_result']
+    apply: Literal[True] | None = None
 
 
 def grant(s, run, worker_id, tolerance=None):
@@ -114,7 +115,11 @@ def install(app, db, worker_auth):
 
     @app.post('/api/v1/worker/executions/{execution_id}/recovery/results')
     def results(execution_id: str, body: ResultRecord, worker=Depends(worker_auth), s=Depends(db)):
-        result = receive(s, worker_id=worker.id, execution_id=execution_id,
+        handler = receive
+        if body.apply is True:
+            from .recovery_results import apply
+            handler = apply
+        result = handler(s, worker_id=worker.id, execution_id=execution_id,
             generation=body.generation, kind=body.kind, sequence=body.sequence, body=body.body)
         s.commit()
         return result
