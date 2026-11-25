@@ -83,6 +83,22 @@ def test_observation_migration_roundtrip_preserves_current_configuration(pg,monk
         assert record(db.get(Worker,'w'))['sequence']==5
 
 
+def test_empty_database_observation_migration_roundtrip(pg, monkeypatch):
+    engine, url = pg
+    monkeypatch.setenv('DATABASE_URL', url)
+    cfg = Config('backend/alembic.ini')
+    command.upgrade(cfg, 'ad074e5')
+    with engine.connect() as db:
+        assert db.scalar(text("SELECT to_regclass('node_agent_observations')")) is not None
+        assert db.scalar(text('SELECT count(*) FROM node_agent_observations')) == 0
+    command.downgrade(cfg, 'ac963d4')
+    with engine.connect() as db:
+        assert db.scalar(text("SELECT to_regclass('node_agent_observations')")) is None
+    command.upgrade(cfg, 'ad074e5')
+    with engine.connect() as db:
+        assert db.scalar(text('SELECT count(*) FROM node_agent_observations')) == 0
+
+
 def test_downgrade_does_not_restore_superseded_session(pg,monkeypatch):
     engine,url=pg
     monkeypatch.setenv('DATABASE_URL',url)

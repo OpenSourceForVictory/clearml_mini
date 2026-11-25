@@ -227,7 +227,7 @@ sha256sum "$DB_BACKUP" > "$DB_BACKUP.sha256"
 
 2026-11-23 本机平台先用生产备份在隔离 PostgreSQL 验证恢复和升级，再停止旧 API、完成最终备份并迁移到 `ad074e5`；升级后 13 个卡位回连，随后启用双进程。其他部署仍须按自己的目标镜像 `heads` 与数据库 `current` 核对，不能据此认为已完成迁移。
 
-升降级回归使用一次性 PostgreSQL，覆盖历史值回填、空库、当前会话值合并降级、旧会话不覆盖新配置及迁移失败事务回滚。升级失败不能手动篡改 alembic_version；应保留错误，修复原因后重试。降级必须暂停 API 写入，把当前会话最新观察合并回 Worker JSON 后再移除表，不能直接 DROP TABLE。
+升降级回归使用一次性 PostgreSQL，覆盖历史值回填、空库、当前会话值合并降级、旧会话不覆盖新配置及迁移失败事务回滚。2026-11-25 复核 9 条迁移专项与 2 条旧资源协议/多卡兼容用例均通过，范围见[迁移兼容记录](validation/disconnected-execution-20261124/agent-migration-20261125.md)。升级失败不能手动篡改 alembic_version；应保留错误，修复原因后重试。降级必须暂停 API 写入，把当前会话最新观察合并回 Worker JSON 后再移除表，不能直接 DROP TABLE。
 
 上述迁移验收不等于整个过载方案可发布；控制通道和剩余锁竞争的范围见 [控制面通道审计](validation/control-plane-backpressure-20261123/channel-audit.md)。尚未实现的断联继续执行/终态补传可能有独立 schema 变更，不能将本迁移视为那些能力已就绪。
 
