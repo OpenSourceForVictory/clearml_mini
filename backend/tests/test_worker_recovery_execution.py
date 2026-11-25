@@ -14,6 +14,35 @@ from worker.recovery_runtime import RecoveryRuntime
 from worker.storage import atomic_json
 
 
+@pytest.mark.parametrize('mode', ['host', 'docker', 'shared', 'service'])
+@pytest.mark.parametrize('reject', [False, True])
+def test_optional_artifacts_are_bounded_and_never_control_cleanup(monkeypatch, mode, reject):
+    from worker.recovery_execution import upload_optional_artifacts
+    from worker.host_backend import HostBackend
+    calls = []
+    task = {'execution_id': 'e', 'benchmark': 'inference-service' if mode == 'service' else 'cs-client'}
+    if mode == 'shared':
+        task['artifact_transport'] = 'shared'
+    worker = SimpleNamespace(host_mode=lambda: mode == 'host', name=lambda _: 'container-e')
+    monkeypatch.setattr(HostBackend, '__init__', lambda self, owner: setattr(self, 'worker', owner))
+    monkeypatch.setattr(HostBackend, 'artifacts', lambda self, _: [('sample.json', b'{}')])
+    monkeypatch.setattr('worker.artifacts.read_artifacts', lambda _: [('sample.json', b'{}')])
+    worker.register_shared_artifacts = lambda *args, **kwargs: calls.append('shared')
+    def post(path, body):
+        calls.append((path, body))
+        if reject:
+            raise TimeoutError('optional API unavailable')
+    worker.api = SimpleNamespace(post=post)
+    upload_optional_artifacts(worker, task)
+    if mode == 'service':
+        assert calls == []
+    elif mode == 'shared':
+        assert calls == ['shared']
+    else:
+        assert calls == [('worker/executions/e/artifacts',
+                          {'name': 'sample.json', 'content_base64': 'e30='})]
+
+
 @pytest.fixture
 def case(tmp_path, monkeypatch):
     w = object.__new__(Worker)

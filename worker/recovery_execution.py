@@ -2,6 +2,7 @@
 import json
 import logging
 import math
+import base64
 from pathlib import Path
 import time
 
@@ -40,6 +41,31 @@ def preserve_output(worker, stdout, stderr):
     record = {'execution_id':worker.state['task']['execution_id'],
               'proof':worker.state['recovery'], 'stdout':stdout, 'stderr':stderr}
     atomic_json(Path(str(worker.path)+'.recovery-output'), record)
+
+
+def upload_optional_artifacts(worker, task):
+    """Attempt bounded best-effort artifacts without gating process cleanup.
+
+    Reliable protocol results use the separate outbox. Historical uploaded
+    artifacts remain optional data and can be lost when their API is refused.
+    """
+    if task.get('benchmark') != 'cs-client':
+        return
+    try:
+        if task.get('artifact_transport') == 'shared':
+            worker.register_shared_artifacts(task, retry_transient=True)
+            return
+        if worker.host_mode():
+            files = HostBackend(worker).artifacts(task['execution_id'])
+        else:
+            from .artifacts import read_artifacts
+            files = read_artifacts(worker.name(task['execution_id']))
+        for name, data in files:
+            worker.api.post(f"worker/executions/{task['execution_id']}/artifacts",
+                            {'name': name, 'content_base64': base64.b64encode(data).decode()})
+    except Exception as exc:
+        LOG.warning('optional recovery artifacts unavailable; cleanup continues (%s)',
+                    type(exc).__name__)
 
 
 def resume_collection(worker, outbox):
@@ -186,6 +212,13 @@ def execute(worker):
             ack = snapshot.get('acknowledged', {})
             if exited and ack.get('state') == 'exited' and ack.get('exit_code') == snapshot['exit_code']:
                 probe.close()
+                if sender is None:
+                    try:
+                        worker.send_logs(execution, stdout + ('\n'+stderr if stderr else ''), max_batches=1)
+                    except Exception as exc:
+                        LOG.warning('optional recovery logs unavailable; cleanup continues (%s)',
+                                    type(exc).__name__)
+                upload_optional_artifacts(worker, task)
                 if collector:
                     collector.close()
                 log_gap = False
@@ -201,8 +234,8 @@ def execute(worker):
                 resume_results(worker)
                 return
             try:
-                delivered = delivery.step(limit=1)
-                if sender is None and not delivered:
+                delivery.step(limit=1)
+                if sender is None:
                     worker.send_logs(execution, stdout + ('\n'+stderr if exited and stderr else ''), max_batches=1)
             except Exception as exc:
                 LOG.warning('recovery data delivery deferred (%s)', type(exc).__name__)

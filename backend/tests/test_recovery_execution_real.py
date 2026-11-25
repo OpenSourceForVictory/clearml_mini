@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','finite_disconnect','service','restart','pre_cancel'])
+@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','finite_disconnect','service','restart','pre_cancel','bulk_rejected'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -50,9 +50,15 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     original=copy.deepcopy(task);execution=task['execution_id'];name='mini-eval-'+execution
     event={'episode_id':1,'seed':episode_seed(0,1),'status':'STARTED'}
     result={**event,'status':'COMPLETED','success':True,'metrics':{},'runtime':.4,'artifacts':[]}
-    script='import time,signal,sys\nsignal.signal(signal.SIGTERM,lambda *a:sys.exit(0))\n'
+    script='import time,signal,sys,os\nsignal.signal(signal.SIGTERM,lambda *a:sys.exit(0))\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(event))+',flush=True)\n'
-    script+='time.sleep('+('2' if scenario in ('complete','offline_complete') else '5' if scenario=='restart' else '30')+')\n'
+    script+='time.sleep('+('2' if scenario in ('complete','offline_complete','bulk_rejected') else '5' if scenario=='restart' else '30')+')\n'
+    if scenario=='bulk_rejected':
+        from worker.workspace import execution_dirs
+        artifact_dir=(str(execution_dirs(w.workspace,execution)/'output') if mode=='host'
+                      else '/tmp/mini-eval-output')
+        script+='os.makedirs('+repr(artifact_dir)+',exist_ok=True)\n'
+        script+='open(os.path.join('+repr(artifact_dir)+',"sample.json"),"w").write("{}")\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(result))+',flush=True)\n'
     script+='print('+repr(json.dumps({'final':{'success_rate':1.,'episode_count':1,'runtime':2.}}))+',flush=True)\n'
     if scenario=='service':
@@ -117,7 +123,9 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
         with TestClient(app) as client:
             def post(path,body=None):
                 calls.append(path)
-                if path.endswith('/logs'):raise APIError(503,'injected bulk overload')
+                if (scenario=='bulk_rejected' and
+                        (path.endswith('/artifacts') or '/logs' in path)):
+                    raise APIError(503,'injected bulk overload')
                 if offline.is_set() and not path.endswith('/recovery/prepare'):raise TimeoutError('injected control/data outage')
                 response=client.post('/api/v1/'+path,json=body)
                 if response.status_code!=200:raise APIError(response.status_code,response.text)
@@ -188,14 +196,19 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             with factory() as db:
                 run=db.get(Run,'r')
                 assert run.status=={'complete':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
-                    'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED'}[scenario]
+                    'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','service':'CANCELLED','restart':'SUCCEEDED',
+                    'bulk_rejected':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
                 control=db.get(ExecutionRecoveryControl,execution).snapshot
                 assert control['result_sync']=='complete'
                 if scenario=='finite_disconnect':
                     assert control['stop_reason']=='disconnection_timeout'
                     assert db.get(EpisodeRecord,('r',1)).result is None
-                if scenario in ('complete','offline_complete','restart'):assert db.get(EpisodeRecord,('r',1)).result==result
+                if scenario in ('complete','offline_complete','restart','bulk_rejected'):
+                    assert db.get(EpisodeRecord,('r',1)).result==result
+            if scenario=='bulk_rejected':
+                assert any(path.endswith('/artifacts') for path in calls)
+                assert any('/logs' in path for path in calls)
             assert calls.count('create')==1
     finally:
         offline.clear();w.stop_event.set()
