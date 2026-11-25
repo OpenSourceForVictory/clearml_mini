@@ -165,6 +165,16 @@ def test_fault_acceptance_never_hides_control_errors(kind, code, outage, accepte
     assert acceptable_responses({kind:{code:1}}, mixed_ui=True, bulk_outage=outage) is accepted
 
 
+@pytest.mark.parametrize('kind,accepted', [
+    ('recovery_control', True), ('claim', True), ('health', True),
+    ('heartbeat', True), ('logs', False), ('ui_monitor', False),
+])
+def test_control_outage_only_allows_affected_route_failures(kind,accepted):
+    from backend.tests.control_plane_load import acceptable_responses
+    assert acceptable_responses({kind:{'502':1}},mixed_ui=True,bulk_outage=False,
+                                control_outage=True) is accepted
+
+
 @pytest.mark.parametrize('arguments', [
     ['--bulk-outage-seconds','-1'],
     ['--bulk-outage-seconds','15'],
@@ -195,6 +205,22 @@ def test_large_batch_arguments_reject_invalid_or_ambiguous_load(monkeypatch,caps
         main()
     assert error.value.code == 2
     assert 'large batches require' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('arguments', [
+    ['--control-outage-seconds','10'],
+    ['--priority-api','--mixed-ui','--agent-telemetry','--recovery-load',
+     '--seconds','60','--control-outage-seconds','10'],
+    ['--priority-api','--mixed-ui','--agent-telemetry','--recovery-load',
+     '--independent-logs','--seconds','80','--control-outage-seconds','10','--bulk-outage-seconds','10'],
+])
+def test_control_outage_arguments_reject_invalid_load(monkeypatch,capsys,arguments):
+    from backend.tests.control_plane_load import main
+    monkeypatch.setattr('sys.argv',['load','--output','/unused',*arguments])
+    monkeypatch.delenv('LOG_TEST_DATABASE_URL',raising=False)
+    with pytest.raises(SystemExit) as error:main()
+    assert error.value.code==2
+    assert '--control-outage-seconds requires' in capsys.readouterr().err
 
 
 @pytest.mark.parametrize('size',[1,1024,16384])

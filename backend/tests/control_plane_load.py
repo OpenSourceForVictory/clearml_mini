@@ -169,10 +169,14 @@ def log_payload(identity, sequence, size, varied=False):
     return ''.join(rows)[:size]
 
 
-def acceptable_responses(by_kind, *, mixed_ui, bulk_outage):
+def acceptable_responses(by_kind, *, mixed_ui, bulk_outage, control_outage=False):
     for kind, counts in by_kind.items():
         allowed = {'200', '503'} | ({'201'} if mixed_ui else set())
         if bulk_outage and kind in ('logs', 'artifact'):
+            allowed |= {'502', '504'}
+        if control_outage and kind in ('recovery_control', 'recovery_exit', 'recovery_complete',
+                                       'recovery_cleanup', 'recovery_result', 'recovery_results_finished',
+                                       'claim', 'health', 'heartbeat'):
             allowed |= {'502', '504'}
         if set(counts) - allowed:
             return False
@@ -694,6 +698,8 @@ def main():
                         help='number of tasks in one submitted batch, maximum 100')
     parser.add_argument('--continuous-batches', action='store_true', help='repeat submit/fail/retry/succeed during mixed UI load')
     parser.add_argument('--bulk-outage-seconds', type=int, default=0, help='stop bulk role 30 seconds into load, then restart')
+    parser.add_argument('--control-outage-seconds', type=int, default=0,
+                        help='stop execution-control role 30 seconds into recovery load, then restart')
     parser.add_argument('--postgres-container', help='optional disposable PostgreSQL container for read-only docker stats')
     parser.add_argument('--progress-every-30s', action='store_true')
     parser.add_argument('--split-api', action='store_true',
@@ -710,6 +716,9 @@ def main():
     grades = [int(x) for x in args.grades.split(',')]
     if args.bulk_outage_seconds < 0 or (args.bulk_outage_seconds and (not args.priority_api or not args.independent_logs or args.seconds < 60+args.bulk_outage_seconds)):
         parser.error('--bulk-outage-seconds requires four roles, independent logs and at least 60 + outage seconds')
+    if (args.control_outage_seconds < 0 or args.control_outage_seconds and
+            (not args.recovery_load or args.bulk_outage_seconds or args.seconds < 60+args.control_outage_seconds)):
+        parser.error('--control-outage-seconds requires recovery load, no bulk outage and at least 60 + outage seconds')
     if args.continuous_batches and (not args.mixed_ui or args.seconds < 30):
         parser.error('--continuous-batches requires --mixed-ui and at least 30 seconds')
     if args.recovery_load and (not args.priority_api or not args.mixed_ui or
@@ -768,6 +777,7 @@ def main():
                'mixed_ui':args.mixed_ui,
                'recovery_load':args.recovery_load,
                'continuous_batches':args.continuous_batches, 'bulk_outage_seconds':args.bulk_outage_seconds,
+               'control_outage_seconds':args.control_outage_seconds,
                'scope':('real HTTP/PostgreSQL, simulated negotiated recovery control/finish/cleanup/late result; '
                         'about 10% of device slots complete during independent log traffic, others remain active; '
                         'real scheduler plus authenticated Web/Agent; excludes real business processes'
@@ -892,6 +902,14 @@ def main():
                             victim.wait(timeout=10)
                         work = with_outage(work, stop_bulk, lambda: launch('bulk-transfer', role_ports['bulk-transfer']),
                                            after=30, duration=args.bulk_outage_seconds)
+                    if args.control_outage_seconds:
+                        def stop_control():
+                            victim = role_processes['execution-control']
+                            victim.terminate()
+                            victim.wait(timeout=10)
+                        work = with_outage(work, stop_control,
+                                           lambda: launch('execution-control', role_ports['execution-control']),
+                                           after=30, duration=args.control_outage_seconds)
                     result = asyncio.run(observe(work, engine, container=args.postgres_container))
                     if args.priority_api:
                         topology = {}
@@ -936,7 +954,9 @@ def main():
                                         if node_groups else count)
                 result['passed'] = (result['expired_leases'] == 0 and result['telemetry_stale'] == 0 and
                     result['max_heartbeat_gap_seconds'] < 10 and all(v['p99'] < 5 for v in result['latency_seconds'].values()) and
-                    acceptable_responses(result['requests_by_kind'], mixed_ui=args.mixed_ui, bulk_outage=args.bulk_outage_seconds))
+                    acceptable_responses(result['requests_by_kind'], mixed_ui=args.mixed_ui,
+                                         bulk_outage=args.bulk_outage_seconds,
+                                         control_outage=bool(args.control_outage_seconds)))
                 if args.independent_logs:
                     logs = result['log_generation']
                     result['passed'] = (result['passed'] and logs.get('generated', 0) == logs.get('accepted', 0)

@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','offline_complete','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
+@pytest.mark.parametrize('scenario',['complete','command','offline_complete','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -39,6 +39,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     w.host_mode=lambda:mode=='host';w.slot_id='s';w.start_lock=threading.Lock();w.stop_event=threading.Event()
     task=w.state['task'];task.update(benchmark='cs-client',job_id='j',run_id='r',episodes=1,lease_seconds=1)
     task['client_spec']['template'].update(task_type='evaluation',episode_reporting=False,integration_mode='direct-protocol')
+    if scenario=='command':
+        task['client_spec']['template'].update(task_type='command',integration_mode='direct')
     task['client_spec']['timeout_seconds']=task['timeout_seconds']
     if scenario=='service':
         import socket
@@ -61,6 +63,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
         script+='open(os.path.join('+repr(artifact_dir)+',"sample.json"),"w").write("{}")\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(result))+',flush=True)\n'
     script+='print('+repr(json.dumps({'final':{'success_rate':1.,'episode_count':1,'runtime':2.}}))+',flush=True)\n'
+    if scenario=='command':
+        script='import time\nprint("ordinary command started",flush=True)\ntime.sleep(2)\n'
     if scenario=='service':
         script='import socket,time\ns=socket.socket()\ns.bind(("127.0.0.1",'+str(port)+'))\ns.listen(32)\nprint("ready",flush=True)\ntime.sleep(30)\n'
     (tmp_path/'business.py').write_text(script)
@@ -195,7 +199,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert w.state is None
             with factory() as db:
                 run=db.get(Run,'r')
-                assert run.status=={'complete':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
+                assert run.status=={'complete':'SUCCEEDED','command':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
                     'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','finite_reconnect':'SUCCEEDED','service':'CANCELLED','restart':'SUCCEEDED',
                     'bulk_rejected':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
@@ -206,6 +210,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
                     assert db.get(EpisodeRecord,('r',1)).result is None
                 if scenario in ('complete','offline_complete','finite_reconnect','restart','bulk_rejected'):
                     assert db.get(EpisodeRecord,('r',1)).result==result
+                if scenario=='command':
+                    assert db.get(EpisodeRecord,('r',1)) is None
             if scenario=='bulk_rejected':
                 assert any(path.endswith('/artifacts') for path in calls)
                 assert any('/logs' in path for path in calls)
