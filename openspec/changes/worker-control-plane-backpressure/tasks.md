@@ -112,3 +112,5 @@
 2026-11-25 整机可靠队列完成 4.2：新安装每卡同一 node_outbox_root、单SQLite原子整机/执行预算、逐执行交付与排空、首次建库目录 fsync、最终 ACK 后退休本执行摘要；旧执行沿原队列，未配置共享根拒绝新协议领取。最终专项 270 通过（含隔离 PostgreSQL 及真实 host/Docker 短程序），所触及关键 Worker 模块行/分支均超过90/80。保留初次19项夹具失败及修正证据，见 docs/validation/disconnected-execution-20261124/outbox-node-quota-20261125.md。完整恢复生产开关仍关闭，4.3–4.10和5.x按各自范围验收。
 
 2026-11-25 断联容忍配置阶段：向导支持默认不限/可选有限值，客户端与托管服务快照传至原领取授权；历史批次回显和旧记录缺失兼容，有限值在旧 Worker 或恢复开关关闭时阻止分配。后端 59 项、前端 24 项及构建通过；测试夹具初次失败和生产能力关闭的边界见 docs/validation/disconnected-execution-20261124/disconnect-policy-wizard-20261125.md。4.6 仍需完整断联监督/取消/重连矩阵，不勾选。
+
+2026-11-25 业务收据身份补缝：仅收据入口与结果应用一致核对当前槽位 Worker 归属及批次删除，保留原身份控制证据。SQLite 专项 63 通过/6 PostgreSQL 条件跳过，隔离 PostgreSQL 补跑 69 通过；完整撤销、丢弃确认、重纳管与发布验收仍属于 4.3/4.9，不勾选。见 docs/validation/disconnected-execution-20261124/receipt-identity-20261125.md。

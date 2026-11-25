@@ -10,7 +10,7 @@ from alembic import command
 from alembic.config import Config
 
 from backend.app import recovery_records as records
-from backend.app.core import ExecutionRecovery, ExecutionRecoveryReceipt, Run, Worker, now
+from backend.app.core import EvaluationBatch, ExecutionRecovery, ExecutionRecoveryReceipt, Run, Slot, Worker, now
 from backend.tests.test_execution_logs_postgres import seed, pg, api as pg_api
 
 
@@ -105,6 +105,29 @@ def test_old_assignment_cannot_write_new_attempt(ledger):
     with factory() as s, pytest.raises(HTTPException) as exc:
         receive(s, generation)
     assert exc.value.status_code == 409
+
+
+@pytest.mark.parametrize('change,code', [('slot_owner',409), ('deleted_batch',410)])
+def test_receipt_only_cannot_accept_business_data_after_identity_or_deletion_change(ledger,change,code):
+    factory,generation=ledger
+    with factory() as s:
+        if change=='slot_owner':
+            s.get(Slot,'s').worker_id='other'
+        else:
+            s.get(EvaluationBatch,'b').deleted_at=now()
+        s.commit()
+    with factory() as s:
+        with pytest.raises(HTTPException) as exc:
+            receive(s,generation)
+        assert exc.value.status_code==code
+        s.rollback()
+        # The original identity may still send bounded safety evidence; it
+        # cannot gain business authority merely by replaying a receipt.
+        assert receive(s,generation,kind='control',body={'stopped':True})['reconciled'] is False
+        s.commit()
+    with factory() as s:
+        assert s.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt).where(
+            ExecutionRecoveryReceipt.kind=='episode'))==0
 
 
 def test_control_capacity_reserved_and_duplicates_allowed_when_full(ledger, monkeypatch):

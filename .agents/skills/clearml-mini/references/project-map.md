@@ -323,7 +323,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 断联恢复基础（尚未启用新协议）：`worker/disconnection.py` 提供绑定执行/代次/boot ID 的单调计时与不可逆停止决定；`worker/reliable_outbox.py` 使用 SQLite FULL 事务持久化控制/结果、摘要幂等 ACK 和控制容量预留，日志继续使用原游标。尚未接入 Worker/API 恢复和界面，不能宣称旧租约已被替换。`client.save` 已补原子重命名后的父目录 fsync，失败向上传播。专项见 `backend/tests/test_disconnected_execution_foundations.py`；实施状态见 `docs/validation/disconnected-execution-20261124/implementation-audit.md`。
 
-断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。`worker/recovery_delivery.py` 逐批上传并匹配摘要后确认本地 outbox，不能将收据视为运行许可或清理确认。尚未接入领取授权、本地监督及生命周期恢复，不广告能力、不对历史任务启用。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK 与鉴权；运维和迁移边界见 docs/operations.md、docs/database-migration.md。
+断联补报账本：`backend/app/recovery_records.py` 与 `ExecutionRecovery/ExecutionRecoveryReceipt`、迁移 `ae185f6` 保留原分配代次和事务收据；控制证据走 execution_control，结果走 worker_result。仅收据业务入口也核对当前 Slot.worker_id 与批次删除标记，防止旧身份在重纳管或删除后取得业务 ACK；控制证据仍要求原 Worker 鉴权。`worker/recovery_delivery.py` 匹配摘要后确认本地 outbox，收据不等于运行许可或清理确认。测试 `test_recovery_records.py` 覆盖真实 PostgreSQL 并发/迁移、HTTP 丢 ACK、身份变更与删除标记；运维和迁移边界见 docs/operations.md、docs/database-migration.md。生产完整恢复能力尚未启用。
 
 断联恢复默认值（开发中）：新协商执行的恢复授权默认显式保存 disconnect_tolerance_seconds=null，表示不限制断联时长；用户可选正整数秒。旧执行没有恢复策略字段时仍走旧协议，不能隐式启用。业务执行时限和已收到的取消独立生效。当前已实现基础模块、补报收据、控制对账与本地监督，完整领取/监督/结果恢复链路尚未启用，修改默认值不会改变现网执行。
 

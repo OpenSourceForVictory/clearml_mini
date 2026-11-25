@@ -13,7 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 from sqlalchemy import select
 
-from .core import ExecutionRecovery, ExecutionRecoveryReceipt, Run, Slot
+from .core import (EvaluationBatch, ExecutionRecovery, ExecutionRecoveryReceipt,
+                   Job, Run, ServiceInstance, Slot)
 
 MAX_BYTES = 64 * 1024 * 1024
 MAX_RECORDS = 25000
@@ -85,6 +86,22 @@ def receive(s, *, worker_id, execution_id, generation, kind, sequence, body):
             raise HTTPException(410, 'recovery business data is no longer accepted')
         if run.execution_id != execution_id or run.slot_id != record.slot_id:
             raise HTTPException(409, 'recovery execution ownership changed')
+        slot = s.get(Slot, record.slot_id)
+        if not slot or slot.worker_id != worker_id:
+            raise HTTPException(409, 'recovery slot ownership changed')
+        job = s.get(Job, run.job_id)
+        if not job:
+            raise HTTPException(410, 'recovery business data is no longer accepted')
+        batch_id = job.batch_id
+        if job.service_instance_id:
+            service = s.get(ServiceInstance, job.service_instance_id)
+            if not service:
+                raise HTTPException(410, 'recovery service is no longer accepted')
+            batch_id = service.orchestration_batch_id or batch_id
+        if batch_id:
+            batch = s.get(EvaluationBatch, batch_id)
+            if not batch or batch.deleted_at:
+                raise HTTPException(410, 'recovery batch is no longer accepted')
     digest = hashlib.sha256(encoded).hexdigest()
     previous = s.get(ExecutionRecoveryReceipt, (execution_id, kind, sequence))
     if previous:
