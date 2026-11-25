@@ -126,3 +126,11 @@ PYTEST_ADDOPTS='--import-mode=importlib -k "recovery_records or disconnected_exe
 扩大专项中产物和存储探测两个开关跳过，已在最终边界专项开启并通过；剩余 1 项需要独立纳管 Compose、5 项需要 root/systemd/专用业务账号。此前一轮扩大测试因修正剩余容忍边界主动中断（278 通过、16 跳过时，pytest 退出 2），未计为完整验收；没有在覆盖率运行中修改源码。证据和逐模块报告来源见 launch-20261125.json。
 
 真实本机 systemd/Docker 短程序验证实际运行后端的启动响应丢失、原实例恢复及正常退出；不是生产评测批次、NPU/GPU 模型验证。未部署，没有新增数据库迁移。生产领取能力协商、完整 Worker 循环、可靠结果和清理确认、界面与全链路验收仍未完成，相关 OpenSpec 任务不勾选。
+
+### 用户要求上线后的部署前复核（2026-11-25）
+
+现网四角色 API 仍使用 mini-eval-api:recovery-foundations-20261125，容器均健康。核对 worker/client.py，尚未调用 RecoverySupervisor、RecoveryLaunch 或恢复领取路径，因此本轮没有部署、迁移或升级节点，也没有启用长期断联能力。缺少实际领取/监督主循环、可靠结果应用及清理确认，更新镜像不能替代这些实现。
+
+重新开启 RECOVERY_RUNTIME_TEST=1，经标准 scripts.test_coverage 入口运行 runtime、launch runtime 和 Worker control 专项，33 通过、无跳过、3278 未选（25.95 秒）。实际 systemd 用户服务/Docker 短进程验证断联监督、原运行身份对账、启动响应丢失后不重复启动；网络失败与时间为注入，API 为隔离 TestClient，不是现网批次、真实网络中断或模型评测。另跑 supervisor 专项，30 通过、无跳过、3281 未选（2.26 秒），覆盖平台停止决定、本地业务超时不受 HTTP 阻塞、停止重试与持久化失败；此组为单元测试。
+
+原始报告分别为 coverage-artifacts/recovery-predeploy-20261125 和 coverage-artifacts/recovery-predeploy-supervisor-20261125；两个 pytest_exit_code 均为 0，标准入口因全项目覆盖率门槛仍退出 1，不合并两次报告宣称全项目达标。上线和平台可见端到端验收尚未完成。
