@@ -397,3 +397,11 @@ def test_platform_lifecycle_wins_over_late_worker_success(execution,platform_sta
         assert snapshot['worker_stop_reason']=='disconnection_timeout'
         if late_state=='exited':assert snapshot['exit_code']==0
         assert not s.get(Run,'r').cleanup_confirmed
+
+
+def test_maximum_accepted_tolerance_does_not_overflow_datetime(execution):
+    factory,generation=execution
+    with factory() as s:
+        s.get(ExecutionRecovery,'e').policy={'version':1,'disconnect_tolerance_seconds':2**63-1}
+        s.commit()
+    assert apply(factory,generation)['action']=='track'

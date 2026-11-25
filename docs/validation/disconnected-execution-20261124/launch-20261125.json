@@ -1,0 +1,212 @@
+{
+  "date": "2026-11-25",
+  "stage": "durable prelaunch confirmation and real runtime identity; production loop not enabled",
+  "expanded": {
+    "passed": 1332,
+    "skipped": 8,
+    "deselected": 1969,
+    "seconds": 528.23,
+    "pytest_exit": 0
+  },
+  "final_boundaries": {
+    "passed": 149,
+    "skipped": 0,
+    "deselected": 3162,
+    "seconds": 23.4,
+    "pytest_exit": 0,
+    "includes": [
+      "finite 0.5-second launch cutoff and late acknowledgement",
+      "expired launch window does not stop original running process",
+      "maximum accepted tolerance does not overflow datetime",
+      "real isolated systemd/Docker startup response loss",
+      "previously skipped Docker artifact persistence and storage probe"
+    ]
+  },
+  "interrupted": {
+    "passed_before_interrupt": 278,
+    "skipped_before_interrupt": 16,
+    "deselected": 1834,
+    "seconds": 85.73,
+    "pytest_exit": 2,
+    "reason": "Stopped before changing source to fix the remaining-tolerance launch cutoff; not a completed validation or final coverage report"
+  },
+  "coverage": {
+    "backend/app/execution.py": {
+      "report": "recovery-launch-verified",
+      "summary": {
+        "covered_lines": 462,
+        "num_statements": 541,
+        "percent_covered": 80.66759388038943,
+        "percent_covered_display": "80.67",
+        "missing_lines": 79,
+        "excluded_lines": 0,
+        "percent_statements_covered": 85.39741219963031,
+        "percent_statements_covered_display": "85.40",
+        "num_branches": 178,
+        "num_partial_branches": 50,
+        "covered_branches": 118,
+        "missing_branches": 60,
+        "percent_branches_covered": 66.29213483146067,
+        "percent_branches_covered_display": "66.29"
+      }
+    },
+    "worker/host_backend.py": {
+      "report": "recovery-launch-verified",
+      "summary": {
+        "covered_lines": 249,
+        "num_statements": 249,
+        "percent_covered": 97.78393351800554,
+        "percent_covered_display": "97.78",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100.00",
+        "num_branches": 112,
+        "num_partial_branches": 8,
+        "covered_branches": 104,
+        "missing_branches": 8,
+        "percent_branches_covered": 92.85714285714286,
+        "percent_branches_covered_display": "92.86"
+      }
+    },
+    "worker/client.py": {
+      "report": "recovery-launch-verified",
+      "summary": {
+        "covered_lines": 851,
+        "num_statements": 898,
+        "percent_covered": 92.19242902208202,
+        "percent_covered_display": "92.19",
+        "missing_lines": 47,
+        "excluded_lines": 0,
+        "percent_statements_covered": 94.76614699331849,
+        "percent_statements_covered_display": "94.77",
+        "num_branches": 370,
+        "num_partial_branches": 40,
+        "covered_branches": 318,
+        "missing_branches": 52,
+        "percent_branches_covered": 85.94594594594595,
+        "percent_branches_covered_display": "85.95"
+      }
+    },
+    "worker/recovery_runtime.py": {
+      "report": "recovery-launch-verified",
+      "summary": {
+        "covered_lines": 59,
+        "num_statements": 59,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100.00",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100.00",
+        "num_branches": 24,
+        "num_partial_branches": 0,
+        "covered_branches": 24,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100.00"
+      }
+    },
+    "backend/app/recovery_launch.py": {
+      "report": "recovery-launch-boundaries",
+      "summary": {
+        "covered_lines": 74,
+        "num_statements": 74,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100.00",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100.00",
+        "num_branches": 28,
+        "num_partial_branches": 0,
+        "covered_branches": 28,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100.00"
+      }
+    },
+    "worker/recovery_launch.py": {
+      "report": "recovery-launch-boundaries",
+      "summary": {
+        "covered_lines": 93,
+        "num_statements": 93,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100.00",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100.00",
+        "num_branches": 34,
+        "num_partial_branches": 0,
+        "covered_branches": 34,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100.00"
+      }
+    },
+    "backend/app/recovery_control.py": {
+      "report": "recovery-launch-boundaries",
+      "summary": {
+        "covered_lines": 148,
+        "num_statements": 148,
+        "percent_covered": 99.54128440366972,
+        "percent_covered_display": "99.54",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100.00",
+        "num_branches": 70,
+        "num_partial_branches": 1,
+        "covered_branches": 69,
+        "missing_branches": 1,
+        "percent_branches_covered": 98.57142857142857,
+        "percent_branches_covered_display": "98.57"
+      }
+    }
+  },
+  "coverage_limits": "Reports are not merged. Unchanged runtime/backend files use the expanded report; final control comparison and new launch modules use the final boundary report. No child business process coverage claimed. Whole-project gates remain unmet (standard script exit 1); execution.py is still 85.40% line / 66.29% branch in the selected suite.",
+  "skips": [
+    {
+      "test": "backend.tests.integration.test_bundled_onboarding.test_bundled_executor_deployment_and_recovery",
+      "reason": "requires isolated mini-eval-onboarding-test Compose project"
+    },
+    {
+      "test": "backend.tests.test_artifact_layout.test_real_docker_sdk_outputs_survive_deletion",
+      "reason": "opt-in real independent artifact Docker test"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_business_permission_denied_before_launch",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[direct]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[sdk-command]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[command]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_managed_host.test_real_managed_identity_cwd_and_cleanup[service]",
+      "reason": "requires root, systemd and provisioned mini-eval test account"
+    },
+    {
+      "test": "backend.tests.test_worker_storage.test_real_probe",
+      "reason": "set STORAGE_PROBE_TEST_IMAGE for real Docker probe"
+    }
+  ],
+  "skip_followup": "Artifact and storage-probe tests passed in final boundary run; remaining six require isolated onboarding Compose (one) or root/systemd/provisioned account (five).",
+  "deployment": "No deployment, production grants or node upgrades; default legacy loop unchanged. No new database migration; depends on af296a7/b03a7b8.",
+  "remaining": [
+    "production capability negotiation and claim/launch/supervisor loop",
+    "reliable result application and cleanup confirmation",
+    "user-facing recovery policy/state",
+    "full production batch and GPU/NPU acceptance",
+    "whole-project coverage gates"
+  ]
+}

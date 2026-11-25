@@ -59,6 +59,21 @@
       ],
       "confirmation": "state/lease confirmation; retry original execution identity",
       "source": "backend.app.recovery_claims.recover_claim"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/prepare",
+      "category": "execution_control",
+      "role": "execution-control",
+      "body": [
+        {
+          "name": "body",
+          "required": true,
+          "schema": "<class 'backend.app.recovery_launch.LaunchRequest'>"
+        }
+      ],
+      "confirmation": "state/lease confirmation; retry original execution identity",
+      "source": "backend.app.recovery_launch.prepare_launch"
     }
   ],
   "body_schemas": {
@@ -256,6 +271,50 @@
       ],
       "title": "Lookup",
       "type": "object"
+    },
+    "<class 'backend.app.recovery_launch.LaunchRequest'>": {
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "maxLength": 36,
+          "minLength": 1,
+          "title": "Generation",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "launch_id": {
+          "format": "uuid",
+          "title": "Launch Id",
+          "type": "string"
+        },
+        "boot_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Boot Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "host",
+            "docker"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generation",
+        "request_id",
+        "launch_id",
+        "boot_id",
+        "kind"
+      ],
+      "title": "LaunchRequest",
+      "type": "object"
     }
   },
   "legacy_routes": [
@@ -277,6 +336,11 @@
     {
       "method": "POST",
       "path": "/api/v1/worker/slots/{slot_id}/recovery/claim",
+      "current_category": "control"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/worker/executions/{execution_id}/recovery/prepare",
       "current_category": "control"
     }
   ]

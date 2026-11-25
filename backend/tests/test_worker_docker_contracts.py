@@ -104,3 +104,13 @@ def test_negotiated_episode_timing_enters_runner_input(container,enabled):
     task['episode_timing_v1']=enabled
     worker.create(task)
     assert inputs[0]['_episode_timing_v1'] is enabled
+
+
+def test_recovery_launch_marker_is_optional_and_canonical(container):
+    worker,task,calls,_=container
+    marker=str(uuid.uuid4());task['recovery_launch_id']=marker
+    worker.create(task)
+    assert 'mini-eval.launch='+marker in calls[0]
+    calls.clear();task['recovery_launch_id']='not-a-uuid'
+    with pytest.raises(ValueError):worker.create(task)
+    assert not calls

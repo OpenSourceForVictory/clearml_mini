@@ -99,6 +99,9 @@ def reconcile(s, *, worker_id, execution_id, observation):
     at = now()
     action, reason = 'observe', None
     mismatch = previous.get('identity') is not None and previous['identity'] != identity
+    launch = previous.get('launch')
+    if launch:
+        mismatch = mismatch or any(launch['request'][key] != identity[key] for key in ('kind', 'boot_id'))
     # Do not direct a worker to stop an unrelated/reused runtime identity.
     if mismatch or not owns or previous.get('identity_conflict'):
         action, reason = 'inspect', 'process_or_assignment_identity_changed'
@@ -131,7 +134,7 @@ def reconcile(s, *, worker_id, execution_id, observation):
             control_at = datetime.fromisoformat(previous['confirmed_at'])
         if tolerance is not None and control_at is None:
             action, reason = 'inspect', 'missing_original_control_time'
-        elif tolerance is not None and at >= control_at + timedelta(seconds=tolerance):
+        elif tolerance is not None and (at-control_at).total_seconds() >= tolerance:
             action, reason = 'stop', 'disconnection_timeout'
         elif job.benchmark != 'inference-service' and limit > 0 and at >= started_at + timedelta(seconds=limit):
             action, reason = 'stop', 'execution_timeout'

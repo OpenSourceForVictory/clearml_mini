@@ -157,6 +157,8 @@ def install(app, db, current):
     recovery_control.install(app, db, worker_auth)
     from . import recovery_claims
     recovery_claims.install(app, db, worker_auth)
+    from . import recovery_launch
+    recovery_launch.install(app, db, worker_auth)
 
     def admin(user=Depends(current)):
         if user.role != 'admin':

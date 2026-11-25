@@ -138,3 +138,13 @@ def test_npu_existing_control_location_remains_recoverable(tmp_path,monkeypatch)
     monkeypatch.setattr(b,'control',lambda *a,**k:SimpleNamespace(returncode=0,stdout='LoadState=not-found'))
     assert b.inspect(w.state['task']['execution_id'])['State']['Status']=='created'
     assert b.root==legacy
+
+
+def test_launch_marker_change_rejected_before_systemd(tmp_path):
+    (tmp_path/'business.py').write_text('pass')
+    w=worker(tmp_path,['python3','business.py']);task=w.state['task'];task['recovery_launch_id']=str(uuid.uuid4())
+    host=HostBackend(w);host.create(task)
+    assert json.loads((host.root/'launch.json').read_text())['recovery_launch_id']==task['recovery_launch_id']
+    task['recovery_launch_id']=str(uuid.uuid4())
+    with pytest.raises(RuntimeError,match='marker changed'):host.start(task)
+    assert not json.loads((host.root/'launch.json').read_text())['started']

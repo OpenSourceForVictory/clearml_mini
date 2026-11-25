@@ -27,6 +27,9 @@ class HostBackend:
         self.root=(Path(worker.workspace)/'runs'/str(uuid.UUID(self.execution))/'host-control'
                    if self.system and self.execution and not legacy.exists() else legacy)
     def unit(self,execution):return 'mini-eval-exec-'+str(uuid.UUID(execution))+'.service'
+    def description(self,execution):
+        marker=((self.worker.state or {}).get('task') or {}).get('recovery_launch_id')
+        return 'Mini Eval execution '+execution+(' launch='+str(uuid.UUID(marker)) if marker is not None else '')
     def control(self,*args,check=True):
         p=subprocess.run(['systemctl',*([] if self.system else ['--user']),*args],env=user_environment(),capture_output=True,text=True,timeout=15)
         if check and p.returncode:raise RuntimeError('host unit control failed: '+p.stderr[-500:])
@@ -40,19 +43,21 @@ class HostBackend:
             if (self.root/'launch.json').exists():
                 launch=json.loads((self.root/'launch.json').read_text())
                 if launch['execution_id']!=execution:raise RuntimeError('host execution identity mismatch')
-                if not launch.get('started'):return {'State':{'Status':'created','Running':False,'ExitCode':0}}
+                if not launch.get('started'):return {'State':{'Status':'created','Running':False,'ExitCode':0},
+                    **({'LaunchID':launch.get('recovery_launch_id')} if recovery else {})}
                 if (self.root/'exit.json').exists():
                     code=json.loads((self.root/'exit.json').read_text()).get('code')
                     if type(code) is not int:raise RuntimeError('invalid host execution exit record')
                     return {'State':{'Status':'exited','Running':False,'ExitCode':code,'Recovered':True}}
             return None
         if p.returncode:raise RuntimeError('cannot inspect host unit: '+p.stderr[-500:])
-        if values.get('Description')!='Mini Eval execution '+execution:raise RuntimeError('host unit identity mismatch')
+        if values.get('Description')!=self.description(execution):raise RuntimeError('host unit identity mismatch')
         running=values.get('SubState') in ('running','start','start-pre','start-post','stop','stop-sigterm','stop-sigkill') or values.get('ActiveState')=='activating'
         code=int(values.get('ExecMainStatus','1'))
         if (self.root/'exit.json').exists():code=json.loads((self.root/'exit.json').read_text())['code']
         return {'State':{'Status':'running' if running else 'exited','Running':running,'ExitCode':code},
-                **({'InvocationID':values.get('InvocationID')} if recovery else {})}
+                **({'InvocationID':values.get('InvocationID'),
+                    'LaunchID':values['Description'].split(' launch=',1)[1] if ' launch=' in values['Description'] else None} if recovery else {})}
     def stop(self,execution):
         item=self.inspect(execution)
         if item and item['State']['Status']!='created' and not item['State'].get('Recovered'):
@@ -190,6 +195,7 @@ class HostBackend:
         login_source=host.get('environment_source')=='login'
         platform_python=sys.executable if generic or login_source else profile['python']
         launch={'resource_limits':{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3,'pids':pids},'execution_id':task['execution_id'],'started':False,'command':[platform_python,'-m',module],'environment':platform_env if login_source else env,'cwd':values['work_dir']}
+        if task.get('recovery_launch_id') is not None:launch['recovery_launch_id']=str(uuid.UUID(task['recovery_launch_id']))
         if task.get('log_protocol') == 2:launch['log_protocol']=2
         if npu:launch['npu_device']=npu[1]
         atomic_json(self.root/'launch.json',launch)
@@ -215,6 +221,9 @@ class HostBackend:
     def start(self,task):
         path=self.root/'launch.json';launch=json.loads(path.read_text())
         if launch['started']:raise RuntimeError('refusing duplicate host launch')
+        if launch.get('recovery_launch_id') != task.get('recovery_launch_id'):
+            raise RuntimeError('host launch marker changed')
+        description=self.description(task['execution_id'])
         limits=launch.setdefault('resource_limits',{'cpus':task['cpus'],'memory_bytes':task['ram_gb']*1024**3})
         if 'pids' not in limits:limits['pids']=execution_pids_limit(self.worker.config)
         pids=execution_pids_limit({'execution_pids_limit':limits['pids']})
@@ -223,7 +232,7 @@ class HostBackend:
         # Writing it after systemd-run would permit duplicate launch after a crash.
         launch['started']=True;atomic_json(path,launch)
         if self.system:os.chown(path,owner.st_uid,owner.st_gid)
-        properties={'Description':'Mini Eval execution '+task['execution_id'],'KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
+        properties={'Description':description,'KillMode':'control-group','RemainAfterExit':'yes','TimeoutStopSec':'10','RuntimeMaxSec':str(task['timeout_seconds']) if task['timeout_seconds'] else 'infinity','StandardOutput':'null','StandardError':'append:'+str((self.root/'supervisor.log').resolve())}
         properties['TasksMax']='infinity' if pids is None else str(pids)
         if task['cpus']:properties['CPUQuota']=str(task['cpus']*100)+'%'
         if task['ram_gb']:properties['MemoryMax']=str(task['ram_gb'])+'G'

@@ -186,3 +186,33 @@ def test_created_container_is_not_a_successful_exit(tmp_path):
     w.inspect=lambda e:{'Id':'a'*64,'State':{'Status':'created','Running':False,'ExitCode':0}}
     runtime=RecoveryRuntime(w,w.state['task']['execution_id'])
     with pytest.raises(RuntimeError,match='has not started'):runtime.inspect()
+
+
+@pytest.mark.parametrize('host',[True,False])
+def test_launch_checks_original_marker_and_immutable_runtime(tmp_path,monkeypatch,host):
+    import uuid
+    w=host_worker(tmp_path,['python3','business.py']);w.host_mode=lambda:host
+    marker='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';w.state['task']['recovery_launch_id']=marker
+    runtime=RecoveryRuntime(w,w.state['task']['execution_id'])
+    data={'State':{'Status':'created','Running':False},'Id':'a'*64,'InvocationID':'b'*32,
+          'LaunchID':marker,'Config':{'Labels':{'mini-eval.launch':marker}}}
+    calls=[]
+    monkeypatch.setattr(runtime,'_raw',lambda:data)
+    def start(*args,**kwargs):
+        calls.append(args);data['State']={'Status':'running','Running':True}
+    monkeypatch.setattr(HostBackend,'start',start)
+    monkeypatch.setattr('worker.client.docker',start)
+    bound=runtime.start(marker)
+    assert bound['launch_id']==marker and bound['identity']['runtime_id']==('b'*32 if host else 'a'*64)
+    if not host:assert calls==[('start','a'*64)]
+    with pytest.raises(RuntimeError,match='already started'):runtime.start(marker)
+    with pytest.raises(ValueError):runtime.inspect_launch(str(uuid.uuid4()))
+    with pytest.raises(ValueError):runtime.inspect_launch(marker.upper())
+    data['LaunchID']='wrong';data['Config']['Labels']['mini-eval.launch']='wrong'
+    with pytest.raises(RuntimeError,match='marker'):runtime.inspect_launch(marker)
+    monkeypatch.setattr(runtime,'_raw',lambda:None)
+    with pytest.raises(RuntimeError,match='marker'):runtime.start(marker)
+    data['LaunchID']=marker;data['Config']['Labels']['mini-eval.launch']=marker
+    data['State']['Recovered']=True
+    monkeypatch.setattr(runtime,'_raw',lambda:data)
+    with pytest.raises(RuntimeError,match='identity unavailable'):runtime.inspect_launch(marker)

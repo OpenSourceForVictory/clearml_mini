@@ -161,3 +161,11 @@ Worker 协议编号仍为 18，新增可选能力 episode_timing_v1。新 API �
 ### 领取请求账本（开发阶段，未接入主循环）
 
 `worker/recovery_claim.py` 在发送前持久化 request_id、Slot、boot ID、单调时间及已知执行列表；响应丢失或重启沿用原请求。收到原分配后先验证摘要、代次与策略，再交给幂等执行 journal；目标 journal 落盘成功后才清除领取请求。持久化失败保留待恢复记录，回调只能写 journal，不能启动程序。收据不是启动许可，后续仍须控制对账。当前更新 Worker 不会启用该流程，不要删除旧执行或领取记录尝试恢复。
+
+### 首次启动边界（开发阶段，未接入生产）
+
+`worker/recovery_launch.py` 持久保存一次性 launch_id、原分配/boot、确认请求时间、启动尝试时间及运行身份。确认响应只能在原请求的短窗口内使用；重复响应、Worker 重启不重置窗口。启动调用前必须落盘 attempt，调用失败或身份落盘失败只能核对实际运行实体，不能重试启动。运行实体需携带同一 launch_id；同名 unit、容器或 PID 不是归属证据。机器重启或身份变化进入待核对。
+
+HostBackend 的服务 Description 和 Docker 创建 label 现支持可选 recovery_launch_id，未带该字段的旧任务保持原行为。RecoveryRuntime.start 只接受同标识且尚未启动的实体，容器按完整 ID 启动；inspect_launch 核对启动标识和实际 InvocationID/容器 ID。真实 systemd 用户服务/Docker 短程序已使用该运行后端模拟启动响应丢失并恢复原实例；Docker 创建 label 另有命令契约测试。这不是业务模型评测，未接入生产 Worker 主循环。仍须完成能力协商及完整监督/结果/清理链路后统一发布。
+
+首次启动确认的有效窗口最长 30 秒，且不超过原分配剩余的有限断联容忍时间；即使确认返回成功，迟到超过这个窗口也不能启动。无限断联策略不等于允许任意迟到的首次启动许可。
