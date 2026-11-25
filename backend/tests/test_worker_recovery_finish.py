@@ -228,3 +228,50 @@ def test_result_sync_refuses_invalid_state_or_ack(case,fault):
         w.api.post=lambda *args:{'result_sync':'complete'}
     with pytest.raises(ValueError):finish_results(w,SimpleNamespace(pending=lambda limit:[]))
     assert w.state is not None
+
+
+@pytest.mark.parametrize('lost',['result','sync'])
+def test_execute_resumes_deferred_delivery_after_cleanup_without_start(case,lost):
+    from worker.recovery_results import execution_outbox
+    w,calls,_=case;q=execution_outbox(w)
+    digest=q.put('e','g','episode',0,{'episode_id':1,'status':'STARTED','seed':100})
+    w.state['recovery_results_collected']=True
+    finalize(w,{'status':'SUCCEEDED','exit_code':0,'pending_results':True})
+    requests=[];dropped=False
+    def post(path,data):
+        nonlocal dropped
+        requests.append((path,copy.deepcopy(data)))
+        kind='result' if path.endswith('/results') else 'sync'
+        assert path.endswith(('/results','/results-finished'))
+        if kind=='result':
+            assert data['apply'] is True
+            response={'digest':digest,'reconciled':True}
+        else:response={'status':'SUCCEEDED','cleanup_confirmed':True,'result_sync':'complete','duplicate':dropped}
+        if kind==lost and not dropped:dropped=True;raise TimeoutError('lost '+lost+' ACK')
+        return response
+    w.api.post=post;w.finalize_recovery=lambda:finalize(w)
+    with pytest.raises(TimeoutError):Worker.execute(w,w.state['task'])
+    assert w.state['recovery_finalization']['phase']=='done'
+    w.state=json.loads(w.path.read_text())
+    Worker.execute(w,w.state['task'])
+    assert w.state is None and q.pending()==[]
+    assert calls.count('remove')==1
+    if lost=='result':assert requests[0]==requests[1]
+    else:assert requests[1]==requests[2]
+
+
+def test_post_cleanup_missing_outbox_cannot_be_replaced_by_empty_queue(case):
+    from worker.recovery_finish import resume_results
+    w,_,_=case
+    w.state['recovery_results_collected']=True
+    finalize(w,{'status':'SUCCEEDED','exit_code':0,'pending_results':True})
+    with pytest.raises(RuntimeError,match='outbox is missing'):resume_results(w)
+    assert w.state is not None
+
+
+def test_execute_keeps_uncollected_results_without_trying_to_start(case):
+    w,_,_=case
+    finalize(w,{'status':'FAILED','exit_code':0,'pending_results':True})
+    w.finalize_recovery=lambda:finalize(w)
+    Worker.execute(w,w.state['task'])
+    assert w.state['recovery_finalization']['phase']=='done'

@@ -301,3 +301,19 @@ def test_result_sync_http_ack_and_replay(api):
         assert reply.status_code==200,reply.text
         assert reply.json()=={'status':'SUCCEEDED','cleanup_confirmed':True,
             'result_sync':'complete','duplicate':duplicate}
+
+
+def test_postgres_result_sync_does_not_compete_for_global_scheduler_lock(pg):
+    from backend.app.recovery_records import grant
+    from backend.app.scheduling import lock
+    factory=seed(pg[0])
+    with factory() as s:
+        run=s.get(Run,'r');run.status='STARTING'
+        generation=grant(s,run,'w').generation;s.commit()
+    proof=prepare(factory,generation)
+    complete(factory,proof,pending_results=True);cleanup(factory,proof)
+    with factory() as scheduling:
+        lock(scheduling)
+        assert sync_results(factory,proof)['result_sync']=='complete'
+        assert sync_results(factory,proof)['duplicate']
+        scheduling.rollback()

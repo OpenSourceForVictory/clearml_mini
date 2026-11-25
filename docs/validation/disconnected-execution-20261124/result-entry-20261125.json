@@ -1,0 +1,34 @@
+{
+  "tests": {
+    "passed": 315,
+    "skipped": 0,
+    "deselected": 3195
+  },
+  "seconds": 38.44,
+  "coverage": {
+    "worker/recovery_results.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "worker/recovery_finish.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "backend/app/recovery_finish.py": {
+      "line": 100.0,
+      "branch": 100.0
+    },
+    "worker/client.py": {
+      "line": 50.05,
+      "branch": 37.04
+    },
+    "backend/app/execution.py": {
+      "line": 40.69,
+      "branch": 9.13
+    }
+  },
+  "all_project_gate_passed": false,
+  "report": "coverage-artifacts/recovery-results-entry-final-20261125",
+  "production_enabled": false,
+  "scope": "真实host/Docker短程序，隔离PostgreSQL；非完整平台批次"
+}

@@ -194,3 +194,9 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 失败证据见result-collector-failures-20261125.txt：初始测试夹具缺runs目录、游标失败注入位置错误；API回合记录会增加平台时间戳，断言已改为核对业务字段及时间戳；新增最终采集标志测试必须落盘后模拟重启。标准首轮遗漏importlib导致同名测试收集冲突，按现有文档补参数；扩大检查发现契约清单和生成网关未同步，已补齐新路由及旧cleanup可选身份正文的覆盖记录，未改历史审计原件。最终上述专项全部通过。
 
 同步worker-upgrades、operations、Skill项目索引、OpenSpec设计及任务记录；strict validate通过。生产execute尚未接通正常监督、延后交付及界面状态，任务4.x不勾选，未部署、未广告能力。本阶段不新增迁移。
+
+### 清理后的恢复交付入口（2026-11-25）
+
+Worker.execute恢复已清理的finalization时，以原执行outbox继续可靠结果交付和最终同步确认，不再进入启动/续租流程。每轮最多16条；没有最终采集标志保持待处理，原队列文件丢失报错保留journal，不能新建空队列假装成功。测试覆盖结果ACK与最终同步ACK丢失、进程重启重放、队列缺失和稳定执行路径。
+
+results-finished仅使用Run→grant行锁，不拿资源全局锁。真实PostgreSQL测试持有调度锁时，首次及重复结果同步仍成功；完成/清理的资源锁不变。标准专项315 passed、3195 deselected、无跳过，38.44秒；三个直接修改的恢复模块行/分支均100/100，完整入口及全项目门槛仍未达标。报告coverage-artifacts/recovery-results-entry-final-20261125；真实host/Docker短程序均通过，不能替代完整平台断联批次。同步操作/升级文档、Skill、OpenSpec，strict validate通过。未启用生产领取能力、未部署完整恢复功能。

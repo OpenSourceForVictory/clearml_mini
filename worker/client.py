@@ -475,6 +475,9 @@ class Worker:
             # A completion ACK may have been lost after the program finished.
             # Resume only its durable cleanup, never enter the startup loop.
             self.finalize_recovery()
+            if self.state is not None:
+                from .recovery_finish import resume_results
+                resume_results(self)
             return
         if self.state and self.state.get('recovery_assignment'):
             # Fail closed until the negotiated supervisor owns this journal.
@@ -861,7 +864,7 @@ class Worker:
         from .recovery_monitor import RecoveryMonitor
         return RecoveryMonitor(self, launch)
 
-    def collect_recovery_results(self, outbox, *, output='', protocol_root=None, final=False):
+    def collect_recovery_results(self, outbox=None, *, output='', protocol_root=None, final=False):
         from .recovery_results import collect
         return collect(self, outbox, output=output, protocol_root=protocol_root, final=final)
 

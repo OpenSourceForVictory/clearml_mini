@@ -6,13 +6,14 @@ from .core import ExecutionRecovery, ExecutionRecoveryControl, Run, Slot, RunLog
 from .scheduling import TERMINAL, fast_lock, transition
 
 
-def locked(s, worker_id, execution_id, proof):
+def locked(s, worker_id, execution_id, proof, *, resource_lock=True):
     grant = s.get(ExecutionRecovery, execution_id)
     if not grant or grant.worker_id != worker_id:
         raise HTTPException(404, 'recovery execution not found')
     if grant.generation != proof.generation:
         raise HTTPException(409, 'recovery assignment generation does not match')
-    fast_lock(s)
+    if resource_lock:
+        fast_lock(s)
     run = s.scalar(select(Run).where(Run.id == grant.run_id).with_for_update()
                    .execution_options(populate_existing=True))
     grant = s.scalar(select(ExecutionRecovery).where(ExecutionRecovery.execution_id == execution_id)
@@ -93,7 +94,9 @@ def cleanup(s, *, worker_id, execution_id, proof):
 
 def results_finished(s, *, worker_id, execution_id, proof):
     """Confirm late business data independently of already released resources."""
-    run, grant, control = locked(s, worker_id, execution_id, proof)
+    # Sync acknowledgement changes no lifecycle/allocation. Match result
+    # application's Run -> grant order without taking the scheduler lock.
+    run, grant, control = locked(s, worker_id, execution_id, proof, resource_lock=False)
     snapshot = control.snapshot
     if not snapshot.get('completion') or run.status not in TERMINAL or not run.cleanup_confirmed:
         raise HTTPException(409, 'result synchronization requires acknowledged completion and cleanup')

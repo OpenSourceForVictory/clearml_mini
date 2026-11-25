@@ -90,3 +90,14 @@ def finish_results(worker, outbox):
     atomic_json(worker.path, None)
     worker.state = None
     return True
+
+
+def resume_results(worker):
+    """One bounded post-cleanup delivery pass, never start or renew a runtime."""
+    if worker.state.get('recovery_results_collected') is not True:
+        return False
+    from .recovery_results import execution_outbox
+    from .recovery_delivery import RecoveryDelivery
+    outbox = execution_outbox(worker, existing=True)
+    RecoveryDelivery(worker.api, outbox, apply_results=True).step()
+    return finish_results(worker, outbox)

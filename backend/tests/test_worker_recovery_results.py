@@ -169,3 +169,15 @@ def test_empty_queue_without_final_collection_cannot_retire_journal(tmp_path):
         'proof':proof,'phase':'done','body':{'pending_results':True}}},
         api=SimpleNamespace(post=lambda *a:pytest.fail('no sync before collection finishes')))
     assert not finish_results(w,ReliableOutbox(tmp_path/'empty'))
+
+
+def test_default_outbox_has_stable_execution_owned_path(case):
+    from worker.recovery_results import execution_outbox
+    w,_,_=case;args,_,_=source(case,'journal')
+    assert w.collect_recovery_results(**args)
+    q=execution_outbox(w,existing=True)
+    assert q.path==Path(str(w.path)+'.outbox')/'reliable.sqlite3'
+    assert len(q.pending())==1
+    w.state=json.loads(w.path.read_text())
+    assert w.collect_recovery_results(**args)
+    assert len(q.pending())==1

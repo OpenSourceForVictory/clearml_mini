@@ -312,3 +312,7 @@ Worker 恢复收尾（开发中）：执行记录包含 recovery 身份及 recov
 协商执行可在完成正文中设置 `pending_results=true`：完成及物理清理确认后释放资源，待补报结果仍保留在节点。结果经应用确认后，`recovery/results-finished` 校验完整性并幂等结束同步；平台取消/超时和新一次重新评测的状态不受旧结果影响。该字段不能用于旧协议绕过完整性校验。不新增数据库表或迁移，独立同步状态保存在既有恢复控制记录的 snapshot。尚未完成生产监督主循环、页面同步状态和端到端发布，不要手工启用恢复能力。
 
 Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json` 和 `.json.supervision.json`；这些文件由所属执行核验，不能当作独立任务，也不能手工删除。
+
+清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。这仅完成已有收尾记录的恢复，正常运行监督与完整生产启用仍待完成。
+
+`results-finished`属于可靠结果通道，只更新原执行同步标记，不竞争调度全局锁；完成与清理仍按资源转换锁序处理。

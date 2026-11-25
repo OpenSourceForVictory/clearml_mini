@@ -355,3 +355,7 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 `worker/recovery_monitor.py` / Worker.monitor_recovery：独立本地tick与外部exchange，原boot/执行代次/运行身份核对；异常观察重试、退出持久化、关闭时保留未结束交换的独占权。尚缺完整生产执行入口和交付收尾。
 
 恢复结果采集：worker/recovery_results.py / test_worker_recovery_results.py，四类旧读取器先写outbox再提交游标；final采集需原实体退出，尾部不完整不封口。worker/recovery_finish.finish_results同时要求本地最终采集标记、空队列及平台应用/完整性ACK；backend/app/recovery_finish.results_finished需完成与清理已确认。同步阶段不改变Run生命周期或资源。恢复旁路JSON不能被recover_journals当成执行UUID。完整生产入口尚未启用。
+
+清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。这仅完成已有收尾记录的恢复，正常运行监督与完整生产启用仍待完成。
+
+恢复同步确认results_finished只锁Run→grant，不获取资源全局锁；完成/清理保留原资源锁序。对应PostgreSQL测试持有调度锁期间结果同步仍可确认。

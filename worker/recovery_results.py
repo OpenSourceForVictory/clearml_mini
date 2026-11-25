@@ -1,13 +1,24 @@
 """Reuse protocol readers, committing to a durable outbox before cursor advance."""
 import copy
+from pathlib import Path
 
 from .storage import atomic_json
 
 
-def collect(worker, outbox, *, output='', protocol_root=None, final=False):
+def execution_outbox(worker, *, existing=False):
+    from .reliable_outbox import ReliableOutbox
+    directory = Path(str(worker.path)+'.outbox')
+    if existing and not (directory/'reliable.sqlite3').is_file():
+        raise RuntimeError('original result outbox is missing; retaining recovery journal')
+    return ReliableOutbox(directory)
+
+
+def collect(worker, outbox=None, *, output='', protocol_root=None, final=False):
     state = worker.state
     if not state or not state.get('recovery_assignment'):
         raise ValueError('durable recovery assignment required')
+    if outbox is None:
+        outbox = execution_outbox(worker)
     task = state['task']
     if final:
         from .recovery_runtime import RecoveryRuntime
