@@ -177,3 +177,5 @@ HostBackend 的服务 Description 和 Docker 创建 label 现支持可选 recove
 新恢复收尾 journal 使用 recovery={generation,identity} 和 recovery_finalization={proof,body,phase}。升级后 execute 可从 completion/remove/cleanup/done 原阶段恢复；不能手工删除此记录或用新执行身份覆盖。仅此代码更新并不启用断联恢复，尚需两端完整能力协商及正常执行路径接线。
 
 领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。生产版本暂不声明disconnected_execution_v1能力；不要单独设置测试用RECOVERY_EXECUTION_ENABLED开关。
+
+Worker 的领取主循环现经 recovery_poll 统一分流：未声明能力且没有待恢复领取文件时仍发原协议请求；已有 .claim.json 时即使当前版本不声明能力，也必须先按原 request_id 恢复，不能绕过待确认分配领取新任务。收据先落盘，再幂等写入执行 journal 的 recovery_assignment，最后清除领取请求。磁盘写入失败、快照冲突、停止处置均保留证据；不得手工删除文件以绕过。完整监督入口尚未接线，带 recovery_assignment 的执行会拒绝进入旧 watchdog/启动路径；这不是已启用断联执行，禁止手工添加能力标识。

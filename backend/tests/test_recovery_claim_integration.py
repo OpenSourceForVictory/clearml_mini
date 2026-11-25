@@ -124,3 +124,37 @@ def test_old_claim_after_cancel_and_retry_cannot_claim_new_attempt(env,monkeypat
     assert fresh.status_code==200,fresh.text
     assert fresh.json()['task']['run_id']==new_id
     assert fresh.json()['task']['execution_id']!=old_execution
+
+
+def test_worker_poll_recovers_lost_api_response_into_original_journal(env,monkeypatch,tmp_path):
+    import json
+    from types import SimpleNamespace
+    from worker.recovery_poll import poll,CAPABILITY
+    from worker.client import Worker
+    main,c,_=env;token,slot=enabled(env,monkeypatch);submit(env);tick(main.SessionLocal)
+    worker=SimpleNamespace(path=tmp_path/'worker.json',slot_id=slot,children={})
+    def child(execution):
+        path=tmp_path/(execution+'.json')
+        return SimpleNamespace(path=path,state=json.loads(path.read_text()) if path.exists() else None,
+            config={},runtime_snapshot={'revision':1},storage_snapshot={'revision':1})
+    worker.child=child
+    replies=[]
+    def post(path,body):
+        response=c.post('/api/v1/'+path,headers=token,json=body)
+        assert response.status_code==200,response.text
+        replies.append(response.json())
+        if len(replies)==1:raise TimeoutError('API committed but response was lost')
+        return response.json()
+    worker.api=SimpleNamespace(post=post)
+    with pytest.raises(TimeoutError):poll(worker,{'capabilities':[CAPABILITY]})
+    assert worker.children=={}
+    # Pending receipt must recover even if the release no longer advertises it.
+    recovered=poll(worker,{'capabilities':[]})
+    assert replies[0]==recovered
+    execution=recovered['task']['execution_id'];saved=worker.children[execution]
+    assert saved.state['task']==recovered['task']
+    assert saved.state['recovery_assignment']['claim']['receipt']==recovered['recovery_claim']
+    with pytest.raises(RuntimeError,match='negotiated execution supervisor'):
+        Worker.execute(saved,saved.state['task'])
+    with main.SessionLocal() as s:
+        assert s.scalar(select(func.count()).select_from(ExecutionRecoveryClaim))==1

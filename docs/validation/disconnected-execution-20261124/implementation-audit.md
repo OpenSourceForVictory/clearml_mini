@@ -166,3 +166,10 @@ complete 携带恢复代次/进程身份走新路径，必须有核对后的退�
 - 标准覆盖率运行：169 passed、22 skipped、3216 deselected；pytest_exit_code=0，但目录/功能组覆盖率门槛未通过。报告位于 `coverage-artifacts/recovery-claim-integration-20261125/`。本次选择下 execution.py 行77.94%、分支59.22%；recovery_claims.py 行77.46%、分支53.85%。不能宣称覆盖率达标。
 - 原22项 PostgreSQL 跳过随后在独立 PostgreSQL 16.8 容器中补跑，22 passed。领取及完成专项（含新增取消后重新评测领取隔离）37 passed、2项 PostgreSQL 跳过；随后完整 recovery_finish.py 在隔离 PostgreSQL 环境补跑29 passed、无跳过。这些独立补跑未合并进覆盖率数据，不与前述通过数相加充当独立用例数。
 - 取消后重新评测的领取测试预置已清理终态，测试的是领取隔离；真实完成/清理链路另有 recovery_finish 专项。未做本阶段真机断网批次验收，未部署，不新增迁移。主循环、结果未齐收尾和界面接线仍未完成。
+
+## 2026-11-25 Worker 领取主循环交接（未启用）
+
+- `worker/recovery_poll.py` 接入实际 run 的领取调用。未广告能力且无 pending journal 保持旧 wire contract；未决请求优先按原 request_id 恢复。收据→执行 journal→清除领取文件严格排序，磁盘失败、冲突或停止处置保留证据，不进入旧启动流程。
+- 新增16项测试覆盖响应丢失、无能力恢复未决请求、交接提交后清除失败重放保留offset、子journal落盘失败、已有journal冲突、无效ACK、停止收据、空ACK和旧协议兼容。API+Worker联测另1通过：真实API事务提交后丢响应，重试原快照落入执行journal，授权只创建一次；不是部署批次。
+- 标准专项199 passed、2 skipped、3223 deselected，pytest成功，覆盖率门槛失败。报告 `coverage-artifacts/worker-recovery-poll-20261125/`；新模块行/分支100%/100%，本次选集中 worker/client.py 为57.33%/38.24%，不能据此宣称整个Worker达标。两项跳过为真实运行后端opt-in，随后启用本机systemd用户服务/Docker短程序测试，2 passed，无跳过。单独补跑与API联测未并入覆盖率。
+- 同步运维指南、升级指南、Skill索引与OpenSpec。没有新增数据库迁移，没有部署或广告新能力。接下来仍需完整监督入口、停止/未启动收据收尾、结果未齐收尾及界面接线；恢复执行不能退回旧watchdog作为临时替代。

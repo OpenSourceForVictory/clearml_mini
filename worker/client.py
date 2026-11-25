@@ -476,6 +476,10 @@ class Worker:
             # Resume only its durable cleanup, never enter the startup loop.
             self.finalize_recovery()
             return
+        if self.state and self.state.get('recovery_assignment'):
+            # Fail closed until the negotiated supervisor owns this journal.
+            # The legacy watchdog must never reinterpret its durable receipt.
+            raise RuntimeError('recovery assignment requires negotiated execution supervisor')
         # Existing execution journals keep their negotiated protocol across upgrades.
         if self.state is not None:
             task = {**task, 'log_protocol': self.state.get('task', {}).get('log_protocol', 1), 'process_logs_v1':self.state.get('task',{}).get('process_logs_v1',False), 'episode_timing_v1':self.state.get('task',{}).get('episode_timing_v1',False)}
@@ -971,8 +975,8 @@ class Worker:
                     self.control.refresh(reply)
                     time.sleep(2)
                     continue
-                response = self.api.post(f'worker/slots/{self.slot_id}/claim',
-                    {'known_execution_ids': list(self.children)})
+                from .recovery_poll import poll
+                response = poll(self, metadata())
                 for execution in response['cleanup']:
                     # An active thread owns its cleanup; signal it rather than racing its journal.
                     if execution in self.children:
@@ -981,7 +985,7 @@ class Worker:
                         self.child(execution).cleanup(execution)
                 if response['task'] and not (once and had_task):
                     task = response['task']
-                    child = self.child(task['execution_id'])
+                    child = self.children.get(task['execution_id']) or self.child(task['execution_id'])
                     self.launch(child, task)
                     had_task = True
                 self.control.refresh(reply)

@@ -346,3 +346,5 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 Worker 恢复收尾接线：worker/recovery_finish.py 通过原子 journal 持久化完成正文和 completion/remove/cleanup/done 阶段，Worker.finalize_recovery 调用，Worker.execute 对已有 recovery_finalization 优先恢复而不启动程序。RecoveryRuntime.remove 只接受同身份的退出实体，Docker 按完整ID删除，missing允许幂等重试；未经完成ACK不移除、未经清理ACK不清除执行记录。test_worker_recovery_finish.py 覆盖HTTP响应丢失、落盘失败、身份冲突和真实host/Docker短程序。领取和正常监督循环尚未接通，不作为功能已上线依据。
 
 恢复领取API接线：execution.Claim的request_id与recovery_version必须成对，claim在普通候选查询前及资源锁后查询原收据，首次RESERVED→STARTING与recovery_claims.bind同事务提交。默认关闭新分配，RECOVERY_EXECUTION_ENABLED与槽位disconnected_execution_v1同时满足才测试启用；已有收据恢复不依赖开关。恢复执行不能由旧claim或新的request_id接管；恢复终态禁止裸cleanup列表，防旧Worker绕过身份证明。test_recovery_claim_integration覆盖响应重放、取消、未协商、空ACK及事务回滚；生产主循环能力未广告。
+
+Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢复请求选择原协议/持久领取；先执行 journal 后清除 claim，重复交接保留进度，停止收据保留待核对。`execute` 禁止 recovery_assignment 误入旧租约路径；完整监督入口仍待实现，不得广告能力或把此阶段当作发布完成。
