@@ -217,6 +217,21 @@ def test_deferred_results_keep_journal_after_cleanup_and_lost_sync_ack(case):
     assert requests[0]==requests[1]
 
 
+def test_failed_result_sync_ack_retires_journal_without_restarting_business(case):
+    from worker.recovery_finish import finish_results
+    w, calls, _ = case
+    finalize(w, {'status': 'SUCCEEDED', 'exit_code': 0, 'pending_results': True})
+    w.state['recovery_results_collected'] = True
+    atomic_json(w.path, w.state)
+    w.api.post = lambda *args: {
+        'status': 'SUCCEEDED', 'cleanup_confirmed': True,
+        'result_sync': 'failed', 'duplicate': False}
+    before = calls.count('start')
+    assert finish_results(w, SimpleNamespace(pending=lambda limit: []))
+    assert w.state is None and json.loads(w.path.read_text()) is None
+    assert calls.count('start') == before
+
+
 @pytest.mark.parametrize('fault',['missing','phase','proof','ack'])
 def test_result_sync_refuses_invalid_state_or_ack(case,fault):
     from worker.recovery_finish import finish_results

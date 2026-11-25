@@ -113,8 +113,18 @@ def results_finished(s, *, worker_id, execution_id, proof):
         else:
             from .execution import Finish, validate_finish
             body = Finish.model_validate(snapshot['completion'])
-            validate_finish(s, run, body)
-            control.snapshot = {**snapshot, 'result_sync':'complete'}
+            try:
+                # results-finished is the Worker's final seal after it has
+                # drained its durable queue. Missing results are then a
+                # terminal protocol failure, not a reason to retry forever.
+                validate_finish(s, run, body)
+            except HTTPException as exc:
+                if exc.status_code != 400:
+                    raise
+                control.snapshot = {**snapshot, 'result_sync':'failed',
+                    'result_sync_error':str(exc.detail)[:1000]}
+            else:
+                control.snapshot = {**snapshot, 'result_sync':'complete'}
         s.flush()
     return {'status':run.status, 'cleanup_confirmed':run.cleanup_confirmed,
             'result_sync':control.snapshot['result_sync'], 'duplicate':duplicate}

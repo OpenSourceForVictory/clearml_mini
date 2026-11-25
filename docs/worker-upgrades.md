@@ -192,6 +192,8 @@ Worker.monitor_recovery绑定原启动账本与运行身份，复用原请求/�
 
 恢复结果遇到业务协议格式或回合计划校验 400 时，新 API 保留原始收据及原因，回复 `application=rejected`，Worker 仅在摘要和明确应用状态匹配后确认该条；其他有效结果继续补报。身份/归属冲突、临时服务或网络错误不确认本地记录。最终同步状态为失败时，查看批次详情中原始错误，业务程序退出状态不被改写。此行为新增 `c14d09e` 迁移，须先迁移同版 API 再升级 Worker；旧协议执行不变。完整断联恢复能力仍未启用，不要手工添加能力标识。
 
+`results-finished` 仅在本地结果源已封口且可靠 outbox 排空后发送；这是最终结果声明。平台若发现计划回合缺失或成功率不一致，会持久记录 `result_sync=failed` 并幂等确认，Worker 清除已完成执行的恢复 journal，不重复启动业务程序。尚未采集完或 HTTP 仍失败时保留 journal 与源数据重试；已封口失败只能通过用户新一次评测纠正，不能把旧执行重新补成成功。
+
 Worker 重启扫描只加载执行主 journal，忽略配套 `.json.launch.json` 和 `.json.supervision.json`；这些文件由所属执行核验，不能当作独立任务，也不能手工删除。
 
 清理后的恢复补报入口已接通：执行记录的recovery_finalization为done且最终采集已封口时，Worker.execute只恢复原outbox的可靠交付，再请求results-finished；不启动程序、不续租。每次最多处理16条，响应丢失保留原记录重试；原outbox丢失时保留journal报错，不能创建空队列冒充同步完成。默认队列为`<execution-journal>.outbox/reliable.sqlite3`。该恢复入口已与正常运行监督相连，完整生产启用仍待验收。

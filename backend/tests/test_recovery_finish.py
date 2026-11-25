@@ -232,8 +232,6 @@ def test_cleanup_releases_before_result_delivery_and_sync_requires_complete_data
     with factory() as s:
         assert s.get(ExecutionRecoveryControl,'e').snapshot['result_sync']=='pending'
         assert s.get(Run,'r').cleanup_confirmed
-    with pytest.raises(HTTPException) as exc:sync_results(factory,proof)
-    assert exc.value.status_code==400
     events=[{'episode_id':1,'seed':100,'status':'STARTED'},
         {'episode_id':1,'seed':100,'status':'COMPLETED','success':True,'metrics':{},'runtime':1,'artifacts':[]}]
     for sequence,body in enumerate(events):
@@ -244,6 +242,41 @@ def test_cleanup_releases_before_result_delivery_and_sync_requires_complete_data
     assert complete(factory,proof,metrics=metrics,pending_results=True)['duplicate']
     with factory() as s:
         assert s.get(Run,'r').status=='SUCCEEDED' and s.get(Run,'r').cleanup_confirmed
+
+
+@pytest.mark.parametrize('case', ['missing', 'mismatched_rate'])
+def test_sealed_result_sync_reports_protocol_failure_without_changing_execution(execution, case):
+    from backend.app.recovery_results import apply
+    factory, generation = execution
+    proof = prepare(factory, generation)
+    with factory() as session:
+        job = session.get(Job, 'j')
+        job.episodes = 1
+        job.client_spec = {'seed': 100, 'template': {
+            'task_type': 'evaluation', 'episode_reporting': True}}
+        session.commit()
+    metrics = {'success_rate': 1, 'episode_count': 1, 'runtime': 1}
+    complete(factory, proof, metrics=metrics, pending_results=True)
+    cleanup(factory, proof)
+    if case == 'mismatched_rate':
+        events = [
+            {'episode_id': 1, 'seed': 100, 'status': 'STARTED'},
+            {'episode_id': 1, 'seed': 100, 'status': 'COMPLETED',
+             'success': False, 'metrics': {}, 'runtime': 1, 'artifacts': []},
+        ]
+        for sequence, body in enumerate(events):
+            with factory() as session:
+                apply(session, worker_id='w', execution_id='e', generation=generation,
+                      kind='episode', sequence=sequence, body=body)
+                session.commit()
+    first = sync_results(factory, proof)
+    assert first['result_sync'] == 'failed' and not first['duplicate']
+    assert sync_results(factory, proof)['duplicate']
+    with factory() as session:
+        run = session.get(Run, 'r')
+        snapshot = session.get(ExecutionRecoveryControl, 'e').snapshot
+        assert run.status == 'SUCCEEDED' and run.cleanup_confirmed
+        assert 'successful execution requires' in snapshot['result_sync_error']
 
 
 def test_pending_sync_does_not_reopen_cancelled_attempt_after_retry(execution):
@@ -301,6 +334,31 @@ def test_result_sync_http_ack_and_replay(api):
         assert reply.status_code==200,reply.text
         assert reply.json()=={'status':'SUCCEEDED','cleanup_confirmed':True,
             'result_sync':'complete','duplicate':duplicate}
+
+
+def test_result_sync_http_seal_reports_missing_episode_as_failed(api):
+    from backend.app.recovery_records import grant
+    client, headers, factory = api
+    with factory() as session:
+        run = session.get(Run, 'r')
+        run.status = 'STARTING'
+        generation = grant(session, run, 'w').generation
+        session.commit()
+    proof = prepare(factory, generation)
+    with factory() as session:
+        job = session.get(Job, 'j')
+        job.episodes = 1
+        job.client_spec = {'seed': 100, 'template': {
+            'task_type': 'evaluation', 'episode_reporting': True}}
+        session.commit()
+    complete(factory, proof, metrics={
+        'success_rate': 1, 'episode_count': 1, 'runtime': 1}, pending_results=True)
+    cleanup(factory, proof)
+    url = '/api/v1/worker/executions/e/recovery/results-finished'
+    first = client.post(url, headers=headers, json=proof.model_dump())
+    assert first.status_code == 200 and first.json()['result_sync'] == 'failed'
+    second = client.post(url, headers=headers, json=proof.model_dump())
+    assert second.status_code == 200 and second.json()['duplicate']
 
 
 def test_postgres_result_sync_does_not_compete_for_global_scheduler_lock(pg):
