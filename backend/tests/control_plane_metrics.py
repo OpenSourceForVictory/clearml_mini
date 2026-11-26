@@ -46,6 +46,20 @@ def expired_leases_during_load(samples):
                 if row.get('phase') in ('load', 'boundary')), default=0)
 
 
+def peak_execution_overlap(intervals):
+    """Maximum simultaneous RUNNING time spans; end equals next start is not overlap."""
+    events = []
+    for started_at, finished_at in intervals:
+        if started_at is None or finished_at is None or finished_at <= started_at:
+            continue
+        events.extend(((started_at, 1), (finished_at, -1)))
+    active = peak = 0
+    for _, change in sorted(events, key=lambda item: (item[0], item[1])):
+        active += change
+        peak = max(peak, active)
+    return peak
+
+
 async def observe(work, engine, *, container=None, interval=10, load_seconds=None):
     started = time.monotonic()
     task = asyncio.create_task(work)

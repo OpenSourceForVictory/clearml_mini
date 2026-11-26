@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
 from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, ExecutionRecovery, ExecutionRecoveryControl, now
 from backend.app import priority_runtime, priority_gateway
-from backend.tests.control_plane_metrics import observe, with_outage, expired_leases_during_load
+from backend.tests.control_plane_metrics import observe, with_outage, expired_leases_during_load, peak_execution_overlap
 
 
 def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
@@ -1028,6 +1028,10 @@ def main():
                     result['database_max_connections'] = int(c.scalar(text('SHOW max_connections')))
                     result['database_connections_at_end'] = c.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()"))
                     result['executions'] = c.scalar(text('SELECT count(*) FROM evaluation_runs'))
+                    if args.mixed_ui and result['ui_evidence']['batch_id']:
+                        spans = c.execute(select(Run.started_at, Run.finished_at).join(Job, Run.job_id == Job.id)
+                                          .where(Job.batch_id == result['ui_evidence']['batch_id'])).all()
+                        result['batch_execution_peak'] = peak_execution_overlap(spans)
                     if args.recovery_load:
                         result['recovery_database'] = recovery_database_counts(c)
                 result['workers'] = count
@@ -1079,7 +1083,8 @@ def main():
                                         and result['recovery_database'] == {
                                             'completed':target,'cleanup_confirmed':target,
                                             'result_sync_complete':target}
-                                        and result['requests_by_kind'].get('recovery_control', {}).get('200', 0) >= count-1
+                                        and result['requests_by_kind'].get('recovery_control', {}).get('200', 0) >=
+                                        count - (args.command_workers if args.mixed_ui else 0)
                                         and result['requests_by_kind'].get('artifact', {}).get('200', 0) > 0
                                         and ui['artifact_seen']
                                         and result['successful_latency_seconds'].get('recovery_control', {}).get('p99', 999) < 5

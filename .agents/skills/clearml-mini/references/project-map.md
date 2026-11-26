@@ -436,3 +436,5 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 数据库容量验收：docs/database-capacity-acceptance.md定义固定API拓扑下池大小/等待的单变量对照；现有control_plane_load提供首次checkout总P99，日志可按类别汇总，但尚缺完整连接等待/持有及SQL分解，不能将HTTP延迟或结束连接数当数据库饱和证据。保留锁竞争/准入拒绝与池超时的区别。
 
 压测租约时点：backend/tests/control_plane_metrics.py 在流量窗口内和结束边界采样活动执行的租约过期数；control_plane_load.py 验收读取窗口最大值，另保留日志排空后的 expired_leases_after_drain 供诊断。避免将停止模拟心跳后约30秒的自然过期计为窗口内失败。回归 test_control_plane_metrics.py。
+
+百任务并行压测：control_plane_load的 `batch_execution_peak` 由同一批次Run开始/结束时间计算重叠峰值，排除零时长与未完成区间；命令Worker与持续恢复控制Worker为不同模拟组，恢复控制成功门槛按后者人数判断。测试test_control_plane_metrics.py。

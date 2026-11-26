@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import text
@@ -64,6 +65,16 @@ def test_load_boundary_separates_lease_expiry_from_log_drain(monkeypatch):
     assert any(row['phase'] == 'drain' and row['expired_leases'] == 7 for row in rows)
     assert metrics.expired_leases_during_load(rows) == 0
     assert metrics.expired_leases_during_load([{'phase':'load', 'expired_leases':2}, *rows]) == 2
+
+
+def test_peak_execution_overlap_uses_completed_spans_and_half_open_boundaries():
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    second = timedelta(seconds=1)
+    spans = [(start, start+3*second), (start+second, start+2*second),
+             (start+3*second, start+4*second), (None, start+second),
+             (start+5*second, None)]
+    assert metrics.peak_execution_overlap(spans) == 2
+    assert metrics.peak_execution_overlap([]) == 0
 
 
 def test_outage_restores_role_and_records_timing():
