@@ -67,6 +67,19 @@
     "lease_expired_during_load": 0,
     "first_attempt_503": 0,
     "busy_reasons": {},
-    "batch_status": "SUCCEEDED"
+    "batch_status": "SUCCEEDED",
+    "postgres_max_connections": 200,
+    "postgres_sampled_peak_connections": 105,
+    "postgres_sampled_peak_active_queries": 5,
+    "first_checkout_p99_ms": 8.068,
+    "http_p99_seconds": {
+      "heartbeat": 0.0634411780629307,
+      "recovery_control": 0.17458238522522151,
+      "team_web": 0.11594149190932512,
+      "team_web_monitor": 0.2875369028188288,
+      "claim": 0.12485968298278749,
+      "result": 0.058847035048529506,
+      "complete": 0.0682761559728533
+    }
   }
 ]
