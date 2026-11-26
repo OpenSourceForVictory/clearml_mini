@@ -6,6 +6,7 @@ from contextlib import AsyncExitStack, ExitStack
 from datetime import timedelta
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -197,7 +198,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
                    progress_path=None, log_interval=2, user_token=None, continuous_batches=False,
                    varied_logs=False, recovery_grants=None, node_groups=None,
-                   command_workers=1, batch_cases=1, web_tokens=(), idle_claim_seconds=.5):
+                   command_workers=1, batch_cases=1, web_tokens=(), idle_claim_seconds=.5,
+                   command_hold_seconds=0):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -499,6 +501,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
         async def command_worker(identity, token):
             nonlocal worst_heartbeat_age
             current, result_sent = None, False
+            claimed_at = None
             latest_heartbeat[identity] = latest_sample[identity] = started
             await asyncio.sleep(random.uniform(0, idle_claim_seconds))
             while time.monotonic()-started < seconds:
@@ -522,8 +525,13 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                     if reply is not None and reply.status_code == 200:
                         current = reply.json().get('task')
                         result_sent = False
+                        if current:
+                            claimed_at = time.monotonic()
                 else:
                     execution_id = current['execution_id']
+                    if time.monotonic() - claimed_at < command_hold_seconds:
+                        await asyncio.sleep(.5)
+                        continue
                     success = (batch_cases > 1 or
                                any(e['job_id'] == current['job_id'] for e in ui_evidence['executions']))
                     path = f'worker/executions/{execution_id}'
@@ -542,6 +550,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                         if reply is not None and reply.status_code == 200:
                             ui_evidence['executions'].append({'execution_id':execution_id, 'job_id':current['job_id'], 'status':status})
                             current = None
+                            claimed_at = None
                 await asyncio.sleep(.5 if current else idle_claim_seconds)
         async def ui_traffic():
             if user_token is None:
@@ -703,6 +712,8 @@ def main():
     parser.add_argument('--grades', default='50,100,200')
     parser.add_argument('--seconds', type=int, default=30)
     parser.add_argument('--idle-claim-seconds', type=float, default=.5, help='idle command-slot polling; use 2 for production Worker cadence')
+    parser.add_argument('--command-hold-seconds', type=float, default=0,
+                        help='keep claimed command tasks running before reporting results (0..60 seconds)')
     parser.add_argument('--web-users', type=int, default=0, help='distinct admin users browsing shared batch pages every five seconds')
     parser.add_argument('--capacity-config', help='JSON object of priority Settings capacity overrides')
     parser.add_argument('--log-bytes', type=int, default=1024)
@@ -773,6 +784,8 @@ def main():
         parser.error('--no-admission requires database backpressure')
     if not .1 <= args.idle_claim_seconds <= 10:
         parser.error('idle claim seconds must be between .1 and 10')
+    if not 0 <= args.command_hold_seconds <= 60 or not math.isfinite(args.command_hold_seconds):
+        parser.error('command hold seconds must be finite and between 0 and 60')
     if not 0 <= args.web_users <= 1000 or args.web_users and not args.mixed_ui:
         parser.error('--web-users requires mixed UI and a count between 0 and 1000')
     capacity = json.loads(Path(args.capacity_config).read_text()) if args.capacity_config else {}
@@ -815,6 +828,7 @@ def main():
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
                'cards_per_node':args.cards_per_node,
                'command_workers':args.command_workers, 'batch_cases':args.batch_cases,
+               'command_hold_seconds':args.command_hold_seconds,
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'log_payload_style':'varied-structured' if args.varied_logs else 'repeated-character',
                'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui or args.priority_api,
@@ -966,6 +980,7 @@ def main():
                                                   continuous_batches=args.continuous_batches, varied_logs=args.varied_logs,
                                                   recovery_grants=recovery_grants, node_groups=node_groups,
                                                   command_workers=args.command_workers, batch_cases=args.batch_cases,
+                                                  command_hold_seconds=args.command_hold_seconds,
                                                   idle_claim_seconds=args.idle_claim_seconds,
                                                   web_tokens=[jwt.encode({'sub':'web-'+str(i),'exp':int(time.time())+3600},jwt_secret,algorithm='HS256')
                                                               for i in range(args.web_users)],

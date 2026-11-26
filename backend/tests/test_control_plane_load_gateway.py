@@ -216,6 +216,16 @@ def test_large_batch_arguments_reject_invalid_or_ambiguous_load(monkeypatch,caps
     assert 'large batches require' in capsys.readouterr().err
 
 
+@pytest.mark.parametrize('value', ['-1', '61', 'nan', 'inf'])
+def test_command_hold_rejects_unbounded_or_invalid_duration(monkeypatch, capsys, value):
+    from backend.tests.control_plane_load import main
+    monkeypatch.setattr('sys.argv', ['load', '--output', '/unused', '--command-hold-seconds', value])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert 'command hold seconds must be finite' in capsys.readouterr().err
+
+
 @pytest.mark.parametrize('arguments', [
     ['--control-outage-seconds','10'],
     ['--priority-api','--mixed-ui','--agent-telemetry','--recovery-load',

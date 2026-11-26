@@ -438,3 +438,5 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 压测租约时点：backend/tests/control_plane_metrics.py 在流量窗口内和结束边界采样活动执行的租约过期数；control_plane_load.py 验收读取窗口最大值，另保留日志排空后的 expired_leases_after_drain 供诊断。避免将停止模拟心跳后约30秒的自然过期计为窗口内失败。回归 test_control_plane_metrics.py。
 
 百任务并行压测：control_plane_load的 `batch_execution_peak` 由同一批次Run开始/结束时间计算重叠峰值，排除零时长与未完成区间；命令Worker与持续恢复控制Worker为不同模拟组，恢复控制成功门槛按后者人数判断。测试test_control_plane_metrics.py。
+
+持续命令压测：control_plane_load `--command-hold-seconds` 默认0、允许有限0..60秒；用于测量batch_execution_peak，领取期间继续心跳。测试test_control_plane_load_gateway.py，模拟保持不代表真实GPU/NPU计算。
