@@ -113,6 +113,9 @@ def test_optional_probe_capability_does_not_block_enrollment(env):
     status=c.get(path+'/enrollment',headers=a['admin']).json()
     assert status['ready'] and not status['slots'][0]['probe_ready']
     assert not installation_capabilities(caps[1:],CAPABILITIES)
+    assert installation_capabilities(CAPABILITIES+['disconnected_execution_v1'],CAPABILITIES)
+    assert installation_capabilities(CAPABILITIES,CAPABILITIES+['disconnected_execution_v1'])
+    assert not installation_capabilities(CAPABILITIES+['unknown_capability'],CAPABILITIES)
     software['capabilities']=CAPABILITIES
     c.post('/api/v1/worker/heartbeat',headers=token,json={'slot_id':ids[0],'software':software})
     assert c.get(path+'/enrollment',headers=a['admin']).json()['slots'][0]['probe_ready']

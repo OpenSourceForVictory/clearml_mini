@@ -17,7 +17,9 @@ BLOCKING={'DRAINING','APPLYING','VERIFYING','ROLLING_BACK','FAILED'}
 
 def installation_capabilities(actual, expected):
     # Optional probes gate business admission, not installation identity.
-    optional={'service_readiness_v1'}
+    # These capabilities depend on node-local dependencies or durable state,
+    # so they cannot be identical for every slot in the same release.
+    optional={'service_readiness_v1','disconnected_execution_v1'}
     return set(actual)-optional == set(expected)-optional
 
 

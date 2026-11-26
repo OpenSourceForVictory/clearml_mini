@@ -156,3 +156,5 @@
 2026-11-26 生产灰度启用：补齐 Compose 四角色 `RECOVERY_EXECUTION_ENABLED` 透传，部署 API 开关为 1；在 1.95.69.29 上为全部 NPU 卡配置共享 outbox 根，仅 NPU0 打开 `recovery_execution_enabled` 并重启空闲 Worker。NPU0 能力广告与 API 健康检查通过；NPU1–7 保持旧协议。Compose 渲染专项 3 通过，隔离 PostgreSQL 相关测试 60 通过。尚未用此生产 NPU0 执行断联故障任务，不能将灰度配置视为真实断联恢复验收；5.2/5.4 保持未完成。操作见[Worker 更新说明](../../../docs/worker-upgrades.md)。
 
 2026-11-26 Worker 升级默认启用调整：版本 0.21.22 从持久 `state_path` 派生共享 outbox（显式 false 保留回退），机器管理显示平台总闸及在线卡能力数；业务工作目录不保存恢复账本。专项后端恢复/机器/安装 69 通过、5 项独立 PostgreSQL 条件跳过；升级相关 23 通过，前端构建和机器界面 3 通过。变更尚未部署真实节点，5.2/5.4 及生产断联验收保持未完成。
+
+2026-11-26 发布续验：API 已部署、29 节点 8 卡升级至 0.21.22 且均上报恢复能力。首次升级因发布包能力验收未豁免节点动态 `disconnected_execution_v1` 而回滚；修正后再次升级成功，升级/回连专项 39 项通过。NPU2 平台宿主机服务在 Worker 主进程暂停 70 秒期间 PID 不变、授权保留，恢复后同一执行重回 HEALTHY，停止并确认清理。详见[生产节点验收记录](../../../docs/validation/disconnected-execution-20261124/production-node-20261126.md)。5.2/5.4 及物理断网、离线完成补报仍未验收。
