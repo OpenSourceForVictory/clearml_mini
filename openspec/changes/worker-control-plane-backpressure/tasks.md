@@ -144,3 +144,5 @@
 2026-11-26 重连迟到意图专项：一次性 PostgreSQL 恢复控制/收据/结果/完成/领取相关组 202 通过、无跳过；真实隔离宿主机/Docker 短程序在 API 断联期间退出、平台重连前取消或超时的四种组合均按平台终态收尾、只创建一次。见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。跨机断网、灰度和完整故障矩阵仍缺，4.7/4.10 保持未完成。
 
 2026-11-26 PostgreSQL 并发预检补测：独立 schema 的百任务、约百卡托管服务预检八路并发均返回 200，检查项齐全、没有创建运行记录；同文件两项 PostgreSQL 集成测试通过。见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。测试不经生产网关、浏览器和混合负载，5.2 不勾选。
+
+2026-11-26 200 Worker 入口诊断：同四角色/独立客户端的60秒模拟负载复现 5,648 次 503，其中 `request_concurrency` 5,111、`scheduler_lock` 537；最大心跳间隔16.11秒。执行控制进程承接心跳、服务健康和恢复控制，入口等待/处理能力是主要待查瓶颈，数据库采样无持续锁等待且初始连接获取 P99 约0.082毫秒。详见 `docs/validation/disconnected-execution-20261124/priority-control-200-diagnostic-20261126.md`。该档失败，5.2仍不勾选。

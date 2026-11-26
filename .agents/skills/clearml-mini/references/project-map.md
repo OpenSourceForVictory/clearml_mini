@@ -413,3 +413,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 预检规模边界：`batches.resolve_batch` 在单次请求持有客户端模板，`orchestrations.preflight` 的只读 Planner 缓存端口诊断；正式调度不启用此缓存。101/103 张模拟卡、100 项清单的 SQLite 顺序量测，普通/托管服务 SQL 从 107/323 降至 8/48；隔离 PostgreSQL 约百卡、100 项托管预检八路并发全部 200 且没有写入运行记录。详情及无网关/页面的验证边界见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。大响应仍存在，不能称 503 已完全解决。
 
 重连迟到控制意图：隔离 PostgreSQL 恢复控制/收据/结果/完成/领取组 202 项通过；真实隔离宿主机与 Docker 短程序在离线完成后、重连前平台取消或超时的四种组合通过，原执行只创建一次、平台终态优先，见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。这不是跨机或模型评测；生产恢复仍关闭，OpenSpec 4.7 未完成。
+
+200 Worker 四角色容量诊断：执行控制入口 `request_concurrency` 占 503 主体，心跳、服务健康和恢复控制共用 24 额度；PostgreSQL 初始连接获取很快，单纯扩大连接上限不能解释或修复入口瓶颈。失败证据和验证边界见 `docs/validation/disconnected-execution-20261124/priority-control-200-diagnostic-20261126.md`；候选档未通过。
