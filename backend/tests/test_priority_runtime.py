@@ -223,6 +223,33 @@ def test_priority_compose_has_single_scheduler_and_preserves_public_port():
     assert role_for('/api/v1/admin/node-installation-bundle', 'GET') == 'bulk-transfer'
 
 
+@pytest.mark.parametrize('enabled', [None, '1'])
+def test_recovery_flag_reaches_every_api_role(tmp_path, enabled):
+    """A .env-only flag is ineffective unless Compose passes it to every API role."""
+    import os
+    import shutil
+    import subprocess
+
+    if not shutil.which('docker') or subprocess.run(['docker', 'compose', 'version'],
+            capture_output=True).returncode:
+        pytest.skip('Docker Compose is required for deployment rendering')
+    root = Path(__file__).resolve().parents[2]
+    env_file = tmp_path/'compose.env'
+    env_file.write_text('')
+    env = {'PATH':os.environ['PATH'], 'HOME':str(tmp_path),
+           'POSTGRES_PASSWORD':'test-only', 'JWT_SECRET':'test-only',
+           'ADMIN_USERNAME':'test-only', 'ADMIN_PASSWORD':'test-only'}
+    if enabled is not None:
+        env['RECOVERY_EXECUTION_ENABLED'] = enabled
+    command = ['docker', 'compose', '--env-file', str(env_file), '-p', 'recovery-config-test',
+               '-f', str(root/'deploy/compose.yml'), '-f', str(root/'deploy/priority-api-compose.yml'),
+               'config', '--format', 'json']
+    config = json.loads(subprocess.run(command, env=env, capture_output=True,
+                                      text=True, check=True).stdout)
+    for role in ('api', 'execution-control-api', 'worker-data-api', 'bulk-transfer-api'):
+        assert config['services'][role]['environment']['RECOVERY_EXECUTION_ENABLED'] == (enabled or '0')
+
+
 def test_postgres_budget_and_pool_exhaustion_are_role_local(pg):
     pools = dict.fromkeys(runtime.DEFAULT_POOLS, 1)
     factories = {role: db_budget.factories(pg[1], settings(role, pool_sizes=pools, pool_timeout=.02), isolated=True)

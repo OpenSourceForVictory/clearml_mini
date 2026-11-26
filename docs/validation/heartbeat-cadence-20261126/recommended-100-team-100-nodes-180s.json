@@ -1,0 +1,67 @@
+{
+  "scope": "Disposable PostgreSQL max_connections=200; 12 isolated API processes; 100 simulated nodes with one Worker each, 100 simulated Web users, one 100-task batch, 180 seconds; driver NOFILE8192 and API-child NOFILE1024",
+  "profile": "deploy/profiles/team-capacity-100.json at commit 6f04eaa; bulk queue192/wait2s; configured API pool maximum168",
+  "passed": true,
+  "http_status_counts": {
+    "200": 65372,
+    "503": 25,
+    "201": 1
+  },
+  "busy_reasons": {
+    "request_concurrency": 4,
+    "execution_lock": 15,
+    "scheduler_lock": 6
+  },
+  "web_transport_errors": {},
+  "team_page_status_counts": {
+    "team_web_list": {
+      "200": 3509
+    },
+    "team_web": {
+      "200": 13990
+    },
+    "team_web_pools": {
+      "200": 3509
+    },
+    "team_web_detail": {
+      "200": 3486
+    },
+    "team_web_monitor": {
+      "200": 3486
+    }
+  },
+  "batch_case_count": 100,
+  "batch_status": "SUCCEEDED",
+  "batch_execution_count": 100,
+  "batch_execution_peak": 4,
+  "batch_full_overlap_seconds": 0,
+  "recovery_completed": 9,
+  "recovery_cleanup_confirmed": 9,
+  "bulk_admission": {
+    "count": 14825,
+    "rejected_count": 0,
+    "p95": 151.422,
+    "p99": 204.056
+  },
+  "control_admission": {
+    "count": 31577,
+    "rejected_count": 4,
+    "p95": 38.906,
+    "p99": 107.323
+  },
+  "pool_timeout_count": 0,
+  "sampled_peak_pg_connections": 136,
+  "max_heartbeat_gap_seconds": 4.0572001750115305,
+  "heartbeat_success_p99_seconds": 0.33456401992589235,
+  "web_monitor_success_p99_seconds": 1.0825385029893368,
+  "logs": {
+    "generated": 7282,
+    "accepted": 7282,
+    "max_pending_chunks_per_worker": 1,
+    "final_pending_chunks": 0,
+    "max_pending_age_seconds": 0.1090044560842216
+  },
+  "expired_leases": 0,
+  "telemetry_stale": 0,
+  "limits": "Simulated workers and commands; not a real 100-node or GPU/NPU model run. One 100-task batch was queued; concurrent task peak was 4, not 100. This is a 180-second targeted test, not a 30-minute endurance test. Four control admission 503 and 21 execution/scheduler lock 503 were retried."
+}
