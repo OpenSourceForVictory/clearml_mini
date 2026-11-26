@@ -434,7 +434,7 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 
 Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，默认5秒±10%错峰、完整回执20秒；worker/client.py 主循环继续独立领取，执行控制2秒不变。只有成功响应推进回执指纹；storage.capacity不作为配置变化触发条件，失败/状态改变及时上报。配置边界和升级说明见 docs/worker-setup.md；test_heartbeat_cadence.py 从Worker.run验证领取退避不阻塞心跳，test_recovery_legacy_compatibility.py 验证旧Worker取消/重评测/迟到回执。模块纳入业务执行与结果关键覆盖组。不能将虚拟时钟测试称作真实Worker长测。
 
-数据库容量验收：docs/database-capacity-acceptance.md定义固定API拓扑下池大小/等待的单变量对照；现有control_plane_load提供首次checkout总P99，日志可按类别汇总，但尚缺完整连接等待/持有及SQL分解，不能将HTTP延迟或结束连接数当数据库饱和证据。保留锁竞争/准入拒绝与池超时的区别。
+数据库容量验收：docs/database-capacity-acceptance.md定义固定API拓扑下池大小/等待的单变量对照；control_plane_load既保留首次显式checkout，也从短时诊断日志汇总全部分类准入/连接获取等待及超时。尚缺连接持有和SQL分解，不能将HTTP延迟或结束连接数当数据库饱和证据。保留锁竞争/准入拒绝与池超时的区别。
 
 压测租约时点：backend/tests/control_plane_metrics.py 在流量窗口内和结束边界采样活动执行的租约过期数；control_plane_load.py 验收读取窗口最大值，另保留日志排空后的 expired_leases_after_drain 供诊断。避免将停止模拟心跳后约30秒的自然过期计为窗口内失败。回归 test_control_plane_metrics.py。
 
@@ -443,3 +443,5 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 持续命令压测：control_plane_load `--command-hold-seconds` 默认0、允许有限0..60秒；用于测量batch_execution_peak，领取期间继续心跳。测试test_control_plane_load_gateway.py，模拟保持不代表真实GPU/NPU计算。
 
 并行容量证据：control_plane_metrics.full_execution_overlap_seconds 计算所有完成Run区间的公共重叠时长；100模拟命令任务在保持40秒时实际峰值100、公共重叠约15.15秒。见 docs/validation/heartbeat-cadence-20261126/parallel-100-preliminary.json，不等同真实模型负载。
+
+长测及池配置结论：30分钟100模拟Worker/100Web用户持续批次通过，日志72,819条全确认、负载窗口租约过期0；168连接池无超时。168/180/仅延长等待三档180秒对照无池超时，锁类503主导，保留168生产池预算。初始168档模拟退出与可选产物上报竞态产生409，control_plane_load以每执行ID局部锁先停可选上报再退出，同档复测通过；失败证据保留。见docs/database-capacity-acceptance.md、docs/validation/heartbeat-cadence-20261126/README.md。未测每档三轮统计和数据库延迟拐点，不将200硬上限称为可承载200条有效并行查询。

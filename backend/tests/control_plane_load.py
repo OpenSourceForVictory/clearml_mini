@@ -239,6 +239,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
     node_groups = node_groups or {}
     lifecycle_ids = set(item[0] for item in running_identities[:max(1, len(running_identities)//10)]) if recovery_grants else set()
     recovered = set()
+    optional_report_locks = {item[0]: asyncio.Lock() for item in running_identities}
     recovery_evidence = {'target_lifecycle':len(lifecycle_ids), 'completed':0,
                          'cleanup_confirmed':0, 'result_sync_complete':0,
                          'duplicate_results':0, 'errors':[]}
@@ -423,22 +424,23 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                     await asyncio.sleep((hint or 0) + random.uniform(retry / 2, retry))
                     retry = min(2, retry * 2)
                     continue
-                if identity in recovered:
-                    await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)))
-                    continue
-                await post('health', identity, token, f'worker/executions/{identity}/service-health', {'ready':True})
-                if not independent_logs:
-                    reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2',
-                                       {'sequence':seq, 'content':log_payload(identity, seq, log_bytes, varied_logs)})
-                    if reply is not None and reply.status_code == 200:
-                        seq = reply.json()['next_sequence']
-                await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
-                if recovery_grants:
-                    receipt = recovery_grants[identity]
-                    await post('claim', identity, token, f'worker/slots/{identity}/recovery/claim',
-                               {'request_id':receipt['request_id']})
-                else:
-                    await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
+                # A terminal transition must not overtake an optional upload
+                # already in flight for this simulated execution.
+                async with optional_report_locks[identity]:
+                    if identity not in recovered:
+                        await post('health', identity, token, f'worker/executions/{identity}/service-health', {'ready':True})
+                        if not independent_logs:
+                            reply = await post('logs', identity, token, f'worker/executions/{identity}/logs-v2',
+                                               {'sequence':seq, 'content':log_payload(identity, seq, log_bytes, varied_logs)})
+                            if reply is not None and reply.status_code == 200:
+                                seq = reply.json()['next_sequence']
+                        await post('artifact', identity, token, f'worker/executions/{identity}/artifacts', {'name':'load.json','content_base64':'e30='})
+                        if recovery_grants:
+                            receipt = recovery_grants[identity]
+                            await post('claim', identity, token, f'worker/slots/{identity}/recovery/claim',
+                                       {'request_id':receipt['request_id']})
+                        else:
+                            await post('claim', identity, token, f'worker/slots/{identity}/claim', {'known_execution_ids':[identity]})
                 await asyncio.sleep(max(.05, 2-(time.monotonic()-cycle)) + random.uniform(0,.1))
 
         async def recovery_control(identity, token):
@@ -482,6 +484,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 await asyncio.sleep(2)
             if identity not in lifecycle_ids:
                 return
+            async with optional_report_locks[identity]:
+                recovered.add(identity)
             exit_fact = {'generation':generation, 'sequence':sequence, 'identity':bound,
                          'state':'exited', 'exit_code':0,
                          'elapsed_seconds':max(0,time.monotonic()-started)}
@@ -491,7 +495,6 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                                                     'kind':'recovery_exit',
                                                     'reason':'exit_not_retained'})
                 return
-            recovered.add(identity)
             proof = {'generation':generation, 'identity':bound}
             complete = await reliable('recovery_complete', '/complete',
                                       {'recovery':proof,'pending_results':True,

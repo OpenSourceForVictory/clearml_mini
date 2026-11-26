@@ -1,0 +1,66 @@
+{
+  "duration_seconds": 1800,
+  "simulated_workers": 100,
+  "simulated_web_users": 100,
+  "passed": true,
+  "requests": {
+    "200": 656226,
+    "503": 112,
+    "201": 204
+  },
+  "busy_reasons": {
+    "request_concurrency": 6,
+    "execution_lock": 105,
+    "scheduler_lock": 1
+  },
+  "busy_by_kind": {
+    "heartbeat": {
+      "request_concurrency": 3
+    },
+    "recovery_control": {
+      "request_concurrency": 1,
+      "execution_lock": 105
+    },
+    "health": {
+      "request_concurrency": 2
+    },
+    "logs": {},
+    "agent": {},
+    "recovery_complete": {
+      "scheduler_lock": 1
+    }
+  },
+  "max_heartbeat_gap_seconds": 4.126605063909665,
+  "expired_leases_during_load": 0,
+  "expired_leases_after_drain": 81,
+  "log_generation": {
+    "generated": 72819,
+    "accepted": 72819,
+    "max_pending_chunks_per_worker": 1,
+    "final_pending_chunks": 0,
+    "max_pending_age_seconds": 0.13806143612600863
+  },
+  "http_success_p99_seconds": {
+    "team_web": 0.4500854699872434,
+    "logs": 0.23301172093488276,
+    "ui_submit": 0.038047895999625325,
+    "heartbeat": 0.07014050777070224,
+    "recovery_control": 0.07366804801858962,
+    "ui_control": 0.020752718904986978,
+    "claim": 0.058184165973216295,
+    "team_web_monitor": 0.6274089850485325,
+    "result": 0.020654633175581694,
+    "complete": 0.053530762903392315
+  },
+  "recovery_database": {
+    "completed": 9,
+    "cleanup_confirmed": 9,
+    "result_sync_complete": 9
+  },
+  "postgres_max_connections": 200,
+  "postgres_sample_count": 168,
+  "postgres_sampled_peak_connections": 137,
+  "postgres_sampled_peak_active_queries": 7,
+  "postgres_lock_wait_samples": 0,
+  "initial_checkout_p99_ms": 13.419
+}
