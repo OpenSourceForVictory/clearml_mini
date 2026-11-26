@@ -140,3 +140,5 @@
 2026-11-26 日志采集磁盘故障专项：旧采集器在诊断环写入 `ENOSPC` 后杀死业务子进程，隔离故障注入复现 `OSError 28` 且业务完成标记缺失。修复为关闭失败的采集通道并持续排空 stdout/stderr，保留真实退出码；协议落盘失败仍不能算结果成功。真实 Docker 64 KiB tmpfs 写满复现旧镜像 Runner 退出 1，绑定当前 Runner 后业务完成且容器退出 0；opt-in采集测试10通过、相关组合回归82通过，修改模块行/分支覆盖89.94%/85.42%。真实 Worker.execute 的 systemd/Docker 新日志协议各输出1 MiB普通 stdout 后仍完成原执行并收集回合结果，定向2通过。旧镜像需更新 Runner，不能只升 Worker。见 `docs/validation/disconnected-execution-20261124/capture-disk-full-20261126.md`。真实宿主机磁盘耗尽及完整执行/接入矩阵未完成，4.10不勾选。
 
 2026-11-26 预检规模专项：100 项清单、约百张模拟卡在 SQLite 单用户顺序请求中复现同模板及端口诊断重复 SQL，按请求内只读复用后普通/托管服务预检 107/323 降至 8/48 条 SQL；正式调度不复用端口快照。响应仍达约 3.56/1.55 MB，尚未进行 PostgreSQL 并发量测，不能据此认定 503 消除或勾选 5.2。证据见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。
+
+2026-11-26 重连迟到意图专项：一次性 PostgreSQL 恢复控制/收据/结果/完成/领取相关组 202 通过、无跳过；真实隔离宿主机/Docker 短程序在 API 断联期间退出、平台重连前取消或超时的四种组合均按平台终态收尾、只创建一次。见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。跨机断网、灰度和完整故障矩阵仍缺，4.7/4.10 保持未完成。

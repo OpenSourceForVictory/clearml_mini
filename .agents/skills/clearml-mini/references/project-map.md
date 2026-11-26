@@ -411,3 +411,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 日志 v2 采集磁盘错误边界：`runner/log_capture.py` 对运行时诊断环、协议事件及退出记录写入失败保留业务 stdout/stderr 读取和原退出码，不因 `ENOSPC` 误杀正在运行的子进程；协议结果可能缺失，平台不得把缺失结果当作成功。确定性子进程故障注入与真实 Docker 小容量 tmpfs 测试见 `backend/tests/test_log_capture.py`；`test_recovery_execution_real.py` 另测真实 systemd/Docker Worker.execute 各 1 MiB stdout 后原执行完成和回合结果收集。说明见 `docs/validation/disconnected-execution-20261124/capture-disk-full-20261126.md`。旧镜像内置 Runner 会保留旧错误，须更新镜像中的 Runner 或走注入路径；真实宿主机磁盘耗尽及完整接入矩阵尚未验收，4.10保持未完成。
 
 预检规模边界：`batches.resolve_batch` 在单次请求持有客户端模板，`orchestrations.preflight` 的只读 Planner 缓存端口诊断；正式调度不启用此缓存。101/103 张模拟卡、100 项清单的 SQLite 顺序量测，普通/托管服务 SQL 从 107/323 降至 8/48，详情及 PostgreSQL 并发验证边界见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。大响应仍存在，不能称 503 已完全解决。
+
+重连迟到控制意图：隔离 PostgreSQL 恢复控制/收据/结果/完成/领取组 202 项通过；真实隔离宿主机与 Docker 短程序在离线完成后、重连前平台取消或超时的四种组合通过，原执行只创建一次、平台终态优先，见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。这不是跨机或模型评测；生产恢复仍关闭，OpenSpec 4.7 未完成。

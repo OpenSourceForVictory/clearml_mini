@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','command','stdout_burst','offline_complete','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
+@pytest.mark.parametrize('scenario',['complete','command','stdout_burst','offline_complete','offline_cancel_after_exit','offline_timeout_after_exit','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -58,7 +58,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     if scenario=='stdout_burst':
         script+='sys.stdout.write("x"*1000000+"\\n");sys.stdout.flush()\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(event))+',flush=True)\n'
-    script+='time.sleep('+('2' if scenario in ('complete','stdout_burst','offline_complete','bulk_rejected','finite_reconnect') else '5' if scenario=='restart' else '30')+')\n'
+    script+='time.sleep('+('2' if scenario in ('complete','stdout_burst','offline_complete','offline_cancel_after_exit','offline_timeout_after_exit','bulk_rejected','finite_reconnect') else '5' if scenario=='restart' else '30')+')\n'
     if scenario=='bulk_rejected':
         from worker.workspace import execution_dirs
         artifact_dir=(str(execution_dirs(w.workspace,execution)/'output') if mode=='host'
@@ -174,7 +174,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert Path(str(w.path)+'.supervision.json').exists(),errors
             time.sleep(1.3)  # Exceeds this task's legacy one-second lease.
             assert thread.is_alive() and not errors
-            if scenario=='offline_complete':
+            if scenario in ('offline_complete','offline_cancel_after_exit','offline_timeout_after_exit'):
                 end=time.monotonic()+10
                 while time.monotonic()<end:
                     observed=w.inspect(execution)
@@ -184,6 +184,10 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
                 time.sleep(1.3)
                 assert thread.is_alive() and not errors
                 assert calls.count('create')==1
+                if scenario!='offline_complete':
+                    with factory() as db:
+                        db.get(Run,'r').status=('CANCEL_REQUESTED' if scenario=='offline_cancel_after_exit' else 'TIMED_OUT')
+                        db.commit()
             if scenario=='restart':
                 w.stop_event.set();thread.join(6)
                 assert not thread.is_alive() and not errors
@@ -213,7 +217,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert w.state is None
             with factory() as db:
                 run=db.get(Run,'r')
-                assert run.status=={'complete':'SUCCEEDED','command':'SUCCEEDED','stdout_burst':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
+                assert run.status=={'complete':'SUCCEEDED','command':'SUCCEEDED','stdout_burst':'SUCCEEDED','offline_complete':'SUCCEEDED',
+                    'offline_cancel_after_exit':'CANCELLED','offline_timeout_after_exit':'TIMED_OUT','cancel':'CANCELLED',
                     'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','finite_reconnect':'SUCCEEDED','service':'CANCELLED','restart':'SUCCEEDED',
                     'bulk_rejected':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
