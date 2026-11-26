@@ -145,8 +145,9 @@ def factories(url, settings, *, isolated=False):
     if url.startswith('sqlite:'):
         factory = sessionmaker(create_engine(url), expire_on_commit=False)
         return ({name: factory for name in settings.active_pool_sizes} if isolated else (factory, factory))
-    def make(size):
-        engine = create_engine(url, pool_size=size, max_overflow=0, pool_timeout=settings.pool_timeout,
+    def make(size, category=None):
+        wait = settings.pool_seconds(category) if hasattr(settings, 'pool_seconds') else settings.pool_timeout
+        engine = create_engine(url, pool_size=size, max_overflow=0, pool_timeout=wait,
                                connect_args={'connect_timeout': 1})
         @event.listens_for(engine, 'before_cursor_execute')
         def deadline(connection, cursor, statement, parameters, context, executemany):
@@ -165,7 +166,7 @@ def factories(url, settings, *, isolated=False):
                            "set_config('lock_timeout', %s, true)", (str(millis), str(lock_ms)))
         return sessionmaker(engine, expire_on_commit=False)
     if isolated:
-        return {name: make(size) for name, size in settings.active_pool_sizes.items()}
+        return {name: make(size, name) for name, size in settings.active_pool_sizes.items()}
     return make(settings.ordinary), make(settings.control)
 
 

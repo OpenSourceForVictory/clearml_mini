@@ -207,7 +207,7 @@ def test_priority_compose_has_single_scheduler_and_preserves_public_port():
         env = service['environment']
         assert service['ports'] == []
         profile = runtime.Settings(env['API_ROUTE_GROUP'], env['SCHEDULER_ENABLED'] == '1',
-                                   pool_sizes=runtime.SCALED_POOLS, processes=int(env['API_DB_PROCESS_COUNT']),
+                                   pool_sizes=runtime.SCALED_POOLS, processes=int(env['API_DB_PROCESS_COUNT'].split(':-')[-1].rstrip('}')),
                                    control_replicas=int(env['API_CONTROL_REPLICAS']))
         roles[profile.route_group] = profile
     assert set(roles) == set(runtime.ROLE_POOLS)

@@ -1,6 +1,6 @@
 # 四角色 API 隔离
 
-此部署将平台的一个外部 API 地址分流到四类角色。新覆盖配置启动五个处理进程，其中执行控制有两个副本；旧四进程配置保持兼容。它不修改业务调度规则或 Worker 协议。本机平台于 2026-11-26 切换到五进程配置，发布状态与验证边界见[容量验证](validation/disconnected-execution-20261124/control-scale-20261126.md)。本次镜像同时包含独立的恢复结果字段迁移 `c14d09e`；仅调整四角色副本数本身不需要新表结构，跨版本升级仍应先检查迁移头。
+此部署将平台的一个外部 API 地址分流到四类角色。 当前本机已采用12进程百人专项配置，见文末“百人团队候选配置与升级”和[本次报告](validation/team-capacity-20261126/README.md)；下表仍为不填写新增参数时的兼容默认值。新覆盖配置启动五个处理进程，其中执行控制有两个副本；旧四进程配置保持兼容。它不修改业务调度规则或 Worker 协议。本机平台于 2026-11-26 切换到五进程配置，发布状态与验证边界见[容量验证](validation/disconnected-execution-20261124/control-scale-20261126.md)。本次镜像同时包含独立的恢复结果字段迁移 `c14d09e`；仅调整四角色副本数本身不需要新表结构，跨版本升级仍应先检查迁移头。
 
 | 进程角色 | 请求范围 | 默认数据库连接上限 |
 | --- | --- | --- |
@@ -71,4 +71,40 @@ docker compose --env-file .env -p mini-eval \
 
 隔离测试工具支持 `--priority-api --mixed-ui`，以真实 HTTP/PostgreSQL 验证四角色、真实调度、用户提交/暂停/恢复/重评测、结果幂等、模拟 Worker 上报及日志。测试会停止批量进程，确认健康检查失败、执行心跳继续响应，随后重启批量进程。增加 `--continuous-batches` 可持续提交和重评测；`--log-bytes 16384 --varied-logs` 使用内容变化的日志单块上限（不加 varied-logs 的旧驱动正文为高度可压缩重复字符）；`--bulk-outage-seconds 15` 在开始 30 秒后暂停批量进程 15 秒，观察日志重试与恢复，仅允许四角色独立日志模式且时长至少为 60 秒加故障时长。允许的 502/504 仅限故障档日志/产物请求，控制请求错误仍判失败。测试只应使用可销毁 PostgreSQL；模拟程序生命周期不等于真实模型验收。
 
-API 隔离尚不解决 Worker 长时间断联后的持续执行与对账，也不替代持久 outbox。当前本地租约 watchdog 和平台超期处理仍可能停止或结束任务；这些边界见 [API 隔离审计](validation/priority-api-isolation-20261124/README.md)。
+API 隔离本身不替代断联执行恢复。新恢复协议需 API 与节点显式启用、持久 outbox 和能力协商；未启用的旧执行仍沿用原租约行为。当前恢复发布状态、真实协议矩阵与灰度边界见 [恢复验收](validation/disconnected-execution-20261124/recovery-acceptance-20261126.md)。
+
+## 分开配置请求准入和数据库容量
+
+新增可选参数仅用于四角色模式；不填写时沿用原额度和等待，单/双API不受影响。所有角色必须拿到相同JSON配置：
+
+| 参数 | 含义 | 缺省 |
+|---|---|---|
+| `PRIORITY_API_ADMISSION_LIMITS` | 各类同时处理的HTTP请求数 | 对应数据库池大小 |
+| `PRIORITY_API_QUEUE_LIMITS` | 各类入口等待人数，0表示不排队 | HTTP准入数的4倍 |
+| `PRIORITY_API_QUEUE_WAITS` | 入口最长排队秒数，0表示立即准入或拒绝 | DB_POOL_TIMEOUT_SECONDS |
+| `PRIORITY_API_POOL_WAITS` | 各类实际取数据库连接的等待秒数 | DB_POOL_TIMEOUT_SECONDS |
+| `PRIORITY_API_REQUEST_BUDGETS` | 从入口开始计算的SQL总预算 | 短类4秒，user_long30秒 |
+
+JSON可仅覆盖需要调整的类别，未知类别或非法值拒绝启动；scheduler只有数据库池，没有HTTP准入。请求和队列额度分别要求正整数/非负整数；等待必须有限。显式设置的排队等待与连接等待之和必须小于该类总预算；Worker类别预算严格小于5秒，交互类别最多60秒。数据库锁等待仍受独立参数和剩余总预算共同限制。总预算不是任意Python函数的强制终止时间。
+
+例如页面读取数据库仍10个连接，可以配置HTTP准入32、队列160、排队2秒、取连接1秒、SQL总预算12秒。并不保证32个SQL并行：同类最多10个连接，其他请求可能等待。更长数据库等待可能占住同步线程，更多HTTP请求可能增加CPU/内存成本；同进程线程额度至少40或HTTP名额总和加4，以较大者为准。类别间不借用容量，日志仍不能挤占心跳或用户操作名额。
+
+候选文件 `deploy/profiles/team-capacity-candidate.json` 用于百人/百节点专项：只提高HTTP与分类等待，数据库总预算仍80。它不是Compose覆盖文件，也不会自动读取；将各键对应JSON写入上述环境变量后，用原完整Compose命令重新创建API容器才生效。**候选配置不是已经证明的百节点生产容量保证**，实测结果以相关验证报告为准。
+
+节点数不同于Worker数：100台8卡节点可能有800个设备Worker。评估同时记录在线用户/活跃页面刷新、节点/卡数、任务与服务实例数、请求率、连接持有时间、成功响应延迟、503原因及积压是否增长。数据库max_connections是连接硬上限，不是吞吐能力；若要提高PRIORITY_API_POOL_SIZES，还须相应核对DB_CONNECTION_BUDGET、预留和数据库硬件，不能只调单池。
+
+短测工具可加 `--web-users 100 --capacity-config deploy/profiles/team-capacity-candidate.json`。新增用户为隔离库内100个独立管理员身份，模拟每5秒查看共享批次/列表/资源池，页面多个请求并发；原控制场景继续提交/暂停/恢复/重评测。该模型验证多人API流量，不代表100个真实浏览器或100人同时提交；长测仍须另行验收。
+
+交互角色也支持显式多副本：`API_INTERACTION_REPLICAS`默认1，允许1至8，Compose中的api服务按此扩容；`API_DB_PROCESS_COUNT`必须同时设为`2 + API_CONTROL_REPLICAS + API_INTERACTION_REPLICAS`。例如执行控制2副本、交互4副本时总进程8；worker-data与bulk-transfer仍各1，调度器仍唯一。PRIORITY_API_POOL_SIZES中的user_action/user_long/page_read为**每个交互副本**的连接数，总预算必须乘副本数，不能把多副本当成免费容量。健康指纹包含副本配置；角色健康检查不保证每一个副本健康，仍需Compose核对。单进程扩大池仍达不到目标吞吐时，可以在有CPU余量的前提下测试多交互进程。
+
+资源池列表的容量成本：`memberships.summary` 按单次请求批量读取设备账号、目标池和待清理槽位，并以SQL分组统计任务状态；避免每卡额外查询和将全部历史任务状态读入Python。就绪规则、缺失账号/目标池、禁用、待迁移和待清理的含义不变；快照不跨请求缓存，调度/资源修改不使用此展示上下文。回归测试`test_pool_summary_scale`在101个槽位下验证摘要与逐卡旧读取结果一致、查询数不随卡数线性增长。
+
+大批次监控响应使用`MonitorResponse`直接编码原生字典/列表树，只对日期等非原生叶值沿用FastAPI转换，避免对每个任务的每个节点诊断再进行完整Python递归遍历。接口字段、日期格式、权限检查和诊断内容不变；非法非有限数字仍拒绝。此优化不缓存监控快照、不改变调度计算。
+
+## 百人团队候选配置与升级
+
+[2026-11-26专项](validation/team-capacity-20261126/README.md)给出了全部失败对照与通过边界。`deploy/profiles/team-capacity-100.env.example`可按键合并进现有`.env`，保留凭据、存储等原配置；它与同名JSON配置有自动一致性测试。该档交互8副本（每副本操作3、长操作1、读取10），执行控制2×12、数据22、批量10，实际最多168连接；数据库总预算180另预留20，要求PostgreSQL实际max_connections至少200。HTTP页面每副本12、队列160、排队最多3秒、连接等待3秒、SQL总预算12秒。此等待不会把Worker五秒超时一并延长。
+
+不要只改`.env`而不重建容器。先确认没有活跃或待清理执行、备份数据库与原环境；用数据库管理员按既有部署方式将`max_connections`调至200并重启数据库，再使用原完整Compose文件列表`config --quiet`、`up -d --no-build --wait api execution-control-api worker-data-api bulk-transfer-api api-gateway`，镜像须先构建为当前代码。保留原只读共享挂载及纳管设置，随后重载网关DNS（`nginx -s reload`）并逐副本检查健康及角色配置指纹。此配置变更没有数据库迁移；跨版本升级仍需核对迁移头。
+
+回退时恢复原环境和镜像，按原Compose文件重建五个API进程及网关，数据库200连接硬上限可暂时保留；不要降级数据库或删除执行记录。**100 Worker短测通过不等于800 Worker通过**，八卡规模失败数据也保存在报告中，不能用于承诺长期生产容量。

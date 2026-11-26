@@ -79,9 +79,12 @@ def test_no_reporting_and_query_budget(env, monkeypatch):
     from backend.app.preflight import DiagnosticContext
     original = DiagnosticContext.inspect
     inspected = []
+    snapshots = []
     def counted(self, job, owner, pool, batch=None):
         inspected.append(job.id)
-        return original(self, job, owner, pool, batch)
+        value = original(self, job, owner, pool, batch)
+        snapshots.append(value)
+        return value
     monkeypatch.setattr(DiagnosticContext, 'inspect', counted)
     engine=main.SessionLocal.kw['bind']
     def trace(*args):queries.append(args[2])
@@ -90,6 +93,12 @@ def test_no_reporting_and_query_budget(env, monkeypatch):
     finally:event.remove(engine,'before_cursor_execute',trace)
     assert len(queries)<=15, len(queries)
     assert len(inspected) == 1  # 100 equivalent pending cases share one read snapshot.
+    assert snapshots[0]['status'] == 'ready'
+    assert not any(r['code']=='awaiting_scheduler' for r in snapshots[0]['reasons'])
+    for case in m['cases']:
+        assert case['waiting']['status']=='awaiting_scheduler'
+        assert sum(r['code']=='awaiting_scheduler' for r in case['waiting']['reasons'])==1
+        assert case['waiting']['nodes']==snapshots[0]['nodes']
     assert m['summary']['unreported_tasks']==100 and m['summary']['success_rate'] is None
     assert m['summary']['completed_episodes']==0
 

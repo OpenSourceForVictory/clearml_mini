@@ -1,7 +1,7 @@
 """Pool membership intent, serialized with scheduling and execution cleanup."""
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from .core import Slot, Pool, Worker, Run, Job, MembershipAudit, now
 from .scheduling import lock, online, transition, ACTIVE
 from .freshness import RESOURCE_SAMPLE_SECONDS, recent
@@ -20,11 +20,11 @@ class MembershipUpdate(BaseModel):
     pool_id: str | None = Field(max_length=36)
 
 
-def target_error(s, slot, target):
+def target_error(s, slot, target, *, pools=None):
     if slot.deleted_at:return 'device was deleted'
     if target is None:
         return None
-    pool = s.get(Pool, target)
+    pool = s.get(Pool, target) if pools is None else pools.get(target)
     if not pool or not pool.enabled:
         return 'target pool is missing or disabled'
     if (pool.gpu_model == 'virtual') != (slot.gpu_uuid or '').startswith('mock:'):
@@ -48,11 +48,13 @@ def reconcile(s):
     s.flush()
 
 
-def view(s, slot):
+def view(s, slot, *, read_context=None):
+    pools = None if read_context is None else read_context["pools"]
     pending = slot.membership_revision != slot.membership_applied_revision
-    error = target_error(s, slot, slot.desired_pool_id) if pending else None
+    error = target_error(s, slot, slot.desired_pool_id, pools=pools) if pending else None
     state = 'blocked' if error else 'draining' if pending else 'assigned' if slot.pool_id else 'unassigned'
-    worker = s.get(Worker, slot.worker_id) if slot.worker_id else None
+    worker = ((s.get(Worker, slot.worker_id) if slot.worker_id else None) if read_context is None
+              else read_context["workers"].get(slot.worker_id))
     reasons = []
     if not online(slot):
         reasons.append('offline')
@@ -60,10 +62,12 @@ def view(s, slot):
         reasons.append('disabled')
     if state != 'assigned':
         reasons.append(state)
-    elif target_error(s, slot, slot.pool_id):
+    elif target_error(s, slot, slot.pool_id, pools=pools):
         reasons.append('pool_unavailable')
-    if slot.quarantined or s.scalar(select(Run.id).where(Run.slot_id == slot.id,
-            Run.cleanup_confirmed.is_(False), Run.status.not_in(ACTIVE)).limit(1)):
+    cleanup_pending = slot.quarantined or (slot.id in read_context['cleanup'] if read_context is not None else
+                       s.scalar(select(Run.id).where(Run.slot_id == slot.id,
+                           Run.cleanup_confirmed.is_(False), Run.status.not_in(ACTIVE)).limit(1)))
+    if slot.quarantined or cleanup_pending:
         reasons.append('cleanup_pending')
     if worker and not storage.ready(worker, slot, now()):
         reasons.append('storage_pending')
@@ -82,17 +86,25 @@ def view(s, slot):
 
 def summary(s, pool):
     slots = list(s.scalars(select(Slot).where(Slot.pool_id == pool.id)))
+    # Request-local read context only; mutations and scheduling keep live reads.
+    pool_ids = {value for slot in slots for value in (slot.pool_id, slot.desired_pool_id) if value}
+    context = {
+        'workers': {w.id:w for w in s.scalars(select(Worker).where(Worker.id.in_({x.worker_id for x in slots})))},
+        'pools': {p.id:p for p in s.scalars(select(Pool).where(Pool.id.in_(pool_ids)))},
+        'cleanup': set(s.scalars(select(Run.slot_id).where(Run.slot_id.in_({x.id for x in slots}),
+                         Run.cleanup_confirmed.is_(False), Run.status.not_in(ACTIVE)).distinct())),
+    }
     models = {}
     for slot in slots:
         model = models.setdefault(slot.gpu_model or 'unknown', dict(count=0, vram_mb=0))
         model['count'] += 1
         model['vram_mb'] += slot.vram_mb
-    jobs = list(s.scalars(select(Job.status).where(Job.pool_id == pool.id)))
+    jobs = dict(s.execute(select(Job.status,func.count()).where(Job.pool_id == pool.id).group_by(Job.status)).all())
     return dict(member_count=len(slots), online_count=sum(online(x) for x in slots),
-        ready_count=sum(view(s, x)['basic_ready'] for x in slots), models=models,
+        ready_count=sum(view(s, x, read_context=context)['basic_ready'] for x in slots), models=models,
         incoming_count=len(list(s.scalars(select(Slot.id).where(Slot.desired_pool_id == pool.id,
             or_(Slot.pool_id.is_(None), Slot.pool_id != pool.id))))),
-        pending_jobs=jobs.count('PENDING'), active_jobs=sum(x in ACTIVE for x in jobs))
+        pending_jobs=jobs.get('PENDING',0), active_jobs=sum(count for state,count in jobs.items() if state in ACTIVE))
 
 
 def install(app, db, admin):

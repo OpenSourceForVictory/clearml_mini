@@ -128,7 +128,7 @@ def render_gateway_config(template, ordinary_port, control_port, gateway_port):
                      f'set $ordinary_backend 127.0.0.1:{ordinary_port};'))
 
 
-def render_priority_gateway_config(ports, gateway_port, control_extra_port=None):
+def render_priority_gateway_config(ports, gateway_port, control_extra_port=None, interaction_extra_ports=()):
     if set(ports) != set(priority_runtime.ROLE_POOLS):
         raise ValueError('priority gateway requires every role port')
     config = priority_gateway.render().replace('listen 8000;', f'listen 127.0.0.1:{gateway_port};')
@@ -139,6 +139,11 @@ def render_priority_gateway_config(ports, gateway_port, control_extra_port=None)
         config = config.replace(control_address, 'execution-control-load-pool')
         config = (f'upstream execution-control-load-pool {{ server {control_address}; '
                   f'server 127.0.0.1:{control_extra_port}; }}\n' + config)
+    if interaction_extra_ports:
+        address = f'127.0.0.1:{ports["interaction"]}'
+        config = config.replace(address, 'interaction-load-pool')
+        servers = ' '.join(f'server 127.0.0.1:{p};' for p in interaction_extra_ports)
+        config = f'upstream interaction-load-pool {{ server {address}; {servers} }}\n' + config
     return config
 
 
@@ -192,7 +197,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                    trace_http_phases=False, client_per_worker=False, agent_telemetry=False,
                    progress_path=None, log_interval=2, user_token=None, continuous_batches=False,
                    varied_logs=False, recovery_grants=None, node_groups=None,
-                   command_workers=1, batch_cases=1):
+                   command_workers=1, batch_cases=1, web_tokens=(), idle_claim_seconds=.5):
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
@@ -495,6 +500,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             nonlocal worst_heartbeat_age
             current, result_sent = None, False
             latest_heartbeat[identity] = latest_sample[identity] = started
+            await asyncio.sleep(random.uniform(0, idle_claim_seconds))
             while time.monotonic()-started < seconds:
                 heartbeat = {'slot_id':identity, 'telemetry':{'free_vram_mb':1024, 'gpu_utilization':0}}
                 if current:
@@ -536,7 +542,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                         if reply is not None and reply.status_code == 200:
                             ui_evidence['executions'].append({'execution_id':execution_id, 'job_id':current['job_id'], 'status':status})
                             current = None
-                await asyncio.sleep(.5)
+                await asyncio.sleep(.5 if current else idle_claim_seconds)
         async def ui_traffic():
             if user_token is None:
                 return
@@ -632,6 +638,22 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
         loop_task = asyncio.create_task(sample_loop_lag())
         progress_task = asyncio.create_task(sample_progress()) if progress_path else None
         ui_task = asyncio.create_task(ui_traffic()) if user_token else None
+        def record_web(code, elapsed, reason, path):
+            kind = "team_web_" + ("monitor" if path.endswith("/monitor") else "detail" if path.startswith("batches/") else "list" if path.startswith("batches?") else "pools")
+            by_kind[kind][code] += 1
+            latency[kind].append(elapsed)
+            if code == "200":successful_latency[kind].append(elapsed)
+            codes[code] += 1
+            by_kind['team_web'][code] += 1
+            latency['team_web'].append(elapsed)
+            if code == '200':
+                successful_latency['team_web'].append(elapsed)
+            if reason:
+                reasons[reason] += 1
+                busy_by_kind['team_web'][reason] += 1
+        from backend.tests.team_web_load import browse
+        team_task = asyncio.create_task(browse(base, web_tokens, seconds,
+            lambda: ui_evidence['batch_id'], record_web)) if web_tokens else None
         worker_tasks = [worker(*item[:2]) for item in running_identities]
         control_tasks = [recovery_control(*item[:2]) for item in running_identities] if recovery_grants else []
         if user_token:
@@ -641,6 +663,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
         await loop_task
         if progress_task:
             await progress_task
+        if team_task:
+            await team_task
         if ui_task:
             await ui_task
         if agent_tasks:
@@ -678,6 +702,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--grades', default='50,100,200')
     parser.add_argument('--seconds', type=int, default=30)
+    parser.add_argument('--idle-claim-seconds', type=float, default=.5, help='idle command-slot polling; use 2 for production Worker cadence')
+    parser.add_argument('--web-users', type=int, default=0, help='distinct admin users browsing shared batch pages every five seconds')
+    parser.add_argument('--capacity-config', help='JSON object of priority Settings capacity overrides')
     parser.add_argument('--log-bytes', type=int, default=1024)
     parser.add_argument('--varied-logs', action='store_true', help='distinct deterministic structured log lines, instead of highly compressible repeated characters')
     parser.add_argument('--log-interval', type=float, default=2)
@@ -744,21 +771,29 @@ def main():
         parser.error('--role-aware-pools requires database backpressure')
     if args.no_backpressure and args.no_admission:
         parser.error('--no-admission requires database backpressure')
-    priority_settings = (priority_runtime.Settings('interaction', False,
-                                                  pool_sizes=priority_runtime.SCALED_POOLS,
-                                                  processes=5, control_replicas=2)
+    if not .1 <= args.idle_claim_seconds <= 10:
+        parser.error('idle claim seconds must be between .1 and 10')
+    if not 0 <= args.web_users <= 1000 or args.web_users and not args.mixed_ui:
+        parser.error('--web-users requires mixed UI and a count between 0 and 1000')
+    capacity = json.loads(Path(args.capacity_config).read_text()) if args.capacity_config else {}
+    allowed_capacity = {'admission_limits','queue_limits','queue_waits','pool_waits','request_budgets','pool_sizes','connection_budget','interaction_replicas'}
+    if not isinstance(capacity, dict) or set(capacity) - allowed_capacity or capacity and not args.priority_api:
+        parser.error('capacity-config supports priority capacity settings only')
+    priority_options = dict(pool_sizes=priority_runtime.SCALED_POOLS, processes=5, control_replicas=2)
+    priority_options.update(capacity)
+    priority_options['processes'] = 4 + priority_options.get('interaction_replicas', 1)
+    priority_settings = (priority_runtime.Settings('interaction', False, **priority_options)
                          if args.priority_api else None)
     profiles = ({role: priority_runtime.Settings(role, role == 'worker-data',
-                                                 pool_sizes=priority_runtime.SCALED_POOLS,
-                                                 processes=5, control_replicas=2).active_pool_sizes
+                                                 **priority_options).active_pool_sizes
                  for role in priority_runtime.ROLE_POOLS} if args.priority_api else
                 pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
                              split_api=args.split_api, role_aware=args.role_aware_pools,
                              scheduler_enabled=args.mixed_ui, result=args.result_pool))
-    process_count = 5 if args.priority_api else len(profiles)
+    process_count = priority_settings.processes if args.priority_api else len(profiles)
     configured_connections = (priority_settings.configured_connections if priority_settings else
                               sum(sum(p.values()) for p in profiles.values()))
-    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or configured_connections > 80 or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
+    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or configured_connections > (priority_settings.connection_budget if priority_settings else 80) or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
@@ -772,7 +807,8 @@ def main():
                'pool_observation':args.observation_pool,
                'pool_result':args.result_pool if args.result_pool is not None else (3 if args.role_aware_pools else 2),
                'pool_scheduler':1,
-               'pool_by_process':({**profiles, 'execution-control-extra':profiles['execution-control']}
+               'pool_by_process':({**profiles, 'execution-control-extra':profiles['execution-control'],
+                                    **{f'interaction-extra-{i}':profiles['interaction'] for i in range(priority_settings.interaction_replicas-1)}}
                                   if args.priority_api else profiles) if not args.no_backpressure else None,
                'configured_total_connections':configured_connections,
                'db_backpressure_enabled':not args.no_backpressure,
@@ -788,7 +824,7 @@ def main():
                'trace_http_phases':args.trace_http_phases,
                'client_per_worker':args.client_per_worker,
                'agent_telemetry':args.agent_telemetry,
-               'mixed_ui':args.mixed_ui,
+               'idle_claim_seconds':args.idle_claim_seconds, 'mixed_ui':args.mixed_ui, 'web_users':args.web_users, 'capacity_overrides':capacity,
                'recovery_load':args.recovery_load,
                'continuous_batches':args.continuous_batches, 'bulk_outage_seconds':args.bulk_outage_seconds,
                'control_outage_seconds':args.control_outage_seconds,
@@ -821,6 +857,10 @@ def main():
                               cards_per_node=args.cards_per_node,
                               command_workers=args.command_workers)
                 identities, recovery_grants, node_groups = seeded if args.recovery_load else (seeded, None, None)
+                if args.web_users:
+                    with sessionmaker(engine).begin() as s:
+                        s.add_all(User(id='web-'+str(i),username='web-'+str(i),role='admin',password_hash='unused')
+                                  for i in range(args.web_users))
                 with engine.begin() as c:
                     c.execute(text("UPDATE evaluation_runs SET lease_expires_at=now()+interval '30 seconds'"))
                 def free_port():
@@ -831,6 +871,7 @@ def main():
                 control_port = free_port() if args.split_api else None
                 role_ports = {role: free_port() for role in profiles} if args.priority_api else {}
                 control_extra_port = free_port() if args.priority_api else None
+                interaction_extra_ports = [free_port() for _ in range(priority_settings.interaction_replicas-1)] if args.priority_api else []
                 port = free_port() if args.split_api or args.priority_api else ordinary_port
                 with ExitStack() as stack:
                     jwt_secret = uuid.uuid4().hex
@@ -839,12 +880,14 @@ def main():
                            'DB_BACKPRESSURE_ENABLED':'0' if args.no_backpressure else '1',
                            'DB_ADMISSION_ENABLED':'0' if args.no_admission else '1',
                            'API_DB_PROCESS_COUNT':str(process_count),
-                           'DB_CONNECTION_BUDGET':'80', 'DB_BUDGET_DIAGNOSTICS':'1'}
+                           'DB_CONNECTION_BUDGET':str(priority_settings.connection_budget if priority_settings else 80), 'DB_BUDGET_DIAGNOSTICS':'1'}
                     if args.mixed_ui:
                         env.update(MAX_ACTIVE_GLOBAL=str(count+10), MAX_ACTIVE_PER_USER=str(count+10))
                     if args.priority_api:
+                        for key,value in capacity.items():
+                            env[{'connection_budget':'DB_CONNECTION_BUDGET','interaction_replicas':'API_INTERACTION_REPLICAS'}.get(key,'PRIORITY_API_'+key.upper())] = json.dumps(value)
                         env['PRIORITY_API_PEERS'] = json.dumps({role:f'http://127.0.0.1:{p}' for role,p in role_ports.items()})
-                        env['PRIORITY_API_POOL_SIZES'] = json.dumps(priority_runtime.SCALED_POOLS)
+                        env['PRIORITY_API_POOL_SIZES'] = json.dumps(priority_settings.pool_sizes)
                         env['API_CONTROL_REPLICAS'] = '2'
                     def launch(role, api_port):
                         api_env = {**env, 'DB_POOL_SIZE': str(args.ordinary_pool),
@@ -858,7 +901,7 @@ def main():
                         if args.split_api and role == 'control':
                             api_env['SCHEDULER_ENABLED'] = '0'
                         if args.priority_api:
-                            api_env['API_ROUTE_GROUP'] = 'execution-control' if role == 'execution-control-extra' else role
+                            api_env['API_ROUTE_GROUP'] = 'execution-control' if role == 'execution-control-extra' else 'interaction' if role.startswith('interaction-extra-') else role
                             api_env['SCHEDULER_ENABLED'] = '1' if role == 'worker-data' else '0'
                         log_name = (f'api-{role}-{count}.log' if args.split_api or args.priority_api else f'api-{count}.log')
                         log = stack.enter_context((output/log_name).open('a' if role in role_processes else 'w'))
@@ -871,13 +914,15 @@ def main():
                         for role, api_port in role_ports.items():
                             launch(role, api_port)
                         launch('execution-control-extra', control_extra_port)
+                        for i, extra_port in enumerate(interaction_extra_ports):
+                            launch(f'interaction-extra-{i}', extra_port)
                     else:
                         launch('ordinary', ordinary_port)
                     if args.split_api:
                         launch('control', control_port)
                     if args.split_api or args.priority_api:
                         deploy = Path(__file__).resolve().parents[2] / 'deploy'
-                        config = (render_priority_gateway_config(role_ports, port, control_extra_port) if args.priority_api else
+                        config = (render_priority_gateway_config(role_ports, port, control_extra_port, interaction_extra_ports) if args.priority_api else
                                   render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
                                                        ordinary_port, control_port, port))
                         gateway_config = output/f'gateway-{count}.conf'
@@ -889,6 +934,17 @@ def main():
                                         'm.daocloud.io/docker.io/library/nginx:1.27-alpine'],
                                        check=True, stdout=subprocess.DEVNULL)
                     base = f'http://127.0.0.1:{port}'
+                    if args.priority_api:
+                        # The role-level health only probes one peer per role.
+                        # Wait for every extra replica before sending user traffic.
+                        for extra_port in [control_extra_port, *interaction_extra_ports]:
+                            for _ in range(100):
+                                try:
+                                    r = httpx.get(f'http://127.0.0.1:{extra_port}/healthz',trust_env=False,timeout=1)
+                                    if r.status_code == 200: break
+                                except httpx.TransportError: pass
+                                time.sleep(.1)
+                            else: raise RuntimeError('extra replica did not become ready')
                     for _ in range(100):
                         if any(process.poll() is not None for process in processes):
                             raise RuntimeError('isolated API exited; inspect API log')
@@ -910,6 +966,9 @@ def main():
                                                   continuous_batches=args.continuous_batches, varied_logs=args.varied_logs,
                                                   recovery_grants=recovery_grants, node_groups=node_groups,
                                                   command_workers=args.command_workers, batch_cases=args.batch_cases,
+                                                  idle_claim_seconds=args.idle_claim_seconds,
+                                                  web_tokens=[jwt.encode({'sub':'web-'+str(i),'exp':int(time.time())+3600},jwt_secret,algorithm='HS256')
+                                                              for i in range(args.web_users)],
                                                   user_token=jwt.encode({'sub':'u', 'exp':int(time.time())+3600}, jwt_secret,
                                                                         algorithm='HS256') if args.mixed_ui else None)
                     if args.bulk_outage_seconds:
@@ -958,7 +1017,7 @@ def main():
                                 break
                             time.sleep(.1)
                         result['role_failure']['gateway_health_after_restart'] = healthy
-                checkouts = [float(v) for name in api_log_names(count, args.split_api, args.priority_api) for v in
+                checkouts = [float(v) for name in (api_log_names(count, args.split_api, args.priority_api) + [f'api-interaction-extra-{i}-{count}.log' for i in range(len(interaction_extra_ports))]) for v in
                              re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
@@ -978,6 +1037,9 @@ def main():
                     acceptable_responses(result['requests_by_kind'], mixed_ui=args.mixed_ui,
                                          bulk_outage=args.bulk_outage_seconds,
                                          control_outage=bool(args.control_outage_seconds)))
+                if args.web_users:
+                    team = result['requests_by_kind'].get('team_web', {})
+                    result['passed'] = result['passed'] and set(team) == {'200'} and team.get('200',0) >= args.web_users
                 if args.independent_logs:
                     logs = result['log_generation']
                     result['passed'] = (result['passed'] and logs.get('generated', 0) == logs.get('accepted', 0)

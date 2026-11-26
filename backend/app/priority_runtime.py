@@ -37,6 +37,7 @@ class Settings:
     pool_sizes: dict = field(default_factory=lambda: DEFAULT_POOLS.copy())
     processes: int = 4
     control_replicas: int = 1
+    interaction_replicas: int = 1
     connection_budget: int = 80
     connection_headroom: int = 20
     pool_timeout: float = .25
@@ -44,11 +45,17 @@ class Settings:
     request_timeout: float = 4
     long_request_timeout: float = 30
     peers: dict = field(default_factory=lambda: PEERS.copy())
+    admission_limits: dict = field(default_factory=dict)
+    queue_limits: dict = field(default_factory=dict)
+    queue_waits: dict = field(default_factory=dict)
+    pool_waits: dict = field(default_factory=dict)
+    request_budgets: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if (self.route_group not in ROLE_POOLS or type(self.control_replicas) is not int or
                 self.control_replicas not in (1, 2) or type(self.processes) is not int or
-                self.processes != 3 + self.control_replicas):
+                type(self.interaction_replicas) is not int or not 1 <= self.interaction_replicas <= 8
+                or self.processes != 2 + self.control_replicas + self.interaction_replicas):
             raise ValueError('priority API requires four roles and a matching process count')
         if self.scheduler_enabled != (self.route_group == 'worker-data'):
             raise ValueError('only worker-data must run the priority scheduler')
@@ -68,6 +75,29 @@ class Settings:
             raise ValueError('priority short requests must fit the Worker five-second timeout')
         if not 20 < self.long_request_timeout <= 60:
             raise ValueError('priority long request budget must cover SSH waits and be at most 60 seconds')
+        http_categories = set(DEFAULT_POOLS) - {'scheduler'}
+        for name in ('admission_limits', 'queue_limits', 'queue_waits', 'pool_waits', 'request_budgets'):
+            values = getattr(self, name)
+            allowed = set(DEFAULT_POOLS) if name == 'pool_waits' else http_categories
+            if not isinstance(values, dict) or set(values) - allowed:
+                raise ValueError('invalid priority capacity categories: ' + name)
+            for value in values.values():
+                if name in ('admission_limits', 'queue_limits'):
+                    valid = type(value) is int and value >= (0 if name == 'queue_limits' else 1)
+                else:
+                    valid = type(value) in (int, float) and math.isfinite(value) and value >= 0
+                    if name != 'queue_waits':
+                        valid = valid and value > 0
+                if not valid:
+                    raise ValueError('invalid priority capacity value: ' + name)
+        for category in http_categories:
+            budget = self.request_seconds(category)
+            maximum = 60 if category in ROLE_POOLS['interaction'] else 5
+            if (budget > maximum or (maximum == 5 and budget == 5)
+                    or (category in (self.queue_waits.keys() | self.pool_waits.keys() | self.request_budgets.keys())
+                        and self.queue_seconds(category) + self.pool_seconds(category) >= budget)
+                    or self.lock_timeout >= budget):
+                raise ValueError('priority category waits must fit request and client budgets: ' + category)
         if not isinstance(self.peers, dict) or set(self.peers) != set(ROLE_POOLS):
             raise ValueError('priority health peers must include every role')
         for address in self.peers.values():
@@ -80,9 +110,26 @@ class Settings:
     def active_pool_sizes(self):
         return {name: self.pool_sizes[name] for name in ROLE_POOLS[self.route_group]}
 
+    def admission_size(self, category):
+        return self.admission_limits.get(category, self.pool_sizes[category])
+
+    def queue_size(self, category):
+        return self.queue_limits.get(category, 4 * self.admission_size(category))
+
+    def queue_seconds(self, category):
+        return self.queue_waits.get(category, self.pool_timeout)
+
+    def pool_seconds(self, category):
+        return self.pool_waits.get(category, self.pool_timeout)
+
+    def request_seconds(self, category):
+        default = self.long_request_timeout if category == 'user_long' else self.request_timeout
+        return self.request_budgets.get(category, default)
+
     @property
     def configured_connections(self):
-        return sum(self.pool_sizes.values()) + (self.control_replicas - 1) * self.pool_sizes['execution_control']
+        return (sum(self.pool_sizes.values()) + (self.control_replicas - 1) * self.pool_sizes['execution_control']
+                + (self.interaction_replicas - 1) * sum(self.pool_sizes[k] for k in ROLE_POOLS['interaction']))
 
     @property
     def fingerprint(self):
@@ -94,14 +141,19 @@ class Settings:
     def environment(cls):
         values = {key: cast(os.environ[name]) for key, name, cast in (
             ('pool_sizes', 'PRIORITY_API_POOL_SIZES', json.loads),
+            ('admission_limits', 'PRIORITY_API_ADMISSION_LIMITS', json.loads),
+            ('queue_limits', 'PRIORITY_API_QUEUE_LIMITS', json.loads),
+            ('queue_waits', 'PRIORITY_API_QUEUE_WAITS', json.loads),
+            ('pool_waits', 'PRIORITY_API_POOL_WAITS', json.loads),
+            ('request_budgets', 'PRIORITY_API_REQUEST_BUDGETS', json.loads),
             ('peers', 'PRIORITY_API_PEERS', json.loads),
-            ('processes', 'API_DB_PROCESS_COUNT', int), ('control_replicas', 'API_CONTROL_REPLICAS', int),
+            ('processes', 'API_DB_PROCESS_COUNT', int), ('interaction_replicas', 'API_INTERACTION_REPLICAS', int), ('control_replicas', 'API_CONTROL_REPLICAS', int),
             ('connection_budget', 'DB_CONNECTION_BUDGET', int),
             ('connection_headroom', 'DB_CONNECTION_HEADROOM', int),
             ('pool_timeout', 'DB_POOL_TIMEOUT_SECONDS', float), ('lock_timeout', 'DB_LOCK_TIMEOUT_SECONDS', float),
             ('request_timeout', 'DB_REQUEST_TIMEOUT_SECONDS', float),
             ('long_request_timeout', 'DB_LONG_REQUEST_TIMEOUT_SECONDS', float),
-        ) if name in os.environ and (key not in ('pool_sizes', 'peers') or os.environ[name])}
+        ) if name in os.environ and os.environ[name]}
         if 'pool_sizes' not in values and values.get('control_replicas', 1) == 2:
             values['pool_sizes'] = SCALED_POOLS.copy()
         return cls(route_group=os.environ['API_ROUTE_GROUP'],
@@ -123,7 +175,7 @@ class Admission:
     """Per-category cancellable queues before auth, sync threads or DB checkout."""
     def __init__(self, app, settings):
         self.app, self.settings = app, settings
-        self.available = {name: size for name, size in settings.active_pool_sizes.items() if name != 'scheduler'}
+        self.available = {name: settings.admission_size(name) for name in settings.active_pool_sizes if name != 'scheduler'}
         self.waiters = {name: deque() for name in self.available}
         self.thread_capacity = max(40, sum(self.available.values()) + 4)
 
@@ -132,11 +184,11 @@ class Admission:
         if not queue and self.available[category]:
             self.available[category] -= 1
             return True
-        if len(queue) >= 4 * self.settings.pool_sizes[category]:
+        if len(queue) >= self.settings.queue_size(category):
             return False
         ticket = object()
         queue.append(ticket)
-        deadline = time.monotonic() + self.settings.pool_timeout
+        deadline = time.monotonic() + self.settings.queue_seconds(category)
         try:
             while time.monotonic() < deadline:
                 if queue[0] is ticket and self.available[category]:
@@ -169,7 +221,7 @@ class Admission:
             db_budget.LOG.warning('database admission rejected category=%s reason=concurrency', category)
             return await db_budget.busy_response('request_concurrency')(scope, receive, send)
         scope.setdefault('state', {})['db_category'] = category
-        seconds = self.settings.long_request_timeout if category == 'user_long' else self.settings.request_timeout
+        seconds = self.settings.request_seconds(category)
         token = db_budget.request_budget.set(started + seconds)
         try:
             await self.app(scope, receive, send)

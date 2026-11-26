@@ -3,8 +3,14 @@
 x-priority-environment: &priority-environment
   DB_BACKPRESSURE_ENABLED: "1"
   DB_ADMISSION_ENABLED: "1"
-  API_DB_PROCESS_COUNT: "5"
+  API_DB_PROCESS_COUNT: ${API_DB_PROCESS_COUNT:-5}
+  API_INTERACTION_REPLICAS: ${API_INTERACTION_REPLICAS:-1}
   API_CONTROL_REPLICAS: "2"
+  PRIORITY_API_ADMISSION_LIMITS: ${PRIORITY_API_ADMISSION_LIMITS:-}
+  PRIORITY_API_QUEUE_LIMITS: ${PRIORITY_API_QUEUE_LIMITS:-}
+  PRIORITY_API_QUEUE_WAITS: ${PRIORITY_API_QUEUE_WAITS:-}
+  PRIORITY_API_POOL_WAITS: ${PRIORITY_API_POOL_WAITS:-}
+  PRIORITY_API_REQUEST_BUDGETS: ${PRIORITY_API_REQUEST_BUDGETS:-}
   PRIORITY_API_POOL_SIZES: ${PRIORITY_API_POOL_SIZES:-}
   PRIORITY_API_PEERS: ${PRIORITY_API_PEERS:-}
   DB_CONNECTION_HEADROOM: ${DB_CONNECTION_HEADROOM:-20}
@@ -16,6 +22,7 @@ services:
     command: ["python", "-m", "onboarding.server", "--socket", "/run/mini-eval-managed-onboarding/control.sock", "--state", "/var/lib/mini-eval-onboarding", "--api-url", "http://api-gateway:8000"]
 
   api:
+    scale: ${API_INTERACTION_REPLICAS:-1}
     ports: !reset []
     environment:
       <<: *priority-environment

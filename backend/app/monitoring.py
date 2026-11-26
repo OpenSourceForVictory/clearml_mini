@@ -1,5 +1,4 @@
 """Batch observability and explicit, attempt-guarded recovery."""
-from copy import deepcopy
 import json
 from . import endpoints
 from collections import Counter, defaultdict
@@ -96,7 +95,10 @@ def monitor(s, batch):
                    json.dumps(spec, sort_keys=True, separators=(',', ':')))
             if key not in diagnostics:
                 diagnostics[key] = context.inspect(job, owner, pools.get(job.pool_id), batch)
-            waiting = deepcopy(diagnostics[key])
+            # Only top-level status and the reason list are extended below.
+            # Node diagnostics stay read-only within this response; copying the
+            # full node tree once per pending task multiplies large-batch cost.
+            waiting = dict(diagnostics[key], reasons=list(diagnostics[key]['reasons']))
             if waiting['status'] == 'ready':
                 waiting['status'] = 'awaiting_scheduler'
                 waiting['reasons'].append(reason('awaiting_scheduler'))
@@ -117,7 +119,8 @@ def monitor(s, batch):
 def install(app, db, current):
     @app.get('/api/v1/batches/{batch_id}/monitor')
     def get(batch_id: str, user=Depends(current), s=Depends(db)):
-        return monitor(s, owned(s, batch_id, user))
+        from .monitor_response import MonitorResponse
+        return MonitorResponse(monitor(s, owned(s, batch_id, user)))
 
     @app.post('/api/v1/batches/{batch_id}/retry-failed')
     def retry(batch_id: str, body: RetrySelection, user=Depends(current), s=Depends(db)):

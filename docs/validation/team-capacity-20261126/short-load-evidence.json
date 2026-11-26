@@ -1,0 +1,3615 @@
+[
+  {
+    "run": "team-capacity-balanced-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "recovery_control": {
+        "503": 238,
+        "200": 1668
+      },
+      "heartbeat": {
+        "503": 16,
+        "200": 2750
+      },
+      "team_web": {
+        "200": 2426,
+        "503": 46
+      },
+      "agent": {
+        "200": 117
+      },
+      "logs": {
+        "503": 662,
+        "200": 1782
+      },
+      "claim": {
+        "200": 2623
+      },
+      "health": {
+        "200": 1889
+      },
+      "artifact": {
+        "200": 1879,
+        "503": 10
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 12,
+        "503": 1
+      },
+      "ui_artifacts": {
+        "200": 13
+      },
+      "ui_detail": {
+        "200": 13
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "ui_monitor": {
+        "200": 13
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 1
+      },
+      "recovery_cleanup": {
+        "200": 9,
+        "503": 1
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 723,
+      "scheduler_lock": 250,
+      "connection_pool": 2
+    },
+    "latency_seconds": {
+      "recovery_control": {
+        "p95": 0.13762961491011083,
+        "p99": 0.45332846813835204,
+        "max": 0.5417184790130705
+      },
+      "heartbeat": {
+        "p95": 0.18611277407035232,
+        "p99": 0.4902874168474227,
+        "max": 1.2451408398337662
+      },
+      "team_web": {
+        "p95": 4.176541682798415,
+        "p99": 7.43277758709155,
+        "max": 11.14272532099858
+      },
+      "agent": {
+        "p95": 0.22078548395074904,
+        "p99": 0.230853287037462,
+        "max": 0.23497637594118714
+      },
+      "logs": {
+        "p95": 0.1545535339973867,
+        "p99": 0.22819586307741702,
+        "max": 0.3009047640953213
+      },
+      "claim": {
+        "p95": 0.14484971784986556,
+        "p99": 0.17670295597054064,
+        "max": 0.19999278895556927
+      },
+      "health": {
+        "p95": 0.20162501512095332,
+        "p99": 0.28088903799653053,
+        "max": 0.3672434331383556
+      },
+      "artifact": {
+        "p95": 0.06326660700142384,
+        "p99": 0.1190185397863388,
+        "max": 0.13700972916558385
+      },
+      "ui_submit": {
+        "p95": 1.527588581899181,
+        "p99": 1.527588581899181,
+        "max": 1.527588581899181
+      },
+      "ui_control": {
+        "p95": 0.1337119690142572,
+        "p99": 0.1337119690142572,
+        "max": 0.1337119690142572
+      },
+      "ui_list": {
+        "p95": 3.4240427841432393,
+        "p99": 3.4240427841432393,
+        "max": 3.4240427841432393
+      },
+      "ui_artifacts": {
+        "p95": 0.19423760590143502,
+        "p99": 0.19423760590143502,
+        "max": 0.19423760590143502
+      },
+      "ui_detail": {
+        "p95": 2.5547342840582132,
+        "p99": 2.5547342840582132,
+        "max": 2.5547342840582132
+      },
+      "result": {
+        "p95": 0.022008217172697186,
+        "p99": 0.05974503606557846,
+        "max": 0.05974503606557846
+      },
+      "result_duplicate": {
+        "p95": 0.008981447201222181,
+        "p99": 0.01038711704313755,
+        "max": 0.01038711704313755
+      },
+      "complete": {
+        "p95": 0.18297586194239557,
+        "p99": 0.2014189548790455,
+        "max": 0.2014189548790455
+      },
+      "ui_monitor": {
+        "p95": 3.023539329878986,
+        "p99": 3.023539329878986,
+        "max": 3.023539329878986
+      },
+      "recovery_exit": {
+        "p95": 0.04007006296887994,
+        "p99": 0.04007006296887994,
+        "max": 0.04007006296887994
+      },
+      "recovery_complete": {
+        "p95": 0.040037912083789706,
+        "p99": 0.040037912083789706,
+        "max": 0.040037912083789706
+      },
+      "recovery_cleanup": {
+        "p95": 0.028294371906667948,
+        "p99": 0.028294371906667948,
+        "max": 0.028294371906667948
+      },
+      "recovery_result": {
+        "p95": 0.019220327958464622,
+        "p99": 0.019220327958464622,
+        "max": 0.019220327958464622
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.016042187809944153,
+        "p99": 0.016042187809944153,
+        "max": 0.016042187809944153
+      },
+      "recovery_results_finished": {
+        "p95": 0.019739149138331413,
+        "p99": 0.019739149138331413,
+        "max": 0.019739149138331413
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.075627925107256,
+    "max_agent_age_seconds": 4.957011932041496,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4651139969937503
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      }
+    ],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0025479509495198727,
+      "p99": 0.0079957889392972,
+      "max": 0.8277303529903293
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-balanced-query-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "logs": {
+        "503": 626,
+        "200": 1782
+      },
+      "agent": {
+        "200": 117
+      },
+      "team_web": {
+        "200": 2727,
+        "503": 11
+      },
+      "heartbeat": {
+        "503": 20,
+        "200": 2754
+      },
+      "recovery_control": {
+        "503": 204,
+        "200": 1700
+      },
+      "claim": {
+        "200": 2629
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 14
+      },
+      "ui_artifacts": {
+        "200": 14
+      },
+      "ui_detail": {
+        "200": 14
+      },
+      "health": {
+        "200": 1888
+      },
+      "artifact": {
+        "200": 1888
+      },
+      "ui_monitor": {
+        "200": 14
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 1
+      },
+      "recovery_cleanup": {
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 642,
+      "scheduler_lock": 220
+    },
+    "latency_seconds": {
+      "logs": {
+        "p95": 0.1448331179562956,
+        "p99": 0.23060649097897112,
+        "max": 0.28851157799363136
+      },
+      "agent": {
+        "p95": 0.2073597889393568,
+        "p99": 0.2131383300293237,
+        "max": 0.21803752216510475
+      },
+      "team_web": {
+        "p95": 3.0653242161497474,
+        "p99": 6.969144642818719,
+        "max": 9.818245241884142
+      },
+      "heartbeat": {
+        "p95": 0.17875305796042085,
+        "p99": 0.48325597308576107,
+        "max": 1.2478911019861698
+      },
+      "recovery_control": {
+        "p95": 0.12550974800251424,
+        "p99": 0.4664062359370291,
+        "max": 0.5961762061342597
+      },
+      "claim": {
+        "p95": 0.13995078695006669,
+        "p99": 0.16853961604647338,
+        "max": 0.2225839530583471
+      },
+      "ui_submit": {
+        "p95": 1.2266497178934515,
+        "p99": 1.2266497178934515,
+        "max": 1.2266497178934515
+      },
+      "ui_control": {
+        "p95": 0.05013169581070542,
+        "p99": 0.05013169581070542,
+        "max": 0.05013169581070542
+      },
+      "ui_list": {
+        "p95": 1.7712769941426814,
+        "p99": 1.7712769941426814,
+        "max": 1.7712769941426814
+      },
+      "ui_artifacts": {
+        "p95": 3.4081640301737934,
+        "p99": 3.4081640301737934,
+        "max": 3.4081640301737934
+      },
+      "ui_detail": {
+        "p95": 0.12622062489390373,
+        "p99": 0.12622062489390373,
+        "max": 0.12622062489390373
+      },
+      "health": {
+        "p95": 0.18028893996961415,
+        "p99": 0.2923635628540069,
+        "max": 0.4112191128078848
+      },
+      "artifact": {
+        "p95": 0.05102722207084298,
+        "p99": 0.10100502008572221,
+        "max": 0.13409106899052858
+      },
+      "ui_monitor": {
+        "p95": 4.0294384360313416,
+        "p99": 4.0294384360313416,
+        "max": 4.0294384360313416
+      },
+      "result": {
+        "p95": 0.024609033949673176,
+        "p99": 0.0486928871832788,
+        "max": 0.0486928871832788
+      },
+      "result_duplicate": {
+        "p95": 0.012998580932617188,
+        "p99": 0.019455171190202236,
+        "max": 0.019455171190202236
+      },
+      "complete": {
+        "p95": 0.14127398398704827,
+        "p99": 0.17115853703580797,
+        "max": 0.17115853703580797
+      },
+      "recovery_exit": {
+        "p95": 0.05015689693391323,
+        "p99": 0.05015689693391323,
+        "max": 0.05015689693391323
+      },
+      "recovery_complete": {
+        "p95": 0.04429736686870456,
+        "p99": 0.04429736686870456,
+        "max": 0.04429736686870456
+      },
+      "recovery_cleanup": {
+        "p95": 0.05452360608614981,
+        "p99": 0.05452360608614981,
+        "max": 0.05452360608614981
+      },
+      "recovery_result": {
+        "p95": 0.024266239954158664,
+        "p99": 0.024266239954158664,
+        "max": 0.024266239954158664
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.019381568068638444,
+        "p99": 0.019381568068638444,
+        "max": 0.019381568068638444
+      },
+      "recovery_results_finished": {
+        "p95": 0.025751165114343166,
+        "p99": 0.025751165114343166,
+        "max": 0.025751165114343166
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.079490022035316,
+    "max_agent_age_seconds": 4.982602267060429,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4428240729030222
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0019419498275965452,
+      "p99": 0.009795295773074031,
+      "max": 0.82382883108221
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-candidate-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 5,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 10,
+        "user_long": 4,
+        "page_read": 10
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      }
+    },
+    "configured_connections": 80,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "logs": {
+        "503": 592,
+        "200": 1782
+      },
+      "recovery_control": {
+        "503": 217,
+        "200": 1694
+      },
+      "heartbeat": {
+        "503": 14,
+        "200": 2763
+      },
+      "agent": {
+        "200": 117
+      },
+      "team_web": {
+        "200": 977,
+        "503": 1245
+      },
+      "claim": {
+        "200": 2640
+      },
+      "health": {
+        "200": 1895
+      },
+      "artifact": {
+        "200": 1891,
+        "503": 4
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 2,
+        "503": 2
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "ui_artifacts": {
+        "503": 2,
+        "200": 2
+      },
+      "ui_detail": {
+        "503": 2,
+        "200": 2
+      },
+      "ui_monitor": {
+        "503": 3,
+        "200": 1
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 6
+      },
+      "recovery_cleanup": {
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 1623,
+      "scheduler_lock": 232,
+      "connection_pool": 232
+    },
+    "latency_seconds": {
+      "logs": {
+        "p95": 0.14453389612026513,
+        "p99": 0.23965510283596814,
+        "max": 0.3045473759993911
+      },
+      "recovery_control": {
+        "p95": 0.0983026388566941,
+        "p99": 0.42003545816987753,
+        "max": 0.5361989769153297
+      },
+      "heartbeat": {
+        "p95": 0.16255508200265467,
+        "p99": 0.4920984390191734,
+        "max": 1.2347753229551017
+      },
+      "agent": {
+        "p95": 0.21875069895759225,
+        "p99": 0.23162392899394035,
+        "max": 0.23413377115502954
+      },
+      "team_web": {
+        "p95": 3.8222921260166913,
+        "p99": 4.480082322843373,
+        "max": 4.878441266017035
+      },
+      "claim": {
+        "p95": 0.1244377619586885,
+        "p99": 0.1665625439491123,
+        "max": 0.20602957205846906
+      },
+      "health": {
+        "p95": 0.17392996698617935,
+        "p99": 0.2788054458796978,
+        "max": 0.4012257060967386
+      },
+      "artifact": {
+        "p95": 0.07071580993942916,
+        "p99": 0.11459378385916352,
+        "max": 0.15709635405801237
+      },
+      "ui_submit": {
+        "p95": 1.701430318877101,
+        "p99": 1.701430318877101,
+        "max": 1.701430318877101
+      },
+      "ui_control": {
+        "p95": 0.05877072806470096,
+        "p99": 0.05877072806470096,
+        "max": 0.05877072806470096
+      },
+      "ui_list": {
+        "p95": 2.2902631510514766,
+        "p99": 2.2902631510514766,
+        "max": 2.2902631510514766
+      },
+      "result": {
+        "p95": 0.01604566304013133,
+        "p99": 0.04918323899619281,
+        "max": 0.04918323899619281
+      },
+      "result_duplicate": {
+        "p95": 0.008029838092625141,
+        "p99": 0.008399517042562366,
+        "max": 0.008399517042562366
+      },
+      "complete": {
+        "p95": 0.1469480157829821,
+        "p99": 0.16090562916360795,
+        "max": 0.16090562916360795
+      },
+      "ui_artifacts": {
+        "p95": 2.8242028278764337,
+        "p99": 2.8242028278764337,
+        "max": 2.8242028278764337
+      },
+      "ui_detail": {
+        "p95": 2.8741156079340726,
+        "p99": 2.8741156079340726,
+        "max": 2.8741156079340726
+      },
+      "ui_monitor": {
+        "p95": 3.0078053560573608,
+        "p99": 3.0078053560573608,
+        "max": 3.0078053560573608
+      },
+      "recovery_exit": {
+        "p95": 0.04828521399758756,
+        "p99": 0.04828521399758756,
+        "max": 0.04828521399758756
+      },
+      "recovery_complete": {
+        "p95": 0.04292140691541135,
+        "p99": 0.04292140691541135,
+        "max": 0.04292140691541135
+      },
+      "recovery_cleanup": {
+        "p95": 0.035247021820396185,
+        "p99": 0.035247021820396185,
+        "max": 0.035247021820396185
+      },
+      "recovery_result": {
+        "p95": 0.025244003161787987,
+        "p99": 0.025244003161787987,
+        "max": 0.025244003161787987
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.014783052960410714,
+        "p99": 0.014783052960410714,
+        "max": 0.014783052960410714
+      },
+      "recovery_results_finished": {
+        "p95": 0.014051193138584495,
+        "p99": 0.014051193138584495,
+        "max": 0.014051193138584495
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.098466692958027,
+    "max_agent_age_seconds": 4.981091905850917,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.426416042027995
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [
+      {
+        "kind": "ui_artifacts",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_detail",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_monitor",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_artifacts",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      },
+      {
+        "kind": "ui_detail",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      },
+      {
+        "kind": "ui_monitor",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      },
+      {
+        "kind": "ui_monitor",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      }
+    ],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0017864019609987736,
+      "p99": 0.00833863508887589,
+      "max": 0.8260702590923756
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-eight-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 12,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-3": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-4": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-5": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-6": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 2.0,
+    "passed": true,
+    "requests_by_kind": {
+      "agent": {
+        "503": 40,
+        "200": 900
+      },
+      "team_web_list": {
+        "200": 863
+      },
+      "team_web": {
+        "200": 3408
+      },
+      "logs": {
+        "503": 543,
+        "200": 1782
+      },
+      "heartbeat": {
+        "503": 17,
+        "200": 2207
+      },
+      "team_web_pools": {
+        "200": 863
+      },
+      "recovery_control": {
+        "503": 213,
+        "200": 1693
+      },
+      "claim": {
+        "200": 2081
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "team_web_detail": {
+        "200": 841
+      },
+      "ui_list": {
+        "200": 20
+      },
+      "ui_artifacts": {
+        "200": 20
+      },
+      "ui_detail": {
+        "200": 20
+      },
+      "health": {
+        "200": 1885
+      },
+      "artifact": {
+        "200": 1882,
+        "503": 3
+      },
+      "team_web_monitor": {
+        "200": 841
+      },
+      "ui_monitor": {
+        "200": 20
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 4
+      },
+      "recovery_cleanup": {
+        "200": 9,
+        "503": 1
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 589,
+      "scheduler_lock": 232
+    },
+    "latency_seconds": {
+      "agent": {
+        "p95": 0.30823697801679373,
+        "p99": 0.45122109493240714,
+        "max": 0.47474087099544704
+      },
+      "team_web_list": {
+        "p95": 0.04501907899975777,
+        "p99": 0.21654253615997732,
+        "max": 0.2831539011094719
+      },
+      "team_web": {
+        "p95": 0.3009779821150005,
+        "p99": 0.5329240539576858,
+        "max": 0.8964565698988736
+      },
+      "logs": {
+        "p95": 0.1402966978494078,
+        "p99": 0.21493526687845588,
+        "max": 0.27252860297448933
+      },
+      "heartbeat": {
+        "p95": 0.17055549495853484,
+        "p99": 0.46778307505883276,
+        "max": 0.5507441100198776
+      },
+      "team_web_pools": {
+        "p95": 0.056592548033222556,
+        "p99": 0.22115598106756806,
+        "max": 0.30618367879651487
+      },
+      "recovery_control": {
+        "p95": 0.1127343880943954,
+        "p99": 0.4578934358432889,
+        "max": 0.5650636800564826
+      },
+      "claim": {
+        "p95": 0.13657624297775328,
+        "p99": 0.16288384119980037,
+        "max": 0.2113138190470636
+      },
+      "ui_submit": {
+        "p95": 1.2985689039342105,
+        "p99": 1.2985689039342105,
+        "max": 1.2985689039342105
+      },
+      "ui_control": {
+        "p95": 0.04902447899803519,
+        "p99": 0.04902447899803519,
+        "max": 0.04902447899803519
+      },
+      "team_web_detail": {
+        "p95": 0.053717364091426134,
+        "p99": 0.09532485296949744,
+        "max": 0.11391801200807095
+      },
+      "ui_list": {
+        "p95": 0.021124971797689795,
+        "p99": 0.021124971797689795,
+        "max": 0.021124971797689795
+      },
+      "ui_artifacts": {
+        "p95": 0.03021385194733739,
+        "p99": 0.03021385194733739,
+        "max": 0.03021385194733739
+      },
+      "ui_detail": {
+        "p95": 0.03842117008753121,
+        "p99": 0.03842117008753121,
+        "max": 0.03842117008753121
+      },
+      "health": {
+        "p95": 0.16680054110474885,
+        "p99": 0.29128216998651624,
+        "max": 0.355506215011701
+      },
+      "artifact": {
+        "p95": 0.056569373002275825,
+        "p99": 0.11861260887235403,
+        "max": 0.1340355770662427
+      },
+      "team_web_monitor": {
+        "p95": 0.5155244329944253,
+        "p99": 0.8485338881146163,
+        "max": 0.8964565698988736
+      },
+      "ui_monitor": {
+        "p95": 0.35109339701011777,
+        "p99": 0.35109339701011777,
+        "max": 0.35109339701011777
+      },
+      "result": {
+        "p95": 0.021089696092531085,
+        "p99": 0.03835478285327554,
+        "max": 0.03835478285327554
+      },
+      "result_duplicate": {
+        "p95": 0.014418866951018572,
+        "p99": 0.017419674899429083,
+        "max": 0.017419674899429083
+      },
+      "complete": {
+        "p95": 0.1349215169902891,
+        "p99": 0.15455984487198293,
+        "max": 0.15455984487198293
+      },
+      "recovery_exit": {
+        "p95": 0.061478283954784274,
+        "p99": 0.061478283954784274,
+        "max": 0.061478283954784274
+      },
+      "recovery_complete": {
+        "p95": 0.06909691402688622,
+        "p99": 0.06909691402688622,
+        "max": 0.06909691402688622
+      },
+      "recovery_cleanup": {
+        "p95": 0.048873539781197906,
+        "p99": 0.048873539781197906,
+        "max": 0.048873539781197906
+      },
+      "recovery_result": {
+        "p95": 0.017333735013380647,
+        "p99": 0.017333735013380647,
+        "max": 0.017333735013380647
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.012705079047009349,
+        "p99": 0.012705079047009349,
+        "max": 0.012705079047009349
+      },
+      "recovery_results_finished": {
+        "p95": 0.02387423301115632,
+        "p99": 0.02387423301115632,
+        "max": 0.02387423301115632
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.102721258066595,
+    "max_agent_age_seconds": 4.927779004210606,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4738441947847605
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0022065669763833284,
+      "p99": 0.0078052859753370285,
+      "max": 0.8258640021085739
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-encoding-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "team_web_list": {
+        "200": 792
+      },
+      "team_web": {
+        "200": 3122
+      },
+      "agent": {
+        "503": 40,
+        "200": 900
+      },
+      "logs": {
+        "503": 610,
+        "200": 1782
+      },
+      "heartbeat": {
+        "200": 2744,
+        "503": 30
+      },
+      "recovery_control": {
+        "503": 263,
+        "200": 1642
+      },
+      "team_web_pools": {
+        "200": 792
+      },
+      "claim": {
+        "200": 2617
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "team_web_detail": {
+        "200": 769
+      },
+      "health": {
+        "200": 1890
+      },
+      "ui_list": {
+        "200": 18
+      },
+      "artifact": {
+        "200": 1881,
+        "503": 9
+      },
+      "ui_artifacts": {
+        "200": 18
+      },
+      "ui_detail": {
+        "200": 18
+      },
+      "team_web_monitor": {
+        "200": 769
+      },
+      "ui_monitor": {
+        "200": 18
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 2
+      },
+      "recovery_cleanup": {
+        "200": 9,
+        "503": 1
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 659,
+      "scheduler_lock": 296
+    },
+    "latency_seconds": {
+      "team_web_list": {
+        "p95": 0.10224783117882907,
+        "p99": 1.6030555479228497,
+        "max": 2.519987983163446
+      },
+      "team_web": {
+        "p95": 1.6318026748485863,
+        "p99": 4.15055286209099,
+        "max": 5.80954186595045
+      },
+      "agent": {
+        "p95": 0.3378745671361685,
+        "p99": 0.4725330851506442,
+        "max": 0.5108825298957527
+      },
+      "logs": {
+        "p95": 0.1452342050615698,
+        "p99": 0.24309000419452786,
+        "max": 0.3412410409655422
+      },
+      "heartbeat": {
+        "p95": 0.18941322690807283,
+        "p99": 0.5114225808065385,
+        "max": 1.1885965000838041
+      },
+      "recovery_control": {
+        "p95": 0.1427184259518981,
+        "p99": 0.46232455410063267,
+        "max": 0.5370415728539228
+      },
+      "team_web_pools": {
+        "p95": 0.2043653540313244,
+        "p99": 2.0483036818914115,
+        "max": 2.6669099379796535
+      },
+      "claim": {
+        "p95": 0.14697777898982167,
+        "p99": 0.17447572411037982,
+        "max": 0.19924261700361967
+      },
+      "ui_submit": {
+        "p95": 1.3332908970769495,
+        "p99": 1.3332908970769495,
+        "max": 1.3332908970769495
+      },
+      "ui_control": {
+        "p95": 0.1055086541455239,
+        "p99": 0.1055086541455239,
+        "max": 0.1055086541455239
+      },
+      "team_web_detail": {
+        "p95": 1.7595225481782109,
+        "p99": 2.2627453529275954,
+        "max": 2.7792444739025086
+      },
+      "health": {
+        "p95": 0.20200212090276182,
+        "p99": 0.29027386708185077,
+        "max": 0.3589954939670861
+      },
+      "ui_list": {
+        "p95": 2.075306470040232,
+        "p99": 2.075306470040232,
+        "max": 2.075306470040232
+      },
+      "artifact": {
+        "p95": 0.04965379205532372,
+        "p99": 0.11564265796914697,
+        "max": 0.1454030149616301
+      },
+      "ui_artifacts": {
+        "p95": 0.06901477999053895,
+        "p99": 0.06901477999053895,
+        "max": 0.06901477999053895
+      },
+      "ui_detail": {
+        "p95": 0.04922515992075205,
+        "p99": 0.04922515992075205,
+        "max": 0.04922515992075205
+      },
+      "team_web_monitor": {
+        "p95": 4.04149851296097,
+        "p99": 5.577928243204951,
+        "max": 5.80954186595045
+      },
+      "ui_monitor": {
+        "p95": 2.2944892968516797,
+        "p99": 2.2944892968516797,
+        "max": 2.2944892968516797
+      },
+      "result": {
+        "p95": 0.024872506968677044,
+        "p99": 0.061571171041578054,
+        "max": 0.061571171041578054
+      },
+      "result_duplicate": {
+        "p95": 0.011495895916596055,
+        "p99": 0.01748748798854649,
+        "max": 0.01748748798854649
+      },
+      "complete": {
+        "p95": 0.17360912496224046,
+        "p99": 0.20902192709036171,
+        "max": 0.20902192709036171
+      },
+      "recovery_exit": {
+        "p95": 0.03275126707740128,
+        "p99": 0.03275126707740128,
+        "max": 0.03275126707740128
+      },
+      "recovery_complete": {
+        "p95": 0.04608992696739733,
+        "p99": 0.04608992696739733,
+        "max": 0.04608992696739733
+      },
+      "recovery_cleanup": {
+        "p95": 0.015496013918891549,
+        "p99": 0.015496013918891549,
+        "max": 0.015496013918891549
+      },
+      "recovery_result": {
+        "p95": 0.029859108850359917,
+        "p99": 0.029859108850359917,
+        "max": 0.029859108850359917
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.018693330930545926,
+        "p99": 0.018693330930545926,
+        "max": 0.018693330930545926
+      },
+      "recovery_results_finished": {
+        "p95": 0.02708173682913184,
+        "p99": 0.02708173682913184,
+        "max": 0.02708173682913184
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.108764139004052,
+    "max_agent_age_seconds": 4.94239125889726,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.532944834092632
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0019882270134985447,
+      "p99": 0.005447624018415809,
+      "max": 0.8319200430996716
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-expanded-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 5,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 10,
+        "user_long": 4,
+        "page_read": 32
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      }
+    },
+    "configured_connections": 102,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "recovery_control": {
+        "503": 316,
+        "200": 1597
+      },
+      "heartbeat": {
+        "503": 18,
+        "200": 2757
+      },
+      "logs": {
+        "503": 676,
+        "200": 1782
+      },
+      "agent": {
+        "200": 117
+      },
+      "claim": {
+        "200": 2632
+      },
+      "team_web": {
+        "200": 1114,
+        "503": 596
+      },
+      "health": {
+        "200": 1891
+      },
+      "artifact": {
+        "200": 1889,
+        "503": 2
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "503": 2,
+        "200": 1
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "ui_artifacts": {
+        "503": 1,
+        "200": 2
+      },
+      "ui_detail": {
+        "503": 1,
+        "200": 2
+      },
+      "ui_monitor": {
+        "503": 1,
+        "200": 2
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 5
+      },
+      "recovery_cleanup": {
+        "200": 9,
+        "503": 2
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 1146,
+      "scheduler_lock": 336,
+      "connection_pool": 138
+    },
+    "latency_seconds": {
+      "recovery_control": {
+        "p95": 0.11681258887983859,
+        "p99": 0.45742632099427283,
+        "max": 0.5679611049126834
+      },
+      "heartbeat": {
+        "p95": 0.1720525671262294,
+        "p99": 0.4948394321836531,
+        "max": 1.2460725700948387
+      },
+      "logs": {
+        "p95": 0.14220829494297504,
+        "p99": 0.22438706294633448,
+        "max": 0.2900034219492227
+      },
+      "agent": {
+        "p95": 0.22659099008888006,
+        "p99": 0.24499784805811942,
+        "max": 0.25320188608020544
+      },
+      "claim": {
+        "p95": 0.13760426687076688,
+        "p99": 0.165500900009647,
+        "max": 0.2124417449813336
+      },
+      "team_web": {
+        "p95": 7.509795241057873,
+        "p99": 10.054593015927821,
+        "max": 12.210024052998051
+      },
+      "health": {
+        "p95": 0.17786446609534323,
+        "p99": 0.27673141402192414,
+        "max": 0.3631787698250264
+      },
+      "artifact": {
+        "p95": 0.05908272508531809,
+        "p99": 0.10736519494093955,
+        "max": 0.1454289371613413
+      },
+      "ui_submit": {
+        "p95": 2.8843840851914138,
+        "p99": 2.8843840851914138,
+        "max": 2.8843840851914138
+      },
+      "ui_control": {
+        "p95": 0.21956433891318738,
+        "p99": 0.21956433891318738,
+        "max": 0.21956433891318738
+      },
+      "ui_list": {
+        "p95": 3.3949726498685777,
+        "p99": 3.3949726498685777,
+        "max": 3.3949726498685777
+      },
+      "result": {
+        "p95": 0.021548239048570395,
+        "p99": 0.038609256967902184,
+        "max": 0.038609256967902184
+      },
+      "result_duplicate": {
+        "p95": 0.006575707113370299,
+        "p99": 0.007429799996316433,
+        "max": 0.007429799996316433
+      },
+      "complete": {
+        "p95": 0.128177982987836,
+        "p99": 0.16517001995816827,
+        "max": 0.16517001995816827
+      },
+      "ui_artifacts": {
+        "p95": 4.516730114817619,
+        "p99": 4.516730114817619,
+        "max": 4.516730114817619
+      },
+      "ui_detail": {
+        "p95": 4.106815002858639,
+        "p99": 4.106815002858639,
+        "max": 4.106815002858639
+      },
+      "ui_monitor": {
+        "p95": 4.297245773952454,
+        "p99": 4.297245773952454,
+        "max": 4.297245773952454
+      },
+      "recovery_exit": {
+        "p95": 0.05705193104222417,
+        "p99": 0.05705193104222417,
+        "max": 0.05705193104222417
+      },
+      "recovery_complete": {
+        "p95": 0.06858005188405514,
+        "p99": 0.06858005188405514,
+        "max": 0.06858005188405514
+      },
+      "recovery_cleanup": {
+        "p95": 0.03551290696486831,
+        "p99": 0.03551290696486831,
+        "max": 0.03551290696486831
+      },
+      "recovery_result": {
+        "p95": 0.022682796930894256,
+        "p99": 0.022682796930894256,
+        "max": 0.022682796930894256
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.0126737121026963,
+        "p99": 0.0126737121026963,
+        "max": 0.0126737121026963
+      },
+      "recovery_results_finished": {
+        "p95": 0.018905126955360174,
+        "p99": 0.018905126955360174,
+        "max": 0.018905126955360174
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.180625962791964,
+    "max_agent_age_seconds": 5.044162600999698,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4555734009481966
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      },
+      {
+        "kind": "ui_artifacts",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_detail",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      },
+      {
+        "kind": "ui_monitor",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      },
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"request_concurrency\"}"
+      }
+    ],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.001599278999492526,
+      "p99": 0.003980332985520363,
+      "max": 0.8218645779415965
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-monitor-fixed-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 2.0,
+    "passed": false,
+    "requests_by_kind": {
+      "team_web_list": {
+        "200": 794
+      },
+      "team_web": {
+        "200": 3132
+      },
+      "agent": {
+        "503": 40,
+        "200": 900
+      },
+      "logs": {
+        "503": 569,
+        "200": 1782
+      },
+      "recovery_control": {
+        "503": 214,
+        "200": 1692
+      },
+      "heartbeat": {
+        "200": 2209,
+        "503": 15
+      },
+      "team_web_pools": {
+        "200": 794
+      },
+      "claim": {
+        "200": 2084
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "team_web_detail": {
+        "200": 772
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 18
+      },
+      "ui_artifacts": {
+        "200": 18
+      },
+      "ui_detail": {
+        "200": 18
+      },
+      "health": {
+        "200": 1887
+      },
+      "artifact": {
+        "200": 1882,
+        "503": 5
+      },
+      "team_web_monitor": {
+        "200": 772
+      },
+      "ui_monitor": {
+        "200": 18
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 5
+      },
+      "recovery_cleanup": {
+        "200": 9,
+        "503": 2
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 614,
+      "scheduler_lock": 236
+    },
+    "latency_seconds": {
+      "team_web_list": {
+        "p95": 0.09112590993754566,
+        "p99": 0.7876893689390272,
+        "max": 1.056674940045923
+      },
+      "team_web": {
+        "p95": 1.3489159820601344,
+        "p99": 3.0212831462267786,
+        "max": 5.618099047103897
+      },
+      "agent": {
+        "p95": 0.3082661919761449,
+        "p99": 0.443465607939288,
+        "max": 0.49312502704560757
+      },
+      "logs": {
+        "p95": 0.1439089879859239,
+        "p99": 0.22442026110365987,
+        "max": 0.28706925199367106
+      },
+      "recovery_control": {
+        "p95": 0.09802205301821232,
+        "p99": 0.4724592571146786,
+        "max": 0.5456046471372247
+      },
+      "heartbeat": {
+        "p95": 0.18967383820563555,
+        "p99": 0.4898737701587379,
+        "max": 0.5614840181078762
+      },
+      "team_web_pools": {
+        "p95": 0.2453470090404153,
+        "p99": 1.5944909770041704,
+        "max": 2.4931408469565213
+      },
+      "claim": {
+        "p95": 0.1412182250060141,
+        "p99": 0.18425854202359915,
+        "max": 0.21844880399294198
+      },
+      "ui_submit": {
+        "p95": 1.2918855189345777,
+        "p99": 1.2918855189345777,
+        "max": 1.2918855189345777
+      },
+      "team_web_detail": {
+        "p95": 0.17805855092592537,
+        "p99": 0.7358209760859609,
+        "max": 0.9935831848997623
+      },
+      "ui_control": {
+        "p95": 0.05926693184301257,
+        "p99": 0.05926693184301257,
+        "max": 0.05926693184301257
+      },
+      "ui_list": {
+        "p95": 2.1452642849180847,
+        "p99": 2.1452642849180847,
+        "max": 2.1452642849180847
+      },
+      "ui_artifacts": {
+        "p95": 0.03413988905958831,
+        "p99": 0.03413988905958831,
+        "max": 0.03413988905958831
+      },
+      "ui_detail": {
+        "p95": 0.8930638518650085,
+        "p99": 0.8930638518650085,
+        "max": 0.8930638518650085
+      },
+      "health": {
+        "p95": 0.19495576992630959,
+        "p99": 0.333680328913033,
+        "max": 0.40280114812776446
+      },
+      "artifact": {
+        "p95": 0.0652619490865618,
+        "p99": 0.11039030598476529,
+        "max": 0.1391292659100145
+      },
+      "team_web_monitor": {
+        "p95": 2.940384116023779,
+        "p99": 5.421162158017978,
+        "max": 5.618099047103897
+      },
+      "ui_monitor": {
+        "p95": 2.3376535549759865,
+        "p99": 2.3376535549759865,
+        "max": 2.3376535549759865
+      },
+      "result": {
+        "p95": 0.026167220901697874,
+        "p99": 0.03400596999563277,
+        "max": 0.03400596999563277
+      },
+      "result_duplicate": {
+        "p95": 0.025958955055102706,
+        "p99": 0.028035647002980113,
+        "max": 0.028035647002980113
+      },
+      "complete": {
+        "p95": 0.14047906082123518,
+        "p99": 0.18578998185694218,
+        "max": 0.18578998185694218
+      },
+      "recovery_exit": {
+        "p95": 0.044171278132125735,
+        "p99": 0.044171278132125735,
+        "max": 0.044171278132125735
+      },
+      "recovery_complete": {
+        "p95": 0.04855853505432606,
+        "p99": 0.04855853505432606,
+        "max": 0.04855853505432606
+      },
+      "recovery_cleanup": {
+        "p95": 0.01716981315985322,
+        "p99": 0.01716981315985322,
+        "max": 0.01716981315985322
+      },
+      "recovery_result": {
+        "p95": 0.0392674570903182,
+        "p99": 0.0392674570903182,
+        "max": 0.0392674570903182
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.03180593089200556,
+        "p99": 0.03180593089200556,
+        "max": 0.03180593089200556
+      },
+      "recovery_results_finished": {
+        "p95": 0.013088230974972248,
+        "p99": 0.013088230974972248,
+        "max": 0.013088230974972248
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.110317239072174,
+    "max_agent_age_seconds": 4.808390267193317,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4868112520780414
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0019481729250401258,
+      "p99": 0.007032114779576659,
+      "max": 0.8249359638430178
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-multicard-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 12,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-3": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-4": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-5": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      },
+      "interaction-extra-6": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 10
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 800,
+    "batch_cases": 100,
+    "command_workers": 10,
+    "idle_claim_seconds": 2.0,
+    "passed": false,
+    "requests_by_kind": {
+      "recovery_control": {
+        "transport_error": 7599,
+        "503": 4701,
+        "200": 1977
+      },
+      "heartbeat": {
+        "transport_error": 6221,
+        "503": 2043,
+        "200": 6220
+      },
+      "agent": {
+        "transport_error": 649,
+        "200": 543
+      },
+      "team_web_list": {
+        "transport_error": 601,
+        "200": 48
+      },
+      "team_web": {
+        "transport_error": 2342,
+        "200": 180
+      },
+      "team_web_pools": {
+        "transport_error": 598,
+        "200": 51
+      },
+      "logs": {
+        "transport_error": 6377,
+        "200": 5937,
+        "503": 3824,
+        "409": 465
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "team_web_detail": {
+        "transport_error": 571,
+        "200": 41
+      },
+      "team_web_monitor": {
+        "transport_error": 572,
+        "200": 40
+      },
+      "health": {
+        "200": 3513,
+        "transport_error": 4,
+        "503": 1248,
+        "409": 1229
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "claim": {
+        "200": 3022,
+        "transport_error": 2336,
+        "503": 714
+      },
+      "artifact": {
+        "200": 1783,
+        "503": 2538,
+        "transport_error": 719,
+        "409": 954
+      },
+      "ui_list": {
+        "200": 1
+      },
+      "ui_artifacts": {
+        "200": 1
+      },
+      "ui_detail": {
+        "200": 1
+      },
+      "result": {
+        "200": 3
+      },
+      "result_duplicate": {
+        "200": 3
+      },
+      "complete": {
+        "200": 1,
+        "503": 4
+      },
+      "recovery_exit": {
+        "transport_error": 60,
+        "200": 59,
+        "503": 12
+      },
+      "recovery_complete": {
+        "503": 201,
+        "200": 47,
+        "transport_error": 37
+      },
+      "recovery_cleanup": {
+        "503": 56,
+        "200": 45,
+        "transport_error": 1
+      },
+      "recovery_result": {
+        "200": 45
+      },
+      "recovery_result_duplicate": {
+        "200": 45
+      },
+      "recovery_results_finished": {
+        "200": 45
+      },
+      "ui_monitor": {
+        "200": 1
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 11575,
+      "scheduler_lock": 3762,
+      "lock_timeout": 4
+    },
+    "latency_seconds": {
+      "recovery_control": {
+        "p95": 1.3906860151328146,
+        "p99": 1.6869578030891716,
+        "max": 2.917744677979499
+      },
+      "heartbeat": {
+        "p95": 1.3852031920105219,
+        "p99": 1.547037848038599,
+        "max": 2.3234001589007676
+      },
+      "agent": {
+        "p95": 1.332563305972144,
+        "p99": 1.3715188230853528,
+        "max": 1.643213024130091
+      },
+      "team_web_list": {
+        "p95": 0.631111399969086,
+        "p99": 1.182438493007794,
+        "max": 1.9174404579680413
+      },
+      "team_web": {
+        "p95": 0.6947157899849117,
+        "p99": 10.884446341078728,
+        "max": 42.02700957399793
+      },
+      "team_web_pools": {
+        "p95": 0.6851333449594676,
+        "p99": 1.1824024049565196,
+        "max": 1.926164082949981
+      },
+      "logs": {
+        "p95": 1.1253349489998072,
+        "p99": 1.3174075880087912,
+        "max": 2.4254150548949838
+      },
+      "ui_submit": {
+        "p95": 2.3547939641866833,
+        "p99": 2.3547939641866833,
+        "max": 2.3547939641866833
+      },
+      "team_web_detail": {
+        "p95": 0.6044269627891481,
+        "p99": 1.5252889269031584,
+        "max": 2.2124255530070513
+      },
+      "team_web_monitor": {
+        "p95": 7.134130944032222,
+        "p99": 41.49117845483124,
+        "max": 42.02700957399793
+      },
+      "health": {
+        "p95": 1.0252351239323616,
+        "p99": 1.153965295990929,
+        "max": 1.7695344709791243
+      },
+      "ui_control": {
+        "p95": 0.23937574191950262,
+        "p99": 0.23937574191950262,
+        "max": 0.23937574191950262
+      },
+      "claim": {
+        "p95": 0.9949168120510876,
+        "p99": 1.3515177378430963,
+        "max": 1.772936990018934
+      },
+      "artifact": {
+        "p95": 1.0146634059492499,
+        "p99": 1.189423007890582,
+        "max": 1.4376031269785017
+      },
+      "ui_list": {
+        "p95": 0.3627357389777899,
+        "p99": 0.3627357389777899,
+        "max": 0.3627357389777899
+      },
+      "ui_artifacts": {
+        "p95": 0.23585075116716325,
+        "p99": 0.23585075116716325,
+        "max": 0.23585075116716325
+      },
+      "ui_detail": {
+        "p95": 0.8211357651744038,
+        "p99": 0.8211357651744038,
+        "max": 0.8211357651744038
+      },
+      "result": {
+        "p95": 0.5826508579775691,
+        "p99": 0.5826508579775691,
+        "max": 0.5826508579775691
+      },
+      "result_duplicate": {
+        "p95": 0.7145629290025681,
+        "p99": 0.7145629290025681,
+        "max": 0.7145629290025681
+      },
+      "complete": {
+        "p95": 1.194798968033865,
+        "p99": 1.194798968033865,
+        "max": 1.194798968033865
+      },
+      "recovery_exit": {
+        "p95": 1.3528046170249581,
+        "p99": 1.4795005340129137,
+        "max": 1.5041142138652503
+      },
+      "recovery_complete": {
+        "p95": 0.949680392164737,
+        "p99": 1.4890550789423287,
+        "max": 1.5977615441661328
+      },
+      "recovery_cleanup": {
+        "p95": 0.7886087410151958,
+        "p99": 1.4051063598599285,
+        "max": 1.4202894610352814
+      },
+      "recovery_result": {
+        "p95": 0.5827803798019886,
+        "p99": 0.6190191670320928,
+        "max": 0.6190191670320928
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.37230811291374266,
+        "p99": 0.7409780919551849,
+        "max": 0.7409780919551849
+      },
+      "recovery_results_finished": {
+        "p95": 0.4954737469088286,
+        "p99": 0.6444466901011765,
+        "max": 0.6444466901011765
+      },
+      "ui_monitor": {
+        "p95": 39.907709665130824,
+        "p99": 39.907709665130824,
+        "max": 39.907709665130824
+      }
+    },
+    "max_heartbeat_gap_seconds": 38.6050852870103,
+    "max_agent_age_seconds": 25.675445337081328,
+    "logs": {
+      "generated": 12237,
+      "accepted": 5937,
+      "permanent_error": 465,
+      "max_pending_chunks_per_worker": 18,
+      "final_pending_chunks": 6300,
+      "max_pending_age_seconds": 50.55044446117245
+    },
+    "expired_leases": 163,
+    "telemetry_stale": 0,
+    "completed_tasks": 1,
+    "ui_errors": [],
+    "recovery_completed": 47,
+    "recovery_target": 79,
+    "recovery_error_count": 348,
+    "driver_lag": {
+      "p95": 0.35091952816583216,
+      "p99": 0.4610844999551773,
+      "max": 0.8431566618382931
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-multiprocess-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 16
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 16
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 16
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 16
+      }
+    },
+    "configured_connections": 136,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "logs": {
+        "503": 684,
+        "200": 1782
+      },
+      "recovery_control": {
+        "503": 220,
+        "200": 1694
+      },
+      "heartbeat": {
+        "503": 9,
+        "200": 2759
+      },
+      "team_web": {
+        "200": 2545,
+        "502": 39,
+        "503": 36
+      },
+      "agent": {
+        "200": 117
+      },
+      "claim": {
+        "200": 2633
+      },
+      "health": {
+        "200": 1892
+      },
+      "artifact": {
+        "200": 1887,
+        "503": 5
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 11,
+        "503": 1
+      },
+      "ui_artifacts": {
+        "200": 12
+      },
+      "ui_detail": {
+        "200": 12
+      },
+      "ui_monitor": {
+        "200": 12
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 2
+      },
+      "recovery_cleanup": {
+        "503": 2,
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 695,
+      "scheduler_lock": 227,
+      "connection_pool": 37
+    },
+    "latency_seconds": {
+      "logs": {
+        "p95": 0.1489896208513528,
+        "p99": 0.234340890776366,
+        "max": 0.2938062590546906
+      },
+      "recovery_control": {
+        "p95": 0.1099745009560138,
+        "p99": 0.45163840404711664,
+        "max": 0.5251478219870478
+      },
+      "heartbeat": {
+        "p95": 0.17603819002397358,
+        "p99": 0.48717646300792694,
+        "max": 1.245544706005603
+      },
+      "team_web": {
+        "p95": 3.962660569930449,
+        "p99": 5.999922713963315,
+        "max": 7.186638724990189
+      },
+      "agent": {
+        "p95": 0.21505580004304647,
+        "p99": 0.22526610805653036,
+        "max": 0.23706628498621285
+      },
+      "claim": {
+        "p95": 0.1419455821160227,
+        "p99": 0.17718987097032368,
+        "max": 0.20881719700992107
+      },
+      "health": {
+        "p95": 0.18651912710629404,
+        "p99": 0.2644646449480206,
+        "max": 0.37787016783840954
+      },
+      "artifact": {
+        "p95": 0.07149501610547304,
+        "p99": 0.11322058900259435,
+        "max": 0.1328268579673022
+      },
+      "ui_submit": {
+        "p95": 1.8603710499592125,
+        "p99": 1.8603710499592125,
+        "max": 1.8603710499592125
+      },
+      "ui_control": {
+        "p95": 0.053536780178546906,
+        "p99": 0.053536780178546906,
+        "max": 0.053536780178546906
+      },
+      "ui_list": {
+        "p95": 3.7604463279712945,
+        "p99": 3.7604463279712945,
+        "max": 3.7604463279712945
+      },
+      "ui_artifacts": {
+        "p95": 0.5193555201403797,
+        "p99": 0.5193555201403797,
+        "max": 0.5193555201403797
+      },
+      "ui_detail": {
+        "p95": 1.2761024089995772,
+        "p99": 1.2761024089995772,
+        "max": 1.2761024089995772
+      },
+      "ui_monitor": {
+        "p95": 3.864451966015622,
+        "p99": 3.864451966015622,
+        "max": 3.864451966015622
+      },
+      "result": {
+        "p95": 0.018436164828017354,
+        "p99": 0.025066955015063286,
+        "max": 0.025066955015063286
+      },
+      "result_duplicate": {
+        "p95": 0.0078498141374439,
+        "p99": 0.01130664604716003,
+        "max": 0.01130664604716003
+      },
+      "complete": {
+        "p95": 0.14482894609682262,
+        "p99": 0.19841274805366993,
+        "max": 0.19841274805366993
+      },
+      "recovery_exit": {
+        "p95": 0.03464152989909053,
+        "p99": 0.03464152989909053,
+        "max": 0.03464152989909053
+      },
+      "recovery_complete": {
+        "p95": 0.04051190009340644,
+        "p99": 0.04051190009340644,
+        "max": 0.04051190009340644
+      },
+      "recovery_cleanup": {
+        "p95": 0.03658690396696329,
+        "p99": 0.03658690396696329,
+        "max": 0.03658690396696329
+      },
+      "recovery_result": {
+        "p95": 0.02368395682424307,
+        "p99": 0.02368395682424307,
+        "max": 0.02368395682424307
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.014486196218058467,
+        "p99": 0.014486196218058467,
+        "max": 0.014486196218058467
+      },
+      "recovery_results_finished": {
+        "p95": 0.014900407055392861,
+        "p99": 0.014900407055392861,
+        "max": 0.014900407055392861
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.1165082841180265,
+    "max_agent_age_seconds": 4.955686266999692,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4387735470663756
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [
+      {
+        "kind": "ui_list",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      }
+    ],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.002157502807676792,
+      "p99": 0.008214595960453153,
+      "max": 0.8215821259655058
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-paths-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 8,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      },
+      "interaction-extra-0": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-1": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      },
+      "interaction-extra-2": {
+        "user_action": 3,
+        "user_long": 1,
+        "page_read": 24
+      }
+    },
+    "configured_connections": 168,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "agent": {
+        "503": 40,
+        "200": 900
+      },
+      "team_web_list": {
+        "200": 764
+      },
+      "team_web": {
+        "200": 3012
+      },
+      "logs": {
+        "503": 582,
+        "200": 1782
+      },
+      "recovery_control": {
+        "503": 217,
+        "200": 1690
+      },
+      "team_web_pools": {
+        "200": 764
+      },
+      "heartbeat": {
+        "200": 2754,
+        "503": 16
+      },
+      "claim": {
+        "200": 2626
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "team_web_detail": {
+        "200": 742
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "health": {
+        "200": 1887
+      },
+      "ui_list": {
+        "200": 17
+      },
+      "artifact": {
+        "200": 1884,
+        "503": 3
+      },
+      "ui_artifacts": {
+        "200": 17
+      },
+      "ui_detail": {
+        "200": 17
+      },
+      "team_web_monitor": {
+        "200": 742
+      },
+      "ui_monitor": {
+        "200": 17
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 4
+      },
+      "recovery_cleanup": {
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 629,
+      "scheduler_lock": 233
+    },
+    "latency_seconds": {
+      "agent": {
+        "p95": 0.3013917140197009,
+        "p99": 0.4483572531025857,
+        "max": 0.46808411995880306
+      },
+      "team_web_list": {
+        "p95": 0.18837649910710752,
+        "p99": 2.8561769200023264,
+        "max": 3.871438288828358
+      },
+      "team_web": {
+        "p95": 2.0911572019103914,
+        "p99": 4.8289834279567,
+        "max": 8.11408632597886
+      },
+      "logs": {
+        "p95": 0.14072456513531506,
+        "p99": 0.2231091798748821,
+        "max": 0.28598556690849364
+      },
+      "recovery_control": {
+        "p95": 0.09620427200570703,
+        "p99": 0.45962987397797406,
+        "max": 0.5809019980952144
+      },
+      "team_web_pools": {
+        "p95": 0.646076314849779,
+        "p99": 2.0034383141901344,
+        "max": 3.283843348035589
+      },
+      "heartbeat": {
+        "p95": 0.1824539431836456,
+        "p99": 0.5092034330591559,
+        "max": 1.1650669779628515
+      },
+      "claim": {
+        "p95": 0.14743803185410798,
+        "p99": 0.17845611507073045,
+        "max": 0.23268809611909091
+      },
+      "ui_submit": {
+        "p95": 1.2924133830238134,
+        "p99": 1.2924133830238134,
+        "max": 1.2924133830238134
+      },
+      "team_web_detail": {
+        "p95": 0.6157456389628351,
+        "p99": 1.931687731994316,
+        "max": 3.4842226679902524
+      },
+      "ui_control": {
+        "p95": 0.058164353016763926,
+        "p99": 0.058164353016763926,
+        "max": 0.058164353016763926
+      },
+      "health": {
+        "p95": 0.20156830199994147,
+        "p99": 0.2948018149472773,
+        "max": 0.3975651450455189
+      },
+      "ui_list": {
+        "p95": 0.1695313488598913,
+        "p99": 0.1695313488598913,
+        "max": 0.1695313488598913
+      },
+      "artifact": {
+        "p95": 0.05564740905538201,
+        "p99": 0.10976046300493181,
+        "max": 0.12317511695437133
+      },
+      "ui_artifacts": {
+        "p95": 0.3681581551209092,
+        "p99": 0.3681581551209092,
+        "max": 0.3681581551209092
+      },
+      "ui_detail": {
+        "p95": 3.1304682730697095,
+        "p99": 3.1304682730697095,
+        "max": 3.1304682730697095
+      },
+      "team_web_monitor": {
+        "p95": 4.275173919042572,
+        "p99": 7.11180238192901,
+        "max": 8.11408632597886
+      },
+      "ui_monitor": {
+        "p95": 1.9335389779880643,
+        "p99": 1.9335389779880643,
+        "max": 1.9335389779880643
+      },
+      "result": {
+        "p95": 0.02532280096784234,
+        "p99": 0.04104749904945493,
+        "max": 0.04104749904945493
+      },
+      "result_duplicate": {
+        "p95": 0.022102436050772667,
+        "p99": 0.03498560702428222,
+        "max": 0.03498560702428222
+      },
+      "complete": {
+        "p95": 0.12084072013385594,
+        "p99": 0.22096734982915223,
+        "max": 0.22096734982915223
+      },
+      "recovery_exit": {
+        "p95": 0.03129418008029461,
+        "p99": 0.03129418008029461,
+        "max": 0.03129418008029461
+      },
+      "recovery_complete": {
+        "p95": 0.09558380604721606,
+        "p99": 0.09558380604721606,
+        "max": 0.09558380604721606
+      },
+      "recovery_cleanup": {
+        "p95": 0.06465279194526374,
+        "p99": 0.06465279194526374,
+        "max": 0.06465279194526374
+      },
+      "recovery_result": {
+        "p95": 0.027371742064133286,
+        "p99": 0.027371742064133286,
+        "max": 0.027371742064133286
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.02276417287066579,
+        "p99": 0.02276417287066579,
+        "max": 0.02276417287066579
+      },
+      "recovery_results_finished": {
+        "p95": 0.02884547715075314,
+        "p99": 0.02884547715075314,
+        "max": 0.02884547715075314
+      }
+    },
+    "max_heartbeat_gap_seconds": 5.340518082957715,
+    "max_agent_age_seconds": 6.163039532955736,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4807730140164495
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0022774680983275175,
+      "p99": 0.007796738995239139,
+      "max": 0.8296620899345726
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-query-fixed-20261126",
+    "hardware": {
+      "machine": "x86_64",
+      "cpu_count": 32
+    },
+    "seconds": 45,
+    "processes": 5,
+    "pool_by_process": {
+      "execution-control": {
+        "execution_control": 12
+      },
+      "interaction": {
+        "user_action": 10,
+        "user_long": 4,
+        "page_read": 10
+      },
+      "worker-data": {
+        "worker_claim": 6,
+        "worker_result": 7,
+        "worker_observation": 8,
+        "scheduler": 1
+      },
+      "bulk-transfer": {
+        "bulk_transfer": 10
+      },
+      "execution-control-extra": {
+        "execution_control": 12
+      }
+    },
+    "configured_connections": 80,
+    "web_users": 100,
+    "nodes": 13,
+    "workers": 100,
+    "batch_cases": 50,
+    "command_workers": 10,
+    "idle_claim_seconds": 0.5,
+    "passed": false,
+    "requests_by_kind": {
+      "logs": {
+        "503": 654,
+        "200": 1782
+      },
+      "heartbeat": {
+        "503": 18,
+        "200": 2757
+      },
+      "recovery_control": {
+        "503": 226,
+        "200": 1685
+      },
+      "agent": {
+        "200": 117
+      },
+      "claim": {
+        "200": 2631
+      },
+      "team_web": {
+        "200": 2105,
+        "503": 693
+      },
+      "health": {
+        "200": 1887
+      },
+      "artifact": {
+        "200": 1876,
+        "503": 11
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "ui_list": {
+        "200": 11
+      },
+      "ui_artifacts": {
+        "200": 11
+      },
+      "ui_detail": {
+        "200": 10,
+        "503": 1
+      },
+      "ui_monitor": {
+        "200": 11
+      },
+      "result": {
+        "200": 50
+      },
+      "result_duplicate": {
+        "200": 50
+      },
+      "complete": {
+        "200": 50
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 2
+      },
+      "recovery_cleanup": {
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 1204,
+      "scheduler_lock": 240,
+      "connection_pool": 161
+    },
+    "latency_seconds": {
+      "logs": {
+        "p95": 0.1433815280906856,
+        "p99": 0.23066928889602423,
+        "max": 0.2881312870886177
+      },
+      "heartbeat": {
+        "p95": 0.16357136401347816,
+        "p99": 0.4807815281674266,
+        "max": 1.232454885961488
+      },
+      "recovery_control": {
+        "p95": 0.08470901078544557,
+        "p99": 0.4779083728790283,
+        "max": 0.5837402381002903
+      },
+      "agent": {
+        "p95": 0.20940710487775505,
+        "p99": 0.21911059599369764,
+        "max": 0.22669101017527282
+      },
+      "claim": {
+        "p95": 0.1282805970404297,
+        "p99": 0.1669289548881352,
+        "max": 0.21168854320421815
+      },
+      "team_web": {
+        "p95": 3.0372422120999545,
+        "p99": 4.7317624860443175,
+        "max": 5.768882205942646
+      },
+      "health": {
+        "p95": 0.17746925610117614,
+        "p99": 0.2782895481213927,
+        "max": 0.36979347304441035
+      },
+      "artifact": {
+        "p95": 0.06091851298697293,
+        "p99": 0.09902610396966338,
+        "max": 0.13810226297937334
+      },
+      "ui_submit": {
+        "p95": 1.4379643260035664,
+        "p99": 1.4379643260035664,
+        "max": 1.4379643260035664
+      },
+      "ui_control": {
+        "p95": 0.04052057093940675,
+        "p99": 0.04052057093940675,
+        "max": 0.04052057093940675
+      },
+      "ui_list": {
+        "p95": 2.657280722865835,
+        "p99": 2.657280722865835,
+        "max": 2.657280722865835
+      },
+      "ui_artifacts": {
+        "p95": 2.4429614869877696,
+        "p99": 2.4429614869877696,
+        "max": 2.4429614869877696
+      },
+      "ui_detail": {
+        "p95": 2.0044487421400845,
+        "p99": 2.0044487421400845,
+        "max": 2.0044487421400845
+      },
+      "ui_monitor": {
+        "p95": 4.950376559048891,
+        "p99": 4.950376559048891,
+        "max": 4.950376559048891
+      },
+      "result": {
+        "p95": 0.013124771881848574,
+        "p99": 0.028045241022482514,
+        "max": 0.028045241022482514
+      },
+      "result_duplicate": {
+        "p95": 0.011388629907742143,
+        "p99": 0.015620652120560408,
+        "max": 0.015620652120560408
+      },
+      "complete": {
+        "p95": 0.1400006520561874,
+        "p99": 0.1644759881310165,
+        "max": 0.1644759881310165
+      },
+      "recovery_exit": {
+        "p95": 0.03741078614257276,
+        "p99": 0.03741078614257276,
+        "max": 0.03741078614257276
+      },
+      "recovery_complete": {
+        "p95": 0.037712361896410584,
+        "p99": 0.037712361896410584,
+        "max": 0.037712361896410584
+      },
+      "recovery_cleanup": {
+        "p95": 0.03153958194889128,
+        "p99": 0.03153958194889128,
+        "max": 0.03153958194889128
+      },
+      "recovery_result": {
+        "p95": 0.049492439022287726,
+        "p99": 0.049492439022287726,
+        "max": 0.049492439022287726
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.020065300166606903,
+        "p99": 0.020065300166606903,
+        "max": 0.020065300166606903
+      },
+      "recovery_results_finished": {
+        "p95": 0.0162463269662112,
+        "p99": 0.0162463269662112,
+        "max": 0.0162463269662112
+      }
+    },
+    "max_heartbeat_gap_seconds": 4.079773291014135,
+    "max_agent_age_seconds": 5.002264164853841,
+    "logs": {
+      "generated": 1782,
+      "accepted": 1782,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.4585732959676534
+    },
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "completed_tasks": 50,
+    "ui_errors": [
+      {
+        "kind": "ui_detail",
+        "status": 503,
+        "detail": "{\"detail\":\"database busy; retry shortly\",\"reason\":\"connection_pool\"}"
+      }
+    ],
+    "recovery_completed": 9,
+    "recovery_target": 9,
+    "recovery_error_count": 0,
+    "driver_lag": {
+      "p95": 0.0016811008099466562,
+      "p99": 0.004564726958051324,
+      "max": 0.8239914900623262
+    },
+    "role_failure": {
+      "gateway_health_when_bulk_stopped": 503,
+      "bulk_request_when_stopped": 502,
+      "heartbeat_when_bulk_stopped": 200,
+      "gateway_health_after_restart": 200
+    }
+  },
+  {
+    "run": "team-capacity-repeat-20261126",
+    "seconds": 60,
+    "web_users": 100,
+    "nodes": 100,
+    "workers": 100,
+    "batch_cases": 100,
+    "passed": true,
+    "requests_by_kind": {
+      "team_web_list": {
+        "200": 1128
+      },
+      "team_web": {
+        "200": 4460
+      },
+      "agent": {
+        "503": 40,
+        "200": 1200
+      },
+      "logs": {
+        "503": 647,
+        "200": 2430
+      },
+      "team_web_pools": {
+        "200": 1128
+      },
+      "recovery_control": {
+        "503": 254,
+        "200": 2329
+      },
+      "heartbeat": {
+        "200": 2966,
+        "503": 25
+      },
+      "claim": {
+        "200": 2767
+      },
+      "health": {
+        "200": 2511
+      },
+      "ui_submit": {
+        "201": 1
+      },
+      "artifact": {
+        "200": 2504,
+        "503": 7
+      },
+      "ui_control": {
+        "200": 2
+      },
+      "team_web_detail": {
+        "200": 1102
+      },
+      "ui_list": {
+        "200": 26
+      },
+      "ui_artifacts": {
+        "200": 26
+      },
+      "ui_detail": {
+        "200": 26
+      },
+      "team_web_monitor": {
+        "200": 1102
+      },
+      "ui_monitor": {
+        "200": 26
+      },
+      "result": {
+        "200": 100
+      },
+      "result_duplicate": {
+        "200": 100
+      },
+      "complete": {
+        "200": 100
+      },
+      "recovery_exit": {
+        "200": 9
+      },
+      "recovery_complete": {
+        "200": 9,
+        "503": 3
+      },
+      "recovery_cleanup": {
+        "503": 3,
+        "200": 9
+      },
+      "recovery_result": {
+        "200": 9
+      },
+      "recovery_result_duplicate": {
+        "200": 9
+      },
+      "recovery_results_finished": {
+        "200": 9
+      }
+    },
+    "latency_seconds": {
+      "team_web_list": {
+        "p95": 0.062462389934808016,
+        "p99": 0.2216593949124217,
+        "max": 0.2610789469908923
+      },
+      "team_web": {
+        "p95": 0.5365092910360545,
+        "p99": 1.1072202338837087,
+        "max": 1.4669621030334383
+      },
+      "agent": {
+        "p95": 0.2496381509117782,
+        "p99": 0.5220309109427035,
+        "max": 0.5560880899429321
+      },
+      "logs": {
+        "p95": 0.1454363891389221,
+        "p99": 0.200765211135149,
+        "max": 0.33203494804911315
+      },
+      "team_web_pools": {
+        "p95": 0.0902102820109576,
+        "p99": 0.24846816807985306,
+        "max": 0.30303910886868834
+      },
+      "recovery_control": {
+        "p95": 0.1303612980991602,
+        "p99": 0.45879717101342976,
+        "max": 0.5594260739162564
+      },
+      "heartbeat": {
+        "p95": 0.16341949393972754,
+        "p99": 0.4854210470803082,
+        "max": 0.6095503240358084
+      },
+      "claim": {
+        "p95": 0.14115184801630676,
+        "p99": 0.185556516982615,
+        "max": 0.25135342101566494
+      },
+      "health": {
+        "p95": 0.17294669384136796,
+        "p99": 0.2828467870131135,
+        "max": 0.36539116501808167
+      },
+      "ui_submit": {
+        "p95": 1.4969655859749764,
+        "p99": 1.4969655859749764,
+        "max": 1.4969655859749764
+      },
+      "artifact": {
+        "p95": 0.059770247898995876,
+        "p99": 0.10521350405178964,
+        "max": 0.1632015979848802
+      },
+      "ui_control": {
+        "p95": 0.05441225599497557,
+        "p99": 0.05441225599497557,
+        "max": 0.05441225599497557
+      },
+      "team_web_detail": {
+        "p95": 0.09281036187894642,
+        "p99": 0.16159246978349984,
+        "max": 0.3173301259521395
+      },
+      "ui_list": {
+        "p95": 0.05596860405057669,
+        "p99": 0.06954239821061492,
+        "max": 0.06954239821061492
+      },
+      "ui_artifacts": {
+        "p95": 0.01809559389948845,
+        "p99": 0.07850637915544212,
+        "max": 0.07850637915544212
+      },
+      "ui_detail": {
+        "p95": 0.05900481902062893,
+        "p99": 0.07056248281151056,
+        "max": 0.07056248281151056
+      },
+      "team_web_monitor": {
+        "p95": 1.0527974229771644,
+        "p99": 1.3508711259346455,
+        "max": 1.4669621030334383
+      },
+      "ui_monitor": {
+        "p95": 0.3805840399581939,
+        "p99": 0.47329334705136716,
+        "max": 0.47329334705136716
+      },
+      "result": {
+        "p95": 0.02164388308301568,
+        "p99": 0.04038858390413225,
+        "max": 0.04038858390413225
+      },
+      "result_duplicate": {
+        "p95": 0.012416988844051957,
+        "p99": 0.04319512308575213,
+        "max": 0.04319512308575213
+      },
+      "complete": {
+        "p95": 0.09670856408774853,
+        "p99": 0.1802533019799739,
+        "max": 0.1802533019799739
+      },
+      "recovery_exit": {
+        "p95": 0.025266157928854227,
+        "p99": 0.025266157928854227,
+        "max": 0.025266157928854227
+      },
+      "recovery_complete": {
+        "p95": 0.026450105011463165,
+        "p99": 0.026450105011463165,
+        "max": 0.026450105011463165
+      },
+      "recovery_cleanup": {
+        "p95": 0.04390824888832867,
+        "p99": 0.04390824888832867,
+        "max": 0.04390824888832867
+      },
+      "recovery_result": {
+        "p95": 0.05675146682187915,
+        "p99": 0.05675146682187915,
+        "max": 0.05675146682187915
+      },
+      "recovery_result_duplicate": {
+        "p95": 0.06973035610280931,
+        "p99": 0.06973035610280931,
+        "max": 0.06973035610280931
+      },
+      "recovery_results_finished": {
+        "p95": 0.06636762199923396,
+        "p99": 0.06636762199923396,
+        "max": 0.06636762199923396
+      }
+    },
+    "busy_reasons": {
+      "request_concurrency": 694,
+      "scheduler_lock": 285
+    },
+    "max_heartbeat_gap_seconds": 3.8656006301753223,
+    "logs": {
+      "generated": 2430,
+      "accepted": 2430,
+      "max_pending_chunks_per_worker": 1,
+      "final_pending_chunks": 0,
+      "max_pending_age_seconds": 1.5353356930427253
+    },
+    "completed_tasks": 100,
+    "expired_leases": 0,
+    "telemetry_stale": 0,
+    "recovery_completed": 9,
+    "recovery_target": 9
+  }
+]

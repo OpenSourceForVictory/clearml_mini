@@ -494,6 +494,7 @@
           "type": "object"
         }
       },
+      "additionalProperties": false,
       "properties": {
         "recovery": {
           "anyOf": [
@@ -763,6 +764,976 @@
         "request_id"
       ],
       "title": "NotStarted",
+      "type": "object"
+    },
+    "<class 'backend.app.orchestrations.Submit'>": {
+      "$defs": {
+        "BatchClient": {
+          "additionalProperties": false,
+          "properties": {
+            "template_id": {
+              "title": "Template Id",
+              "type": "string"
+            },
+            "service_mode": {
+              "default": "external",
+              "enum": [
+                "external",
+                "none",
+                "managed"
+              ],
+              "title": "Service Mode",
+              "type": "string"
+            },
+            "endpoint": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Endpoint"
+            },
+            "endpoints": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/$defs/Endpoint"
+                  },
+                  "maxItems": 100,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Endpoints"
+            },
+            "task_name": {
+              "default": "batch",
+              "title": "Task Name",
+              "type": "string"
+            },
+            "seed": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            },
+            "request_timeout_seconds": {
+              "default": 10,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Request Timeout Seconds",
+              "type": "integer"
+            },
+            "timeout_seconds": {
+              "default": 300,
+              "minimum": 0,
+              "title": "Timeout Seconds",
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": true,
+              "title": "Parameters",
+              "type": "object"
+            },
+            "parameter_overrides": {
+              "additionalProperties": true,
+              "title": "Parameter Overrides",
+              "type": "object"
+            },
+            "environment": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Environment",
+              "type": "object"
+            }
+          },
+          "required": [
+            "template_id"
+          ],
+          "title": "BatchClient",
+          "type": "object"
+        },
+        "Case": {
+          "additionalProperties": false,
+          "properties": {
+            "case_id": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "title": "Case Id",
+              "type": "string"
+            },
+            "task_name": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Task Name",
+              "type": "string"
+            },
+            "episodes": {
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Episodes",
+              "type": "integer"
+            },
+            "seed": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": true,
+              "title": "Parameters",
+              "type": "object"
+            },
+            "service_keys": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 100,
+              "title": "Service Keys",
+              "type": "array"
+            },
+            "resources": {
+              "$ref": "#/$defs/Request"
+            }
+          },
+          "required": [
+            "case_id",
+            "task_name",
+            "episodes"
+          ],
+          "title": "Case",
+          "type": "object"
+        },
+        "Endpoint": {
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Url",
+              "type": "string"
+            },
+            "mode": {
+              "enum": [
+                "exclusive",
+                "shared"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url",
+            "mode"
+          ],
+          "title": "Endpoint",
+          "type": "object"
+        },
+        "Request": {
+          "additionalProperties": false,
+          "properties": {
+            "accelerator_type": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "gpu",
+                    "npu"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Accelerator Type"
+            },
+            "cpu_unlimited": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cpu Unlimited"
+            },
+            "memory_unlimited": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Memory Unlimited"
+            },
+            "cpus": {
+              "anyOf": [
+                {
+                  "maximum": 10000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cpus"
+            },
+            "ram_gb": {
+              "anyOf": [
+                {
+                  "maximum": 100000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Ram Gb"
+            },
+            "gpu_mode": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "exclusive",
+                    "shared"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Gpu Mode"
+            },
+            "requested_vram_gb": {
+              "anyOf": [
+                {
+                  "maximum": 10000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Requested Vram Gb"
+            },
+            "required_gpu_model": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Required Gpu Model"
+            }
+          },
+          "title": "Request",
+          "type": "object"
+        },
+        "ServiceDefinition": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "default": "default",
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+              "title": "Key",
+              "type": "string"
+            },
+            "template_id": {
+              "title": "Template Id",
+              "type": "string"
+            },
+            "pool_id": {
+              "title": "Pool Id",
+              "type": "string"
+            },
+            "slot_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Slot Id"
+            },
+            "mode": {
+              "default": "shared",
+              "enum": [
+                "exclusive",
+                "shared"
+              ],
+              "title": "Mode",
+              "type": "string"
+            },
+            "max_instances": {
+              "anyOf": [
+                {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Max Instances"
+            },
+            "instance_count": {
+              "anyOf": [
+                {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Instance Count"
+            },
+            "parameters": {
+              "additionalProperties": true,
+              "title": "Parameters",
+              "type": "object"
+            },
+            "parameter_overrides": {
+              "additionalProperties": true,
+              "title": "Parameter Overrides",
+              "type": "object"
+            },
+            "environment": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Environment",
+              "type": "object"
+            },
+            "resources": {
+              "$ref": "#/$defs/Request"
+            }
+          },
+          "required": [
+            "template_id",
+            "pool_id"
+          ],
+          "title": "ServiceDefinition",
+          "type": "object"
+        },
+        "SuiteCreate": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            },
+            "version": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Version",
+              "type": "string"
+            },
+            "template_id": {
+              "default": "",
+              "title": "Template Id",
+              "type": "string"
+            },
+            "template_ids": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Template Ids"
+            },
+            "cases": {
+              "items": {
+                "$ref": "#/$defs/Case"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "title": "Cases",
+              "type": "array"
+            },
+            "client_defaults": {
+              "additionalProperties": true,
+              "title": "Client Defaults",
+              "type": "object"
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "cases"
+          ],
+          "title": "SuiteCreate",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "pool_id": {
+          "title": "Pool Id",
+          "type": "string"
+        },
+        "gpu_mode": {
+          "default": "exclusive",
+          "enum": [
+            "exclusive",
+            "shared"
+          ],
+          "title": "Gpu Mode",
+          "type": "string"
+        },
+        "requested_vram_gb": {
+          "default": 0,
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Requested Vram Gb",
+          "type": "integer"
+        },
+        "required_gpu_model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Gpu Model"
+        },
+        "client": {
+          "$ref": "#/$defs/BatchClient"
+        },
+        "max_concurrent": {
+          "default": 1,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Concurrent",
+          "type": "integer"
+        },
+        "disconnect_tolerance_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 9223372036854775808,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disconnect Tolerance Seconds"
+        },
+        "suite_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suite Id"
+        },
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/Case"
+          },
+          "maxItems": 100,
+          "title": "Cases",
+          "type": "array"
+        },
+        "resources": {
+          "$ref": "#/$defs/Request"
+        },
+        "new_suite": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SuiteCreate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "services": {
+          "items": {
+            "$ref": "#/$defs/ServiceDefinition"
+          },
+          "maxItems": 20,
+          "title": "Services",
+          "type": "array"
+        },
+        "stop_after_batch": {
+          "default": true,
+          "title": "Stop After Batch",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title",
+        "pool_id",
+        "client"
+      ],
+      "title": "Submit",
+      "type": "object"
+    },
+    "<class 'backend.app.batches.BatchSubmit'>": {
+      "$defs": {
+        "BatchClient": {
+          "additionalProperties": false,
+          "properties": {
+            "template_id": {
+              "title": "Template Id",
+              "type": "string"
+            },
+            "service_mode": {
+              "default": "external",
+              "enum": [
+                "external",
+                "none",
+                "managed"
+              ],
+              "title": "Service Mode",
+              "type": "string"
+            },
+            "endpoint": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Endpoint"
+            },
+            "endpoints": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/$defs/Endpoint"
+                  },
+                  "maxItems": 100,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Endpoints"
+            },
+            "task_name": {
+              "default": "batch",
+              "title": "Task Name",
+              "type": "string"
+            },
+            "seed": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            },
+            "request_timeout_seconds": {
+              "default": 10,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Request Timeout Seconds",
+              "type": "integer"
+            },
+            "timeout_seconds": {
+              "default": 300,
+              "minimum": 0,
+              "title": "Timeout Seconds",
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": true,
+              "title": "Parameters",
+              "type": "object"
+            },
+            "parameter_overrides": {
+              "additionalProperties": true,
+              "title": "Parameter Overrides",
+              "type": "object"
+            },
+            "environment": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Environment",
+              "type": "object"
+            }
+          },
+          "required": [
+            "template_id"
+          ],
+          "title": "BatchClient",
+          "type": "object"
+        },
+        "Case": {
+          "additionalProperties": false,
+          "properties": {
+            "case_id": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "title": "Case Id",
+              "type": "string"
+            },
+            "task_name": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Task Name",
+              "type": "string"
+            },
+            "episodes": {
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Episodes",
+              "type": "integer"
+            },
+            "seed": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": true,
+              "title": "Parameters",
+              "type": "object"
+            },
+            "service_keys": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 100,
+              "title": "Service Keys",
+              "type": "array"
+            },
+            "resources": {
+              "$ref": "#/$defs/Request"
+            }
+          },
+          "required": [
+            "case_id",
+            "task_name",
+            "episodes"
+          ],
+          "title": "Case",
+          "type": "object"
+        },
+        "Endpoint": {
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Url",
+              "type": "string"
+            },
+            "mode": {
+              "enum": [
+                "exclusive",
+                "shared"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url",
+            "mode"
+          ],
+          "title": "Endpoint",
+          "type": "object"
+        },
+        "Request": {
+          "additionalProperties": false,
+          "properties": {
+            "accelerator_type": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "gpu",
+                    "npu"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Accelerator Type"
+            },
+            "cpu_unlimited": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cpu Unlimited"
+            },
+            "memory_unlimited": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Memory Unlimited"
+            },
+            "cpus": {
+              "anyOf": [
+                {
+                  "maximum": 10000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cpus"
+            },
+            "ram_gb": {
+              "anyOf": [
+                {
+                  "maximum": 100000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Ram Gb"
+            },
+            "gpu_mode": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "exclusive",
+                    "shared"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Gpu Mode"
+            },
+            "requested_vram_gb": {
+              "anyOf": [
+                {
+                  "maximum": 10000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Requested Vram Gb"
+            },
+            "required_gpu_model": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Required Gpu Model"
+            }
+          },
+          "title": "Request",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "pool_id": {
+          "title": "Pool Id",
+          "type": "string"
+        },
+        "gpu_mode": {
+          "default": "exclusive",
+          "enum": [
+            "exclusive",
+            "shared"
+          ],
+          "title": "Gpu Mode",
+          "type": "string"
+        },
+        "requested_vram_gb": {
+          "default": 0,
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Requested Vram Gb",
+          "type": "integer"
+        },
+        "required_gpu_model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Gpu Model"
+        },
+        "client": {
+          "$ref": "#/$defs/BatchClient"
+        },
+        "max_concurrent": {
+          "default": 1,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Concurrent",
+          "type": "integer"
+        },
+        "disconnect_tolerance_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 9223372036854775808,
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disconnect Tolerance Seconds"
+        },
+        "suite_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suite Id"
+        },
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/Case"
+          },
+          "maxItems": 100,
+          "title": "Cases",
+          "type": "array"
+        },
+        "resources": {
+          "$ref": "#/$defs/Request"
+        }
+      },
+      "required": [
+        "title",
+        "pool_id",
+        "client"
+      ],
+      "title": "BatchSubmit",
       "type": "object"
     }
   },

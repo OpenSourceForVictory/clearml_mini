@@ -1,0 +1,26 @@
+{
+  "release": "team-capacity-20261126",
+  "schema": "c14d09e",
+  "api_processes": 12,
+  "health": {
+    "status": "ok",
+    "roles": {
+      "execution-control": true,
+      "interaction": true,
+      "worker-data": true,
+      "bulk-transfer": true
+    }
+  },
+  "page_statuses": {
+    "auth/me": 200,
+    "batches?view=summary": 200,
+    "admin/nodes": 200
+  },
+  "worker_slots_reconnected": 13,
+  "agents_reconnected": 6,
+  "recovery_records_preserved": 2,
+  "configured_connections": 168,
+  "database_max_connections": 200,
+  "scope": "100 Worker short-load profile; 800 Worker candidate failed",
+  "deployed_at": "2026-11-26T04:41:17.304757+00:00"
+}

@@ -282,7 +282,7 @@ def test_control_auth_and_heartbeat_work_while_ordinary_pool_exhausted(online):
 def test_real_row_lock_times_out_without_connection_leak(online):
     main, client, headers = online
     with main.SessionLocal() as holder:
-        holder.execute(text("SELECT id FROM workers WHERE id='w' FOR UPDATE"))
+        holder.execute(text("SELECT id FROM gpu_slots WHERE id='s' FOR UPDATE"))
         response = client.post('/api/v1/worker/heartbeat', headers=headers, json={'slot_id': 's'})
         assert response.status_code == 503, response.text
         assert response.json()['reason'] == 'lock_timeout'
