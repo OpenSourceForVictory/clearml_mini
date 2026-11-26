@@ -13,6 +13,7 @@ import time
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import DBAPIError, TimeoutError as PoolTimeout
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import QueuePool
 from starlette.responses import JSONResponse
 from .priority_routes import legacy_category_for
 
@@ -23,6 +24,22 @@ if os.getenv('DB_BUDGET_DIAGNOSTICS', '0') == '1':
         LOG.addHandler(logging.StreamHandler())
     LOG.propagate = False
 request_budget = ContextVar('db_request_budget', default=None)
+
+
+class DiagnosticQueuePool(QueuePool):
+    """Measure every checkout, including re-checkouts after a transaction ends."""
+
+    def connect(self):
+        started = time.monotonic()
+        try:
+            connection = super().connect()
+        except PoolTimeout:
+            LOG.warning('database pool checkout category=%s outcome=timeout wait_ms=%.3f',
+                        self.logging_name, (time.monotonic() - started) * 1000)
+            raise
+        LOG.debug('database pool checkout category=%s outcome=ok wait_ms=%.3f checked_out=%s',
+                  self.logging_name, (time.monotonic() - started) * 1000, self.checkedout())
+        return connection
 
 
 class DatabaseBusy(Exception):
@@ -147,8 +164,11 @@ def factories(url, settings, *, isolated=False):
         return ({name: factory for name in settings.active_pool_sizes} if isolated else (factory, factory))
     def make(size, category=None):
         wait = settings.pool_seconds(category) if hasattr(settings, 'pool_seconds') else settings.pool_timeout
+        diagnostics = os.getenv('DB_BUDGET_DIAGNOSTICS', '0') == '1'
         engine = create_engine(url, pool_size=size, max_overflow=0, pool_timeout=wait,
-                               connect_args={'connect_timeout': 1})
+                               connect_args={'connect_timeout': 1},
+                               **({'poolclass': DiagnosticQueuePool, 'pool_logging_name': category or 'ordinary'}
+                                  if diagnostics else {}))
         @event.listens_for(engine, 'before_cursor_execute')
         def deadline(connection, cursor, statement, parameters, context, executemany):
             budget = request_budget.get()

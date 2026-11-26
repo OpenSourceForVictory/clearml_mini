@@ -8,8 +8,22 @@ from sqlalchemy.orm import Session
 
 from backend.app.db_budget import Settings
 from backend.app.core import ClientTemplate, ExecutionRecovery, ExecutionRecoveryClaim, ExecutionRecoveryControl, Run, Slot, Worker
-from backend.tests.control_plane_load import api_log_names, pool_profiles, recovery_database_counts, render_gateway_config, render_priority_gateway_config, seed
 from backend.app.priority_runtime import ROLE_POOLS
+from backend.tests.control_plane_load import api_log_names, capacity_waits, pool_profiles, recovery_database_counts, render_gateway_config, render_priority_gateway_config, seed
+
+
+def test_capacity_waits_keep_only_safe_category_timing_fields():
+    pool, admission = capacity_waits([
+        'database pool checkout category=page_read outcome=ok wait_ms=2.500 checked_out=1\n'
+        'database pool checkout category=page_read outcome=timeout wait_ms=500.000\n'
+        'database admission accepted category=page_read wait_ms=3.000 queued=0\n'
+        'database admission rejected category=worker_claim reason=concurrency wait_ms=10.000\n'
+        'token=secret password=secret SELECT private_column FROM private_table\n'])
+    assert pool == {'page_read': {'count': 1, 'timeout_count': 1, 'p95': 2.5, 'p99': 2.5}}
+    assert admission == {
+        'page_read': {'count': 1, 'rejected_count': 0, 'p95': 3.0, 'p99': 3.0},
+        'worker_claim': {'count': 0, 'rejected_count': 1, 'p95': None, 'p99': None}}
+    assert 'secret' not in str((pool, admission)) and 'private_table' not in str((pool, admission))
 
 
 def test_split_gateway_uses_distinct_loopback_backends():

@@ -72,6 +72,24 @@ def test_zero_queue_and_wait_do_not_disable_available_capacity():
     asyncio.run(run())
 
 
+def test_admission_diagnostics_report_accepted_and_rejected_waits(monkeypatch):
+    messages = []
+    monkeypatch.setattr(db_budget.LOG, 'debug', lambda template, *args: messages.append(template % args))
+    monkeypatch.setattr(db_budget.LOG, 'warning', lambda template, *args: messages.append(template % args))
+
+    async def run():
+        m = runtime.Admission(respond, settings(admission_limits={'page_read': 1},
+                                                queue_limits={'page_read': 0}))
+        assert (await invoke(m, '/api/v1/batches'))[0]['status'] == 200
+        assert await m.acquire('page_read')
+        assert (await invoke(m, '/api/v1/batches'))[0]['status'] == 503
+        m.available['page_read'] += 1
+
+    asyncio.run(run())
+    assert any('admission accepted category=page_read wait_ms=' in item for item in messages)
+    assert any('admission rejected category=page_read reason=concurrency wait_ms=' in item for item in messages)
+
+
 def test_web_waits_longer_without_consuming_action_or_db_allowance():
     async def run():
         s=settings(admission_limits={'page_read':1},queue_waits={'page_read':.4},
@@ -118,6 +136,34 @@ def test_real_db_pool_wait_is_independent_and_does_not_overflow(pg):
         with engine.connect() as again:assert again.scalar(text('SELECT 1'))==1
     finally:
         for factory in factories.values():factory.kw['bind'].dispose()
+
+
+def test_opt_in_pool_diagnostics_measure_all_checkouts_without_sensitive_data(pg, monkeypatch):
+    monkeypatch.setenv('DB_BUDGET_DIAGNOSTICS', '1')
+    messages = []
+    monkeypatch.setattr(db_budget.LOG, 'debug', lambda template, *args: messages.append(template % args))
+    monkeypatch.setattr(db_budget.LOG, 'warning', lambda template, *args: messages.append(template % args))
+    s = settings(pool_sizes=dict(runtime.DEFAULT_POOLS, page_read=1),
+                 pool_waits={'page_read': .02})
+    factories = db_budget.factories(pg[1], s, isolated=True)
+    try:
+        engine = factories['page_read'].kw['bind']
+        assert isinstance(engine.pool, db_budget.DiagnosticQueuePool)
+        with engine.connect() as first:
+            assert first.scalar(text('SELECT 1')) == 1
+            with pytest.raises(TimeoutError):
+                with engine.connect():
+                    pass
+        with engine.connect() as again:
+            assert again.scalar(text('SELECT 1')) == 1
+        successes = [item for item in messages if 'outcome=ok' in item]
+        failures = [item for item in messages if 'outcome=timeout' in item]
+        assert len(successes) == 2 and len(failures) == 1
+        assert all('category=page_read' in item and 'wait_ms=' in item for item in messages)
+        assert all('postgresql' not in item and 'SELECT' not in item for item in messages)
+    finally:
+        for factory in factories.values():
+            factory.kw['bind'].dispose()
 
 
 def test_checked_in_team_profile_validates_without_raising_db_budget():

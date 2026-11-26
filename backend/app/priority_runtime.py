@@ -218,8 +218,11 @@ class Admission:
         limiter.total_tokens = max(limiter.total_tokens, self.thread_capacity)
         started = time.monotonic()
         if not await self.acquire(category):
-            db_budget.LOG.warning('database admission rejected category=%s reason=concurrency', category)
+            db_budget.LOG.warning('database admission rejected category=%s reason=concurrency wait_ms=%.3f',
+                                  category, (time.monotonic() - started) * 1000)
             return await db_budget.busy_response('request_concurrency')(scope, receive, send)
+        db_budget.LOG.debug('database admission accepted category=%s wait_ms=%.3f queued=%s',
+                            category, (time.monotonic() - started) * 1000, len(self.waiters[category]))
         scope.setdefault('state', {})['db_category'] = category
         seconds = self.settings.request_seconds(category)
         token = db_budget.request_budget.set(started + seconds)

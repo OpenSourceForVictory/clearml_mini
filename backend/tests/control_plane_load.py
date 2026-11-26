@@ -106,6 +106,24 @@ def percentile(values, fraction):
     return sorted(values)[min(len(values)-1, int(len(values)*fraction))] if values else None
 
 
+def capacity_waits(logs):
+    """Summarize safe category/timing fields only; ignore URLs, SQL and request bodies."""
+    pool_waits, admission_waits = {}, {}
+    for log in logs:
+        for category, outcome, wait in re.findall(
+                r'database pool checkout category=(\w+) outcome=(ok|timeout) wait_ms=([0-9.]+)', log):
+            pool_waits.setdefault(category, {'ok': [], 'timeout': []})[outcome].append(float(wait))
+        for outcome, category, wait in re.findall(
+                r'database admission (accepted|rejected) category=(\w+).*?wait_ms=([0-9.]+)', log):
+            admission_waits.setdefault(category, {'accepted': [], 'rejected': []})[outcome].append(float(wait))
+    return ({category: {'count': len(values['ok']), 'timeout_count': len(values['timeout']),
+                        'p95': percentile(values['ok'], .95), 'p99': percentile(values['ok'], .99)}
+             for category, values in pool_waits.items()},
+            {category: {'count': len(values['accepted']), 'rejected_count': len(values['rejected']),
+                        'p95': percentile(values['accepted'], .95), 'p99': percentile(values['accepted'], .99)}
+             for category, values in admission_waits.items()})
+
+
 def recovery_database_counts(connection):
     rows = connection.execute(select(Run.status, Run.cleanup_confirmed,
                                      ExecutionRecoveryControl.snapshot)
@@ -1034,9 +1052,13 @@ def main():
                                 break
                             time.sleep(.1)
                         result['role_failure']['gateway_health_after_restart'] = healthy
-                checkouts = [float(v) for name in (api_log_names(count, args.split_api, args.priority_api) + [f'api-interaction-extra-{i}-{count}.log' for i in range(len(interaction_extra_ports))]) for v in
-                             re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
+                api_logs = [(output/name).read_text() for name in
+                            (api_log_names(count, args.split_api, args.priority_api) +
+                             [f'api-interaction-extra-{i}-{count}.log' for i in range(len(interaction_extra_ports))])]
+                checkouts = [float(v) for log in api_logs for v in
+                             re.findall(r'database checkout category=\w+ wait_ms=([0-9.]+)', log)]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
+                result['pool_checkout_wait_ms'], result['admission_wait_ms'] = capacity_waits(api_logs)
                 with engine.connect() as c:
                     result['expired_leases_after_drain'] = c.scalar(text("SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now() AND status IN ('STARTING','RUNNING','CANCEL_REQUESTED')"))
                     result['expired_leases'] = expired_leases_during_load(result['database_samples'])
