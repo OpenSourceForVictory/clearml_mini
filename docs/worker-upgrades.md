@@ -1,5 +1,9 @@
 # 节点组件版本与升级管理
 
+Worker 0.21.23 修复恢复执行在断联后只上传首条日志缺口、终态立即关闭诊断发送器的问题：退出确认后最多等待 5 秒补传最新 stdout/stderr 尾部，失败仍标记缺口并继续完成/清理。配套 API 修复断联期间租约过期时日志接口误回 409 的问题，仍要求原 Worker、槽位及未撤销的恢复授权且任务尚未终态。先部署当前 API，再经节点升级入口升级实际执行节点 Worker/Runner；仅更新仓库不会修改已纳管节点。协议仍为 18，无数据库迁移或业务镜像强制重建；旧式自带 Runner 镜像仍按原升级规则处理。真机 GPU 容器断网复测与失败前证据见 [验证记录](validation/worker-offline-complete-gpu-20261127.md)。
+
+同批修复独立升级执行器对恢复 journal 的判定：`<执行UUID>.json` 是活动执行 journal，`<执行UUID>.json.launch.json`、`.supervision.json`、`.runtime-exit.json` 是可保留的历史侧车记录。旧执行器把这些侧车也当作活动 journal，可能在停止 Worker 后报告 `rollback_failed`；仅升级 Worker 包不会更新 `/opt/mini-eval-updater/updater.py`。此状态下先确认旧代码未被替换、任务已清理，再停止升级执行器，按本页 `--system --update --start` 流程更新独立执行器；它会重试原升级回滚并启动原 Worker。平台显示 `FAILED / upgrade_failed` 且原版本在线后，管理员用“确认失败已处理，解除升级暂停”恢复接单，再重新发起升级。真实活动 journal 仍阻止替换，不可手工删除来强行升级。
+
 Worker 0.21.16 引入控制面过载重试：日志、回合、普通服务健康、产物和完成上报遇到暂时过载会保留数据并返回续租循环。协议版本仍为 18，不改变业务 SDK 正文或镜像。本机平台曾在 2026-11-23 通过受控升级将六台机器、13 个卡位升级到 0.21.16，并在回连后启用双 API 背压；之后又升级到下述 0.21.17。其他部署须先升级并验证目标 Worker，再启用 `DB_BACKPRESSURE_ENABLED=1`，否则旧 Worker 可能把新增的 503 当作执行异常。API 开关默认关闭，回滚 API 时可以保留新版 Worker，不能删除恢复 journal 或在运行中直接替换代码。
 
 Worker 0.21.17 将空闲领取的单次退避总等待限制为 3 秒（包括服务端 `Retry-After`），持续重试且不设次数上限；协议仍为 18。对应 API 将无候选任务的轮询改为只读路径，候选遇调度锁忙返回本轮无任务。本机已先更新 API，再通过版本升级入口逐台将六台机器、13 个卡位升至 0.21.17；未升级的 0.21.16 仍可使用 API，但领取临时故障可能按较长 `Retry-After` 等待。本机上线结果以[双进程验证记录](validation/split-control-api-process-20261123/README.md)为准。

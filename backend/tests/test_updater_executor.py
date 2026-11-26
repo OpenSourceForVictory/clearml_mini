@@ -70,6 +70,33 @@ def test_remaining_journal_prevents_swap(tmp_path):
     assert state.read_text()=='{"task":"unfinished"}'
 
 
+def test_completed_execution_sidecars_do_not_block_upgrade(tmp_path):
+    u,job,cfg,state,calls=fixture(tmp_path)
+    runs=Path(str(state)+'.runs');runs.mkdir()
+    execution='205b0efb-e38c-4d8f-a7a9-6af0407362d4'
+    for suffix in ('.launch.json','.supervision.json','.runtime-exit.json'):
+        (runs/(execution+'.json'+suffix)).write_text('{"completed":true}')
+    u.apply(job)
+    assert u.api.status=='SUCCEEDED'
+    assert (u.app/'worker/client.py').read_text()=='# new worker'
+    assert calls==['stop','start']
+
+
+def test_real_execution_journal_blocks_upgrade_then_rollback_recovers(tmp_path):
+    u,job,cfg,state,calls=fixture(tmp_path)
+    runs=Path(str(state)+'.runs');runs.mkdir()
+    execution='205b0efb-e38c-4d8f-a7a9-6af0407362d4'
+    primary=runs/(execution+'.json');primary.write_text('{"task":"unfinished"}')
+    (runs/(execution+'.json.launch.json')).write_text('{"completed":true}')
+    u.apply(job)
+    assert u.api.status=='FAILED' and json.loads(u.journal.read_text())['error']=='rollback_failed'
+    assert (u.app/'worker/client.py').read_text()=='# old worker'
+    primary.unlink()
+    u.apply(job)
+    assert u.api.status=='FAILED' and not u.journal.exists()
+    assert calls==['stop','stop','stop','start']
+
+
 def test_interrupted_swap_recovers_backup(tmp_path):
     u,job,cfg,state,calls=fixture(tmp_path)
     backup=u.app.parent/('.mini-eval-backup-'+job['id']);u.app.rename(backup)

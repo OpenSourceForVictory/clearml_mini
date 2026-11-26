@@ -1,7 +1,8 @@
 import pytest
+from datetime import timedelta
 from sqlalchemy import select
 from backend.tests.test_execution import env, node, submit, claim
-from backend.app.core import Run, RunLogState, RunLogChunk
+from backend.app.core import ExecutionRecovery, Run, RunLogState, RunLogChunk, Slot, now
 
 
 def running(env):
@@ -60,6 +61,34 @@ def test_permissions_closed_run_and_empty_gap(env):
     assert c.post(path, headers=token, json=body).status_code == 409
     data = c.get('/api/v1/jobs/'+job+'/logs', headers=auth['alice']).json()
     assert data['complete'] and data['truncated'] and data['chunks'][0]['gap']
+
+
+def test_expired_lease_allows_only_original_recovery_owner_log_tail(env):
+    from backend.app.recovery_records import grant
+
+    main, client, _ = env
+    token, _, task = running(env)
+    path = '/api/v1/worker/executions/' + task['execution_id'] + '/logs-v2'
+    with main.SessionLocal() as session:
+        run = session.scalar(select(Run).where(Run.execution_id == task['execution_id']))
+        run.lease_expires_at = now() - timedelta(minutes=1)
+        session.commit()
+    body = {'sequence': 0, 'content': 'OFFLINE_FINISHED', 'stream': 'stdout'}
+    assert client.post(path, headers=token, json=body).status_code == 409
+
+    with main.SessionLocal() as session:
+        run = session.scalar(select(Run).where(Run.execution_id == task['execution_id']))
+        # Recovery grants are issued at original claim, not after expiry.
+        run.status = 'STARTING'
+        owner = session.get(Slot, run.slot_id).worker_id
+        grant(session, run, owner)
+        run.status = 'RUNNING'
+        session.commit()
+    assert client.post(path, headers=token, json=body).status_code == 200
+    with main.SessionLocal() as session:
+        session.get(ExecutionRecovery, task['execution_id']).revoked = True
+        session.commit()
+    assert client.post(path, headers=token, json={'sequence': 1, 'content': 'late'}).status_code == 409
 
 
 def test_metadata_count_bounded(env):

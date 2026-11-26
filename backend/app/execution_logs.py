@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, delete, text
-from .core import Run, RunLog, RunLogChunk, RunLogState, Slot, now
+from .core import ExecutionRecovery, Run, RunLog, RunLogChunk, RunLogState, Slot, now
 from .scheduling import TERMINAL, utc
 
 WINDOW_BYTES = 262144
@@ -55,7 +55,16 @@ def append(s, execution_id, worker, body):
         raise HTTPException(404, 'execution not found')
     terminal_log_lock(s, run.id)
     s.refresh(run)
-    if run.status not in ('STARTING', 'RUNNING', 'CANCEL_REQUESTED') or not run.lease_expires_at or utc(run.lease_expires_at) <= now():
+    # A negotiated execution may keep running while disconnected. Its lease
+    # expires, but the immutable recovery grant still owns its log tail until
+    # the platform commits a terminal state. Ordinary executions retain the
+    # strict lease check.
+    lease_valid = bool(run.lease_expires_at and utc(run.lease_expires_at) > now())
+    recovery = s.get(ExecutionRecovery, execution_id) if not lease_valid else None
+    recoverable = bool(recovery and recovery.run_id == run.id
+                       and recovery.slot_id == run.slot_id
+                       and recovery.worker_id == worker.id and not recovery.revoked)
+    if run.status not in ('STARTING', 'RUNNING', 'CANCEL_REQUESTED') or not (lease_valid or recoverable):
         raise HTTPException(409, 'execution lease is no longer valid')
     state = s.scalar(select(RunLogState).where(RunLogState.run_id == run.id).with_for_update())
     if not state:

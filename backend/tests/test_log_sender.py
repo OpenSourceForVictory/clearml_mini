@@ -47,6 +47,33 @@ def test_upload_coalesces_and_restores_pending(tmp_path):
     assert sender.state['pending']['content']=='hello1hello2hello3'
 
 
+def test_recovered_connection_drains_final_tail_after_pending_gap(tmp_path):
+    first = threading.Event()
+    online = threading.Event()
+    calls = []
+    class API:
+        def post(self, path, body):
+            first.set()
+            if not online.is_set():
+                raise TimeoutError('temporary control outage')
+            calls.append(dict(body))
+            return {'next_sequence': body['sequence'] + 1}
+    root = tmp_path / 'logs'
+    ring = Ring(root)
+    ring.write('system', 'bounded catch-up', gap=True)
+    sender = Sender(API(), 'execution', root, tmp_path / 'journal.json')
+    try:
+        assert first.wait(2)
+        ring.write('stdout', 'OFFLINE_STARTED\nOFFLINE_FINISHED\n')
+        online.set()
+        assert sender.finish(timeout=5)
+        assert any('OFFLINE_STARTED' in row['content'] and 'OFFLINE_FINISHED' in row['content']
+                   for row in calls)
+        assert sender.state['pending'] is None
+    finally:
+        sender.close()
+
+
 @pytest.mark.parametrize("cancel", [False, True])
 def test_worker_heartbeats_survive_log_request_longer_than_lease(execution, monkeypatch, tmp_path, cancel):
     from worker import client

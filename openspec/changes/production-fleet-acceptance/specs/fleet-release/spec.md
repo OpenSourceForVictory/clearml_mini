@@ -35,6 +35,10 @@
 - **WHEN** 数据库迁移或任一节点升级后检查失败
 - **THEN** 停止后续发布，不宣告成功，提供与当前数据版本相容的恢复步骤
 
+#### Scenario: Completed execution sidecars remain during upgrade
+- **WHEN** 节点已无活动执行，但历史执行目录仍有启动、监督或退出侧车 JSON
+- **THEN** 升级器只把真正的执行 journal 作为排空阻断；活动 journal 必须阻断替换，历史侧车不触发错误回滚
+
 #### Scenario: New data after release
 - **WHEN** 新版本已产生任务或结果后需要回退
 - **THEN** 不自动覆盖旧数据库备份，不删除新记录来强制降级

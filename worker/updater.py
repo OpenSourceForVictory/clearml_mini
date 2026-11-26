@@ -13,6 +13,7 @@ import tempfile
 import time
 import urllib.request
 import urllib.error
+import uuid
 import zipfile
 from contextlib import ExitStack
 
@@ -113,7 +114,15 @@ class Updater:
         for v in self.values:
             state=Path(v['state_path']);state.parent.mkdir(parents=True,exist_ok=True)
             handle=stack.enter_context(open(str(state)+'.lock','a'));fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            journals=[state,*Path(str(state)+'.runs').glob('*.json')]
+            journals=[state]
+            for path in Path(str(state)+'.runs').glob('*.json'):
+                # Only <execution UUID>.json is a Worker journal. Launch,
+                # supervision and exit evidence use <UUID>.json.*.json and
+                # remain after a completed run; treating them as live state
+                # leaves an otherwise idle node stuck in rollback_failed.
+                try:identity=str(uuid.UUID(path.stem))
+                except ValueError:continue
+                if path.stem==identity:journals.append(path)
             if any(p.exists() and json.loads(p.read_text()) for p in journals):raise ValueError('execution recovery journal remains')
 
     def report(self,identity,status,error=None):

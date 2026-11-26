@@ -394,7 +394,7 @@ def test_service_report_rejection_does_not_kill_healthy_program(case,monkeypatch
 
 
 @pytest.mark.parametrize('host',[False,True])
-def test_v2_log_lifecycle_does_not_wait_for_sender(case,monkeypatch,host):
+def test_v2_log_lifecycle_uses_bounded_final_drain(case,monkeypatch,host):
     task=case.worker.state['task'];task['log_protocol']=2
     case.worker.state['recovery_assignment']['claim']['receipt']['task']=copy.deepcopy(task)
     if host:
@@ -412,7 +412,7 @@ def test_v2_log_lifecycle_does_not_wait_for_sender(case,monkeypatch,host):
         def close(self):events.append('collector-close')
     class Sender:
         def __init__(self,*a,**kw):events.append('sender')
-        def finish(self,timeout):assert timeout==0;return False
+        def finish(self,timeout):assert timeout==5;return False
         def close(self):events.append('sender-close')
     monkeypatch.setattr('worker.log_stream.Sender',Sender)
     monkeypatch.setattr('worker.log_stream.DockerCollector',Collector)

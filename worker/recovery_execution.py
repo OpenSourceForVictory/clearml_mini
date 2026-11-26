@@ -223,7 +223,10 @@ def execute(worker):
                     collector.close()
                 log_gap = False
                 if sender:
-                    log_gap = not sender.finish(timeout=0)
+                    # The control ACK may arrive before the diagnostic sender
+                    # catches up after an outage. Give the final tail the same
+                    # bounded drain as ordinary executions, then mark a gap.
+                    log_gap = not sender.finish(timeout=5)
                     sender.close()
                 monitor.close()
                 closed = True

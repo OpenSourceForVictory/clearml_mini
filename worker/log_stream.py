@@ -154,7 +154,10 @@ class Sender:
                     retry.wait(exc,self.stop)
                     continue
                 delay=min(30,delay*2)
-            self.stop.wait(delay)
+            # At finalization only one coalesced tail remains; do not spend the
+            # bounded drain window on the normal upload pacing delay.
+            if not self.finishing.is_set():
+                self.stop.wait(delay)
 
     def finish(self, timeout=5):
         self.finishing.set()
