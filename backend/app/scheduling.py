@@ -90,7 +90,10 @@ def reconcile(s, at):
         ExecutionRecovery.execution_id == Run.execution_id,
         ExecutionRecovery.run_id == Run.id,
         ExecutionRecovery.slot_id == Run.slot_id)
-    for run, recoverable in s.execute(select(Run, recovery).where(Run.status.in_(ACTIVE))).all():
+    # Keep Job objects alive for this pass; avoid a SELECT per active Run.
+    for run, job, recoverable in s.execute(
+            select(Run, Job, recovery).join(Job, Job.id == Run.job_id)
+            .where(Run.status.in_(ACTIVE))).all():
         if run.status == 'RESERVED':
             if utc(run.reservation_expires_at) <= at:
                 # No worker has claimed it, so no container can have been started.
@@ -98,7 +101,7 @@ def reconcile(s, at):
                 run.slot_id = run.execution_id = run.reservation_expires_at = None
             continue
         expired = not recoverable and run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
-        overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
+        overrun = job.benchmark != 'inference-service' and execution_timeout(job) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(job)) <= at
         startup = not recoverable and run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
         if expired or overrun or startup:
             # Renewals no longer take the global scheduling lock. Never act on
@@ -111,12 +114,12 @@ def reconcile(s, at):
                 continue
             run, recoverable = locked
             expired = not recoverable and run.lease_expires_at and utc(run.lease_expires_at) + timedelta(seconds=seconds('LOST_WORKER_GRACE_SECONDS', 30)) <= at
-            overrun = s.get(Job, run.job_id).benchmark != 'inference-service' and execution_timeout(s.get(Job, run.job_id)) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(s.get(Job, run.job_id))) <= at
+            overrun = job.benchmark != 'inference-service' and execution_timeout(job) > 0 and run.started_at and utc(run.started_at) + timedelta(seconds=execution_timeout(job)) <= at
             startup = not recoverable and run.status == 'STARTING' and utc(run.enqueued_at) + timedelta(seconds=seconds('STARTUP_TIMEOUT_SECONDS', 120)) <= at
             if not (expired or overrun or startup):
                 continue
             if overrun:
-                message = f'客户端执行总时限已到（{execution_timeout(s.get(Job, run.job_id))} 秒，全部回合共用）'
+                message = f'客户端执行总时限已到（{execution_timeout(job)} 秒，全部回合共用）'
             elif startup:
                 message = f'执行启动超时（{seconds("STARTUP_TIMEOUT_SECONDS", 120)} 秒）'
             else:
@@ -279,7 +282,9 @@ def tick(factory, at=None):
         s.flush()
         # A timed-out worker may still be running its container. Keep its global,
         # user and node resource credits until cleanup is explicitly confirmed.
-        active = s.scalars(select(Run).where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
+        active_rows = s.execute(select(Run, Job).join(Job, Job.id == Run.job_id)
+                                .where(or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))).all()
+        active = [run for run, _ in active_rows]
         pools = {p.id: p for p in s.scalars(select(Pool).where(Pool.enabled))}
         workers = {w.id: w for w in s.scalars(select(Worker).where(Worker.enabled))}
         slots = {x.id: x for x in s.scalars(select(Slot).where(Slot.deleted_at.is_(None)))}
@@ -289,14 +294,11 @@ def tick(factory, at=None):
                 by_slot[r.slot_id].append(r)
         endpoint_held = endpoints.holdings(active)
         batch_counts = {}
-        batches = {b.id: b for b in s.scalars(select(EvaluationBatch))}
         counts, node_counts, node_cpu, node_ram, pending_ram = {}, {}, {}, {}, {}
-        for r in active:
-            job = s.get(Job, r.job_id)
+        for r, job in active_rows:
             batch_counts[job.batch_id] = batch_counts.get(job.batch_id, 0) + 1
             counts[job.owner_id] = counts.get(job.owner_id, 0) + 1
             slot = slots.get(r.slot_id)
-            pool = s.get(Pool, job.pool_id)
             if slot:
                 n = slot.worker_id
                 node_counts[n] = node_counts.get(n, 0) + 1
@@ -312,6 +314,11 @@ def tick(factory, at=None):
                 and not slot_codes(workers[x.worker_id], x, at)]
         pending = s.scalars(select(Job).join(User, User.id == Job.owner_id).where(
             Job.status == 'PENDING', User.active).order_by(Job.created_at, Job.id)).all()
+        # Only queued jobs need batch priority/pause/capacity metadata.
+        # Historical batches cannot affect this allocation decision.
+        batch_ids = {j.batch_id for j in pending if j.batch_id}
+        batches = {b.id: b for b in s.scalars(select(EvaluationBatch).where(
+            EvaluationBatch.id.in_(batch_ids)))} if batch_ids else {}
         cursor = s.get(SchedulerState, 'rotation')
         if not cursor:
             cursor = SchedulerState(key='rotation', value={})

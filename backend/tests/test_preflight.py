@@ -6,6 +6,7 @@ from backend.tests.test_execution import env, node
 from backend.tests.test_cs_protocol import template, batch_body
 from backend.app.core import EvaluationBatch, Job, Run, Event, Slot, Worker, Pool, now
 from backend.app.scheduling import tick
+from backend.app.freshness import RESOURCE_SAMPLE_SECONDS
 
 
 def setup(env):
@@ -83,8 +84,8 @@ def test_many_cases_reuse_selected_template_query(env):
     ({'last_seen_at':None}, 'offline'),
     ({'quarantined':True}, 'quarantined'),
     ({'membership_revision':10,'desired_pool_id':'missing'}, 'membership_pending'),
-    ({'disk_min_free_mb':1000,'disk_free_mb':1,'disk_at':now()}, 'disk_capacity'),
-    ({'disk_min_free_mb':1000,'disk_free_mb':2000,'disk_at':now()-timedelta(seconds=30)}, 'disk_capacity'),
+    ({'disk_min_free_mb':1000,'disk_free_mb':1,'disk_age_seconds':0}, 'disk_capacity'),
+    ({'disk_min_free_mb':1000,'disk_free_mb':2000,'disk_age_seconds':RESOURCE_SAMPLE_SECONDS+1}, 'disk_capacity'),
     ({'protocol_version':4}, 'storage_pending'),
     ({'protocol_version':5}, 'runtime_pending'),
 ])
@@ -93,7 +94,11 @@ def test_environment_reasons_match_admission(env, change, code):
     body, sid = setup(env)
     with main.SessionLocal() as s:
         slot=s.get(Slot,sid)
-        for k,v in change.items(): setattr(slot,k,v)
+        for k,v in change.items():
+            if k == 'disk_age_seconds':
+                slot.disk_at = now()-timedelta(seconds=v)
+            else:
+                setattr(slot,k,v)
         s.commit()
     result=check(env,body)
     assert code in [r['code'] for r in result['nodes'][0]['reasons']]

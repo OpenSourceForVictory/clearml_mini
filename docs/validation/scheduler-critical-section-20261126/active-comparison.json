@@ -1,0 +1,75 @@
+{
+  "before": [
+    {
+      "sql_count": 418,
+      "sql_seconds": 0.02103879232890904,
+      "objects_loaded": 802,
+      "phases": {
+        "backend.app.orchestration_scheduler.reconcile": 0.0006263940595090389,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003587380051612854
+      },
+      "admitted": 0,
+      "tick_seconds": 0.0797327330801636
+    },
+    {
+      "sql_count": 418,
+      "sql_seconds": 0.022819397039711475,
+      "objects_loaded": 802,
+      "phases": {
+        "backend.app.orchestration_scheduler.reconcile": 0.0006798780523240566,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.00037078093737363815
+      },
+      "admitted": 0,
+      "tick_seconds": 0.08647869294509292
+    },
+    {
+      "sql_count": 418,
+      "sql_seconds": 0.02151878271251917,
+      "objects_loaded": 802,
+      "phases": {
+        "backend.app.orchestration_scheduler.reconcile": 0.0005966019816696644,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.00048578507266938686
+      },
+      "admitted": 0,
+      "tick_seconds": 0.08236768702045083
+    }
+  ],
+  "after": [
+    {
+      "sql_count": 17,
+      "sql_seconds": 0.002237173495814204,
+      "objects_loaded": 502,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.001993922982364893,
+        "backend.app.orchestration_scheduler.reconcile": 0.0006150249391794205,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003277838695794344
+      },
+      "admitted": 0,
+      "tick_seconds": 0.008189501008018851
+    },
+    {
+      "sql_count": 17,
+      "sql_seconds": 0.0021182738710194826,
+      "objects_loaded": 502,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.001808190019801259,
+        "backend.app.orchestration_scheduler.reconcile": 0.0005642871838063002,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003302409313619137
+      },
+      "admitted": 0,
+      "tick_seconds": 0.007991082035005093
+    },
+    {
+      "sql_count": 17,
+      "sql_seconds": 0.002091538393869996,
+      "objects_loaded": 502,
+      "phases": {
+        "backend.app.scheduling.reconcile": 0.001796534052118659,
+        "backend.app.orchestration_scheduler.reconcile": 0.0006050961092114449,
+        "backend.app.orchestration_scheduler.fill_desired_instances": 0.0003160438500344753
+      },
+      "admitted": 0,
+      "tick_seconds": 0.007830142043530941
+    }
+  ]
+}

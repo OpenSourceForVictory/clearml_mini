@@ -34,3 +34,8 @@ API 四角色隔离请求与数据库连接，不会隔离数据库锁。两个�
 本次没有移除整个调度 tick 的全局锁，也不宣称消除全部竞争。将 tick 改成分资源锁需要另行证明资源快照、预约和并发分配的安全性。
 
 专项测试：`test_execution_local_control_locks.py`、`test_execution_lock_scope.py`、`test_recovery_control.py`、`test_recovery_launch.py`，以及取消、恢复收尾、日志 PostgreSQL 回归。真实 PostgreSQL 测试需隔离的 `LOG_TEST_DATABASE_URL`；不要指向生产库。混合负载与失败记录见 [等待与锁对照验证](validation/wait-tuning-20261126/README.md)。模拟 Worker 压测不代表真实模型验收。
+
+
+## 调度事务内查询压缩
+
+后续优化保留整轮tick事务与全局锁：活动Run/Job联查取代逐条查询，取消资源统计中未使用的Pool读取，批次元数据只加载本轮待调度任务引用的批次。目的是缩短持锁时间，并非把资源检查和预约写入拆成不同事务。SKIP LOCKED后的最新Run复查、未清理占用以及调度顺序不变。专项数据和限制见[临界区验证](validation/scheduler-critical-section-20261126/README.md)。
