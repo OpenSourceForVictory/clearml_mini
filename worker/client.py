@@ -957,7 +957,7 @@ class Worker:
         from .accelerators import capabilities
         hardware['accelerator_backends']=capabilities(self.config)
         registration = self.api.post('worker/register', {'pool_id': self.config.get('pool_id'),
-            **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': {**metadata(),'probe_references':probe_references(self.config)}, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
+            **hardware, 'protocol_version': PROTOCOL_VERSION, 'software': {**metadata(self.config),'probe_references':probe_references(self.config)}, 'execution_modes': self.config.get('execution_modes', ['docker', 'host']), 'client_images': self.config.get('client_images', [])})
         self.slot_id = registration['slot_id']
         from .control import Control
         self.control = Control(self, docker, telemetry)
@@ -994,7 +994,7 @@ class Worker:
                     self.stop_event.wait(min(2, heartbeat_window.remaining()))
                     continue
                 body = {'slot_id': self.slot_id, **self.control.report(),
-                        'software': {**metadata(),'probe_references':probe_references(self.config)}}
+                        'software': {**metadata(self.config),'probe_references':probe_references(self.config)}}
                 try:
                     reply = self.api.post('worker/heartbeat', body)
                 except APIError as exc:
@@ -1019,7 +1019,8 @@ class Worker:
                     continue
                 from .recovery_poll import poll
                 try:
-                    response = poll(self, metadata())
+                    response = poll(self, metadata(self.config),
+                                    server_enabled=reply.get('recovery_execution_enabled', False))
                 except APIError as exc:
                     claim_window.defer(exc)
                     raise

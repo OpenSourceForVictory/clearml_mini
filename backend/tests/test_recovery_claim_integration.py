@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import pytest
 from sqlalchemy import select, func
-from backend.tests.test_execution import env,node,submit
+from backend.tests.test_execution import env,node,submit,claim
 from backend.app.core import Run, Slot, ExecutionRecovery, ExecutionRecoveryClaim, now
 from backend.app.scheduling import tick
 
@@ -161,3 +161,23 @@ def test_worker_poll_recovers_lost_api_response_into_original_journal(env,monkey
     assert dispatched==[saved]
     with main.SessionLocal() as s:
         assert s.scalar(select(func.count()).select_from(ExecutionRecoveryClaim))==1
+
+
+@pytest.mark.parametrize('flag,expected', [('0', False), ('1', True)])
+def test_registration_and_heartbeat_advertise_server_negotiation(env, monkeypatch, flag, expected):
+    _, client, _ = env
+    monkeypatch.setenv('RECOVERY_EXECUTION_ENABLED', flag)
+    token, slots = node(env)
+    registered = client.post('/api/v1/worker/register', headers=token, json={
+        'pool_id': 'mock', 'gpu_index': 0, 'gpu_uuid': 'mock:node:0',
+        'gpu_model': 'virtual', 'vram_gb': 0})
+    assert registered.status_code == 200
+    assert registered.json()['recovery_execution_enabled'] is expected
+    heartbeat = client.post('/api/v1/worker/heartbeat', headers=token,
+                            json={'slot_id': slots[0]})
+    assert heartbeat.status_code == 200
+    assert heartbeat.json()['recovery_execution_enabled'] is expected
+    # An old worker still receives the old execution shape even when the server opts in.
+    submit(env)
+    task = claim(env, token, slots[0])
+    assert task is not None and 'recovery_claim' not in task

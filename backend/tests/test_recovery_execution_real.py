@@ -25,6 +25,10 @@ from backend.tests.test_host_backend import worker as host_fixture
 @pytest.mark.parametrize('mode',['host','docker'])
 @pytest.mark.parametrize('scenario',['complete','command','stdout_burst','offline_complete','offline_cancel_after_exit','offline_timeout_after_exit','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
+    exercise(tmp_path, mode, scenario)
+
+
+def exercise(tmp_path, mode, scenario, variant=None):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from sqlalchemy import create_engine
@@ -43,6 +47,9 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
         task['client_spec']['template'].update(task_type='command',integration_mode='direct')
     if scenario=='stdout_burst':
         task['log_protocol']=2
+    if variant:
+        from backend.tests.recovery_matrix_program import configure
+        configure(task, mode, variant)
     task['client_spec']['timeout_seconds']=task['timeout_seconds']
     if scenario=='service':
         import socket
@@ -71,12 +78,15 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
         script='import time\nprint("ordinary command started",flush=True)\ntime.sleep(2)\n'
     if scenario=='service':
         script='import socket,time\ns=socket.socket()\ns.bind(("127.0.0.1",'+str(port)+'))\ns.listen(32)\nprint("ready",flush=True)\ntime.sleep(30)\n'
+    if variant:
+        from backend.tests.recovery_matrix_program import program
+        script = program(tmp_path, variant)
     (tmp_path/'business.py').write_text(script)
     engine=create_engine('sqlite:///'+str(tmp_path/'api.sqlite'),connect_args={'check_same_thread':False})
     factory=seed(engine)
     with factory() as db:
         run=db.get(Run,'r');run.execution_id=execution;run.status='STARTING';run.enqueued_at=now()
-        job=db.get(Job,'j');job.benchmark=task['benchmark'];job.client_spec=task['client_spec'];job.episodes=1
+        job=db.get(Job,'j');job.benchmark=task['benchmark'];job.client_spec=task['client_spec'];job.episodes=task['episodes']
         if scenario=='service':
             job.service_instance_id='svc'
             db.add(ServiceInstance(id='svc',name='recovery-test',worker_id='w',slot_id='s',address='127.0.0.1',port=port,
@@ -111,11 +121,17 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
         calls.append('create')
         if mode=='host':
             host.create(task)
-            path=host.root/'launch.json';value=json.loads(path.read_text())
-            value['command']=['/usr/bin/python3',str(tmp_path/'business.py')];path.write_text(json.dumps(value))
+            if not variant:
+                path=host.root/'launch.json';value=json.loads(path.read_text())
+                value['command']=['/usr/bin/python3',str(tmp_path/'business.py')];path.write_text(json.dumps(value))
         else:
             args=['create','--network','host','--name',name,'--label','mini-eval.execution='+execution,
                   '--label','mini-eval.launch='+task['recovery_launch_id']]
+            if variant:
+                from backend.tests.recovery_matrix_program import container_args
+                args.extend(container_args(w, task, tmp_path))
+                docker(*args)
+                return
             if scenario=='stdout_burst':
                 from worker.workspace import execution_dirs
                 root=execution_dirs(w.workspace,execution)/'output'/'.mini-eval-protocol'
@@ -227,7 +243,10 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
                 if scenario=='finite_disconnect':
                     assert control['stop_reason']=='disconnection_timeout'
                     assert db.get(EpisodeRecord,('r',1)).result is None
-                if scenario in ('complete','stdout_burst','offline_complete','finite_reconnect','restart','bulk_rejected'):
+                if variant:
+                    from backend.tests.recovery_matrix_program import verify
+                    verify(db, tmp_path, variant)
+                elif scenario in ('complete','stdout_burst','offline_complete','finite_reconnect','restart','bulk_rejected'):
                     assert db.get(EpisodeRecord,('r',1)).result==result
                 if scenario=='command':
                     assert db.get(EpisodeRecord,('r',1)) is None

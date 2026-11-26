@@ -153,7 +153,11 @@ def report_task_result(success, metrics=None, summary=None):
             temp_fd, temporary = tempfile.mkstemp(prefix='.task-result-', dir=root)
             try:
                 with os.fdopen(temp_fd, 'w') as stream:
-                    os.fchmod(stream.fileno(), 0o600)
+                    # The execution parent is private to the Worker, but the
+                    # container/business UID can differ from the Worker UID.
+                    # Match episode journals: publish a readable result while
+                    # retaining owner-only writes and the private lock file.
+                    os.fchmod(stream.fileno(), 0o644)
                     stream.write(encoded)
                     stream.flush()
                     os.fsync(stream.fileno())

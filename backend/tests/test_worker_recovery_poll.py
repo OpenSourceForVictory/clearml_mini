@@ -187,3 +187,46 @@ def test_cancelled_lost_handoff_preserves_original_execution_journal(case,monkey
     assert poll(worker,SOFTWARE)['task']==task
     assert worker.children[task['execution_id']].state['created'] is True
     assert len(calls)==2  # No declaration of never-started for an existing child.
+
+
+@pytest.mark.parametrize('server_enabled', [False, None, '1'])
+def test_unconfirmed_server_uses_legacy_claim(case, server_enabled):
+    worker, _, calls = case
+    worker.config = {}
+    worker.api.post = lambda path, body: calls.append(body) or {'task': None, 'cleanup': []}
+    assert poll(worker, SOFTWARE, server_enabled=server_enabled)['task'] is None
+    assert calls == [{'known_execution_ids': []}]
+    assert not Path(str(worker.path) + '.claim.json').exists()
+
+
+def test_disabled_server_preserves_pending_claim(case):
+    worker, task, calls = case
+    post = worker.api.post
+    def lose(path, body):
+        post(path, body)
+        raise TimeoutError('lost response')
+    worker.api.post = lose
+    with pytest.raises(TimeoutError):
+        poll(worker, SOFTWARE)
+    worker.api.post = post
+    poll(worker, {}, server_enabled=False)
+    assert calls[0] == calls[1]
+    assert task['execution_id'] in worker.children
+
+
+def test_recovery_capability_requires_explicit_valid_node_configuration(tmp_path):
+    from worker.version import metadata, CAPABILITIES
+    config = {'recovery_execution_enabled': True, 'node_name': 'test-node',
+              'node_outbox_root': str(tmp_path / 'outbox')}
+    assert CAPABILITY not in metadata()['capabilities']
+    assert CAPABILITY in metadata(config)['capabilities']
+    assert CAPABILITY not in CAPABILITIES
+    assert CAPABILITY not in metadata({**config, 'recovery_execution_enabled': 'true'})['capabilities']
+    for update in ({'node_name': ''}, {'node_outbox_root': ''}, {'node_outbox_root': 'relative'},
+                   {'node_outbox_root': None}):
+        with pytest.raises(ValueError, match='node_outbox_root'):
+            metadata({**config, **update})
+    link = tmp_path / 'link'
+    link.symlink_to(tmp_path / 'outbox')
+    with pytest.raises(ValueError, match='node_outbox_root'):
+        metadata({**config, 'node_outbox_root': str(link)})

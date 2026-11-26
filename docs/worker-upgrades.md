@@ -178,7 +178,7 @@ HostBackend 的服务 Description 和 Docker 创建 label 支持可选 recovery_
 
 新恢复收尾 journal 使用 recovery={generation,identity} 和 recovery_finalization={proof,body,phase}。升级后 execute 可从 completion/remove/cleanup/done 原阶段恢复；不能手工删除此记录或用新执行身份覆盖。仅此代码更新并不启用断联恢复，尚需两端完整能力协商及正常执行路径接线。
 
-领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。生产版本暂不声明disconnected_execution_v1能力；不要单独设置测试用RECOVERY_EXECUTION_ENABLED开关。
+领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。0.21.20 默认不声明 disconnected_execution_v1。受控验证节点须显式设置 Worker JSON 的 recovery_execution_enabled=true，并配置 node_name 及同节点各卡共用的绝对 node_outbox_root；API 也须设置 RECOVERY_EXECUTION_ENABLED=1。Worker 仅在心跳响应明确确认开关时发起新协议领取；旧 API 无此字段时沿用旧领取。关闭任一开关只影响新领取，已有未确认领取与执行继续按原身份恢复，不能降级处理。完整发布验收状态见本特性验证记录。
 
 Worker 的领取主循环现经 recovery_poll 统一分流：未声明能力且没有待恢复领取文件时仍发原协议请求；已有 .claim.json 时即使当前版本不声明能力，也必须先按原 request_id 恢复，不能绕过待确认分配领取新任务。收据先落盘，再幂等写入执行 journal 的 recovery_assignment，最后清除领取请求。磁盘写入失败、快照冲突、停止处置均保留证据；不得手工删除文件以绕过。完整监督入口尚未接线，带 recovery_assignment 的执行会拒绝进入旧 watchdog/启动路径；这不是已启用断联执行，禁止手工添加能力标识。
 
@@ -232,3 +232,5 @@ Worker 0.21.19包含上述共享预算修正，不改变协议版本，也不增
 此更新自动为本地 outbox SQLite 增加 retired 表，不新增平台数据库迁移；原未确认记录保持兼容，控制/任务结果摘要不参与回合压缩。不要手工恢复旧 journal 配合新队列，或单独降级正在恢复的 Worker。真实待报结果达到字节/条数上限仍会报告容量错误并保留源文件，不能把压缩解释为无限容量。
 
 2026-11-25 已通过界面同一升级 API 验证 local4090-151 升级至 3216ae0 对应发布摘要，6 个宿主机/容器真实进程用例通过；没有批量升级其他节点。API 实际迁移 ae185f6 → b03a7b8，完整恢复能力仍关闭。详见[发布验收](validation/log-recovery-release-20261125/README.md)。
+
+任务级 SDK 跨账号结果读取：0.21.20 配套 Runner 将新写入的 `task-result.json` 设为 0644（仅属主可写），解决容器内 root 写出 0600 文件导致 Worker 无法读取的问题；私有执行父目录权限和 `.task-result.lock` 的 0600 不变。需更新实际业务使用的 SDK/Runner；旧镜像内置 Runner 需重建镜像，不能只更新 API。已存在的旧 0600 文件不会自动改权限，应由文件属主仅对该结果文件授予 Worker 读取权限，不要递归开放整个目录。

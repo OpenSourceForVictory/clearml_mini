@@ -21,6 +21,8 @@ def test_sdk_report_is_atomic_single_and_idempotent(tmp_path, monkeypatch):
         values = list(pool.map(lambda _: report_task_result(True, {'score': .75}, 'done'), range(6)))
     assert values == [expected] * 6
     assert json.loads((tmp_path/'task-result.json').read_text()) == expected
+    assert (tmp_path/'task-result.json').stat().st_mode & 0o777 == 0o644
+    assert (tmp_path/'.task-result.lock').stat().st_mode & 0o777 == 0o600
     with pytest.raises(RuntimeError, match='different task result'):
         report_task_result(False)
 

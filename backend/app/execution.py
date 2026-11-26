@@ -373,7 +373,8 @@ def install(app, db, current):
         slot.telemetry_at = slot.free_vram_mb = slot.gpu_utilization = None
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'slot_id': slot.id, 'quarantined': slot.quarantined, 'pool_id': slot.pool_id, **memberships.view(s, slot)}
+        return {'recovery_execution_enabled': os.getenv('RECOVERY_EXECUTION_ENABLED', '0') == '1',
+                'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'slot_id': slot.id, 'quarantined': slot.quarantined, 'pool_id': slot.pool_id, **memberships.view(s, slot)}
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
@@ -427,7 +428,8 @@ def install(app, db, current):
             slot.telemetry_at = now()
         slot.last_seen_at = slot.heartbeat_at = now()
         s.commit()
-        return {'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
+        return {'recovery_execution_enabled': os.getenv('RECOVERY_EXECUTION_ENABLED', '0') == '1',
+                'resource_source': 'agent' if node_agents.resource_source(worker) else 'worker', 'lease_seconds': seconds('LEASE_SECONDS', 30), 'cancel': cancel,
                 'host': host_environments.desired(worker), 'runtime': image_runtime.desired(worker), 'storage': storage_protocol.desired(worker, slot), 'storage_busy': storage_protocol.held(s, slot)}
 
     @app.post('/api/v1/worker/slots/{slot_id}/claim')

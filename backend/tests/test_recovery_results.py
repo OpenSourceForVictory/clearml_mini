@@ -199,6 +199,58 @@ def test_result_ack_lost_across_api_restart_reuses_original_receipt(execution, t
         assert session.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt)) == 1
 
 
+@pytest.mark.parametrize('change', ['revoked', 'slot_owner', 'new_attempt'])
+def test_restart_with_pending_ack_cannot_cross_changed_authority(execution, tmp_path, change):
+    """A committed result whose ACK was lost is not authority for a new owner."""
+    from worker.backpressure import APIError
+    factory, generation = execution
+    setup(factory, True)
+    directory = tmp_path / 'outbox'
+    queue = ReliableOutbox(directory)
+    queue.put('e', generation, 'task_result', 0, {'success': True})
+
+    def app_instance():
+        app = FastAPI()
+        def database():
+            with factory() as session:
+                yield session
+        recovery_records.install(app, database, lambda: SimpleNamespace(id='w'))
+        return app
+
+    with TestClient(app_instance()) as client:
+        def lost_ack(path, body):
+            response = client.post('/api/v1/' + path, json=body)
+            assert response.status_code == 200, response.text
+            raise TimeoutError('committed, acknowledgement lost')
+        with pytest.raises(TimeoutError):
+            RecoveryDelivery(SimpleNamespace(post=lost_ack), queue, apply_results=True).step()
+    with factory() as session:
+        if change == 'revoked':
+            session.get(ExecutionRecovery, 'e').revoked = True
+        elif change == 'slot_owner':
+            session.get(Slot, 's').worker_id = 'replacement-worker'
+        else:
+            session.get(Run, 'r').execution_id = 'replacement-execution'
+        session.commit()
+        run = session.get(Run, 'r')
+        before = (run.status, run.lease_expires_at, run.cleanup_confirmed, run.result_json)
+
+    restarted_queue = ReliableOutbox(directory)
+    with TestClient(app_instance()) as client:
+        def post(path, body):
+            response = client.post('/api/v1/' + path, json=body)
+            if response.status_code != 200:
+                raise APIError(response.status_code, response.text)
+            return response.json()
+        with pytest.raises(APIError):
+            RecoveryDelivery(SimpleNamespace(post=post), restarted_queue, apply_results=True).step()
+    assert len(restarted_queue.pending()) == 1
+    with factory() as session:
+        run = session.get(Run, 'r')
+        assert (run.status, run.lease_expires_at, run.cleanup_confirmed, run.result_json) == before
+        assert session.scalar(select(func.count()).select_from(ExecutionRecoveryReceipt)) == 1
+
+
 @pytest.mark.parametrize('reply_state', [False, True, 'missing_application'])
 def test_delivery_keeps_unconfirmed_result_pending(tmp_path, reply_state):
     q=ReliableOutbox(tmp_path/'outbox')

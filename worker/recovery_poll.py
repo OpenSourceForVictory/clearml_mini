@@ -11,10 +11,10 @@ from .storage import atomic_json
 CAPABILITY = 'disconnected_execution_v1'
 
 
-def poll(worker, software):
+def poll(worker, software, *, server_enabled=True):
     path = Path(str(worker.path)+'.claim.json')
     pending = json.loads(path.read_text()) if path.exists() else None
-    negotiated = CAPABILITY in software.get('capabilities', [])
+    negotiated = server_enabled is True and CAPABILITY in software.get('capabilities', [])
     if negotiated and pending is None:
         root = worker.config.get('node_outbox_root')
         if (not isinstance(root, str) or not root or not Path(root).is_absolute()

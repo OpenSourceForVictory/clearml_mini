@@ -39,3 +39,5 @@ GENERIC_DOCKER_TEST=1 GENERIC_DOCKER_IMAGE=mini-eval-api:root-managed-20261117 .
 Docker 测试镜像可替换为含 `/usr/local/bin/python`、Bash、与主机编译产物兼容的 glibc 镜像。测试需要本机 `cc`，容器使用当前 UID/GID、无网络、无额外 capabilities。测试覆盖真实进程与容器入口，服务端样例运行后退出，不能代替长驻推理服务的就绪与恢复验收，也不是模型评测。
 
 本次结果与失败证据见 [验收记录](validation/generic-commands/README.md)。
+
+任务级 SDK 的结果文件由业务进程写入、Worker 读取。配套 0.21.20 Runner 的新结果文件为 0644，适配容器和 Worker 使用不同账号的情况；仅属主可修改，执行父目录仍受原权限保护。更新 SDK/Runner 后再创建新任务，旧文件不会自动改权限。

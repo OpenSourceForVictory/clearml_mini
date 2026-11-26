@@ -1,6 +1,6 @@
 # 四角色 API 隔离
 
-此部署将平台的一个外部 API 地址分流到四类角色。新覆盖配置启动五个处理进程，其中执行控制有两个副本；旧四进程配置保持兼容。它不修改业务调度规则、数据库表结构或 Worker 协议。本机平台于 2026-11-25 使用旧四进程配置切换，13 个 Worker 卡位和 6 个 Agent 回连验证通过；五进程配置的发布状态以[容量验证](validation/disconnected-execution-20261124/control-scale-20261126.md)为准，不能把旧发布当作新配置上线。
+此部署将平台的一个外部 API 地址分流到四类角色。新覆盖配置启动五个处理进程，其中执行控制有两个副本；旧四进程配置保持兼容。它不修改业务调度规则或 Worker 协议。本机平台于 2026-11-26 切换到五进程配置，发布状态与验证边界见[容量验证](validation/disconnected-execution-20261124/control-scale-20261126.md)。本次镜像同时包含独立的恢复结果字段迁移 `c14d09e`；仅调整四角色副本数本身不需要新表结构，跨版本升级仍应先检查迁移头。
 
 | 进程角色 | 请求范围 | 默认数据库连接上限 |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ docker compose --env-file .env -p mini-eval \
   -f deploy/compose.yml -f deploy/priority-api-compose.yml ps
 ```
 
-新配置应显示两个 `execution-control-api` 副本及各一个交互、Worker 数据、批量进程。若旧 `.env` 显式设置 `PRIORITY_API_POOL_SIZES` 为旧的执行控制 24，启动会因五进程总连接预算超限而拒绝；先移除该旧覆盖值或改为上面的每副本 12，并通过 `config --quiet`。更新覆盖文件后须重建网关及 API，不可只重启现有容器。升级前继续按下文排空与备份；当前运行中的四进程平台不会因代码提交自动切换。
+新配置应显示两个 `execution-control-api` 副本及各一个交互、Worker 数据、批量进程。若旧 `.env` 显式设置 `PRIORITY_API_POOL_SIZES` 为旧的执行控制 24，启动会因五进程总连接预算超限而拒绝；先移除该旧覆盖值或改为上面的每副本 12，并通过 `config --quiet`。更新覆盖文件后须重建网关及 API，不可只重启现有容器。其他平台不会因本机代码提交或部署自动切换，升级前仍须排空与备份。
 
 纳管执行器同时读取交互接口和安装包下载接口，后者属于批量进程。四角色覆盖文件将其内部控制地址设为 `http://api-gateway:8000`；更新覆盖文件后需重建 `onboarding` 容器。旧容器若仍直连 `http://api:8000`，在 SSH 检查阶段下载安装包会收到 `control_api_rejected_404`。排查时核对 `docker compose ... config` 中 `onboarding.command` 的 `--api-url`，以及 `/api/v1/admin/node-installation-bundle` 经网关是否返回鉴权响应；不要把未带凭据时的 401 误判成路由失败。
 

@@ -126,3 +126,29 @@ def test_real_docker_full_protocol_tmpfs_does_not_kill_business(tmp_path):
     assert result.returncode == 0, result.stderr[-1000:]
     assert 'protocol capture unavailable: OSError' in result.stderr
     assert (output/'done').read_text() == 'complete'
+
+
+@pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST') != '1',
+                    reason='real host user/mount namespace tmpfs opt-in')
+def test_real_host_full_protocol_filesystem_keeps_business_running(tmp_path):
+    """Fill only a private 64 KiB mount, never the host's actual filesystem."""
+    root = tmp_path / 'capture'
+    root.mkdir()
+    marker = tmp_path / 'done'
+    business = ('from pathlib import Path\n'
+                'for _ in range(3000):\n'
+                ' print(\'MINI_EVAL_EVENT {"episode_id":1,"status":"STARTED"}\')\n'
+                f'Path({str(marker)!r}).write_text("complete")\n')
+    # A private user/mount namespace permits a real ENOSPC without sudo or
+    # modifying mounts visible to any production Worker.
+    launcher = ('import subprocess,sys\n'
+                'subprocess.run(["mount","-t","tmpfs","-o","size=65536","tmpfs",sys.argv[1]],check=True)\n'
+                'from runner.log_capture import capture\n'
+                'raise SystemExit(capture([sys.executable,"-c",sys.argv[2]],sys.argv[1]))\n')
+    result = subprocess.run(['unshare', '--user', '--map-root-user', '--mount',
+                             sys.executable, '-c', launcher, str(root), business],
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr[-1000:]
+    assert 'protocol capture unavailable: OSError' in result.stderr
+    assert marker.read_text() == 'complete'
+    assert list(root.iterdir()) == []  # Private mount disappeared on exit.
