@@ -210,6 +210,8 @@ def test_team_profile_counts_all_twelve_processes_and_env_matches():
     assert s.configured_connections==168
     assert s.connection_budget+s.connection_headroom==200
     assert s.interaction_replicas==8
+    assert s.queue_limits['bulk_transfer']==192
+    assert s.queue_waits['bulk_transfer']==2
     env=dotenv_values('deploy/profiles/team-capacity-100.env.example')
     assert int(env['API_DB_PROCESS_COUNT'])==s.processes
     for key,value in profile.items():
@@ -250,9 +252,9 @@ def test_team_log_queue_remains_bounded_and_cancellation_frees_slots():
         m=runtime.Admission(respond,settings('bulk-transfer',processes=12,control_replicas=2,**profile))
         for _ in range(12):assert await m.acquire('bulk_transfer')
         path='/api/v1/worker/executions/e/logs'
-        pending=[asyncio.create_task(invoke(m,path,'POST')) for _ in range(96)]
+        pending=[asyncio.create_task(invoke(m,path,'POST')) for _ in range(192)]
         await asyncio.sleep(.03)
-        assert len(m.waiters['bulk_transfer'])==96
+        assert len(m.waiters['bulk_transfer'])==192
         assert (await invoke(m,path,'POST'))[0]['status']==503
         for task in pending:task.cancel()
         await asyncio.gather(*pending,return_exceptions=True)

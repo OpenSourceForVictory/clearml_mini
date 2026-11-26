@@ -17,7 +17,7 @@
     "worker_claim": 40,
     "worker_result": 48,
     "worker_observation": 128,
-    "bulk_transfer": 96
+    "bulk_transfer": 192
   },
   "queue_waits": {
     "execution_control": 1,
@@ -27,7 +27,7 @@
     "worker_claim": 0.5,
     "worker_result": 0.5,
     "worker_observation": 1,
-    "bulk_transfer": 1
+    "bulk_transfer": 2
   },
   "pool_waits": {
     "execution_control": 1,

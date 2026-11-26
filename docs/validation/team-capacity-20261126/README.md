@@ -29,7 +29,7 @@
 
 ## 复现
 
-使用可销毁PostgreSQL，不能把测试指向生产库。候选配置见 [team-capacity-100.json](../../../deploy/profiles/team-capacity-100.json)，环境映射见 [team-capacity-100.env.example](../../../deploy/profiles/team-capacity-100.env.example)。
+使用可销毁PostgreSQL，不能把测试指向生产库。候选配置见 [team-capacity-100.json](../../../deploy/profiles/team-capacity-100.json)，环境映射见 [team-capacity-100.env.example](../../../deploy/profiles/team-capacity-100.env.example)。此页上述原始45/60秒测试使用当时的批量入口队列96、等待1秒；现行配置改为192、2秒，保持12进程/168连接，上述历史数字不可视为新配置结果。新配置的90秒百Worker复核见[精简证据](../heartbeat-cadence-20261126/bulk-queue-100-recheck.json)。
 
 ```bash
 LOG_TEST_DATABASE_URL=postgresql+psycopg://USER@HOST:PORT/TESTDB \

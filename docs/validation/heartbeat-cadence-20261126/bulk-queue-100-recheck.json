@@ -1,0 +1,37 @@
+{
+  "scope": "isolated disposable PostgreSQL; 100 simulated nodes/100 Worker slots, 100 simulated Web users, 90 seconds; 12 API processes; driver NOFILE 8192, API child NOFILE 1024",
+  "configuration": "team-capacity-100 base with only bulk_transfer queue 192 and wait 2s; PostgreSQL max_connections 200; API configured pool maximum 168",
+  "passed": true,
+  "http_status_counts": {
+    "200": 32540,
+    "201": 9,
+    "503": 9
+  },
+  "busy_reasons": {
+    "execution_lock": 3,
+    "scheduler_lock": 6
+  },
+  "web_transport_errors": {},
+  "bulk_admission": {
+    "count": 7416,
+    "rejected_count": 0,
+    "p95": 188.846,
+    "p99": 233.857
+  },
+  "all_pool_timeout_count": 0,
+  "sampled_peak_pg_connections": 127,
+  "heartbeat_max_gap_seconds": 4.068174117011949,
+  "heartbeat_success_p99_seconds": 0.514160294085741,
+  "web_monitor_success_p99_seconds": 0.6290856550913304,
+  "logs": {
+    "generated": 3644,
+    "accepted": 3644,
+    "max_pending_chunks_per_worker": 1,
+    "final_pending_chunks": 0,
+    "max_pending_age_seconds": 0.12252984498627484
+  },
+  "expired_leases": 0,
+  "telemetry_stale": 0,
+  "recovery_completed": 9,
+  "limits": "90-second isolated simulated load, not a real 100-node deployment or 100 concurrent model executions; old 30-minute run used bulk queue 96/wait 1s; 800 Worker load failed"
+}
