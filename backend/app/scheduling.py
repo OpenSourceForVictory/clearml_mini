@@ -36,10 +36,17 @@ def lock(s, wait=True):
     return s.scalar(text('SELECT pg_try_advisory_xact_lock(:key)'), {'key': LOCK_ID})
 
 
+class ControlBusy(HTTPException):
+    """Preserve retry semantics while identifying the contended lock scope."""
+    def __init__(self, reason):
+        self.reason = reason
+        super().__init__(503, 'control plane busy; retry shortly', headers={'Retry-After':'1'})
+
+
 def fast_lock(s):
     """High-frequency reports must release their connection instead of queuing on admission."""
     if not lock(s, wait=False):
-        raise HTTPException(503, 'control plane busy; retry shortly', headers={'Retry-After':'1'})
+        raise ControlBusy('scheduler_lock')
 
 
 def transition(s, run, status, message=None):

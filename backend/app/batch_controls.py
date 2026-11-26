@@ -2,7 +2,8 @@
 from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from .core import now
+from sqlalchemy import select
+from .core import now, Run
 from .scheduling import lock, transition, TERMINAL
 
 
@@ -13,10 +14,17 @@ class Control(BaseModel):
 
 
 def cancel_job(s, job):
+    # Callers retain the scheduler lock for batch/resource intent, but startup
+    # reports no longer take it. Lock and refresh the execution before deciding
+    # the transition, never write a cancellation from a stale Job snapshot.
+    run = s.scalar(select(Run).where(Run.job_id == job.id)
+                   .order_by(Run.attempt.desc()).limit(1)
+                   .with_for_update(key_share=True).execution_options(populate_existing=True))
+    s.refresh(job)
     if job.status in TERMINAL:
         raise HTTPException(409, 'terminal job')
     if job.status != 'CANCEL_REQUESTED':
-        transition(s, job.runs[-1], 'CANCELLED' if job.status in ('PENDING', 'RESERVED') else 'CANCEL_REQUESTED')
+        transition(s, run, 'CANCELLED' if job.status in ('PENDING', 'RESERVED') else 'CANCEL_REQUESTED')
     return job.status
 
 

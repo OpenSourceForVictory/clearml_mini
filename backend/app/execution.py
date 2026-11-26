@@ -378,12 +378,9 @@ def install(app, db, current):
 
     @app.post('/api/v1/worker/heartbeat')
     def heartbeat(body: Heartbeat, worker=Depends(worker_auth), s: Session = Depends(db)):
-        # Pure renewal does not change resource ownership. Only the initial
-        # STARTING transition participates in global scheduling serialization.
-        if body.execution_id and s.scalar(select(Run.status).where(
-                Run.execution_id == body.execution_id)) == 'STARTING':
-            from .scheduling import fast_lock
-            fast_lock(s)
+        # Startup confirmation and renewal keep the already allocated resources.
+        # Run -> Slot locks serialize this execution; cancellation and timeout
+        # decisions re-read the Run under the same execution-local lock.
         # Execution reports never modify Worker configuration JSON. Lock Run
         # before Slot, matching completion/reclamation. Only configuration
         # acknowledgements need the Worker row lock; ordinary telemetry and

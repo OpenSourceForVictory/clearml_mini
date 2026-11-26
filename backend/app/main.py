@@ -19,7 +19,7 @@ from sqlalchemy import func, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
-from .scheduling import lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE
+from .scheduling import ControlBusy, lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE
 from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 from .execution import install
 from .clients import ClientRequest, snapshot, install as install_clients
@@ -72,6 +72,11 @@ elif DB_BACKPRESSURE_ENABLED:
 if API_ROUTE_GROUP and not PRIORITY_API:
     app.add_middleware(db_budget.RouteGroup, route_group=API_ROUTE_GROUP)
 bearer = HTTPBearer(auto_error=False)
+
+
+@app.exception_handler(ControlBusy)
+def control_busy(request, exc):
+    return db_budget.busy_response(exc.reason)
 
 
 @app.exception_handler(db_budget.DatabaseBusy)

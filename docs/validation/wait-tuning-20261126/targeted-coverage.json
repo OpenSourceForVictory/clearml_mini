@@ -1,0 +1,30 @@
+{
+  "batch_controls": {
+    "line": 100.0,
+    "branch": 93.75
+  },
+  "execution": {
+    "line": 78.47,
+    "branch": 59.22
+  },
+  "main": {
+    "line": 67.08,
+    "branch": 41.67
+  },
+  "recovery_control": {
+    "line": 99.4,
+    "branch": 97.5
+  },
+  "recovery_launch": {
+    "line": 98.73,
+    "branch": 96.67
+  },
+  "scheduling": {
+    "line": 88.24,
+    "branch": 68.42
+  },
+  "priority_runtime": {
+    "line": 100.0,
+    "branch": 100.0
+  }
+}

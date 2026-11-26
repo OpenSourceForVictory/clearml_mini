@@ -34,10 +34,11 @@ def test_execution_reports_ignore_unrelated_scheduler_lock(online, pg, operation
         assert client.post(path, headers=headers, json=body).status_code == 200
 
 
-def test_start_transition_still_uses_global_lock(online):
+@pytest.mark.parametrize("started", [False, True])
+def test_start_transition_ignores_unrelated_global_lock(online, started):
     main, client, headers = online
     with main.SessionLocal() as s:
-        s.get(Run, 'r').status = 'STARTING'
+        s.get(Run, 'r').status = s.get(Job, 'j').status = 'STARTING'
         s.commit()
     # Use a separate engine so the reserved HTTP pool is not exhausted.
     from sqlalchemy.orm import sessionmaker
@@ -47,8 +48,13 @@ def test_start_transition_still_uses_global_lock(online):
         with sessionmaker(engine)() as holder:
             lock(holder)
             response = client.post('/api/v1/worker/heartbeat', headers=headers,
-                                   json={'slot_id': 's', 'execution_id': 'e', 'started': True})
-            assert response.status_code == 503
+                                   json={'slot_id': 's', 'execution_id': 'e', 'started': started})
+            assert response.status_code == 200, response.text
+            with main.SessionLocal() as check:
+                run = check.get(Run, 'r')
+                assert run.status == check.get(Job, 'j').status == ('RUNNING' if started else 'STARTING')
+                assert not run.cleanup_confirmed
+                assert run.slot_id == 's'
     finally:
         engine.dispose()
 
@@ -72,18 +78,21 @@ def test_idle_claim_skips_global_lock_but_candidate_defers(online, pg):
     assert claimed.json()['task']['execution_id'] == 'e'
 
 
-def test_reconcile_skips_locked_run_and_reclaims_after_release(pg):
+@pytest.mark.parametrize("initial_status", ["STARTING", "RUNNING"])
+def test_reconcile_skips_locked_run_and_reclaims_after_release(pg, initial_status):
     factory = seed(pg[0])
     at = now()
     with factory() as s:
         s.get(Run, 'r').lease_expires_at = at - timedelta(seconds=31)
+        s.get(Run, 'r').status = initial_status
+        s.get(Run, 'r').enqueued_at = at - timedelta(seconds=121)
         s.commit()
     with factory() as uploader, factory() as scheduler:
         uploader.scalar(select(Run).where(Run.id == 'r').with_for_update())
         lock(scheduler)
         reconcile(scheduler, at)
         scheduler.commit()
-        assert scheduler.get(Run, 'r').status == 'RUNNING'
+        assert scheduler.get(Run, 'r').status == initial_status
     with factory() as scheduler:
         lock(scheduler)
         reconcile(scheduler, at)
@@ -132,3 +141,40 @@ def test_execution_renewal_does_not_wait_for_unmodified_worker_json(online, pg):
         response = client.post('/api/v1/worker/heartbeat', headers=headers,
                                json={'slot_id': 's', 'execution_id': 'e', 'started': True})
         assert response.status_code == 200, response.text
+
+
+@pytest.mark.parametrize('reason', ['scheduler_lock', 'execution_lock', 'execution_recheck'])
+def test_control_busy_http_reason_is_not_lost(online, monkeypatch, reason):
+    from backend.app.scheduling import ControlBusy
+    main, client, headers = online
+    # Exercise the real main exception handler, not a test-only FastAPI app.
+    def busy(*args, **kwargs):
+        raise ControlBusy(reason)
+    from backend.app import recovery_launch
+    monkeypatch.setattr(recovery_launch, 'prepare', busy)
+    response = client.post('/api/v1/worker/executions/e/recovery/prepare', headers=headers, json={
+        'generation':'test', 'request_id':'00000000-0000-0000-0000-000000000001',
+        'launch_id':'00000000-0000-0000-0000-000000000002', 'boot_id':'boot', 'kind':'host'})
+    assert response.status_code == 503, response.text
+    assert response.json()['reason'] == reason
+    assert response.headers['Retry-After'] == '1'
+
+
+def test_start_confirmation_supersedes_stale_startup_timeout(online, pg):
+    main, client, headers = online
+    at = now()
+    with main.SessionLocal() as s:
+        run = s.get(Run, 'r')
+        run.status = s.get(Job, 'j').status = 'STARTING'
+        run.enqueued_at = at-timedelta(seconds=121)
+        s.commit()
+    with Session(pg[0]) as scheduler:
+        stale = scheduler.get(Run, 'r')
+        lock(scheduler)
+        reply = client.post('/api/v1/worker/heartbeat', headers=headers,
+                            json={'slot_id':'s', 'execution_id':'e', 'started':True})
+        assert reply.status_code == 200
+        reconcile(scheduler, at)
+        scheduler.commit()
+        assert stale.status == 'RUNNING'
+        assert not stale.cleanup_confirmed

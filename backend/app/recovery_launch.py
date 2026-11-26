@@ -5,11 +5,12 @@ import uuid
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from typing import Literal
 
 from .core import ExecutionRecovery, ExecutionRecoveryClaim, ExecutionRecoveryControl, Run, Slot, now
 from .recovery_control import platform_stop_reason
-from .scheduling import fast_lock, utc
+from .scheduling import ControlBusy, utc
 
 # Short-lived permission to start, distinct from the lifetime of an offline run.
 LAUNCH_WINDOW_SECONDS = 30
@@ -30,11 +31,15 @@ def prepare(s, *, worker_id, execution_id, request):
         raise HTTPException(404, 'recovery execution not found')
     if grant.generation != request.generation:
         raise HTTPException(409, 'recovery assignment generation does not match')
-    fast_lock(s)
-    run = s.scalar(select(Run).where(Run.id == grant.run_id).with_for_update()
-                   .execution_options(populate_existing=True))
-    grant = s.scalar(select(ExecutionRecovery).where(ExecutionRecovery.execution_id == execution_id)
-                     .with_for_update().execution_options(populate_existing=True))
+    try:
+        run = s.scalar(select(Run).where(Run.id == grant.run_id).with_for_update(key_share=True, nowait=True)
+                       .execution_options(populate_existing=True))
+        grant = s.scalar(select(ExecutionRecovery).where(ExecutionRecovery.execution_id == execution_id)
+                         .with_for_update(nowait=True).execution_options(populate_existing=True))
+    except OperationalError as exc:
+        if getattr(exc.orig, 'sqlstate', None) != '55P03':
+            raise
+        raise ControlBusy('execution_lock') from exc
     claim = s.get(ExecutionRecoveryClaim, str(request.request_id))
     slot = s.get(Slot, grant.slot_id)
     if not claim or claim.execution_id != execution_id or not slot or slot.worker_id != worker_id:

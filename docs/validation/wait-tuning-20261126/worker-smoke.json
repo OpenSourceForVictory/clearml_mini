@@ -1,0 +1,16 @@
+[
+  {
+    "case": "complete",
+    "job_id": "8b609a86-318e-411c-8a70-136b5e5d257e",
+    "status": "SUCCEEDED",
+    "execution_id": "02877319-6ed3-4698-b4ea-d2462011a62e",
+    "cleanup_confirmed": true
+  },
+  {
+    "case": "cancel",
+    "job_id": "137e8548-25da-411d-b82e-cf801a89eb68",
+    "status": "CANCELLED",
+    "execution_id": "16afcff8-98eb-4da0-917a-4b88a806760a",
+    "cleanup_confirmed": true
+  }
+]

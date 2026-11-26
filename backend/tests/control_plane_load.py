@@ -255,7 +255,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                 if reply.status_code == 200:
                     successful_latency[kind].append(time.monotonic()-begin)
                 if reply.status_code == 503:
-                    reason = reply.json().get('reason', 'scheduler_lock')
+                    reason = reply.json().get('reason', 'unspecified_busy')
                     reasons[reason] += 1
                     busy_by_kind[kind][reason] += 1
                 return reply

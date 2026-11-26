@@ -364,7 +364,7 @@ def test_postgres_cancel_lock_contention_and_retry(pg):
     assert apply(factory,generation,sequence=2)['action']=='stop'
 
 
-def test_postgres_running_control_avoids_global_lock_but_expired_lease_rechecks(pg):
+def test_postgres_client_recovery_avoids_global_lock_even_after_expiry(pg):
     from backend.app.scheduling import lock
     factory=seed(pg[0])
     with factory() as session:
@@ -383,9 +383,7 @@ def test_postgres_running_control_avoids_global_lock_but_expired_lease_rechecks(
         session.commit()
     with factory() as scheduler:
         lock(scheduler)
-        with pytest.raises(HTTPException) as error:
-            apply(factory,generation,sequence=3)
-        assert error.value.status_code==503
+        assert apply(factory,generation,sequence=3)['action']=='track'
         scheduler.rollback()
     assert apply(factory,generation,sequence=3)['action']=='track'
 

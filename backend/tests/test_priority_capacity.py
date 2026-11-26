@@ -170,3 +170,48 @@ def test_team_profile_counts_all_twelve_processes_and_env_matches():
         names={'connection_budget':'DB_CONNECTION_BUDGET','interaction_replicas':'API_INTERACTION_REPLICAS'}
         name=names.get(key,'PRIORITY_API_'+key.upper())
         assert json.loads(env[name])==value
+
+
+@pytest.mark.parametrize('role,category,path',[
+    ('bulk-transfer','bulk_transfer','/api/v1/worker/executions/e/logs'),
+    ('worker-data','worker_observation','/api/v1/agent/heartbeat'),
+])
+def test_team_burst_waits_without_borrowing_control_capacity(role,category,path):
+    from pathlib import Path
+    profile=json.loads(Path('deploy/profiles/team-capacity-100.json').read_text())
+    async def run():
+        s=settings(role,processes=12,control_replicas=2,**profile)
+        m=runtime.Admission(respond,s)
+        for _ in range(12):assert await m.acquire(category)
+        pending=[asyncio.create_task(invoke(m,path,'POST')) for _ in range(88)]
+        await asyncio.sleep(.03)
+        assert not any(task.done() for task in pending)
+        assert len(m.waiters[category])==88
+        control=runtime.Admission(respond,settings('execution-control',processes=12,control_replicas=2,**profile))
+        assert (await invoke(control,'/api/v1/worker/heartbeat','POST'))[0]['status']==200
+        m.available[category]+=12
+        responses=await asyncio.gather(*pending)
+        assert all(response[0]['status']==200 for response in responses)
+        assert m.available[category]==12 and not m.waiters[category]
+        assert s.configured_connections==168
+    asyncio.run(run())
+
+
+def test_team_log_queue_remains_bounded_and_cancellation_frees_slots():
+    from pathlib import Path
+    profile=json.loads(Path('deploy/profiles/team-capacity-100.json').read_text())
+    async def run():
+        m=runtime.Admission(respond,settings('bulk-transfer',processes=12,control_replicas=2,**profile))
+        for _ in range(12):assert await m.acquire('bulk_transfer')
+        path='/api/v1/worker/executions/e/logs'
+        pending=[asyncio.create_task(invoke(m,path,'POST')) for _ in range(96)]
+        await asyncio.sleep(.03)
+        assert len(m.waiters['bulk_transfer'])==96
+        assert (await invoke(m,path,'POST'))[0]['status']==503
+        for task in pending:task.cancel()
+        await asyncio.gather(*pending,return_exceptions=True)
+        assert not m.waiters['bulk_transfer']
+        m.available['bulk_transfer']+=12
+        assert (await invoke(m,path,'POST'))[0]['status']==200
+        assert m.available['bulk_transfer']==12
+    asyncio.run(run())

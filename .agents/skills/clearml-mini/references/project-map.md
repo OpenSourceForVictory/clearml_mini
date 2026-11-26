@@ -426,3 +426,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 监控响应编码：monitoring.get在owned鉴权后返回MonitorResponse；monitor_response只用jsonable_encoder转换非原生叶值，原生诊断树由标准JSON编码器遍历。保持日期/Unicode/None/数字响应、拒绝NaN/Infinity，专项test_monitor_response/test_monitoring；无跨请求缓存。
 
 百人团队分类容量与交互多副本：配置与回滚见 `docs/priority-api-isolation.md`，实测边界见 `docs/validation/team-capacity-20261126/README.md`。100用户/100节点/100Worker短测通过配置见 `deploy/profiles/team-capacity-100.json` 及同名env.example；交互8副本、实际168连接、PG至少200。800Worker混合档失败，不能称为百台八卡并行业务容量已达标。独立API进程的压测不计入父进程覆盖率。
+
+执行锁范围优化：见 `docs/execution-lock-scope.md`。STARTING 心跳、原执行 prepare、非资源变更 reconcile 不取全局调度锁；Run 使用 NO KEY UPDATE，prepare/reconcile 按 Run→grant NOWAIT。cancel_job 锁最新 attempt 并刷新 Job，调度超时保持 SKIP LOCKED 后重查。过期服务恢复清除就绪仍取全局锁，租约跨界返回 execution_recheck，禁止 Run 后取全局锁。ControlBusy 通过 main 异常处理器返回 scheduler_lock/execution_lock/execution_recheck；压测缺失 reason 归 unspecified_busy，不再误称全局锁。验证入口 test_execution_local_control_locks，资源释放与 tick 全局锁未取消。

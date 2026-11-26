@@ -16,28 +16,28 @@
     "page_read": 160,
     "worker_claim": 40,
     "worker_result": 48,
-    "worker_observation": 48,
-    "bulk_transfer": 24
+    "worker_observation": 128,
+    "bulk_transfer": 96
   },
   "queue_waits": {
-    "execution_control": 0.5,
+    "execution_control": 1,
     "user_action": 2,
     "user_long": 3,
     "page_read": 3,
     "worker_claim": 0.5,
     "worker_result": 0.5,
-    "worker_observation": 0.5,
-    "bulk_transfer": 0.25
+    "worker_observation": 1,
+    "bulk_transfer": 1
   },
   "pool_waits": {
-    "execution_control": 0.5,
+    "execution_control": 1,
     "user_action": 1,
     "user_long": 1,
     "page_read": 3,
     "worker_claim": 0.5,
     "worker_result": 0.5,
     "worker_observation": 0.5,
-    "bulk_transfer": 0.25
+    "bulk_transfer": 0.5
   },
   "request_budgets": {
     "user_action": 12,
