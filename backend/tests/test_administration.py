@@ -1,6 +1,22 @@
 from sqlalchemy import select
 from backend.tests.test_execution import env, node, submit, claim
-from backend.app.core import Worker, ManagementAudit
+from backend.app.core import Worker, Slot, ManagementAudit
+
+
+def test_machine_reports_recovery_capability_after_worker_upgrade(env, monkeypatch):
+    main, client, auth = env
+    _, slots = node(env, count=2)
+    monkeypatch.setenv('RECOVERY_EXECUTION_ENABLED', '1')
+    with main.SessionLocal() as session:
+        session.get(Slot, slots[0]).software = {'capabilities':['disconnected_execution_v1']}
+        session.commit()
+    machine = client.get('/api/v1/admin/nodes', headers=auth['admin']).json()[0]
+    assert machine['recovery_execution'] == {'platform_enabled':True,
+        'ready_slots':1, 'online_slots':2, 'total_slots':2}
+    monkeypatch.setenv('RECOVERY_EXECUTION_ENABLED', '0')
+    machine = client.get('/api/v1/admin/nodes', headers=auth['admin']).json()[0]
+    assert machine['recovery_execution']['ready_slots'] == 1
+    assert not machine['recovery_execution']['platform_enabled']
 
 
 def test_disabled_node_can_finish_but_not_claim(env):

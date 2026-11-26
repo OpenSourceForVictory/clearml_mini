@@ -230,3 +230,27 @@ def test_recovery_capability_requires_explicit_valid_node_configuration(tmp_path
     link.symlink_to(tmp_path / 'outbox')
     with pytest.raises(ValueError, match='node_outbox_root'):
         metadata({**config, 'node_outbox_root': str(link)})
+
+
+def test_upgraded_worker_defaults_to_shared_persistent_state(tmp_path):
+    from worker.version import recovery_config, metadata
+    state = tmp_path/'state'/'gpu0.json'
+    config = {'node_name':'test-node', 'state_path':str(state),
+              'workspace_root':str(tmp_path/'business-workspace')}
+    effective = recovery_config(config)
+    assert effective['node_outbox_root'] == str(state.parent/'reliable-outbox')
+    assert CAPABILITY in metadata(config)['capabilities']
+    assert CAPABILITY not in metadata({**config, 'recovery_execution_enabled':False})['capabilities']
+    assert CAPABILITY not in metadata({'node_name':'test-node'})['capabilities']
+    assert config.get('node_outbox_root') is None
+    assert not (tmp_path/'business-workspace').exists()
+
+
+def test_worker_instances_on_same_node_derive_one_outbox(tmp_path):
+    from worker.version import metadata
+    snapshot = {'revision':0, 'config':{'workspace_root':str(tmp_path/'workspace')}}
+    first = Worker({'node_name':'test-node'}, tmp_path/'state'/'gpu0.json', snapshot=snapshot)
+    second = Worker({'node_name':'test-node'}, tmp_path/'state'/'gpu1.json', snapshot=snapshot)
+    assert first.config['node_outbox_root'] == second.config['node_outbox_root']
+    assert CAPABILITY in metadata(first.config)['capabilities']
+    assert CAPABILITY in metadata(second.config)['capabilities']

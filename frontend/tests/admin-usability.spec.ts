@@ -55,7 +55,7 @@ test('NPU server uses accelerator count label',async({page})=>{
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const p=new URL(route.request().url()).pathname;
-  await route.fulfill({json:p.endsWith('/auth/me')?{username:'admin',role:'admin'}:p.endsWith('/admin/nodes')?[{id:'npu',node_name:'ascend-eight',roles:['server'],status:'online',gpu_count:8,held_executions:0,enabled:true,revoked_at:null}]:[]});
+  await route.fulfill({json:p.endsWith('/auth/me')?{username:'admin',role:'admin'}:p.endsWith('/admin/nodes')?[{id:'npu',node_name:'ascend-eight',roles:['server'],status:'online',gpu_count:8,held_executions:0,enabled:true,revoked_at:null,recovery_execution:{platform_enabled:true,ready_slots:7,online_slots:8,total_slots:8}}]:[]});
  });
  await page.goto('/');await page.getByRole('button',{name:'管理设置',exact:true}).click();
  await page.getByRole('tab',{name:'服务端机器',exact:true}).click();
@@ -63,4 +63,6 @@ test('NPU server uses accelerator count label',async({page})=>{
  await expect(page.getByRole('columnheader',{name:'加速设备数量'})).toBeVisible();
  await expect(page.getByRole('row').filter({hasText:'ascend-eight'})).toContainText('8');
  await expect(page.getByText('GPU 总数',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'查看配置'}).click();
+ await expect(page.getByRole('status').filter({hasText:'断联恢复能力'})).toContainText('在线设备 7/8 张已上报可用');
 });

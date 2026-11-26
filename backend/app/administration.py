@@ -1,5 +1,6 @@
 """Non-destructive machine, pool, and account lifecycle management."""
 import secrets
+import os
 from typing import Literal
 from argon2 import PasswordHasher
 from fastapi import Depends, HTTPException
@@ -19,10 +20,14 @@ def node_view(s, w, *, slots=None, held_count=None):
     connection = dict(w.connection or {})
     if 'agent' in connection: connection['agent'] = agent_view(w)
     slots = list(s.scalars(select(Slot).where(Slot.worker_id == w.id))) if slots is None else slots
+    live_slots = [x for x in slots if online(x)]
+    recovery_slots = [x for x in live_slots if 'disconnected_execution_v1' in (x.software or {}).get('capabilities', [])]
     return {**{k: getattr(w, k) for k in ('id', 'node_name', 'enabled', 'max_concurrent', 'cpu_capacity', 'ram_gb_capacity', 'roles', 'management_revision', 'revoked_at', 'connection')},
             'status': 'unmanaged' if w.revoked_at else 'enrolling' if (w.connection or {}).get('enrollment',{}).get('state')=='INSTALLING' else 'disabled' if not w.enabled else 'online' if any(online(x) for x in slots) else 'offline' if slots else 'waiting',
             'connection': connection or None,
-            'held_executions': held_count if held_count is not None else s.scalar(select(func.count()).select_from(Run).where(Run.slot_id.in_([x.id for x in slots]), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))), 'gpu_count': len(slots)}
+            'held_executions': held_count if held_count is not None else s.scalar(select(func.count()).select_from(Run).where(Run.slot_id.in_([x.id for x in slots]), or_(Run.status.in_(ACTIVE), Run.cleanup_confirmed.is_(False)))), 'gpu_count': len(slots),
+            'recovery_execution': {'platform_enabled': os.getenv('RECOVERY_EXECUTION_ENABLED', '0') == '1',
+                                   'ready_slots': len(recovery_slots), 'online_slots': len(live_slots), 'total_slots': len(slots)}}
 
 
 def node_views(s, workers):

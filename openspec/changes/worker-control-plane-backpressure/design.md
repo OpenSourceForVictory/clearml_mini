@@ -316,4 +316,6 @@ SQLite 本地增量创建 retired 表，无平台 Alembic 迁移；每执行/流
 
 新分配采用双端显式确认：Worker JSON 的 recovery_execution_enabled 默认为 false，启用时要求 node_name 及同节点共享的绝对 node_outbox_root；API 注册/心跳返回自身恢复开关状态。Worker 仅在服务端明确确认且本机广告能力时创建新恢复领取请求，旧 API 缺字段时走旧式新领取。持久未决领取与已协商执行不受开关关闭影响，继续对账；不能靠关闭开关降级既有执行。新开关不新增数据库字段，不改变既有恢复迁移。
 
+2026-11-26 修订：用户要求升级 Worker 后默认具备恢复能力。新版 Worker 对未显式设置 `recovery_execution_enabled` 的节点默认启用；显式 `false` 保留运维回退能力。共享 outbox 根优先取已有 `node_outbox_root`，旧安装缺失时从绝对 `state_path` 的父目录派生 `reliable-outbox`，不放入业务工作目录。无持久状态路径或路径不可信时不广告能力，并在管理界面显示未就绪；API `RECOVERY_EXECUTION_ENABLED` 仍是平台总闸，旧 API 缺确认时不发新协议领取。界面展示各卡上报能力，不把升级请求成功等同于已生效。以上取代本节旧的“Worker 默认 false”决定。
+
 跨 UID 的任务级 SDK 结果文件需允许 Worker 读取：新文件0644，仅属主写入；执行私有父目录与锁文件0600保持。真实 Docker 验证发现旧0600导致 PermissionError，不能把程序退出0误作结果已读取。

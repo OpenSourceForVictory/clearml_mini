@@ -154,3 +154,5 @@
 2026-11-26 5.3兼容与发布验收：恢复迁移升级/降级及有记录拒绝降级已在一次性PG通过；镜像recovery-acceptance-20261126本机部署，13槽位/6Agent回连、页面200。隔离Worker经真实网关/API/PG/Docker主循环完成断联补报与断联取消，两项单次执行、资源清理确认；灰度后关闭新分配，保留原收据。真实宿主机矩阵见45项专项，不冒充生产宿主机断网或模型评测。证据见[验收报告](../../../docs/validation/disconnected-execution-20261124/recovery-acceptance-20261126.md)。余5.2/5.4按用户要求暂缓。
 
 2026-11-26 生产灰度启用：补齐 Compose 四角色 `RECOVERY_EXECUTION_ENABLED` 透传，部署 API 开关为 1；在 1.95.69.29 上为全部 NPU 卡配置共享 outbox 根，仅 NPU0 打开 `recovery_execution_enabled` 并重启空闲 Worker。NPU0 能力广告与 API 健康检查通过；NPU1–7 保持旧协议。Compose 渲染专项 3 通过，隔离 PostgreSQL 相关测试 60 通过。尚未用此生产 NPU0 执行断联故障任务，不能将灰度配置视为真实断联恢复验收；5.2/5.4 保持未完成。操作见[Worker 更新说明](../../../docs/worker-upgrades.md)。
+
+2026-11-26 Worker 升级默认启用调整：版本 0.21.22 从持久 `state_path` 派生共享 outbox（显式 false 保留回退），机器管理显示平台总闸及在线卡能力数；业务工作目录不保存恢复账本。专项后端恢复/机器/安装 69 通过、5 项独立 PostgreSQL 条件跳过；升级相关 23 通过，前端构建和机器界面 3 通过。变更尚未部署真实节点，5.2/5.4 及生产断联验收保持未完成。

@@ -90,7 +90,8 @@ def telemetry(config):
 
 class Worker:
     def __init__(self, config, state_path, snapshot=None, runtime_snapshot=None):
-        self.config = dict(config)
+        from .version import recovery_config
+        self.config = recovery_config({**config, 'state_path': config.get('state_path') or str(state_path)})
         self.api = Client(self.config)
         self.path = Path(state_path)
         self.state = json.loads(self.path.read_text()) if self.path.exists() else None

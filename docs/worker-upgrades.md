@@ -178,9 +178,9 @@ HostBackend 的服务 Description 和 Docker 创建 label 支持可选 recovery_
 
 新恢复收尾 journal 使用 recovery={generation,identity} 和 recovery_finalization={proof,body,phase}。升级后 execute 可从 completion/remove/cleanup/done 原阶段恢复；不能手工删除此记录或用新执行身份覆盖。仅此代码更新并不启用断联恢复，尚需两端完整能力协商及正常执行路径接线。
 
-领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。0.21.20 默认不声明 disconnected_execution_v1。受控验证节点须显式设置 Worker JSON 的 recovery_execution_enabled=true，并配置 node_name 及同节点各卡共用的绝对 node_outbox_root；API 也须设置 RECOVERY_EXECUTION_ENABLED=1。Worker 仅在心跳响应明确确认开关时发起新协议领取；旧 API 无此字段时沿用旧领取。关闭任一开关只影响新领取，已有未确认领取与执行继续按原身份恢复，不能降级处理。完整发布验收状态见本特性验证记录。
+领取响应丢失恢复要求保持原request_id；相同请求返回原快照/代次，不按当前模板重算。新请求不得接管已领取执行，旧请求也不能把恢复执行交回旧Worker；取消后的原请求仅返回停止处置。Worker **0.21.22 起**升级后默认声明 `disconnected_execution_v1`：优先使用节点配置的 `node_outbox_root`，旧配置缺失时从绝对 `state_path` 的父目录派生同机共享的 `reliable-outbox`。恢复账本放在 Worker 持久状态目录，不能放在按任务清理的业务工作目录。缺少可信持久路径时不声明能力；显式配置 `recovery_execution_enabled=false` 可关闭新领取。API 仍须设置 `RECOVERY_EXECUTION_ENABLED=1`；Worker 仅在心跳响应明确确认开关时发起新协议领取，旧 API 无此字段时沿用旧领取。关闭任一开关只影响新领取，已有未确认领取与执行继续按原身份恢复，不能降级处理。
 
-已有节点启用时，先确认该节点各卡无活动执行、待清理执行及未完成恢复journal。用`systemctl show <worker服务名> -p ExecStart -p User -p WorkingDirectory`定位实际`--config`文件和运行身份；不要假定都在同一目录。备份原JSON，只给受控灰度卡增加布尔字段`"recovery_execution_enabled": true`，并给该节点所有卡配置相同、纳管账号可读写的绝对`node_outbox_root`（不是每卡各一个）；保留既有token及设备身份字段。仅在所涉卡空闲时重启对应Worker，核对注册上报`disconnected_execution_v1`；API四角色还需通过Compose显式传递`RECOVERY_EXECUTION_ENABLED=1`，并确认心跳回复该值。直接修改`.env`但不重建API不会加载配置，重启Worker可能停止旧协议的在途业务程序。不得因一个灰度卡通过就宣称整机各卡或所有节点已启用。
+已有节点升级时，先按平台排空流程确认各卡无活动执行、待清理执行及未完成恢复 journal。升级后到“机器管理 → 查看配置 → 基本配置”查看“断联恢复能力”的在线卡数与已上报卡数；只有平台总闸和节点能力都具备，新领取才使用恢复协议。老节点若状态路径不可用，先用`systemctl show <worker服务名> -p ExecStart -p User -p WorkingDirectory`定位配置，再检查 `state_path` 的父目录是否为持久、纳管账号可写且无符号链接的目录；不需要修改业务工作目录。API四角色须通过Compose显式传递`RECOVERY_EXECUTION_ENABLED=1`，只改`.env`不重建API不会生效。升级排空与真实任务断联恢复验收仍须分别核对，界面能力数字不是执行验收结论。
 
 Worker 的领取主循环现经 recovery_poll 统一分流：未声明能力且没有待恢复领取文件时仍发原协议请求；已有 .claim.json 时即使当前版本不声明能力，也必须先按原 request_id 恢复，不能绕过待确认分配领取新任务。收据先落盘，再幂等写入执行 journal 的 recovery_assignment，最后清除领取请求。磁盘写入失败、快照冲突、停止处置均保留证据；不得手工删除文件以绕过。完整监督入口尚未接线，带 recovery_assignment 的执行会拒绝进入旧 watchdog/启动路径；这不是已启用断联执行，禁止手工添加能力标识。
 
