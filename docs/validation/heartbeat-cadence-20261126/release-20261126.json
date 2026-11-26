@@ -1,0 +1,59 @@
+{
+  "source_commit": "d2ad332",
+  "api_image": "mini-eval-api:heartbeat-capacity-20261126",
+  "migration_head": "c14d09e",
+  "api_roles_healthy": 4,
+  "api_processes_healthy": 12,
+  "database_pool_budget_connections": 168,
+  "nodes": [
+    {
+      "node_name": "ascend910b3-29",
+      "slot_count": 8,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 5.0,
+      "max_telemetry_age_seconds": 5.8
+    },
+    {
+      "node_name": "local4090-151",
+      "slot_count": 1,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 4.8,
+      "max_telemetry_age_seconds": 6.1
+    },
+    {
+      "node_name": "rtx3080-182",
+      "slot_count": 1,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 1.1,
+      "max_telemetry_age_seconds": 9.6
+    },
+    {
+      "node_name": "rtx4090-157",
+      "slot_count": 1,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 1.6,
+      "max_telemetry_age_seconds": 9.9
+    },
+    {
+      "node_name": "rtx4090-183",
+      "slot_count": 1,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 1.7,
+      "max_telemetry_age_seconds": 5.5
+    },
+    {
+      "node_name": "rtx8000-177",
+      "slot_count": 1,
+      "worker_version": "0.21.21",
+      "upgrade_state": "SUCCEEDED",
+      "max_heartbeat_age_seconds": 2.9,
+      "max_telemetry_age_seconds": 6.0
+    }
+  ],
+  "validation_boundary": "real managed nodes and component heartbeats; no GPU/NPU model task launched in this release check"
+}
