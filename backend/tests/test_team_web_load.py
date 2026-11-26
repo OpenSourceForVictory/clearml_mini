@@ -34,3 +34,9 @@ def test_transport_failure_records_safe_exception_type(monkeypatch):
     assert len(records)==2
     assert all(code=='transport_error' and reason=='ReadTimeout' for code,_,reason,_ in records)
     assert 'sensitive' not in str(records)
+
+
+def test_socket_errno_is_reported_without_message_or_url():
+    exc=httpx.ConnectError('[Errno 111] Connection refused; token=private-value')
+    assert load.safe_transport_reason(exc)=='ConnectError/errno=111'
+    assert load.safe_transport_reason(httpx.ConnectError('private URL'))=='ConnectError'

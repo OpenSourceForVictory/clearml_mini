@@ -139,6 +139,48 @@
     "logs_accepted": 7524,
     "final_log_pending": 0
   },
+  "file_descriptor_diagnostics_200": {
+    "scope": "same-host disposable PostgreSQL, 12 API processes, 168 configured application connections, 200 simulated workers, 100 simulated Web users, 90 seconds per run",
+    "default_limit_socket_run": {
+      "load_driver_soft_nofile": 1024,
+      "passed": false,
+      "web_connect_errors_first_30_seconds": 13,
+      "http_503": 1443,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 137,
+      "gateway_listen_queue_samples": 400,
+      "gateway_peak_recv_queue": 0,
+      "gateway_listen_queue_capacity": 511,
+      "listen_overflow_and_drop_counter_delta": 0,
+      "gateway_error_log_lines": 0
+    },
+    "raised_limit_run": {
+      "load_driver_soft_nofile": 8192,
+      "passed": true,
+      "web_transport_errors": 0,
+      "http_503": 1934,
+      "load_driver_peak_open_fds": 860,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 139,
+      "expired_leases_during_load": 0,
+      "logs_generated": 7524,
+      "logs_accepted": 7524
+    },
+    "default_limit_repeat": {
+      "load_driver_soft_nofile": 1024,
+      "passed": false,
+      "web_connect_errors_first_30_seconds": 29,
+      "http_503": 1365,
+      "load_driver_peak_open_fds": 1009,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 119,
+      "expired_leases_during_load": 0,
+      "logs_generated": 7524,
+      "logs_accepted": 7524
+    },
+    "minimum_client_nofile_budget": 1220,
+    "limitation": "Raising the load driver's soft limit also raises the inherited API subprocess limit; one passing 90-second run cannot isolate the failing process or establish a production SLA."
+  },
   "base_commit": "ad87978",
-  "diagnostic_instrumentation": "Web transport exception class and 30-second window; test tooling only"
+  "diagnostic_instrumentation": "Web transport exception class, optional numeric socket errno and 30-second window; load-driver RLIMIT_NOFILE precheck; test tooling only"
 }

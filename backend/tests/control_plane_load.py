@@ -12,6 +12,7 @@ from pathlib import Path
 import platform
 import random
 import re
+import resource
 import socket
 import subprocess
 import sys
@@ -735,6 +736,11 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
                                'max_pending_age_seconds': max_log_age} if independent_logs else None}
 
 
+def minimum_client_nofile(workers, web_users, mixed_ui):
+    """Reserve the HTTP clients' possible sockets plus a small driver margin."""
+    return 4 * (workers + web_users) + (4 if mixed_ui else 0) + 16
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--grades', default='50,100,200')
@@ -836,6 +842,10 @@ def main():
                               sum(sum(p.values()) for p in profiles.values()))
     if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or configured_connections > (priority_settings.connection_budget if priority_settings else 80) or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
+    soft_nofile, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+    minimum_nofile = minimum_client_nofile(max(grades), args.web_users, args.mixed_ui)
+    if soft_nofile < minimum_nofile:
+        parser.error(f'open-files soft limit {soft_nofile} is below HTTP load budget {minimum_nofile}; raise ulimit -n for this disposable run')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
         parser.error('requires disposable PostgreSQL admin URL')

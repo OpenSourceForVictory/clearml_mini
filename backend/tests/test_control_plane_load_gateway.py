@@ -9,7 +9,25 @@ from sqlalchemy.orm import Session
 from backend.app.db_budget import Settings
 from backend.app.core import ClientTemplate, ExecutionRecovery, ExecutionRecoveryClaim, ExecutionRecoveryControl, Run, Slot, Worker
 from backend.app.priority_runtime import ROLE_POOLS
-from backend.tests.control_plane_load import api_log_names, capacity_waits, pool_profiles, recovery_database_counts, render_gateway_config, render_priority_gateway_config, seed
+from backend.tests.control_plane_load import api_log_names, capacity_waits, minimum_client_nofile, pool_profiles, recovery_database_counts, render_gateway_config, render_priority_gateway_config, seed
+
+
+def test_http_load_nofile_budget_includes_independent_workers_and_web_clients():
+    assert minimum_client_nofile(100, 100, True) == 820
+    assert minimum_client_nofile(150, 100, True) == 1020
+    assert minimum_client_nofile(200, 100, True) == 1220
+
+
+def test_http_load_rejects_low_nofile_before_touching_database(monkeypatch, capsys):
+    from backend.tests.control_plane_load import main
+    monkeypatch.setattr('sys.argv', ['load', '--grades', '200', '--web-users', '100',
+                                   '--mixed-ui', '--output', '/unused'])
+    monkeypatch.setattr('backend.tests.control_plane_load.resource.getrlimit', lambda _: (1024, 1048576))
+    monkeypatch.delenv('LOG_TEST_DATABASE_URL', raising=False)
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert 'open-files soft limit 1024 is below HTTP load budget 1220' in capsys.readouterr().err
 
 
 def test_capacity_waits_keep_only_safe_category_timing_fields():

@@ -1,7 +1,20 @@
 """Concurrent authenticated browsing for the disposable mixed-load driver."""
 import asyncio
+import re
 import time
 import httpx
+
+
+def safe_transport_reason(exc):
+    """Only retain exception class and numeric socket errno, never URL or message."""
+    kind = type(exc).__name__
+    for current in (exc, exc.__cause__):
+        if current is None:
+            continue
+        match = re.search(r'\[Errno ([0-9]{1,5})\]', str(current))
+        if match:
+            return kind + '/errno=' + match.group(1)
+    return kind
 
 
 async def browse(base, tokens, seconds, batch_id, record):
@@ -28,7 +41,7 @@ async def browse(base, tokens, seconds, batch_id, record):
                         record(str(r.status_code),time.monotonic()-began,reason,path)
                     except httpx.TransportError as exc:
                         # Keep exception messages out of capacity evidence: URLs can carry data.
-                        record('transport_error',time.monotonic()-began,type(exc).__name__,path)
+                        record('transport_error',time.monotonic()-began,safe_transport_reason(exc),path)
                 await asyncio.gather(*(request(path) for path in paths))
                 await asyncio.sleep(5)
     await asyncio.gather(*(user(index,token) for index,token in enumerate(tokens)))
