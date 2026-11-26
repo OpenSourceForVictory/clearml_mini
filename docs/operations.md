@@ -63,6 +63,8 @@ docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/spli
 
 单批次排队专项另用 `--grades 100 --seconds 150 --batch-cases 100 --command-workers 10`，并保留上述四角色、恢复、多卡、独立日志和独立客户端选项；不要同时加 `--continuous-batches`。此档要求 100 个任务都由 10 个空闲槽位实际领取并完成，核对最大待调度数、批次详情/监控成功延迟、重复结果幂等、心跳、日志和资源释放。旧版监控对每个待调度任务重复遍历全池节点，100 任务时出现 `503 request_budget`；现在只在同一次监控请求内复用等价请求诊断，申请不同的任务仍独立检查，不改变调度器。失败与修复后的记录见[大批次验收](validation/disconnected-execution-20261124/large-batch-monitor-20261125.md)。
 
+真实多节点短批次可用 `scripts/validate_multinode_batch.py`：先确认池内节点镜像就绪与空闲，再交互式登录平台，提交 50 个短容器命令并检查跨节点同时执行、退出码、日志和清理。2026-11-27 五台 GPU 节点单批次 50/50 成功的范围与命令见[验收记录](validation/multinode-50-20261127.md)；这是短时调度/执行验收，不是长期容量基线或模型评测。
+
 控制通道短暂中断演练可在上述恢复负载命令中添加 `--control-outage-seconds 10`，脚本会在第 30 秒停掉执行控制 API 进程，10 秒后重启；运行总时长至少为中断时长加 60 秒。故障窗口内心跳与恢复对账都走执行控制 API，因此会收到网关 502/504；日志和页面不应因此收到 502/504。报告中的 `during_load_outage` 记录实际停止及重启时刻，恢复控制、完成、清理和结果仍须在原执行身份上成功收敛。原 `passed` 使用无故障时的最大心跳间隔 <10 秒门槛，10 秒故障注入会使它预期为 false；应单独核对故障恢复指标，不把故障轮当作 100 Worker 无故障容量基线。此项是隔离测试，不用于生产 API 进程。
 
 排查期间可临时设置 `DB_BUDGET_DIAGNOSTICS=1` 并重建 API，输出每请求首次借连接的 `wait_ms`、池内 `checked_out` 和请求 `elapsed_ms`，不输出 SQL 参数或业务内容。该诊断会增加日志量，平时默认关闭；commit 后再次借连接仍受池预算限制，但不计入首次借连接指标。
