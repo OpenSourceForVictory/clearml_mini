@@ -42,3 +42,5 @@
 独立领取计时补测及SDK下载包复测67通过（5.94秒）。实际Worker再次验证完成、取消和清理确认，稳定心跳间隔5.457、4.921、4.645秒，7次基础报告中2次完整报告；证据见gray-result-claim-timer.json和cadence-wire-claim-timer.json。
 
 基线bb73bca全量Python结果：3660通过、200跳过、1失败；覆盖率93.53%行/86.16%分支，目录及关键功能门槛通过，但测试不全绿。唯一失败是test_integration_bundle检测到下载包runner/sdk.py落后于维护源码；重新运行scripts.build_integration_bundle同步下载包，脱离仓库运行示例与日志采集测试均通过。完整失败日志及覆盖率保留主工作区.runtime/full-capacity-20261126。新版本全量仍需独立重跑，不将基线覆盖率当成新版本结果。
+
+指南核对：修正worker-setup.md遗留的存储回执15秒描述，按storage.py/freshness.py现有60秒判定说明；完整回执20秒为到期阈值，实际合并下一次基础心跳发送。仅文档纠正，不改服务端准入规则。
