@@ -2,6 +2,8 @@
 
 机器管理的 SSH 检查、注册与重新纳管，需要独立运行的 `onboarding.server`。API 只通过本地 Unix socket 调用它，执行器负责 SSH 和临时凭据；不对公网开放执行器端口。
 
+使用四角色 API 覆盖配置时，执行器必须通过内部 `api-gateway:8000` 回调平台。它会读取交互角色的机器列表，也会从批量角色下载节点安装包；若仍直连 `api:8000`，SSH 检查阶段可能报 `control_api_rejected_404`。应用新的 `priority-api-compose.yml` 后重建 `onboarding` 容器并核对命令中的 `--api-url`。
+
 ## 默认部署无需用户配置
 
 当前默认 Compose 包含 onboarding 服务，平台启动时自动构建并启动执行器、创建共享 socket 卷和独立状态卷，API 等待其健康后启动。用户只需在界面“机器管理 → 注册新机器”填写 SSH 信息、确认主机指纹和安装计划，无需安装 systemd 服务、填写 socket 或执行修复命令。

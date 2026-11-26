@@ -146,3 +146,5 @@
 2026-11-26 PostgreSQL 并发预检补测：独立 schema 的百任务、约百卡托管服务预检八路并发均返回 200，检查项齐全、没有创建运行记录；同文件两项 PostgreSQL 集成测试通过。见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。测试不经生产网关、浏览器和混合负载，5.2 不勾选。
 
 2026-11-26 200 Worker 入口诊断：同四角色/独立客户端的60秒模拟负载复现 5,648 次 503，其中 `request_concurrency` 5,111、`scheduler_lock` 537；最大心跳间隔16.11秒。执行控制进程承接心跳、服务健康和恢复控制，入口等待/处理能力是主要待查瓶颈，数据库采样无持续锁等待且初始连接获取 P99 约0.082毫秒。详见 `docs/validation/disconnected-execution-20261124/priority-control-200-diagnostic-20261126.md`。该档失败，5.2仍不勾选。
+
+2026-11-26 双执行控制副本：同一 80 连接预算下把控制 24 分成两进程各 12，旧四进程配置兼容；200 模拟 Worker 60 秒档由失败转为通过，最大心跳间隔4.09秒、入口拒绝129、日志最终待发0，19个模拟恢复执行均收尾。单进程保留额度试验总503恶化，已撤销并保留失败证据。DNS 双后端路由20/20；定向测试77通过/6项独立PG跳过，隔离PG角色组41通过。真实 Compose 灰度、新拓扑30分钟基线和故障档仍待验收，5.2/5.3不勾选；见 `docs/validation/disconnected-execution-20261124/control-scale-20261126.md`。

@@ -128,18 +128,23 @@ def render_gateway_config(template, ordinary_port, control_port, gateway_port):
                      f'set $ordinary_backend 127.0.0.1:{ordinary_port};'))
 
 
-def render_priority_gateway_config(ports, gateway_port):
+def render_priority_gateway_config(ports, gateway_port, control_extra_port=None):
     if set(ports) != set(priority_runtime.ROLE_POOLS):
         raise ValueError('priority gateway requires every role port')
     config = priority_gateway.render().replace('listen 8000;', f'listen 127.0.0.1:{gateway_port};')
     for role, port in ports.items():
         config = config.replace(priority_gateway.BACKENDS[role], f'127.0.0.1:{port}')
+    if control_extra_port is not None:
+        control_address = f'127.0.0.1:{ports["execution-control"]}'
+        config = config.replace(control_address, 'execution-control-load-pool')
+        config = (f'upstream execution-control-load-pool {{ server {control_address}; '
+                  f'server 127.0.0.1:{control_extra_port}; }}\n' + config)
     return config
 
 
 def api_log_names(count, split_api, priority_api=False):
     if priority_api:
-        return [f'api-{role}-{count}.log' for role in priority_runtime.ROLE_POOLS]
+        return [f'api-{role}-{count}.log' for role in (*priority_runtime.ROLE_POOLS, 'execution-control-extra')]
     return ([f'api-ordinary-{count}.log', f'api-control-{count}.log'] if split_api
             else [f'api-{count}.log'])
 
@@ -739,13 +744,21 @@ def main():
         parser.error('--role-aware-pools requires database backpressure')
     if args.no_backpressure and args.no_admission:
         parser.error('--no-admission requires database backpressure')
-    profiles = ({role: priority_runtime.Settings(role, role == 'worker-data').active_pool_sizes
+    priority_settings = (priority_runtime.Settings('interaction', False,
+                                                  pool_sizes=priority_runtime.SCALED_POOLS,
+                                                  processes=5, control_replicas=2)
+                         if args.priority_api else None)
+    profiles = ({role: priority_runtime.Settings(role, role == 'worker-data',
+                                                 pool_sizes=priority_runtime.SCALED_POOLS,
+                                                 processes=5, control_replicas=2).active_pool_sizes
                  for role in priority_runtime.ROLE_POOLS} if args.priority_api else
                 pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
                              split_api=args.split_api, role_aware=args.role_aware_pools,
                              scheduler_enabled=args.mixed_ui, result=args.result_pool))
-    process_count = len(profiles)
-    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or sum(sum(p.values()) for p in profiles.values()) > 80 or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
+    process_count = 5 if args.priority_api else len(profiles)
+    configured_connections = (priority_settings.configured_connections if priority_settings else
+                              sum(sum(p.values()) for p in profiles.values()))
+    if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or configured_connections > 80 or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
     url = make_url(os.environ['LOG_TEST_DATABASE_URL'])
     if url.get_backend_name() != 'postgresql':
@@ -759,8 +772,9 @@ def main():
                'pool_observation':args.observation_pool,
                'pool_result':args.result_pool if args.result_pool is not None else (3 if args.role_aware_pools else 2),
                'pool_scheduler':1,
-               'pool_by_process':profiles if not args.no_backpressure else None,
-               'configured_total_connections':sum(sum(p.values()) for p in profiles.values()),
+               'pool_by_process':({**profiles, 'execution-control-extra':profiles['execution-control']}
+                                  if args.priority_api else profiles) if not args.no_backpressure else None,
+               'configured_total_connections':configured_connections,
                'db_backpressure_enabled':not args.no_backpressure,
                'db_admission_enabled':not (args.no_admission or args.no_backpressure),
                'cards_per_node':args.cards_per_node,
@@ -816,6 +830,7 @@ def main():
                 ordinary_port = free_port()
                 control_port = free_port() if args.split_api else None
                 role_ports = {role: free_port() for role in profiles} if args.priority_api else {}
+                control_extra_port = free_port() if args.priority_api else None
                 port = free_port() if args.split_api or args.priority_api else ordinary_port
                 with ExitStack() as stack:
                     jwt_secret = uuid.uuid4().hex
@@ -829,7 +844,8 @@ def main():
                         env.update(MAX_ACTIVE_GLOBAL=str(count+10), MAX_ACTIVE_PER_USER=str(count+10))
                     if args.priority_api:
                         env['PRIORITY_API_PEERS'] = json.dumps({role:f'http://127.0.0.1:{p}' for role,p in role_ports.items()})
-                        env['PRIORITY_API_POOL_SIZES'] = json.dumps(priority_runtime.DEFAULT_POOLS)
+                        env['PRIORITY_API_POOL_SIZES'] = json.dumps(priority_runtime.SCALED_POOLS)
+                        env['API_CONTROL_REPLICAS'] = '2'
                     def launch(role, api_port):
                         api_env = {**env, 'DB_POOL_SIZE': str(args.ordinary_pool),
                                    'DB_CONTROL_POOL_SIZE': str(args.control_pool),
@@ -842,7 +858,7 @@ def main():
                         if args.split_api and role == 'control':
                             api_env['SCHEDULER_ENABLED'] = '0'
                         if args.priority_api:
-                            api_env['API_ROUTE_GROUP'] = role
+                            api_env['API_ROUTE_GROUP'] = 'execution-control' if role == 'execution-control-extra' else role
                             api_env['SCHEDULER_ENABLED'] = '1' if role == 'worker-data' else '0'
                         log_name = (f'api-{role}-{count}.log' if args.split_api or args.priority_api else f'api-{count}.log')
                         log = stack.enter_context((output/log_name).open('a' if role in role_processes else 'w'))
@@ -854,13 +870,14 @@ def main():
                     if args.priority_api:
                         for role, api_port in role_ports.items():
                             launch(role, api_port)
+                        launch('execution-control-extra', control_extra_port)
                     else:
                         launch('ordinary', ordinary_port)
                     if args.split_api:
                         launch('control', control_port)
                     if args.split_api or args.priority_api:
                         deploy = Path(__file__).resolve().parents[2] / 'deploy'
-                        config = (render_priority_gateway_config(role_ports, port) if args.priority_api else
+                        config = (render_priority_gateway_config(role_ports, port, control_extra_port) if args.priority_api else
                                   render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
                                                        ordinary_port, control_port, port))
                         gateway_config = output/f'gateway-{count}.conf'
@@ -904,11 +921,15 @@ def main():
                                            after=30, duration=args.bulk_outage_seconds)
                     if args.control_outage_seconds:
                         def stop_control():
-                            victim = role_processes['execution-control']
-                            victim.terminate()
-                            victim.wait(timeout=10)
+                            for role in ('execution-control', 'execution-control-extra'):
+                                victim = role_processes[role]
+                                victim.terminate()
+                                victim.wait(timeout=10)
+                        def restart_control():
+                            launch('execution-control', role_ports['execution-control'])
+                            launch('execution-control-extra', control_extra_port)
                         work = with_outage(work, stop_control,
-                                           lambda: launch('execution-control', role_ports['execution-control']),
+                                           restart_control,
                                            after=30, duration=args.control_outage_seconds)
                     result = asyncio.run(observe(work, engine, container=args.postgres_container))
                     if args.priority_api:

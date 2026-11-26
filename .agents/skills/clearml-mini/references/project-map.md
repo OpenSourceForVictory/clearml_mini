@@ -6,7 +6,7 @@
 
 本机平台于 2026-11-23 启用双 API 网关和角色连接池，2026-11-25 切换为下述四角色；六台机器的 13 个 Worker 卡位随后已升至 0.21.17。基础 Compose 仍是单 API 默认配置，其他部署不继承本机状态。发布顺序、真实 GPU SDK 小任务和 100 Worker 模拟负载边界见 [双进程验证](../../../../docs/validation/split-control-api-process-20261123/README.md)。
 
-四角色 API 隔离为可选部署，2026-11-25 已替换本机双进程（提交 `51fe692`，13 个 Worker 卡位及 6 个 Agent 回连通过）；其他机器不会自动切换。`backend/app/priority_route_manifest.json` 是 167 条方法/路径的唯一分类源；`priority_gateway.py` 生成网关，`priority_runtime.py` 校验角色、总连接预算与 PostgreSQL 余量，并隔离各类准入队列。`deploy/priority-api-compose.yml` 分离执行控制、用户交互、Worker 数据和批量传输，仅 Worker 数据角色启动调度器；网关健康检查聚合四角色及配置指纹。部署、回退和连接预算见 [四角色部署指南](../../../../docs/priority-api-isolation.md)。单/双 API 保留原分类和行为。
+四角色 API 隔离为可选部署，2026-11-25 已替换本机双进程（提交 `51fe692`，13 个 Worker 卡位及 6 个 Agent 回连通过）；其他机器不会自动切换。`backend/app/priority_route_manifest.json` 是 167 条方法/路径的唯一分类源；`priority_gateway.py` 生成网关，`priority_runtime.py` 校验角色、总连接预算与 PostgreSQL 余量，并隔离各类准入队列。`deploy/priority-api-compose.yml` 分离执行控制、用户交互、Worker 数据和批量传输，仅 Worker 数据角色启动调度器；纳管执行器经网关回调交互与批量接口，直连 `api` 会使安装包下载返回 404。网关健康检查聚合四角色及配置指纹。部署、回退和连接预算见 [四角色部署指南](../../../../docs/priority-api-isolation.md)。单/双 API 保留原分类和行为。
 
 证据见 [API 流量审计与混合基线](../../../../docs/validation/priority-api-isolation-20261124/README.md)：包含全路由请求体契约、事务/锁抽查、真实 PostgreSQL 混合压测。`backend/tests/control_plane_load.py --mixed-ui --continuous-batches` 使用模拟 Worker 驱动真实调度，重复提交、暂停/恢复、失败/重评测、幂等结果和完成；不能替代真实模型评测。Agent 心跳同时包含可合并采样与配置 ACK/事件，不能整条丢弃。API 隔离不消除跨池行锁，也未完成断联后持续执行与持久 outbox；租约 watchdog 仍生效。
 
@@ -415,3 +415,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 重连迟到控制意图：隔离 PostgreSQL 恢复控制/收据/结果/完成/领取组 202 项通过；真实隔离宿主机与 Docker 短程序在离线完成后、重连前平台取消或超时的四种组合通过，原执行只创建一次、平台终态优先，见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。这不是跨机或模型评测；生产恢复仍关闭，OpenSpec 4.7 未完成。
 
 200 Worker 四角色容量诊断：执行控制入口 `request_concurrency` 占 503 主体，心跳、服务健康和恢复控制共用 24 额度；PostgreSQL 初始连接获取很快，单纯扩大连接上限不能解释或修复入口瓶颈。失败证据和验证边界见 `docs/validation/disconnected-execution-20261124/priority-control-200-diagnostic-20261126.md`；候选档未通过。
+
+执行控制副本扩容：新覆盖配置把执行控制分为两个进程、各 12 额度，总 API 连接上限仍 80；旧四进程参数继续兼容。200 模拟 Worker 的隔离 60 秒档由失败转为通过，网关 DNS 与双后端均分测试及仍未验收的长测/发布边界见 `docs/validation/disconnected-execution-20261124/control-scale-20261126.md`；运行平台尚未切换。操作配置见 `docs/priority-api-isolation.md`。

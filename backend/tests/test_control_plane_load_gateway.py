@@ -96,9 +96,18 @@ def test_priority_load_uses_four_distinct_backends_and_health_target():
         assert role+'-api:8000' not in config
         assert f'127.0.0.1:{port}' in config
     assert f'set $interaction_backend 127.0.0.1:{ports["interaction"]};' in config
-    assert api_log_names(100, False, True) == [f'api-{role}-100.log' for role in ROLE_POOLS]
+    assert api_log_names(100, False, True) == [f'api-{role}-100.log' for role in (*ROLE_POOLS, 'execution-control-extra')]
     with pytest.raises(ValueError, match='every role'):
         render_priority_gateway_config({}, 18000)
+
+
+def test_priority_load_balances_two_control_processes():
+    ports = {role:18010+i for i,role in enumerate(ROLE_POOLS)}
+    config = render_priority_gateway_config(ports, 18000, 18020)
+    assert 'upstream execution-control-load-pool' in config
+    assert f'server 127.0.0.1:{ports["execution-control"]};' in config
+    assert 'server 127.0.0.1:18020;' in config
+    assert 'POST:/api/v1/worker/heartbeat execution-control-load-pool;' in config
 
 
 def test_role_aware_pools_preserve_control_and_observation_capacity():

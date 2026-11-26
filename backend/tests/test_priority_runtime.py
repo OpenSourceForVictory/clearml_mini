@@ -26,6 +26,13 @@ def settings(role='interaction', **kwargs):
 def test_each_role_has_only_its_pools_and_one_scheduler():
     profiles = {role: settings(role).active_pool_sizes for role in runtime.ROLE_POOLS}
     assert sum(sum(p.values()) for p in profiles.values()) == 80
+    scaled = {role: settings(role, pool_sizes=runtime.SCALED_POOLS, processes=5, control_replicas=2).active_pool_sizes
+              for role in runtime.ROLE_POOLS}
+    assert sum(sum(p.values()) for p in scaled.values()) + scaled['execution-control']['execution_control'] == 80
+    assert settings().configured_connections == 80
+    assert settings(pool_sizes=runtime.SCALED_POOLS, processes=5, control_replicas=2).configured_connections == 80
+    with pytest.raises(ValueError, match='budget'):
+        settings('execution-control', pool_sizes=runtime.DEFAULT_POOLS, processes=5, control_replicas=2)
     assert [role for role in profiles if 'scheduler' in profiles[role]] == ['worker-data']
     assert len({settings(role).fingerprint for role in profiles}) == 1
     for role in profiles:
@@ -34,7 +41,8 @@ def test_each_role_has_only_its_pools_and_one_scheduler():
 
 
 @pytest.mark.parametrize('kwargs', [
-    {'route_group':'bad'}, {'processes':2}, {'scheduler_enabled':True},
+    {'route_group':'bad'}, {'processes':2}, {'processes':True},
+    {'control_replicas':0}, {'control_replicas':True}, {'scheduler_enabled':True},
     {'pool_sizes':{}}, {'pool_sizes':list(runtime.DEFAULT_POOLS)},
     {'pool_sizes':dict(runtime.DEFAULT_POOLS, page_read=0)},
     {'pool_sizes':dict(runtime.DEFAULT_POOLS, page_read=True)},
@@ -54,12 +62,22 @@ def test_rejects_invalid_role_and_global_budget(kwargs):
 def test_environment_manifest_and_config_drift(monkeypatch):
     monkeypatch.setenv('API_ROUTE_GROUP', 'worker-data')
     monkeypatch.setenv('API_DB_PROCESS_COUNT', '4')
+    monkeypatch.setenv('API_CONTROL_REPLICAS', '1')
     monkeypatch.setenv('SCHEDULER_ENABLED', '1')
     monkeypatch.setenv('PRIORITY_API_POOL_SIZES', '')
     assert runtime.Settings.environment().fingerprint == settings('worker-data').fingerprint
     pools = dict(runtime.DEFAULT_POOLS, page_read=9)
     monkeypatch.setenv('PRIORITY_API_POOL_SIZES', json.dumps(pools))
     assert runtime.Settings.environment().fingerprint != settings('worker-data').fingerprint
+    monkeypatch.setenv('PRIORITY_API_POOL_SIZES', '')
+    monkeypatch.setenv('API_DB_PROCESS_COUNT', '5')
+    monkeypatch.setenv('API_CONTROL_REPLICAS', '2')
+    assert runtime.Settings.environment().pool_sizes == runtime.SCALED_POOLS
+    assert runtime.Settings.environment().fingerprint != settings('worker-data').fingerprint
+    monkeypatch.setenv('PRIORITY_API_POOL_SIZES', json.dumps(runtime.DEFAULT_POOLS))
+    with pytest.raises(ValueError, match='budget'):
+        runtime.Settings.environment()
+    monkeypatch.setenv('PRIORITY_API_POOL_SIZES', '')
     monkeypatch.setenv('SCHEDULER_ENABLED', '0')
     with pytest.raises(ValueError, match='scheduler'):
         runtime.Settings.environment()
@@ -188,12 +206,21 @@ def test_priority_compose_has_single_scheduler_and_preserves_public_port():
         service = services[name]
         env = service['environment']
         assert service['ports'] == []
-        profile = runtime.Settings(env['API_ROUTE_GROUP'], env['SCHEDULER_ENABLED'] == '1', processes=int(env['API_DB_PROCESS_COUNT']))
+        profile = runtime.Settings(env['API_ROUTE_GROUP'], env['SCHEDULER_ENABLED'] == '1',
+                                   pool_sizes=runtime.SCALED_POOLS, processes=int(env['API_DB_PROCESS_COUNT']),
+                                   control_replicas=int(env['API_CONTROL_REPLICAS']))
         roles[profile.route_group] = profile
     assert set(roles) == set(runtime.ROLE_POOLS)
     assert [r for r,p in roles.items() if p.scheduler_enabled] == ['worker-data']
     assert services['api-gateway']['ports'] == ['${API_BIND_HOST:-127.0.0.1}:${API_BIND_PORT:-8000}:8000']
     assert 'interaction-api' in services['api']['networks']['default']['aliases']
+    assert services['execution-control-api']['scale'] == 2
+    # Onboarding reads both interaction metadata and the bulk-transfer bundle.
+    assert runtime.ROLE_POOLS['bulk-transfer'] == ('bulk_transfer',)
+    assert services['onboarding']['command'][-1] == 'http://api-gateway:8000'
+    from backend.app.priority_routes import role_for
+    assert role_for('/api/v1/admin/nodes', 'GET') == 'interaction'
+    assert role_for('/api/v1/admin/node-installation-bundle', 'GET') == 'bulk-transfer'
 
 
 def test_postgres_budget_and_pool_exhaustion_are_role_local(pg):
@@ -273,7 +300,8 @@ def test_actual_app_role_health_auth_session_and_scheduler(pg, monkeypatch, role
     monkeypatch.setenv('JWT_SECRET', 'isolated-priority-test-only')
     monkeypatch.setenv('DB_BACKPRESSURE_ENABLED', '1')
     monkeypatch.setenv('DB_ADMISSION_ENABLED', '1')
-    monkeypatch.setenv('API_DB_PROCESS_COUNT', '4')
+    monkeypatch.setenv('API_DB_PROCESS_COUNT', '5')
+    monkeypatch.setenv('API_CONTROL_REPLICAS', '2')
     monkeypatch.setenv('API_ROUTE_GROUP', role)
     monkeypatch.setenv('SCHEDULER_ENABLED', '1' if role == 'worker-data' else '0')
     name = 'backend.app._priority_test_main'

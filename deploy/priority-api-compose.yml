@@ -3,13 +3,18 @@
 x-priority-environment: &priority-environment
   DB_BACKPRESSURE_ENABLED: "1"
   DB_ADMISSION_ENABLED: "1"
-  API_DB_PROCESS_COUNT: "4"
+  API_DB_PROCESS_COUNT: "5"
+  API_CONTROL_REPLICAS: "2"
   PRIORITY_API_POOL_SIZES: ${PRIORITY_API_POOL_SIZES:-}
   PRIORITY_API_PEERS: ${PRIORITY_API_PEERS:-}
   DB_CONNECTION_HEADROOM: ${DB_CONNECTION_HEADROOM:-20}
   DB_LONG_REQUEST_TIMEOUT_SECONDS: ${DB_LONG_REQUEST_TIMEOUT_SECONDS:-30}
 
 services:
+  onboarding:
+    # Enrollment reads both interaction and bulk-transfer routes.
+    command: ["python", "-m", "onboarding.server", "--socket", "/run/mini-eval-managed-onboarding/control.sock", "--state", "/var/lib/mini-eval-onboarding", "--api-url", "http://api-gateway:8000"]
+
   api:
     ports: !reset []
     environment:
@@ -21,6 +26,7 @@ services:
         aliases: [interaction-api]
 
   execution-control-api:
+    scale: 2
     extends:
       file: compose.yml
       service: api

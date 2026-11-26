@@ -26,6 +26,7 @@ ROLE_POOLS = {
 }
 DEFAULT_POOLS = dict(execution_control=24, user_action=10, user_long=4, page_read=10,
                      worker_claim=6, worker_result=7, worker_observation=8, scheduler=1, bulk_transfer=10)
+SCALED_POOLS = dict(DEFAULT_POOLS, execution_control=12)
 PEERS = {role: f'http://{role}-api:8000' for role in ROLE_POOLS}
 
 
@@ -35,6 +36,7 @@ class Settings:
     scheduler_enabled: bool
     pool_sizes: dict = field(default_factory=lambda: DEFAULT_POOLS.copy())
     processes: int = 4
+    control_replicas: int = 1
     connection_budget: int = 80
     connection_headroom: int = 20
     pool_timeout: float = .25
@@ -44,8 +46,10 @@ class Settings:
     peers: dict = field(default_factory=lambda: PEERS.copy())
 
     def __post_init__(self):
-        if self.route_group not in ROLE_POOLS or self.processes != 4:
-            raise ValueError('priority API requires four known roles')
+        if (self.route_group not in ROLE_POOLS or type(self.control_replicas) is not int or
+                self.control_replicas not in (1, 2) or type(self.processes) is not int or
+                self.processes != 3 + self.control_replicas):
+            raise ValueError('priority API requires four roles and a matching process count')
         if self.scheduler_enabled != (self.route_group == 'worker-data'):
             raise ValueError('only worker-data must run the priority scheduler')
         if not isinstance(self.pool_sizes, dict) or set(self.pool_sizes) != set(DEFAULT_POOLS):
@@ -53,7 +57,7 @@ class Settings:
         if any(type(value) is not int or value < 1 for value in
                (*self.pool_sizes.values(), self.connection_budget, self.connection_headroom)):
             raise ValueError('priority connection budgets must be positive integers')
-        if sum(self.pool_sizes.values()) > self.connection_budget:
+        if self.configured_connections > self.connection_budget:
             raise ValueError('priority API pools exceed total connection budget')
         if self.pool_sizes['scheduler'] != 1:
             raise ValueError('priority scheduler pool must have one connection')
@@ -77,6 +81,10 @@ class Settings:
         return {name: self.pool_sizes[name] for name in ROLE_POOLS[self.route_group]}
 
     @property
+    def configured_connections(self):
+        return sum(self.pool_sizes.values()) + (self.control_replicas - 1) * self.pool_sizes['execution_control']
+
+    @property
     def fingerprint(self):
         values = {name: value for name, value in self.__dict__.items()
                   if name not in ('route_group', 'scheduler_enabled')}
@@ -87,12 +95,15 @@ class Settings:
         values = {key: cast(os.environ[name]) for key, name, cast in (
             ('pool_sizes', 'PRIORITY_API_POOL_SIZES', json.loads),
             ('peers', 'PRIORITY_API_PEERS', json.loads),
-            ('processes', 'API_DB_PROCESS_COUNT', int), ('connection_budget', 'DB_CONNECTION_BUDGET', int),
+            ('processes', 'API_DB_PROCESS_COUNT', int), ('control_replicas', 'API_CONTROL_REPLICAS', int),
+            ('connection_budget', 'DB_CONNECTION_BUDGET', int),
             ('connection_headroom', 'DB_CONNECTION_HEADROOM', int),
             ('pool_timeout', 'DB_POOL_TIMEOUT_SECONDS', float), ('lock_timeout', 'DB_LOCK_TIMEOUT_SECONDS', float),
             ('request_timeout', 'DB_REQUEST_TIMEOUT_SECONDS', float),
             ('long_request_timeout', 'DB_LONG_REQUEST_TIMEOUT_SECONDS', float),
         ) if name in os.environ and (key not in ('pool_sizes', 'peers') or os.environ[name])}
+        if 'pool_sizes' not in values and values.get('control_replicas', 1) == 2:
+            values['pool_sizes'] = SCALED_POOLS.copy()
         return cls(route_group=os.environ['API_ROUTE_GROUP'],
                    scheduler_enabled=os.getenv('SCHEDULER_ENABLED', '1') == '1', **values)
 
