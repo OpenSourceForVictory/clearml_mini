@@ -129,7 +129,6 @@ def owned(s,identity,user):
 def diagnose_service(s, definition, owner, context, planner, batch=None):
     """Read-only per-device admission and network diagnosis for a managed service."""
     from .orchestration_scheduler import server_job
-    from .service_network import choose_port
     pool=planner.pools.get(definition['pool_id'])
     diagnosis=context.inspect(server_job(definition,owner.id),owner,pool,batch)
     diagnosis['nodes']=[node for node in diagnosis['nodes'] if 'server' in (planner.workers[context.slots[node['slot_id']].worker_id].roles or ['client'])]
@@ -144,9 +143,9 @@ def diagnose_service(s, definition, owner, context, planner, batch=None):
             node['reasons'].append({'code':'service_network_pending','category':'environment',
                                     'message':'服务端网络地址或端口范围未配置','action':'请管理员配置服务端网络'})
         else:
-            port=choose_port(s,worker)
+            port=planner.available_port(worker)
             separate_health=(definition['template'].get('readiness') or {}).get('port','business')!='business'
-            if port is None or (separate_health and choose_port(s,worker,[port]) is None):
+            if port is None or (separate_health and planner.available_port(worker,[port]) is None):
                 node['reasons'].append({'code':'service_port_busy','category':'resource',
                                         'message':'服务端端口范围暂无可用端口','action':'等待已有服务释放端口或调整端口范围'})
         node['ready']=not node['reasons'] and not diagnosis['reasons']
@@ -210,7 +209,7 @@ def install(app,db,current):
             from .preflight import DiagnosticContext
             from types import SimpleNamespace
             from .core import now
-            planner=Planner(s,now());checks=[]
+            planner=Planner(s,now(),cache_ports_for_read_only=True);checks=[]
             context=DiagnosticContext(s)
             result['server_checks']=[diagnose_service(s,d,user,context,planner) for d in definitions]
             for case,spec in zip(cases,configs):

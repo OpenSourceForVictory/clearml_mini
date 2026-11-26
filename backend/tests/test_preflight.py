@@ -1,7 +1,7 @@
 import copy
 from datetime import timedelta
 import pytest
-from sqlalchemy import select, func
+from sqlalchemy import select, func, event
 from backend.tests.test_execution import env, node
 from backend.tests.test_cs_protocol import template, batch_body
 from backend.app.core import EvaluationBatch, Job, Run, Event, Slot, Worker, Pool, now
@@ -51,6 +51,31 @@ def test_read_only_normalization_and_revalidation(env):
     assert c.post('/api/v1/batches', headers=headers, json=body).json()['id'] == r.json()['id']
     assert tick(main.SessionLocal) == 0
     assert check(env, body)['status'] == 'needs_environment'
+
+
+def test_many_cases_reuse_selected_template_query(env):
+    main, client, auth = env
+    body, _ = setup(env)
+    engine = main.SessionLocal.kw['bind']
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(engine, 'before_cursor_execute', record)
+    try:
+        counts = []
+        for size in (1, 20):
+            body['cases'] = [dict(case_id=str(index), task_name=f'case-{index}', episodes=1, seed=index)
+                             for index in range(size)]
+            statements.clear()
+            response = client.post('/api/v1/batches/preflight', headers=auth['alice'], json=body)
+            assert response.status_code == 200, response.text
+            assert response.json()['task_count'] == size
+            counts.append(len(statements))
+        assert counts[1] == counts[0]
+    finally:
+        event.remove(engine, 'before_cursor_execute', record)
 
 
 @pytest.mark.parametrize('change,code', [

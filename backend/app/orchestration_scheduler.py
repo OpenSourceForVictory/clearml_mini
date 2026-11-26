@@ -21,13 +21,22 @@ def server_job(definition,owner_id):
 
 
 class Planner:
-    def __init__(self,s,at):
+    def __init__(self,s,at,cache_ports_for_read_only=False):
         self.s=s;self.at=at
+        self._port_cache={} if cache_ports_for_read_only else None
         self.workers={x.id:x for x in s.scalars(select(Worker).where(Worker.deleted_at.is_(None)))}
         self.slots=list(s.scalars(select(Slot).where(Slot.deleted_at.is_(None)).order_by(Slot.node_name,Slot.gpu_index)))
         self.pools={x.id:x for x in s.scalars(select(Pool).where(Pool.enabled))}
         self.active=list(s.scalars(select(Run).where(or_(Run.status.in_(admission.ACTIVE),Run.cleanup_confirmed.is_(False)))))
         self.jobs={r.job_id:s.get(Job,r.job_id) for r in self.active}
+
+    def available_port(self,worker,avoid=()):
+        if self._port_cache is None:
+            return choose_port(self.s,worker,avoid)
+        key=(worker.id,tuple(avoid))
+        if key not in self._port_cache:
+            self._port_cache[key]=choose_port(self.s,worker,avoid)
+        return self._port_cache[key]
 
     def fits(self,job,slot,extra=()):
         pool=self.pools.get(job.pool_id);worker=self.workers.get(slot.worker_id)
@@ -101,9 +110,9 @@ class Planner:
         for slot in self.slots:
             worker=self.workers.get(slot.worker_id)
             if not worker or not worker.service_network or not self.fits(server,slot):continue
-            port=choose_port(self.s,worker,[p for w,p in avoid if w==worker.id])
+            port=self.available_port(worker,[p for w,p in avoid if w==worker.id])
             if port is None:continue
-            if (definition['template'].get('readiness') or {}).get('port','business')!='business' and choose_port(self.s,worker,[port,*[p for w,p in avoid if w==worker.id]]) is None:continue
+            if (definition['template'].get('readiness') or {}).get('port','business')!='business' and self.available_port(worker,[port,*[p for w,p in avoid if w==worker.id]]) is None:continue
             request=budget(self.pools[server.pool_id],server)
             reserved=SimpleNamespace(slot_id=slot.id,exclusive=server.gpu_mode=='exclusive',
                 reserved_vram_mb=slot.vram_mb if server.gpu_mode=='exclusive' else server.requested_vram_gb*1024,

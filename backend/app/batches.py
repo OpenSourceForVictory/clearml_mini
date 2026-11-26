@@ -161,6 +161,10 @@ def resolve_batch(s, body, user, initial_defaults=None):
     if pending + len(cases) > int(os.getenv('MAX_BATCH_BACKLOG_PER_USER', '10000')):
         raise HTTPException(429, 'manifest exceeds remaining pending quota')
     # Validate the entire manifest before persisting any of it.
+    # Keep the selected template strongly referenced while resolving cases.
+    # SQLAlchemy's identity map uses weak references for clean objects; without
+    # this, snapshot() re-selects the same template once per case.
+    template = s.get(ClientTemplate, body.client.template_id)
     configs = []
     for case in cases:
         values = body.client.model_dump()

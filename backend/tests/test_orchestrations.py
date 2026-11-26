@@ -1,5 +1,5 @@
 import copy
-from sqlalchemy import select,func
+from sqlalchemy import select,func,event
 from backend.tests.test_execution import env,node,claim
 from backend.app.core import Slot,Worker,Run,Job,EvaluationSuite,EvaluationBatch,ServiceInstance,now
 from backend.app.scheduling import tick
@@ -65,6 +65,29 @@ def test_atomic_idempotent_submission_and_read_only_preflight(env,monkeypatch):
         assert s.scalar(select(func.count()).select_from(EvaluationSuite))==1
         assert s.scalar(select(func.count()).select_from(Job))==3
         assert s.scalar(select(func.count()).select_from(EvaluationBatch))==1
+
+
+def test_many_managed_cases_reuse_read_only_port_diagnosis(env,monkeypatch):
+    main,client,auth=env;*_,body=setup(env,monkeypatch)
+    engine=main.SessionLocal.kw['bind'];statements=[]
+
+    def record(conn,cursor,statement,parameters,context,executemany):
+        statements.append(statement)
+
+    event.listen(engine,'before_cursor_execute',record)
+    try:
+        counts=[]
+        for size in (1,20):
+            body['cases']=[dict(case_id=str(index),task_name=f'case-{index}',episodes=1,seed=index)
+                           for index in range(size)]
+            statements.clear()
+            response=client.post('/api/v1/orchestrations/preflight',headers=auth['alice'],json=body)
+            assert response.status_code==200,response.text
+            assert len(response.json()['pair_checks'])==size
+            counts.append(len(statements))
+        assert counts[1]==counts[0]
+    finally:
+        event.remove(engine,'before_cursor_execute',record)
 
 
 def test_preflight_reports_server_node_card_and_blocker(env,monkeypatch):
