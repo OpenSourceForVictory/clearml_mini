@@ -21,3 +21,5 @@
 # Impact
 
 backend/app/priority_runtime.py、db_budget.py、四角色Compose、容量测试工具、运维与项目Skill参考；无数据库迁移。单/双API配置兼容，不自动提高PostgreSQL max_connections。
+
+2026-11-26后续：用户恢复全量与长测，并明确容量对照应固定API副本、检验数据库池设置。补充业务时延目标及测量缺口，不能将原专项通过等同长期SLA。

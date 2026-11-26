@@ -432,3 +432,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 调度临界区查询优化：scheduling.reconcile按Run/Job联查并保持Run取锁后刷新；tick活动占用联查Job，批次元数据限定pending引用集合，空队列不加载历史批次。没有锁外资源缓存，没有拆资源核对/预约事务。test_scheduler_query_scope验证查询数量/对象加载对历史和活动规模的关系；对照与上线范围见docs/validation/scheduler-critical-section-20261126/README.md。
 
 Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，默认5秒±10%错峰、完整回执20秒；worker/client.py 主循环继续独立领取，执行控制2秒不变。只有成功响应推进回执指纹；storage.capacity不作为配置变化触发条件，失败/状态改变及时上报。配置边界和升级说明见 docs/worker-setup.md；test_heartbeat_cadence.py 从Worker.run验证领取退避不阻塞心跳，test_recovery_legacy_compatibility.py 验证旧Worker取消/重评测/迟到回执。模块纳入业务执行与结果关键覆盖组。不能将虚拟时钟测试称作真实Worker长测。
+
+数据库容量验收：docs/database-capacity-acceptance.md定义固定API拓扑下池大小/等待的单变量对照；现有control_plane_load提供首次checkout总P99，日志可按类别汇总，但尚缺完整连接等待/持有及SQL分解，不能将HTTP延迟或结束连接数当数据库饱和证据。保留锁竞争/准入拒绝与池超时的区别。
