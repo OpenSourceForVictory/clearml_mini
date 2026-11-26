@@ -951,6 +951,8 @@ class Worker:
             self.runtime.close()
 
     def run(self, once=False):
+        from .heartbeat_cadence import HeartbeatCadence
+        cadence = HeartbeatCadence(self.config)
         from .version import PROTOCOL_VERSION, metadata
         hardware = device(self.config)
         from .probe_credentials import available as probe_references
@@ -973,6 +975,7 @@ class Worker:
         had_task = bool(self.children)
         retry = Backoff(max_total=3.0)
         heartbeat_window, claim_window = RetryWindow(), RetryWindow()
+        reply = {}
         while True:
             try:
                 for execution, child in list(self.children.items()):
@@ -995,27 +998,30 @@ class Worker:
                     continue
                 body = {'slot_id': self.slot_id, **self.control.report(),
                         'software': {**metadata(self.config),'probe_references':probe_references(self.config)}}
-                try:
-                    reply = self.api.post('worker/heartbeat', body)
-                except APIError as exc:
-                    heartbeat_window.defer(exc)
-                    raise
-                heartbeat_window.reset()
-                self.control.source = reply.get('resource_source', 'worker')
+                pending = cadence.prepare(body)
+                if pending is not None:
+                    try:
+                        reply = self.api.post('worker/heartbeat', pending)
+                    except APIError as exc:
+                        heartbeat_window.defer(exc)
+                        raise
+                    cadence.accepted(body)
+                    heartbeat_window.reset()
+                    self.control.source = reply.get('resource_source', 'worker')
                 # Never claim while background configuration can change paths.
                 # Readiness is checked before scheduling the next control cycle.
                 control_ready = self.control.ready()
                 if once and had_task:
                     self.control.refresh(reply)
-                    time.sleep(2)
+                    time.sleep(cadence.delay())
                     continue
                 if not control_ready:
                     self.control.refresh(reply)
-                    time.sleep(2)
+                    time.sleep(cadence.delay())
                     continue
                 if claim_window.remaining():
                     self.control.refresh(reply)
-                    self.stop_event.wait(min(2, claim_window.remaining()))
+                    self.stop_event.wait(min(cadence.delay(), claim_window.remaining()))
                     continue
                 from .recovery_poll import poll
                 try:
@@ -1044,7 +1050,11 @@ class Worker:
                     if not retry.wait(exc, self.stop_event):
                         return
                     continue
-            time.sleep(2)
+                # A rejected heartbeat remains due. Do not spin at delay zero
+                # on authentication/configuration errors while retaining state.
+                time.sleep(2)
+                continue
+            time.sleep(cadence.delay())
 
 
 def main():

@@ -287,7 +287,8 @@ def test_idle_retry_after_keeps_other_control_work_running(execution, monkeypatc
             worker.slot_lock.close()
     assert len(rejected) == 1
     assert len(claims) == (2 if route == 'claim' else 1)
-    assert len(beats) >= 2
+    # A one-second claim retry no longer forces another five-second base heartbeat.
+    assert len(beats) >= (2 if route == 'heartbeat' else 1)
     assert (claims[1] if route == 'claim' else beats[1]) - rejected[0] >= 1
 
 @pytest.mark.parametrize('outcome',['success','cancel','expired','stop','denied'])
