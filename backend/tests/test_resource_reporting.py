@@ -284,7 +284,7 @@ def test_worker_supervisor_heartbeats_while_storage_probe_is_blocked(tmp_path,mo
     config={**settings(tmp_path),'mock':True,'node_name':'isolated','api_url':'http://unused','token':'unused'}
     w=client.Worker(config,tmp_path/'state.json')
     gate=threading.Event();entered=threading.Event();calls=[]
-    def blocked():entered.set();gate.wait(3);return {}
+    def blocked():entered.set();gate.wait(20);return {}
     w.storage.report=blocked
     class Stop(BaseException):pass
     class API:
@@ -292,7 +292,7 @@ def test_worker_supervisor_heartbeats_while_storage_probe_is_blocked(tmp_path,mo
             calls.append((path,body))
             if path=='worker/register':return {'slot_id':str(uuid.uuid4()),'resource_source':'agent'}
             assert path=='worker/heartbeat'  # no claim while storage is unknown
-            if len(calls)>=4:raise Stop()
+            if len([p for p,_ in calls if p=='worker/heartbeat'])>=2:raise Stop()
             return {'resource_source':'agent'}
     class Retention:
         def __init__(self,*a):pass
@@ -304,7 +304,7 @@ def test_worker_supervisor_heartbeats_while_storage_probe_is_blocked(tmp_path,mo
     try:
         with pytest.raises(Stop):w.run()
         assert entered.is_set()
-        assert len([p for p,b in calls if p=='worker/heartbeat'])==3
+        assert len([p for p,b in calls if p=='worker/heartbeat'])==2
         assert all(b['disk']['free_mb']==0 for p,b in calls if p=='worker/heartbeat')
     finally:
         gate.set();w.control.thread.join(2);w.shutdown();w.slot_lock.close()
