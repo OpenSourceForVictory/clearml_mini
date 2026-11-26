@@ -26,8 +26,9 @@ async def browse(base, tokens, seconds, batch_id, record):
                             try:reason=r.json().get('reason','unknown')
                             except (ValueError, AttributeError):reason='non_json_gateway_response'
                         record(str(r.status_code),time.monotonic()-began,reason,path)
-                    except httpx.TransportError:
-                        record('transport_error',time.monotonic()-began,None,path)
+                    except httpx.TransportError as exc:
+                        # Keep exception messages out of capacity evidence: URLs can carry data.
+                        record('transport_error',time.monotonic()-began,type(exc).__name__,path)
                 await asyncio.gather(*(request(path) for path in paths))
                 await asyncio.sleep(5)
     await asyncio.gather(*(user(index,token) for index,token in enumerate(tokens)))

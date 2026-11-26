@@ -1,0 +1,144 @@
+{
+  "api_image": "mini-eval-api:heartbeat-capacity-20261126",
+  "database": "disposable PostgreSQL, same-host load",
+  "capacity": [
+    {
+      "simulated_workers": 150,
+      "simulated_web_users": 100,
+      "duration_seconds": 90,
+      "passed": true,
+      "http_responses": {
+        "200": 45528,
+        "503": 187,
+        "201": 9
+      },
+      "busy_reasons": {
+        "request_concurrency": 168,
+        "execution_lock": 8,
+        "scheduler_lock": 11
+      },
+      "web_aggregate": {
+        "200": 6986
+      },
+      "heartbeat_p99_seconds": 0.5691425409168005,
+      "web_monitor_p99_seconds": 1.039055889006704,
+      "control_checkout_p99_ms": 44.339,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 125,
+      "sampled_peak_pg_active": 5,
+      "database_max_connections": 200,
+      "expired_leases_during_load": 0,
+      "telemetry_stale": 0,
+      "max_heartbeat_gap_seconds": 4.172333155060187,
+      "logs_generated": 5544,
+      "logs_accepted": 5544,
+      "final_log_pending": 0,
+      "load_driver_loop_lag_p99_seconds": 0.01199089689180255
+    },
+    {
+      "simulated_workers": 200,
+      "simulated_web_users": 100,
+      "duration_seconds": 90,
+      "passed": false,
+      "http_responses": {
+        "201": 9,
+        "503": 1377,
+        "200": 57771,
+        "transport_error": 73
+      },
+      "busy_reasons": {
+        "request_concurrency": 1351,
+        "execution_lock": 11,
+        "scheduler_lock": 15
+      },
+      "web_aggregate": {
+        "200": 6757,
+        "transport_error": 71
+      },
+      "heartbeat_p99_seconds": 0.5184120419435203,
+      "web_monitor_p99_seconds": 1.6359694541897625,
+      "control_checkout_p99_ms": 47.207,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 139,
+      "sampled_peak_pg_active": 8,
+      "database_max_connections": 200,
+      "expired_leases_during_load": 0,
+      "telemetry_stale": 0,
+      "max_heartbeat_gap_seconds": 4.803068923065439,
+      "logs_generated": 7524,
+      "logs_accepted": 7524,
+      "final_log_pending": 0,
+      "load_driver_loop_lag_p99_seconds": 0.02782013500109315
+    }
+  ],
+  "production_operator_canaries": {
+    "gpu": {
+      "batch_id": "b5d69a7e-d3f3-4ff3-8b2a-c4fbe1bafc84",
+      "job_id": "2f7aa5a4-f30d-4302-9f5d-f096a4c7a946",
+      "execution_id": "5fb0f94a-9442-495c-acf4-03f206492b97",
+      "status": "SUCCEEDED",
+      "exit_code": 0,
+      "cleanup_confirmed": true,
+      "gpu_operator_observed": true,
+      "gpu_log_line": "GPU_SMOKE NVIDIA GeForce RTX 4090 GPU-1568a9ba-cc52-a2a1-5771-d76bf6ea176f 357389824.0",
+      "model_evaluation": false
+    },
+    "npu": {
+      "model_evaluation": false,
+      "node_id": "7d9bdfac-17df-40c5-8b04-f659fd18a29c",
+      "slot_id": "847e8acc-2bc1-415d-afeb-f37ac7792b7e",
+      "port": 19981,
+      "template_id": "b19dcb29-fa0a-4878-99ac-3c0e80deffaf",
+      "service_id": "0977a8a7-c740-48d9-9973-630985b7c0dc",
+      "job_id": "bc2a4c32-9a1d-44f4-9b48-433451f7bf38",
+      "healthy": true,
+      "computation": {
+        "visible": "0",
+        "uid": 1001,
+        "value": 1240
+      },
+      "execution_id": "317c953c-3d7e-4d55-bdfd-d9ff04d03ede",
+      "stopped": true,
+      "cleanup_confirmed": true,
+      "held_after": 0
+    }
+  },
+  "limitations": [
+    "one 90-second run per scale grade",
+    "simulated command tasks, not model inference",
+    "200 grade failed; not a database connection ceiling"
+  ],
+  "diagnostic_rerun_200": {
+    "duration_seconds": 90,
+    "passed": false,
+    "http_responses": {
+      "201": 9,
+      "503": 1358,
+      "200": 57901,
+      "transport_error": 17
+    },
+    "web_aggregate": {
+      "200": 6731,
+      "transport_error": 17
+    },
+    "web_transport_errors": {
+      "ConnectError": 17
+    },
+    "web_transport_error_windows_seconds": {
+      "0": 17
+    },
+    "busy_reasons": {
+      "request_concurrency": 1307,
+      "execution_lock": 15,
+      "scheduler_lock": 36
+    },
+    "pool_timeout_count": 0,
+    "sampled_peak_pg_connections": 134,
+    "expired_leases_during_load": 0,
+    "logs_generated": 7524,
+    "logs_accepted": 7524,
+    "final_log_pending": 0
+  },
+  "base_commit": "ad87978",
+  "diagnostic_instrumentation": "Web transport exception class and 30-second window; test tooling only"
+}

@@ -19,3 +19,18 @@ def test_shared_page_requests_keep_identity_and_record_gateway_failures(monkeypa
     assert len(seen)==8 and len(records)==8
     assert sum(code=='200' for code,_,_,_ in records)==6
     assert sum(reason=='non_json_gateway_response' for _,_,reason,_ in records)==2
+
+
+def test_transport_failure_records_safe_exception_type(monkeypatch):
+    real_client=httpx.AsyncClient
+    real_sleep=asyncio.sleep
+    records=[]
+    def handle(request):
+        raise httpx.ReadTimeout('sensitive URL and token must not appear in evidence')
+    monkeypatch.setattr(load.httpx,'AsyncClient',lambda **kwargs:real_client(**kwargs,transport=httpx.MockTransport(handle)))
+    async def sleep(value):await real_sleep(.02 if value==5 else 0)
+    monkeypatch.setattr(load.asyncio,'sleep',sleep)
+    asyncio.run(load.browse('http://test',['test'],.01,lambda:None,lambda *r:records.append(r)))
+    assert len(records)==2
+    assert all(code=='transport_error' and reason=='ReadTimeout' for code,_,reason,_ in records)
+    assert 'sensitive' not in str(records)

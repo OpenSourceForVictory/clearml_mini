@@ -222,6 +222,7 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
     latency, codes, reasons = defaultdict(list), Counter(), Counter()
     successful_latency = defaultdict(list)
     by_kind, busy_by_kind = defaultdict(Counter), defaultdict(Counter)
+    web_transport_errors, web_transport_error_windows = Counter(), Counter()
     latest_heartbeat, latest_sample, latest_agent = {}, {}, {}
     worst_heartbeat_age = 0
     log_queues = {item[0]: deque() for item in identities}
@@ -679,7 +680,10 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             latency['team_web'].append(elapsed)
             if code == '200':
                 successful_latency['team_web'].append(elapsed)
-            if reason:
+            if code == 'transport_error':
+                web_transport_errors[reason or 'unknown'] += 1
+                web_transport_error_windows[str(int((time.monotonic() - started)//30)*30)] += 1
+            elif reason:
                 reasons[reason] += 1
                 busy_by_kind['team_web'][reason] += 1
         from backend.tests.team_web_load import browse
@@ -705,6 +709,8 @@ async def exercise(base, identities, seconds, log_bytes, *, independent_logs=Fal
             max_log_age = max(max_log_age, max((time.monotonic() - created for queue in log_queues.values()
                                                 for created, _ in queue), default=0))
     return {'requests': dict(codes), 'busy_reasons': dict(reasons),
+            'web_transport_errors': dict(web_transport_errors),
+            'web_transport_error_windows_seconds': dict(web_transport_error_windows),
             'requests_by_kind': {k:dict(v) for k,v in by_kind.items()},
             'busy_by_kind': {k:dict(v) for k,v in busy_by_kind.items()},
             'successful_latency_seconds': {k:{'p95':percentile(v,.95), 'p99':percentile(v,.99), 'max':max(v)} for k,v in successful_latency.items()},
