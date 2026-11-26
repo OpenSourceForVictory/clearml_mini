@@ -5,9 +5,9 @@ from threading import Barrier
 import pytest
 from sqlalchemy import select,text
 from sqlalchemy.engine import make_url
-from backend.tests.test_execution import env
+from backend.tests.test_execution import env,node
 from backend.tests.test_orchestrations import setup
-from backend.app.core import Base,User,Pool,Run,ServiceInstance,EvaluationBatch,Job,Slot,session_factory
+from backend.app.core import Base,User,Pool,Run,ServiceInstance,EvaluationBatch,Job,Slot,now,session_factory
 from backend.app.scheduling import tick
 
 pytestmark=pytest.mark.skipif(not os.getenv('TEST_DATABASE_URL'),reason='dedicated PostgreSQL is required')
@@ -60,6 +60,57 @@ def test_joint_reservation_and_submission_race(env,monkeypatch):
         with factory() as s:
             instances=list(s.scalars(select(ServiceInstance)))
             assert len(instances)==2 and len({(i.worker_id,i.port) for i in instances})==2
+    finally:
+        factory.kw['bind'].dispose()
+        with admin() as s:s.execute(text('DROP SCHEMA '+schema+' CASCADE'));s.commit()
+        admin.kw['bind'].dispose()
+
+
+def test_concurrent_large_managed_preflight_is_read_only(env,monkeypatch):
+    """Large wizard requests share PostgreSQL capacity without reserving runs."""
+    main,client,auth=env
+    schema='preflight_'+uuid.uuid4().hex
+    admin=session_factory(os.environ['TEST_DATABASE_URL'])
+    with admin() as s:s.execute(text('CREATE SCHEMA '+schema));s.commit()
+    url=make_url(os.environ['TEST_DATABASE_URL']).update_query_dict({'options':'-csearch_path='+schema})
+    factory=session_factory(url.render_as_string(hide_password=False))
+    try:
+        Base.metadata.create_all(factory.kw['bind'])
+        with main.SessionLocal() as old,factory() as s:
+            for user in old.scalars(select(User)):
+                s.add(User(id=user.id,username=user.username,role=user.role,password_hash=user.password_hash))
+            s.add(Pool(id='mock',name='mock',gpu_model='virtual'));s.commit()
+        monkeypatch.setattr(main,'SessionLocal',factory)
+        *_,body=setup(env,monkeypatch)
+        for index in range(24):
+            node(env,f'extra-client-{index}',count=4)
+        with factory() as s:
+            for slot in s.scalars(select(Slot)):
+                if slot.protocol_version:
+                    continue
+                slot.protocol_version=10
+                slot.client_images=['image:1']
+                slot.storage_report={'revision':0,'status':'applied'}
+                slot.storage_reported_at=now()
+                slot.runtime_report={'revision':0,'applied_revision':0,'images':{'image:1':{'ready':True}},'assets':{}}
+                slot.runtime_reported_at=now()
+            s.commit()
+        body['cases']=[{'case_id':str(i),'task_name':f'scene-{i}','episodes':1} for i in range(100)]
+        barrier=Barrier(8)
+
+        def preflight(_):
+            barrier.wait()
+            return client.post('/api/v1/orchestrations/preflight',headers=auth['alice'],json=body)
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            responses=list(executor.map(preflight,range(8)))
+        assert all(response.status_code==200 for response in responses),[(r.status_code,r.text[:200]) for r in responses]
+        assert all(len(response.json()['pair_checks'])==100 for response in responses)
+        with factory() as s:
+            assert not list(s.scalars(select(EvaluationBatch)))
+            assert not list(s.scalars(select(Job)))
+            assert not list(s.scalars(select(Run)))
+            assert not list(s.scalars(select(ServiceInstance)))
     finally:
         factory.kw['bind'].dispose()
         with admin() as s:s.execute(text('DROP SCHEMA '+schema+' CASCADE'));s.commit()

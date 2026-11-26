@@ -142,3 +142,5 @@
 2026-11-26 预检规模专项：100 项清单、约百张模拟卡在 SQLite 单用户顺序请求中复现同模板及端口诊断重复 SQL，按请求内只读复用后普通/托管服务预检 107/323 降至 8/48 条 SQL；正式调度不复用端口快照。响应仍达约 3.56/1.55 MB，尚未进行 PostgreSQL 并发量测，不能据此认定 503 消除或勾选 5.2。证据见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。
 
 2026-11-26 重连迟到意图专项：一次性 PostgreSQL 恢复控制/收据/结果/完成/领取相关组 202 通过、无跳过；真实隔离宿主机/Docker 短程序在 API 断联期间退出、平台重连前取消或超时的四种组合均按平台终态收尾、只创建一次。见 `docs/validation/disconnected-execution-20261124/reconnect-late-intent-20261126.md`。跨机断网、灰度和完整故障矩阵仍缺，4.7/4.10 保持未完成。
+
+2026-11-26 PostgreSQL 并发预检补测：独立 schema 的百任务、约百卡托管服务预检八路并发均返回 200，检查项齐全、没有创建运行记录；同文件两项 PostgreSQL 集成测试通过。见 `docs/validation/disconnected-execution-20261124/preflight-query-scale-20261126.md`。测试不经生产网关、浏览器和混合负载，5.2 不勾选。

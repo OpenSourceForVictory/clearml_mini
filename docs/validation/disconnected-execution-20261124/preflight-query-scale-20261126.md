@@ -6,4 +6,6 @@
 
 隔离 SQLite API 量测：25 个模拟四卡节点加基线节点，共 101/103 张候选卡；分别提交 1、10、50、100 项的普通/托管服务预检。普通 100 项由 107 条 SQL 降至 8 条，托管服务 100 项由 323 条降至 48 条；同一次量测中 100 项响应分别约 3.56 MB、1.55 MB。四种规模均返回 200，普通/托管服务 100 项耗时约 0.21/0.23 秒。量测节点是测试数据，业务未启动，使用 SQLite、单用户顺序请求，不能据此推断 PostgreSQL 生产并发容量或保证不出现 503。响应仍逐项包含候选卡诊断，大小随任务和卡数增长。
 
-回归测试 `backend/tests/test_preflight.py::test_many_cases_reuse_selected_template_query` 和 `backend/tests/test_orchestrations.py::test_many_managed_cases_reuse_read_only_port_diagnosis` 比较 1 与 20 项，验证 SQL 数量不随任务数增长，并核对返回项数；预检/编排全组 47 项通过。服务实例补足、实例数量及就绪检查相关 27 项也通过，覆盖正式调度仍实时查询端口的路径。另用一次性 PostgreSQL 16.8 容器运行 `backend/tests/integration/test_orchestration_race.py`，调度与提交并发竞争 1 项通过；这并非并发预检容量测试。进一步的 PostgreSQL 并发预检与页面大响应验收仍待做，不能把这项局部查询优化计为 OpenSpec 5.2 完成。
+回归测试 `backend/tests/test_preflight.py::test_many_cases_reuse_selected_template_query` 和 `backend/tests/test_orchestrations.py::test_many_managed_cases_reuse_read_only_port_diagnosis` 比较 1 与 20 项，验证 SQL 数量不随任务数增长，并核对返回项数；预检/编排全组 47 项通过。服务实例补足、实例数量及就绪检查相关 27 项也通过，覆盖正式调度仍实时查询端口的路径。另用一次性 PostgreSQL 16.8 容器运行 `backend/tests/integration/test_orchestration_race.py`，调度与提交并发竞争 1 项通过。后续并发预检补测见下文；页面大响应仍待验收，不能把这项局部查询优化计为 OpenSpec 5.2 完成。
+
+2026-11-26 补充隔离 PostgreSQL 并发测试：在独立 schema 中准备 100 项托管服务预检及 25 台多卡客户端节点（含原有基线节点，共约百张候选卡），八个线程同时请求同一预检接口。八次均返回 200、各有 100 个配对检查，数据库中未创建批次、任务、运行或服务实例；同文件两个 PostgreSQL 测试均通过。此测试直接调用 FastAPI 测试客户端，不经过生产网关或浏览器，也未叠加 Worker 心跳、日志与调度负载。它验证此规模下的并发只读行为，不能作为页面响应、持续容量或 503 根因消除的证明；5.2 仍待长时间混合故障档验收。
