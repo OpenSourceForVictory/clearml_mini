@@ -23,7 +23,7 @@ from backend.tests.test_host_backend import worker as host_fixture
 
 @pytest.mark.skipif(os.getenv('RECOVERY_RUNTIME_TEST')!='1',reason='real host/Docker execution main loop opt-in')
 @pytest.mark.parametrize('mode',['host','docker'])
-@pytest.mark.parametrize('scenario',['complete','command','offline_complete','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
+@pytest.mark.parametrize('scenario',['complete','command','stdout_burst','offline_complete','cancel','timeout','finite_disconnect','finite_reconnect','service','restart','pre_cancel','bulk_rejected'])
 def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -41,6 +41,8 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     task['client_spec']['template'].update(task_type='evaluation',episode_reporting=False,integration_mode='direct-protocol')
     if scenario=='command':
         task['client_spec']['template'].update(task_type='command',integration_mode='direct')
+    if scenario=='stdout_burst':
+        task['log_protocol']=2
     task['client_spec']['timeout_seconds']=task['timeout_seconds']
     if scenario=='service':
         import socket
@@ -53,8 +55,10 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
     event={'episode_id':1,'seed':episode_seed(0,1),'status':'STARTED'}
     result={**event,'status':'COMPLETED','success':True,'metrics':{},'runtime':.4,'artifacts':[]}
     script='import time,signal,sys,os\nsignal.signal(signal.SIGTERM,lambda *a:sys.exit(0))\n'
+    if scenario=='stdout_burst':
+        script+='sys.stdout.write("x"*1000000+"\\n");sys.stdout.flush()\n'
     script+='print('+repr('MINI_EVAL_EVENT '+json.dumps(event))+',flush=True)\n'
-    script+='time.sleep('+('2' if scenario in ('complete','offline_complete','bulk_rejected','finite_reconnect') else '5' if scenario=='restart' else '30')+')\n'
+    script+='time.sleep('+('2' if scenario in ('complete','stdout_burst','offline_complete','bulk_rejected','finite_reconnect') else '5' if scenario=='restart' else '30')+')\n'
     if scenario=='bulk_rejected':
         from worker.workspace import execution_dirs
         artifact_dir=(str(execution_dirs(w.workspace,execution)/'output') if mode=='host'
@@ -110,9 +114,19 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             path=host.root/'launch.json';value=json.loads(path.read_text())
             value['command']=['/usr/bin/python3',str(tmp_path/'business.py')];path.write_text(json.dumps(value))
         else:
-            docker('create','--network','host','--name',name,'--label','mini-eval.execution='+execution,
-                   '--label','mini-eval.launch='+task['recovery_launch_id'],'--entrypoint','python',
-                   os.getenv('RECOVERY_RUNTIME_IMAGE','mini-eval-api:recovery-foundations-20261125'),'-c',script)
+            args=['create','--network','host','--name',name,'--label','mini-eval.execution='+execution,
+                  '--label','mini-eval.launch='+task['recovery_launch_id']]
+            if scenario=='stdout_burst':
+                from worker.workspace import execution_dirs
+                root=execution_dirs(w.workspace,execution)/'output'/'.mini-eval-protocol'
+                root.mkdir()
+                args.extend(['--workdir','/code','--mount',f'type=bind,source={root},target=/tmp/mini-eval-protocol',
+                             '--mount',f'type=bind,source={Path(__file__).resolve().parents[2] / "runner"},target=/code/runner,readonly',
+                             '--env','PYTHONPATH=/code'])
+            args.extend(['--entrypoint','python',os.getenv('RECOVERY_RUNTIME_IMAGE','mini-eval-api:recovery-foundations-20261125')])
+            args.extend(['-m','runner.log_capture','/tmp/mini-eval-protocol','python','-c',script]
+                        if scenario=='stdout_burst' else ['-c',script])
+            docker(*args)
     w.create=create
     def monitor(launch,control=False):
         m=RecoveryMonitor(w,launch,interval=.05)
@@ -199,7 +213,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
             assert w.state is None
             with factory() as db:
                 run=db.get(Run,'r')
-                assert run.status=={'complete':'SUCCEEDED','command':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
+                assert run.status=={'complete':'SUCCEEDED','command':'SUCCEEDED','stdout_burst':'SUCCEEDED','offline_complete':'SUCCEEDED','cancel':'CANCELLED',
                     'timeout':'TIMED_OUT','finite_disconnect':'TIMED_OUT','finite_reconnect':'SUCCEEDED','service':'CANCELLED','restart':'SUCCEEDED',
                     'bulk_rejected':'SUCCEEDED'}[scenario]
                 assert run.cleanup_confirmed
@@ -208,7 +222,7 @@ def test_real_execute_offline_reconnect_cleanup(tmp_path,mode,scenario):
                 if scenario=='finite_disconnect':
                     assert control['stop_reason']=='disconnection_timeout'
                     assert db.get(EpisodeRecord,('r',1)).result is None
-                if scenario in ('complete','offline_complete','finite_reconnect','restart','bulk_rejected'):
+                if scenario in ('complete','stdout_burst','offline_complete','finite_reconnect','restart','bulk_rejected'):
                     assert db.get(EpisodeRecord,('r',1)).result==result
                 if scenario=='command':
                     assert db.get(EpisodeRecord,('r',1)) is None
