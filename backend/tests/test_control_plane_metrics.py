@@ -1,17 +1,22 @@
 import asyncio
 
 import pytest
+from sqlalchemy import text
 
 from backend.tests import control_plane_metrics as metrics
 from backend.tests.test_execution_logs_postgres import pg
 
 
 def test_database_sampler_records_waits_and_wal(pg):
+    with pg[0].begin() as connection:
+        connection.execute(text('CREATE TABLE evaluation_runs (lease_expires_at timestamptz, status text)'))
+        connection.execute(text("INSERT INTO evaluation_runs VALUES (now()-interval '1 second', 'RUNNING')"))
     report = metrics.sample(pg[0])
     assert report['waiting_locks'] == 0
     assert report['cluster_wal_bytes'] >= 0
     assert report['database']['deadlocks'] == 0
     assert report['sample_seconds'] >= 0
+    assert report['expired_leases'] == 1
 
 
 def test_sampler_failure_cancels_load_and_runs_cleanup(monkeypatch):
@@ -42,6 +47,23 @@ def test_sampler_preserves_load_result_and_final_sample(monkeypatch):
     assert result['passed']
     assert len(result['database_samples']) == len(calls) >= 2
     assert result['database_samples'][-1]['elapsed_seconds'] >= .01
+
+
+def test_load_boundary_separates_lease_expiry_from_log_drain(monkeypatch):
+    calls = []
+    def sample(*args):
+        calls.append(True)
+        return {'expired_leases': 0 if len(calls) < 5 else 7}
+    monkeypatch.setattr(metrics, 'sample', sample)
+    async def work():
+        await asyncio.sleep(.025)
+        return {'passed': True}
+    result = asyncio.run(metrics.observe(work(), None, interval=.004, load_seconds=.012))
+    rows = result['database_samples']
+    assert any(row['phase'] == 'boundary' for row in rows)
+    assert any(row['phase'] == 'drain' and row['expired_leases'] == 7 for row in rows)
+    assert metrics.expired_leases_during_load(rows) == 0
+    assert metrics.expired_leases_during_load([{'phase':'load', 'expired_leases':2}, *rows]) == 2
 
 
 def test_outage_restores_role_and_records_timing():

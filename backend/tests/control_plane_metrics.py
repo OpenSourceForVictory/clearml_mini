@@ -21,10 +21,13 @@ def sample(engine, container=None):
         database = dict(connection.execute(text("""SELECT xact_commit,xact_rollback,blks_read,blks_hit,deadlocks,
             temp_bytes FROM pg_stat_database WHERE datname=current_database()""")).one()._mapping)
         wal = int(connection.scalar(text('SELECT wal_bytes FROM pg_stat_wal')))
+        expired_leases = int(connection.scalar(text("""SELECT count(*) FROM evaluation_runs
+            WHERE lease_expires_at <= now() AND status IN ('STARTING','RUNNING','CANCEL_REQUESTED')""")))
     for row in activity:
         if row['max_query_age_seconds'] is not None:
             row['max_query_age_seconds'] = float(row['max_query_age_seconds'])
-    result = {'activity':activity, 'waiting_locks':waiting, 'database':database, 'cluster_wal_bytes':wal}
+    result = {'activity':activity, 'waiting_locks':waiting, 'database':database,
+              'cluster_wal_bytes':wal, 'expired_leases':expired_leases}
     if container:
         try:
             completed = subprocess.run(['docker','stats','--no-stream','--format','{{json .}}',container],
@@ -37,18 +40,32 @@ def sample(engine, container=None):
     return result
 
 
-async def observe(work, engine, *, container=None, interval=10):
+def expired_leases_during_load(samples):
+    """Keep lease checks inside the traffic window, before log drain begins."""
+    return max((row['expired_leases'] for row in samples
+                if row.get('phase') in ('load', 'boundary')), default=0)
+
+
+async def observe(work, engine, *, container=None, interval=10, load_seconds=None):
     started = time.monotonic()
     task = asyncio.create_task(work)
     samples = []
+    boundary_sampled = load_seconds is None
     try:
         while True:
             row = await asyncio.to_thread(sample, engine, container)
             row['elapsed_seconds'] = time.monotonic()-started
+            if not boundary_sampled:
+                row['phase'] = 'boundary' if row['elapsed_seconds'] >= load_seconds else 'load'
+                if row['phase'] == 'boundary':
+                    boundary_sampled = True
+            else:
+                row['phase'] = 'drain'
             samples.append(row)
             if task.done():
                 break
-            await asyncio.wait([task], timeout=interval)
+            timeout = interval if boundary_sampled else min(interval, max(0, started+load_seconds-time.monotonic()))
+            await asyncio.wait([task], timeout=timeout)
         result = await task
         result['database_samples'] = samples
         return result

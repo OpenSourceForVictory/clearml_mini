@@ -434,3 +434,5 @@ Worker 领取分流：`worker/recovery_poll.py` 接入 run，按能力或待恢�
 Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，默认5秒±10%错峰、完整回执20秒；worker/client.py 主循环继续独立领取，执行控制2秒不变。只有成功响应推进回执指纹；storage.capacity不作为配置变化触发条件，失败/状态改变及时上报。配置边界和升级说明见 docs/worker-setup.md；test_heartbeat_cadence.py 从Worker.run验证领取退避不阻塞心跳，test_recovery_legacy_compatibility.py 验证旧Worker取消/重评测/迟到回执。模块纳入业务执行与结果关键覆盖组。不能将虚拟时钟测试称作真实Worker长测。
 
 数据库容量验收：docs/database-capacity-acceptance.md定义固定API拓扑下池大小/等待的单变量对照；现有control_plane_load提供首次checkout总P99，日志可按类别汇总，但尚缺完整连接等待/持有及SQL分解，不能将HTTP延迟或结束连接数当数据库饱和证据。保留锁竞争/准入拒绝与池超时的区别。
+
+压测租约时点：backend/tests/control_plane_metrics.py 在流量窗口内和结束边界采样活动执行的租约过期数；control_plane_load.py 验收读取窗口最大值，另保留日志排空后的 expired_leases_after_drain 供诊断。避免将停止模拟心跳后约30秒的自然过期计为窗口内失败。回归 test_control_plane_metrics.py。

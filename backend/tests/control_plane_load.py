@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
 from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, ExecutionRecovery, ExecutionRecoveryControl, now
 from backend.app import priority_runtime, priority_gateway
-from backend.tests.control_plane_metrics import observe, with_outage
+from backend.tests.control_plane_metrics import observe, with_outage, expired_leases_during_load
 
 
 def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
@@ -990,7 +990,8 @@ def main():
                         work = with_outage(work, stop_control,
                                            restart_control,
                                            after=30, duration=args.control_outage_seconds)
-                    result = asyncio.run(observe(work, engine, container=args.postgres_container))
+                    result = asyncio.run(observe(work, engine, container=args.postgres_container,
+                                                 load_seconds=args.seconds))
                     if args.priority_api:
                         topology = {}
                         for role, api_port in role_ports.items():
@@ -1021,7 +1022,8 @@ def main():
                              re.findall(r'checkout .*?wait_ms=([0-9.]+)', (output/name).read_text())]
                 result['initial_checkout_wait_ms'] = {'p95':percentile(checkouts,.95), 'p99':percentile(checkouts,.99)}
                 with engine.connect() as c:
-                    result['expired_leases'] = c.scalar(text("SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now() AND status IN ('STARTING','RUNNING','CANCEL_REQUESTED')"))
+                    result['expired_leases_after_drain'] = c.scalar(text("SELECT count(*) FROM evaluation_runs WHERE lease_expires_at <= now() AND status IN ('STARTING','RUNNING','CANCEL_REQUESTED')"))
+                    result['expired_leases'] = expired_leases_during_load(result['database_samples'])
                     result['telemetry_stale'] = c.scalar(text("SELECT count(*) FROM gpu_slots WHERE telemetry_at IS NULL OR telemetry_at < now()-interval '45 seconds'"))
                     result['database_max_connections'] = int(c.scalar(text('SHOW max_connections')))
                     result['database_connections_at_end'] = c.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()"))
