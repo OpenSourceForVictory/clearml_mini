@@ -1,0 +1,197 @@
+[
+  {
+    "profile": "baseline",
+    "configured_connections": 168,
+    "passed": false,
+    "requests": {
+      "200": 65240,
+      "503": 28,
+      "201": 1
+    },
+    "busy_reasons": {
+      "request_concurrency": 2,
+      "execution_lock": 19,
+      "scheduler_lock": 7
+    },
+    "expired_leases_end": 81,
+    "first_checkout_by_category": {
+      "worker_observation": {
+        "samples": 3600,
+        "p99_ms": 27.828,
+        "max_ms": 55.215
+      },
+      "worker_claim": {
+        "samples": 843,
+        "p99_ms": 0.096,
+        "max_ms": 4.768
+      },
+      "worker_result": {
+        "samples": 227,
+        "p99_ms": 2.045,
+        "max_ms": 3.901
+      },
+      "page_read": {
+        "samples": 14268,
+        "p99_ms": 0.1,
+        "max_ms": 321.368
+      },
+      "user_action": {
+        "samples": 4,
+        "p99_ms": 0.105,
+        "max_ms": 0.105
+      },
+      "execution_control": {
+        "samples": 31534,
+        "p99_ms": 40.923,
+        "max_ms": 135.793
+      },
+      "bulk_transfer": {
+        "samples": 14796,
+        "p99_ms": 20.44,
+        "max_ms": 47.728
+      }
+    },
+    "http_p99_seconds": {
+      "heartbeat": 0.3478778600692749,
+      "recovery_control": 0.3115323830861598,
+      "team_web": 0.7929983059875667,
+      "team_web_monitor": 1.1834567659534514,
+      "claim": 0.1628312929533422,
+      "logs": 0.2805545630399138
+    },
+    "sample_count": 22,
+    "peak_observed_connections": 135,
+    "peak_observed_active": 5,
+    "peak_observed_waiting_locks": 0
+  },
+  {
+    "profile": "more-connections",
+    "configured_connections": 180,
+    "passed": false,
+    "requests": {
+      "200": 65288,
+      "503": 23,
+      "201": 1
+    },
+    "busy_reasons": {
+      "request_concurrency": 3,
+      "execution_lock": 15,
+      "scheduler_lock": 5
+    },
+    "expired_leases_end": 81,
+    "first_checkout_by_category": {
+      "worker_observation": {
+        "samples": 3600,
+        "p99_ms": 22.185,
+        "max_ms": 60.732
+      },
+      "worker_claim": {
+        "samples": 842,
+        "p99_ms": 0.097,
+        "max_ms": 4.695
+      },
+      "worker_result": {
+        "samples": 227,
+        "p99_ms": 3.801,
+        "max_ms": 5.788
+      },
+      "page_read": {
+        "samples": 14276,
+        "p99_ms": 0.116,
+        "max_ms": 482.734
+      },
+      "user_action": {
+        "samples": 4,
+        "p99_ms": 0.112,
+        "max_ms": 0.112
+      },
+      "execution_control": {
+        "samples": 31564,
+        "p99_ms": 40.511,
+        "max_ms": 119.005
+      },
+      "bulk_transfer": {
+        "samples": 14801,
+        "p99_ms": 21.645,
+        "max_ms": 83.533
+      }
+    },
+    "http_p99_seconds": {
+      "heartbeat": 0.2972202659584582,
+      "recovery_control": 0.36823648400604725,
+      "team_web": 0.982764946995303,
+      "team_web_monitor": 1.3604872529394925,
+      "claim": 0.14627564093098044,
+      "logs": 0.30251279892399907
+    },
+    "sample_count": 22,
+    "peak_observed_connections": 140,
+    "peak_observed_active": 9,
+    "peak_observed_waiting_locks": 0
+  },
+  {
+    "profile": "longer-wait",
+    "configured_connections": 168,
+    "passed": false,
+    "requests": {
+      "200": 65346,
+      "503": 34,
+      "201": 1
+    },
+    "busy_reasons": {
+      "request_concurrency": 3,
+      "execution_lock": 20,
+      "scheduler_lock": 11
+    },
+    "expired_leases_end": 81,
+    "first_checkout_by_category": {
+      "worker_observation": {
+        "samples": 3600,
+        "p99_ms": 27.374,
+        "max_ms": 48.228
+      },
+      "worker_claim": {
+        "samples": 843,
+        "p99_ms": 0.129,
+        "max_ms": 5.612
+      },
+      "worker_result": {
+        "samples": 227,
+        "p99_ms": 5.904,
+        "max_ms": 7.325
+      },
+      "page_read": {
+        "samples": 14304,
+        "p99_ms": 0.098,
+        "max_ms": 119.318
+      },
+      "user_action": {
+        "samples": 4,
+        "p99_ms": 0.111,
+        "max_ms": 0.111
+      },
+      "execution_control": {
+        "samples": 31580,
+        "p99_ms": 39.626,
+        "max_ms": 107.637
+      },
+      "bulk_transfer": {
+        "samples": 14825,
+        "p99_ms": 18.59,
+        "max_ms": 60.901
+      }
+    },
+    "http_p99_seconds": {
+      "heartbeat": 0.3253743010573089,
+      "recovery_control": 0.3394370588939637,
+      "team_web": 0.6795841068960726,
+      "team_web_monitor": 0.9886491841170937,
+      "claim": 0.14216031995601952,
+      "logs": 0.2917965219821781
+    },
+    "sample_count": 22,
+    "peak_observed_connections": 132,
+    "peak_observed_active": 6,
+    "peak_observed_waiting_locks": 0
+  }
+]
