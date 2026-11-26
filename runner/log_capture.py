@@ -126,6 +126,7 @@ def capture(command, root, cwd=None, env=None, tee=False, ring=True):
     logs = Ring(root/'logs') if ring else None
     protocol = ProtocolCapture(root)
     stderr_tail = ''
+    diagnostic_error = protocol_error = False
     decoders = {name: codecs.getincrementaldecoder('utf-8')(errors='replace') for name in ('stdout','stderr')}
     with subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as child:
         selector = selectors.DefaultSelector()
@@ -141,17 +142,38 @@ def capture(command, root, cwd=None, env=None, tee=False, ring=True):
                         remaining = decoders[stream].decode(b'', final=True)
                         if remaining and logs: logs.write(stream, remaining)
                         continue
-                    if stream == 'stdout': protocol.feed(data)
+                    if stream == 'stdout' and not protocol_error:
+                        try:
+                            protocol.feed(data)
+                        except (OSError, RuntimeError) as exc:
+                            # The child must keep draining even if its durable
+                            # protocol source cannot be written. The missing
+                            # result remains visible to result validation.
+                            protocol_error = True
+                            print(f'protocol capture unavailable: {type(exc).__name__}', file=sys.stderr)
                     if stream == 'stderr' and not ring:
                         stderr_tail = (stderr_tail+decoders[stream].decode(data)).encode('utf-8')[-7168:].decode('utf-8', errors='ignore')
-                        atomic(root/'stderr-tail.json', {'content': stderr_tail})
-                    if logs: logs.write(stream, decoders[stream].decode(data))
+                        if not diagnostic_error:
+                            try: atomic(root/'stderr-tail.json', {'content': stderr_tail})
+                            except OSError as exc:
+                                diagnostic_error = True
+                                print(f'diagnostic capture unavailable: {type(exc).__name__}', file=sys.stderr)
+                    if logs and not diagnostic_error:
+                        try: logs.write(stream, decoders[stream].decode(data))
+                        except OSError as exc:
+                            diagnostic_error = True
+                            print(f'diagnostic capture unavailable: {type(exc).__name__}', file=sys.stderr)
                     if tee:
                         target = sys.stdout.buffer if stream == 'stdout' else sys.stderr.buffer
                         target.write(data); target.flush()
-            if protocol.tail and not protocol.discard: protocol.line(protocol.tail+b'\n')
+            if protocol.tail and not protocol.discard and not protocol_error:
+                try: protocol.line(protocol.tail+b'\n')
+                except (OSError, RuntimeError) as exc:
+                    print(f'protocol capture unavailable: {type(exc).__name__}', file=sys.stderr)
             code = child.wait()
-            atomic(root/'exit.json', {'code': code})
+            try: atomic(root/'exit.json', {'code': code})
+            except OSError as exc:
+                print(f'exit record unavailable: {type(exc).__name__}', file=sys.stderr)
             return code
         finally:
             selector.close()
