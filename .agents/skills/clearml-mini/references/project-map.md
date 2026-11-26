@@ -440,3 +440,5 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 百任务并行压测：control_plane_load的 `batch_execution_peak` 由同一批次Run开始/结束时间计算重叠峰值，排除零时长与未完成区间；命令Worker与持续恢复控制Worker为不同模拟组，恢复控制成功门槛按后者人数判断。测试test_control_plane_metrics.py。
 
 持续命令压测：control_plane_load `--command-hold-seconds` 默认0、允许有限0..60秒；用于测量batch_execution_peak，领取期间继续心跳。测试test_control_plane_load_gateway.py，模拟保持不代表真实GPU/NPU计算。
+
+并行容量证据：control_plane_metrics.full_execution_overlap_seconds 计算所有完成Run区间的公共重叠时长；100模拟命令任务在保持40秒时实际峰值100、公共重叠约15.15秒。见 docs/validation/heartbeat-cadence-20261126/parallel-100-preliminary.json，不等同真实模型负载。

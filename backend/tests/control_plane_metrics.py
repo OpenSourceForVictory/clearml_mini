@@ -60,6 +60,14 @@ def peak_execution_overlap(intervals):
     return peak
 
 
+def full_execution_overlap_seconds(intervals):
+    """Time for which every completed execution in the batch was running."""
+    spans = list(intervals)
+    if not spans or any(start is None or end is None or end <= start for start, end in spans):
+        return 0
+    return max(0, (min(end for _, end in spans) - max(start for start, _ in spans)).total_seconds())
+
+
 async def observe(work, engine, *, container=None, interval=10, load_seconds=None):
     started = time.monotonic()
     task = asyncio.create_task(work)

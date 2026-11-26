@@ -74,6 +74,9 @@ def test_peak_execution_overlap_uses_completed_spans_and_half_open_boundaries():
              (start+3*second, start+4*second), (None, start+second),
              (start+5*second, None)]
     assert metrics.peak_execution_overlap(spans) == 2
+    assert metrics.full_execution_overlap_seconds(spans) == 0
+    assert metrics.full_execution_overlap_seconds([(start, start+3*second),
+                                                   (start+second, start+2*second)]) == 1
     assert metrics.peak_execution_overlap([]) == 0
 
 

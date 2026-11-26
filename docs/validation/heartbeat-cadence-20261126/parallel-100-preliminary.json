@@ -1,0 +1,72 @@
+[
+  {
+    "hold_seconds": 0,
+    "passed": true,
+    "workers": 101,
+    "web_users": 100,
+    "batch_cases": 100,
+    "execution_count": 100,
+    "execution_peak": 5,
+    "all_execution_overlap_seconds": null,
+    "lease_expired_during_load": 0,
+    "first_attempt_503": 0,
+    "busy_reasons": {},
+    "batch_status": "SUCCEEDED"
+  },
+  {
+    "hold_seconds": 15,
+    "passed": true,
+    "workers": 101,
+    "web_users": 100,
+    "batch_cases": 100,
+    "execution_count": 100,
+    "execution_peak": 99,
+    "all_execution_overlap_seconds": null,
+    "lease_expired_during_load": 0,
+    "first_attempt_503": 0,
+    "busy_reasons": {},
+    "batch_status": "SUCCEEDED"
+  },
+  {
+    "hold_seconds": 20,
+    "passed": true,
+    "workers": 101,
+    "web_users": 100,
+    "batch_cases": 100,
+    "execution_count": 100,
+    "execution_peak": 99,
+    "all_execution_overlap_seconds": null,
+    "lease_expired_during_load": 0,
+    "first_attempt_503": 0,
+    "busy_reasons": {},
+    "batch_status": "SUCCEEDED"
+  },
+  {
+    "hold_seconds": 25,
+    "passed": true,
+    "workers": 101,
+    "web_users": 100,
+    "batch_cases": 100,
+    "execution_count": 100,
+    "execution_peak": 100,
+    "all_execution_overlap_seconds": null,
+    "lease_expired_during_load": 0,
+    "first_attempt_503": 0,
+    "busy_reasons": {},
+    "batch_status": "SUCCEEDED"
+  },
+  {
+    "hold_seconds": 40,
+    "passed": true,
+    "workers": 101,
+    "web_users": 100,
+    "batch_cases": 100,
+    "execution_count": 100,
+    "execution_peak": 100,
+    "all_execution_overlap_seconds": 15.154928,
+    "lease_expired_during_load": 0,
+    "first_attempt_503": 0,
+    "busy_reasons": {},
+    "batch_status": "SUCCEEDED"
+  }
+]

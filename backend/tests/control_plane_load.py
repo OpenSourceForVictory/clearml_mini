@@ -26,7 +26,8 @@ from sqlalchemy.orm import sessionmaker
 from worker.backpressure import parse_retry_after
 from backend.app.core import Base, User, Pool, Worker, AgentObservation, Slot, Job, Run, ServiceInstance, ClientTemplate, ExecutionRecovery, ExecutionRecoveryControl, now
 from backend.app import priority_runtime, priority_gateway
-from backend.tests.control_plane_metrics import observe, with_outage, expired_leases_during_load, peak_execution_overlap
+from backend.tests.control_plane_metrics import (observe, with_outage, expired_leases_during_load,
+                                                 peak_execution_overlap, full_execution_overlap_seconds)
 
 
 def seed(engine, count, *, agent_telemetry=False, mixed_ui=False,
@@ -1047,6 +1048,7 @@ def main():
                         spans = c.execute(select(Run.started_at, Run.finished_at).join(Job, Run.job_id == Job.id)
                                           .where(Job.batch_id == result['ui_evidence']['batch_id'])).all()
                         result['batch_execution_peak'] = peak_execution_overlap(spans)
+                        result['batch_full_overlap_seconds'] = full_execution_overlap_seconds(spans)
                     if args.recovery_load:
                         result['recovery_database'] = recovery_database_counts(c)
                 result['workers'] = count
