@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "requests": {
+    "200": 21740,
+    "503": 17,
+    "201": 5
+  },
+  "busy_reasons": {
+    "request_concurrency": 2,
+    "execution_lock": 6,
+    "scheduler_lock": 9
+  },
+  "expired_leases": 0,
+  "expired_leases_after_drain": 81,
+  "max_heartbeat_gap_seconds": 3.5482281239237636,
+  "log_generation": {
+    "generated": 2428,
+    "accepted": 2428,
+    "max_pending_chunks_per_worker": 1,
+    "final_pending_chunks": 0,
+    "max_pending_age_seconds": 0.15588913206011057
+  },
+  "ui": {
+    "batch_count": 5,
+    "retry_count": 5,
+    "case_count_seen": 1,
+    "max_pending_count": 1,
+    "last_batch_status": "SUCCEEDED",
+    "errors": []
+  },
+  "context": {
+    "seconds": 60,
+    "simulated_workers": 100,
+    "web_users": 100,
+    "continuous_batches": true,
+    "concurrent_full_coverage": true
+  }
+}
