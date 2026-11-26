@@ -30,6 +30,41 @@ def test_http_load_rejects_low_nofile_before_touching_database(monkeypatch, caps
     assert 'open-files soft limit 1024 is below HTTP load budget 1220' in capsys.readouterr().err
 
 
+def test_bulk_extra_gateway_uses_two_backends_without_changing_other_roles():
+    ports = {'execution-control': 18001, 'interaction': 18002,
+             'worker-data': 18003, 'bulk-transfer': 18004}
+    config = render_priority_gateway_config(ports, 18006, 18005, (18007,), 18008)
+    assert 'upstream bulk-transfer-load-pool { server 127.0.0.1:18004; server 127.0.0.1:18008; }' in config
+    assert '127.0.0.1:18004' not in config.split('map "$request_method:$uri"', 1)[1]
+    assert 'upstream interaction-load-pool { server 127.0.0.1:18002; server 127.0.0.1:18007; }' in config
+    assert 'upstream execution-control-load-pool { server 127.0.0.1:18001; server 127.0.0.1:18005; }' in config
+
+
+def test_bulk_extra_rejects_unbudgeted_or_unsupported_topology(monkeypatch, capsys, tmp_path):
+    from backend.tests.control_plane_load import main
+    monkeypatch.delenv('LOG_TEST_DATABASE_URL', raising=False)
+    for arguments, expected in ((['--bulk-extra'], '--bulk-extra requires'),
+                                (['--priority-api', '--bulk-extra', '--bulk-outage-seconds', '15',
+                                  '--independent-logs', '--seconds', '75'], '--bulk-extra requires')):
+        monkeypatch.setattr('sys.argv', ['load', '--grades', '10', '--output', '/unused', *arguments])
+        with pytest.raises(SystemExit) as error:
+            main()
+        assert error.value.code == 2
+        assert expected in capsys.readouterr().err
+    import json
+    candidate = json.loads((Path(__file__).resolve().parents[2] /
+                            'deploy/profiles/team-capacity-100.json').read_text())
+    candidate['connection_budget'] = 175
+    config = tmp_path / 'capacity.json'
+    config.write_text(json.dumps(candidate))
+    monkeypatch.setattr('sys.argv', ['load', '--grades', '10', '--output', '/unused',
+                                    '--priority-api', '--bulk-extra', '--capacity-config', str(config)])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert 'positive grades' in capsys.readouterr().err
+
+
 def test_capacity_waits_keep_only_safe_category_timing_fields():
     pool, admission = capacity_waits([
         'database pool checkout category=page_read outcome=ok wait_ms=2.500 checked_out=1\n'

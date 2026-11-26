@@ -1,0 +1,126 @@
+{
+  "scope": "disposable same-host PostgreSQL max_connections=200; 200 simulated Worker, 100 simulated Web user, 90s; driver soft NOFILE=8192, API child soft NOFILE=1024",
+  "variants": {
+    "baseline": "bulk 1 process, admission 12, queue 96, wait 1s, configured DB budget 168",
+    "queue": "bulk 1 process, admission 12, queue 192, wait 2s, configured DB budget 168",
+    "replica": "bulk 2 processes, each admission 12, queue 96, wait 1s, actual configured DB budget 178; test-only topology"
+  },
+  "runs": {
+    "baseline": {
+      "api_processes": 12,
+      "configured_pool_connections": 168,
+      "passed": true,
+      "http_503": 1621,
+      "busy_reasons": {
+        "request_concurrency": 1584,
+        "execution_lock": 9,
+        "scheduler_lock": 28
+      },
+      "bulk_admission_rejected": 1335,
+      "bulk_admission_p99_ms": 406.129,
+      "bulk_pool_timeout": 0,
+      "all_pool_timeout": 0,
+      "web_p99_seconds": 1.899,
+      "heartbeat_p99_seconds": 0.49,
+      "sampled_peak_pg_connections": 137,
+      "expired_leases": 0,
+      "log_generated": 7524,
+      "log_accepted": 7524,
+      "web_transport_errors": {}
+    },
+    "queue_1": {
+      "api_processes": 12,
+      "configured_pool_connections": 168,
+      "passed": true,
+      "http_503": 283,
+      "busy_reasons": {
+        "request_concurrency": 245,
+        "execution_lock": 14,
+        "scheduler_lock": 24
+      },
+      "bulk_admission_rejected": 0,
+      "bulk_admission_p99_ms": 636.921,
+      "bulk_pool_timeout": 0,
+      "all_pool_timeout": 0,
+      "web_p99_seconds": 2.086,
+      "heartbeat_p99_seconds": 0.533,
+      "sampled_peak_pg_connections": 139,
+      "expired_leases": 0,
+      "log_generated": 7524,
+      "log_accepted": 7524,
+      "web_transport_errors": {}
+    },
+    "replica_1": {
+      "api_processes": 13,
+      "configured_pool_connections": 178,
+      "passed": true,
+      "http_503": 265,
+      "busy_reasons": {
+        "request_concurrency": 248,
+        "scheduler_lock": 16,
+        "execution_lock": 1
+      },
+      "bulk_admission_rejected": 0,
+      "bulk_admission_p99_ms": 141.853,
+      "bulk_pool_timeout": 0,
+      "all_pool_timeout": 0,
+      "web_p99_seconds": 1.261,
+      "heartbeat_p99_seconds": 0.528,
+      "sampled_peak_pg_connections": 143,
+      "expired_leases": 0,
+      "log_generated": 7524,
+      "log_accepted": 7524,
+      "web_transport_errors": {}
+    },
+    "replica_2": {
+      "api_processes": 13,
+      "configured_pool_connections": 178,
+      "passed": true,
+      "http_503": 282,
+      "busy_reasons": {
+        "request_concurrency": 250,
+        "execution_lock": 4,
+        "scheduler_lock": 28
+      },
+      "bulk_admission_rejected": 0,
+      "bulk_admission_p99_ms": 200.168,
+      "bulk_pool_timeout": 0,
+      "all_pool_timeout": 0,
+      "web_p99_seconds": 1.117,
+      "heartbeat_p99_seconds": 0.536,
+      "sampled_peak_pg_connections": 138,
+      "expired_leases": 0,
+      "log_generated": 7524,
+      "log_accepted": 7524,
+      "web_transport_errors": {}
+    },
+    "queue_2": {
+      "api_processes": 12,
+      "configured_pool_connections": 168,
+      "passed": true,
+      "http_503": 283,
+      "busy_reasons": {
+        "request_concurrency": 248,
+        "execution_lock": 15,
+        "scheduler_lock": 20
+      },
+      "bulk_admission_rejected": 0,
+      "bulk_admission_p99_ms": 617.94,
+      "bulk_pool_timeout": 0,
+      "all_pool_timeout": 0,
+      "web_p99_seconds": 1.541,
+      "heartbeat_p99_seconds": 0.525,
+      "sampled_peak_pg_connections": 136,
+      "expired_leases": 0,
+      "log_generated": 7524,
+      "log_accepted": 7524,
+      "web_transport_errors": {}
+    }
+  },
+  "limits": [
+    "API process soft limit held at 1024 by a private launch wrapper; production Compose topology was not changed",
+    "Second bulk process bypasses production Settings process-count accounting in load tool; only the load tool checks actual 178 connection budget",
+    "One baseline and two 90-second runs per candidate; simulated artifact sent on every worker cycle, not real model traffic",
+    "Bulk replica comparison skipped the bulk-outage probe; production failover and health behavior require separate implementation and tests"
+  ]
+}

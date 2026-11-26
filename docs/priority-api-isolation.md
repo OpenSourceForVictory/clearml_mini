@@ -71,6 +71,8 @@ docker compose --env-file .env -p mini-eval \
 
 隔离测试工具支持 `--priority-api --mixed-ui`，以真实 HTTP/PostgreSQL 验证四角色、真实调度、用户提交/暂停/恢复/重评测、结果幂等、模拟 Worker 上报及日志。测试会停止批量进程，确认健康检查失败、执行心跳继续响应，随后重启批量进程。增加 `--continuous-batches` 可持续提交和重评测；`--log-bytes 16384 --varied-logs` 使用内容变化的日志单块上限（不加 varied-logs 的旧驱动正文为高度可压缩重复字符）；`--bulk-outage-seconds 15` 在开始 30 秒后暂停批量进程 15 秒，观察日志重试与恢复，仅允许四角色独立日志模式且时长至少为 60 秒加故障时长。允许的 502/504 仅限故障档日志/产物请求，控制请求错误仍判失败。测试只应使用可销毁 PostgreSQL；模拟程序生命周期不等于真实模型验收。
 
+隔离负载工具的`--bulk-extra`可临时增加第二个批量API进程，要求`--priority-api`且不得与批量故障注入同时使用。工具单独核算实际多出的10个连接、等待额外副本就绪并将网关指向两个批量后端；跳过单后端停机探测。**这不是生产Compose副本开关**：生产Settings/网关/健康与故障恢复尚未支持批量副本，不能直接对`bulk-transfer-api`执行扩容。与加长批量队列的200 Worker对照见[数据库容量验收](database-capacity-acceptance.md)。
+
 API 隔离本身不替代断联执行恢复。新恢复协议需 API 与节点显式启用、持久 outbox 和能力协商；未启用的旧执行仍沿用原租约行为。当前恢复发布状态、真实协议矩阵与灰度边界见 [恢复验收](validation/disconnected-execution-20261124/recovery-acceptance-20261126.md)。
 
 ## 分开配置请求准入和数据库容量

@@ -149,7 +149,8 @@ def render_gateway_config(template, ordinary_port, control_port, gateway_port):
                      f'set $ordinary_backend 127.0.0.1:{ordinary_port};'))
 
 
-def render_priority_gateway_config(ports, gateway_port, control_extra_port=None, interaction_extra_ports=()):
+def render_priority_gateway_config(ports, gateway_port, control_extra_port=None,
+                                   interaction_extra_ports=(), bulk_extra_port=None):
     if set(ports) != set(priority_runtime.ROLE_POOLS):
         raise ValueError('priority gateway requires every role port')
     config = priority_gateway.render().replace('listen 8000;', f'listen 127.0.0.1:{gateway_port};')
@@ -165,6 +166,11 @@ def render_priority_gateway_config(ports, gateway_port, control_extra_port=None,
         config = config.replace(address, 'interaction-load-pool')
         servers = ' '.join(f'server 127.0.0.1:{p};' for p in interaction_extra_ports)
         config = f'upstream interaction-load-pool {{ server {address}; {servers} }}\n' + config
+    if bulk_extra_port is not None:
+        address = f'127.0.0.1:{ports["bulk-transfer"]}'
+        config = config.replace(address, 'bulk-transfer-load-pool')
+        config = (f'upstream bulk-transfer-load-pool {{ server {address}; '
+                  f'server 127.0.0.1:{bulk_extra_port}; }}\n' + config)
     return config
 
 
@@ -783,6 +789,8 @@ def main():
                         help='run two isolated API processes behind the production Nginx routing config')
     parser.add_argument('--priority-api', action='store_true',
                         help='run four role-specific API processes and the generated Nginx gateway')
+    parser.add_argument('--bulk-extra', action='store_true',
+                        help='load-test only: add a second bulk-transfer API process to compare throughput')
     parser.add_argument('--role-aware-pools', action='store_true',
                         help='use the split Compose role-specific pool profile')
     parser.add_argument('--no-backpressure', action='store_true',
@@ -810,6 +818,8 @@ def main():
         parser.error('large batches require --mixed-ui, 1..100 cases, free command slots and no --continuous-batches')
     if args.priority_api and (args.split_api or args.role_aware_pools or args.no_admission or args.no_backpressure):
         parser.error('--priority-api requires its own pools and admission, without --split-api')
+    if args.bulk_extra and (not args.priority_api or args.bulk_outage_seconds):
+        parser.error('--bulk-extra requires --priority-api and no bulk outage')
     if args.role_aware_pools and not args.split_api:
         parser.error('--role-aware-pools requires --split-api')
     if args.role_aware_pools and args.no_backpressure:
@@ -837,8 +847,9 @@ def main():
                 pool_profiles(args.ordinary_pool, args.control_pool, args.observation_pool,
                              split_api=args.split_api, role_aware=args.role_aware_pools,
                              scheduler_enabled=args.mixed_ui, result=args.result_pool))
-    process_count = priority_settings.processes if args.priority_api else len(profiles)
-    configured_connections = (priority_settings.configured_connections if priority_settings else
+    process_count = (priority_settings.processes + int(args.bulk_extra) if args.priority_api else len(profiles))
+    configured_connections = ((priority_settings.configured_connections +
+                               (priority_settings.pool_sizes['bulk_transfer'] if args.bulk_extra else 0)) if priority_settings else
                               sum(sum(p.values()) for p in profiles.values()))
     if min(grades) < 1 or args.seconds < 5 or not 1 <= args.log_bytes <= 16384 or not .1 <= args.log_interval <= 60 or args.drain_seconds < 0 or any(value < 1 for profile in profiles.values() for value in profile.values()) or configured_connections > (priority_settings.connection_budget if priority_settings else 80) or (not args.priority_api and any(sum(p.values()) * process_count > 80 for p in profiles.values())):
         parser.error('positive grades, seconds >= 5 and log bytes 1..16384 required')
@@ -859,6 +870,7 @@ def main():
                'pool_result':args.result_pool if args.result_pool is not None else (3 if args.role_aware_pools else 2),
                'pool_scheduler':1,
                'pool_by_process':({**profiles, 'execution-control-extra':profiles['execution-control'],
+                                    **({'bulk-transfer-extra':profiles['bulk-transfer']} if args.bulk_extra else {}),
                                     **{f'interaction-extra-{i}':profiles['interaction'] for i in range(priority_settings.interaction_replicas-1)}}
                                   if args.priority_api else profiles) if not args.no_backpressure else None,
                'configured_total_connections':configured_connections,
@@ -870,7 +882,7 @@ def main():
                'seconds_per_grade':args.seconds, 'log_bytes_per_worker_per_cycle':args.log_bytes,
                'log_payload_style':'varied-structured' if args.varied_logs else 'repeated-character',
                'target_cycle_seconds':2, 'scheduler_enabled':args.mixed_ui or args.priority_api,
-               'priority_api':args.priority_api,
+               'priority_api':args.priority_api, 'bulk_extra':args.bulk_extra,
                'log_interval_seconds':args.log_interval,
                'independent_logs':args.independent_logs, 'log_drain_seconds':args.drain_seconds if args.independent_logs else 0,
                'trace_http_phases':args.trace_http_phases,
@@ -923,6 +935,7 @@ def main():
                 control_port = free_port() if args.split_api else None
                 role_ports = {role: free_port() for role in profiles} if args.priority_api else {}
                 control_extra_port = free_port() if args.priority_api else None
+                bulk_extra_port = free_port() if args.bulk_extra else None
                 interaction_extra_ports = [free_port() for _ in range(priority_settings.interaction_replicas-1)] if args.priority_api else []
                 port = free_port() if args.split_api or args.priority_api else ordinary_port
                 with ExitStack() as stack:
@@ -931,7 +944,9 @@ def main():
                            'SCHEDULER_ENABLED':'1' if args.mixed_ui else '0',
                            'DB_BACKPRESSURE_ENABLED':'0' if args.no_backpressure else '1',
                            'DB_ADMISSION_ENABLED':'0' if args.no_admission else '1',
-                           'API_DB_PROCESS_COUNT':str(process_count),
+                           # Settings counts the four supported production roles. The
+                           # second bulk process is isolated load-tool-only topology.
+                           'API_DB_PROCESS_COUNT':str(priority_settings.processes if args.priority_api else process_count),
                            'DB_CONNECTION_BUDGET':str(priority_settings.connection_budget if priority_settings else 80), 'DB_BUDGET_DIAGNOSTICS':'1'}
                     if args.mixed_ui:
                         env.update(MAX_ACTIVE_GLOBAL=str(count+10), MAX_ACTIVE_PER_USER=str(count+10))
@@ -953,7 +968,7 @@ def main():
                         if args.split_api and role == 'control':
                             api_env['SCHEDULER_ENABLED'] = '0'
                         if args.priority_api:
-                            api_env['API_ROUTE_GROUP'] = 'execution-control' if role == 'execution-control-extra' else 'interaction' if role.startswith('interaction-extra-') else role
+                            api_env['API_ROUTE_GROUP'] = 'execution-control' if role == 'execution-control-extra' else 'interaction' if role.startswith('interaction-extra-') else 'bulk-transfer' if role == 'bulk-transfer-extra' else role
                             api_env['SCHEDULER_ENABLED'] = '1' if role == 'worker-data' else '0'
                         log_name = (f'api-{role}-{count}.log' if args.split_api or args.priority_api else f'api-{count}.log')
                         log = stack.enter_context((output/log_name).open('a' if role in role_processes else 'w'))
@@ -966,6 +981,8 @@ def main():
                         for role, api_port in role_ports.items():
                             launch(role, api_port)
                         launch('execution-control-extra', control_extra_port)
+                        if args.bulk_extra:
+                            launch('bulk-transfer-extra', bulk_extra_port)
                         for i, extra_port in enumerate(interaction_extra_ports):
                             launch(f'interaction-extra-{i}', extra_port)
                     else:
@@ -974,7 +991,8 @@ def main():
                         launch('control', control_port)
                     if args.split_api or args.priority_api:
                         deploy = Path(__file__).resolve().parents[2] / 'deploy'
-                        config = (render_priority_gateway_config(role_ports, port, control_extra_port, interaction_extra_ports) if args.priority_api else
+                        config = (render_priority_gateway_config(role_ports, port, control_extra_port,
+                                                                 interaction_extra_ports, bulk_extra_port) if args.priority_api else
                                   render_gateway_config((deploy/'split-api-nginx.conf').read_text(),
                                                        ordinary_port, control_port, port))
                         gateway_config = output/f'gateway-{count}.conf'
@@ -989,7 +1007,8 @@ def main():
                     if args.priority_api:
                         # The role-level health only probes one peer per role.
                         # Wait for every extra replica before sending user traffic.
-                        for extra_port in [control_extra_port, *interaction_extra_ports]:
+                        for extra_port in [control_extra_port, *interaction_extra_ports,
+                                           *([bulk_extra_port] if args.bulk_extra else [])]:
                             for _ in range(100):
                                 try:
                                     r = httpx.get(f'http://127.0.0.1:{extra_port}/healthz',trust_env=False,timeout=1)
@@ -1054,25 +1073,29 @@ def main():
                                               'ready_status':httpx.get(direct+'/readyz', trust_env=False).status_code,
                                               'wrong_route_status':httpx.post(direct+wrong, trust_env=False).status_code}
                         result['role_topology'] = topology
-                        victim = role_processes['bulk-transfer']
-                        victim.terminate()
-                        victim.wait(timeout=10)
-                        result['role_failure'] = {
-                            'gateway_health_when_bulk_stopped':httpx.get(base+'/healthz', trust_env=False).status_code,
-                            'bulk_request_when_stopped':httpx.post(base+'/api/v1/worker/executions/test/logs-v2',
-                                                                 trust_env=False).status_code,
-                            'heartbeat_when_bulk_stopped':httpx.post(base+'/api/v1/worker/heartbeat',
-                                headers={'Authorization':'Bearer '+identities[0][1]},
-                                json={'slot_id':identities[0][0]}, trust_env=False).status_code}
-                        launch('bulk-transfer', role_ports['bulk-transfer'])
-                        for _ in range(50):
-                            healthy = httpx.get(base+'/healthz', trust_env=False, timeout=2).status_code
-                            if healthy == 200:
-                                break
-                            time.sleep(.1)
-                        result['role_failure']['gateway_health_after_restart'] = healthy
+                        if args.bulk_extra:
+                            result['role_failure'] = {'skipped': 'bulk replica capacity comparison'}
+                        else:
+                            victim = role_processes['bulk-transfer']
+                            victim.terminate()
+                            victim.wait(timeout=10)
+                            result['role_failure'] = {
+                                'gateway_health_when_bulk_stopped':httpx.get(base+'/healthz', trust_env=False).status_code,
+                                'bulk_request_when_stopped':httpx.post(base+'/api/v1/worker/executions/test/logs-v2',
+                                                                     trust_env=False).status_code,
+                                'heartbeat_when_bulk_stopped':httpx.post(base+'/api/v1/worker/heartbeat',
+                                    headers={'Authorization':'Bearer '+identities[0][1]},
+                                    json={'slot_id':identities[0][0]}, trust_env=False).status_code}
+                            launch('bulk-transfer', role_ports['bulk-transfer'])
+                            for _ in range(50):
+                                healthy = httpx.get(base+'/healthz', trust_env=False, timeout=2).status_code
+                                if healthy == 200:
+                                    break
+                                time.sleep(.1)
+                            result['role_failure']['gateway_health_after_restart'] = healthy
                 api_logs = [(output/name).read_text() for name in
                             (api_log_names(count, args.split_api, args.priority_api) +
+                             ([f'api-bulk-transfer-extra-{count}.log'] if args.bulk_extra else []) +
                              [f'api-interaction-extra-{i}-{count}.log' for i in range(len(interaction_extra_ports))])]
                 checkouts = [float(v) for log in api_logs for v in
                              re.findall(r'database checkout category=\w+ wait_ms=([0-9.]+)', log)]
@@ -1150,9 +1173,11 @@ def main():
                                         and recovery['release_latency_seconds']['max'] < 9)
                 if args.priority_api:
                     result['passed'] = (result['passed'] and all(row['ready_status'] == 200 and row['wrong_route_status'] == 404
-                                         for row in result['role_topology'].values()) and result['role_failure'] == {
+                                         for row in result['role_topology'].values()) and (result['role_failure'] == {
                                              'gateway_health_when_bulk_stopped':503, 'bulk_request_when_stopped':502,
-                                             'heartbeat_when_bulk_stopped':200, 'gateway_health_after_restart':200})
+                                             'heartbeat_when_bulk_stopped':200, 'gateway_health_after_restart':200}
+                                             if not args.bulk_extra else
+                                             result['role_failure'] == {'skipped': 'bulk replica capacity comparison'}))
                 summary['grades'].append(result)
                 (output/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps({'workers':count,'passed':result['passed'],'requests':result['requests']}),flush=True)
