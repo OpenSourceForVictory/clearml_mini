@@ -104,9 +104,9 @@
     }
   },
   "limitations": [
-    "one 90-second run per scale grade",
+    "90-second scale runs with limited repetition; no sustained 200-worker production SLA test",
     "simulated command tasks, not model inference",
-    "200 grade failed; not a database connection ceiling"
+    "200 grade under the default load-driver file-descriptor limit failed repeatedly; this is not a database connection ceiling"
   ],
   "diagnostic_rerun_200": {
     "duration_seconds": 90,
@@ -141,6 +141,12 @@
   },
   "file_descriptor_diagnostics_200": {
     "scope": "same-host disposable PostgreSQL, 12 API processes, 168 configured application connections, 200 simulated workers, 100 simulated Web users, 90 seconds per run",
+    "discarded_preflight_attempt": {
+      "disposable_database_max_connections": 100,
+      "configured_application_connection_budget": 168,
+      "api_startup_error": "priority connection budget and headroom exceed PostgreSQL capacity",
+      "load_started": false
+    },
     "default_limit_socket_run": {
       "load_driver_soft_nofile": 1024,
       "passed": false,
@@ -178,8 +184,21 @@
       "logs_generated": 7524,
       "logs_accepted": 7524
     },
+    "isolated_api_limit_run": {
+      "load_driver_soft_nofile": 8192,
+      "all_twelve_api_child_soft_nofile": 1024,
+      "passed": true,
+      "web_transport_errors": 0,
+      "http_503": 1621,
+      "pool_timeout_count": 0,
+      "sampled_peak_pg_connections": 137,
+      "expired_leases_during_load": 0,
+      "logs_generated": 7524,
+      "logs_accepted": 7524,
+      "maximum_heartbeat_gap_seconds": 4.768364395014942
+    },
     "minimum_client_nofile_budget": 1220,
-    "limitation": "Raising the load driver's soft limit also raises the inherited API subprocess limit; one passing 90-second run cannot isolate the failing process or establish a production SLA."
+    "limitation": "A temporary launch wrapper held all 12 API subprocesses at soft NOFILE 1024 while the driver used 8192. This one passing 90-second control strengthens the load-driver limit hypothesis but does not establish a stable production SLA or exclude other startup factors."
   },
   "base_commit": "ad87978",
   "diagnostic_instrumentation": "Web transport exception class, optional numeric socket errno and 30-second window; load-driver RLIMIT_NOFILE precheck; test tooling only"
