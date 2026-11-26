@@ -1,0 +1,104 @@
+{
+  "passed": true,
+  "requests": {
+    "200": 21785,
+    "503": 21,
+    "201": 1
+  },
+  "busy_reasons": {
+    "request_concurrency": 9,
+    "execution_lock": 4,
+    "scheduler_lock": 8
+  },
+  "expired_leases": 0,
+  "expired_leases_after_drain": 81,
+  "max_heartbeat_gap_seconds": 3.9118096448946744,
+  "initial_checkout_wait_ms": {
+    "p95": 22.39,
+    "p99": 44.855
+  },
+  "log_generation": {
+    "generated": 2430,
+    "accepted": 2430,
+    "max_pending_chunks_per_worker": 1,
+    "final_pending_chunks": 0,
+    "max_pending_age_seconds": 0.13256231206469238
+  },
+  "recovery_evidence": {
+    "target_lifecycle": 9,
+    "completed": 9,
+    "cleanup_confirmed": 9,
+    "result_sync_complete": 9,
+    "duplicate_results": 9,
+    "errors": [],
+    "release_latency_seconds": {
+      "p95": 1.1945799351669848,
+      "p99": 1.1945799351669848,
+      "max": 1.1945799351669848
+    }
+  },
+  "lease_samples": [
+    {
+      "elapsed_seconds": 1.7493956671096385,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 12.768415708094835,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 23.791937397094443,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 34.81143862614408,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 45.83119171205908,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 56.85135224717669,
+      "phase": "load",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 61.02076565101743,
+      "phase": "boundary",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 72.03663608315401,
+      "phase": "drain",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 83.05308800912462,
+      "phase": "drain",
+      "expired_leases": 0
+    },
+    {
+      "elapsed_seconds": 91.03969988506287,
+      "phase": "drain",
+      "expired_leases": 81
+    }
+  ],
+  "test_context": {
+    "duration_seconds": 60,
+    "drain_seconds": 30,
+    "web_users": 100,
+    "simulated_device_workers": 100,
+    "simulated_batch_tasks": 100,
+    "interactive_api_replicas": 8,
+    "max_connections": 200,
+    "configured_pool_limit": 168,
+    "concurrent_full_coverage": true,
+    "postgres_container_stats_enabled": true
+  }
+}
