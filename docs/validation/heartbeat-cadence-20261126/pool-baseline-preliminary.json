@@ -204,5 +204,677 @@
     "first checkout includes connection establishment; not full SQL timing",
     "expired lease check occurs after traffic/drain/role checks; timing needs investigation",
     "four user_action samples insufficient for stable percentile"
+  ],
+  "database_samples": [
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 13,
+          "max_query_age_seconds": 0.419364
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 110,
+        "xact_rollback": 1,
+        "blks_read": 38,
+        "blks_hit": 45102,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 34917000,
+      "sample_seconds": 0.002396432915702462,
+      "elapsed_seconds": 0.9226962020620704
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 97,
+          "max_query_age_seconds": 11.34075
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 21,
+          "max_query_age_seconds": 0.012904
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.000243
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 3234,
+        "xact_rollback": 1927,
+        "blks_read": 54,
+        "blks_hit": 738702,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 42611130,
+      "sample_seconds": 0.0018825968727469444,
+      "elapsed_seconds": 10.925307861994952
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "Client",
+          "connections": 1,
+          "max_query_age_seconds": 0.000217
+        },
+        {
+          "state": "active",
+          "wait_event_type": "IO",
+          "connections": 1,
+          "max_query_age_seconds": 0.004187
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 108,
+          "max_query_age_seconds": 21.343558
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 14,
+          "max_query_age_seconds": 0.002289
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 6662,
+        "xact_rollback": 4279,
+        "blks_read": 55,
+        "blks_hit": 1115623,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 45134926,
+      "sample_seconds": 0.00344653008505702,
+      "elapsed_seconds": 20.93012698390521
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "IO",
+          "connections": 1,
+          "max_query_age_seconds": 0.000368
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 122,
+          "max_query_age_seconds": 31.349273
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 7,
+          "max_query_age_seconds": 0.000931
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.003129
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 10060,
+        "xact_rollback": 6668,
+        "blks_read": 55,
+        "blks_hit": 1507254,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 47597508,
+      "sample_seconds": 0.005257209064438939,
+      "elapsed_seconds": 30.936950406059623
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "IO",
+          "connections": 1,
+          "max_query_age_seconds": 0.003575
+        },
+        {
+          "state": "active",
+          "wait_event_type": "LWLock",
+          "connections": 4,
+          "max_query_age_seconds": 0.007836
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 109,
+          "max_query_age_seconds": 41.356016
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 15,
+          "max_query_age_seconds": 0.00316
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 2,
+          "max_query_age_seconds": 0.003169
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 13579,
+        "xact_rollback": 9140,
+        "blks_read": 55,
+        "blks_hit": 1855655,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 50183595,
+      "sample_seconds": 0.0028300550766289234,
+      "elapsed_seconds": 40.94084651302546
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": null,
+          "connections": 2,
+          "max_query_age_seconds": 0.000529
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 121,
+          "max_query_age_seconds": 51.358419
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 7,
+          "max_query_age_seconds": 0.004099
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.000426
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 16911,
+        "xact_rollback": 11589,
+        "blks_read": 55,
+        "blks_hit": 2100162,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 52255693,
+      "sample_seconds": 0.002277019899338484,
+      "elapsed_seconds": 50.94402572186664
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 131,
+          "max_query_age_seconds": 61.361801
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 19980,
+        "xact_rollback": 13931,
+        "blks_read": 55,
+        "blks_hit": 2340400,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 54224199,
+      "sample_seconds": 0.001524023013189435,
+      "elapsed_seconds": 60.94594409200363
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 132,
+          "max_query_age_seconds": 71.364057
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 23309,
+        "xact_rollback": 16341,
+        "blks_read": 55,
+        "blks_hit": 2648507,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 56581362,
+      "sample_seconds": 0.0014418018981814384,
+      "elapsed_seconds": 70.94815042498522
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 133,
+          "max_query_age_seconds": 81.366555
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 26673,
+        "xact_rollback": 18772,
+        "blks_read": 55,
+        "blks_hit": 2887022,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 58673938,
+      "sample_seconds": 0.001321673858910799,
+      "elapsed_seconds": 80.95060010999441
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 127,
+          "max_query_age_seconds": 91.368863
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 6,
+          "max_query_age_seconds": 0.018382
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 30059,
+        "xact_rollback": 21198,
+        "blks_read": 55,
+        "blks_hit": 3125137,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 60773360,
+      "sample_seconds": 0.0014872380997985601,
+      "elapsed_seconds": 90.95301967905834
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "Client",
+          "connections": 1,
+          "max_query_age_seconds": 0.000275
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 127,
+          "max_query_age_seconds": 101.371518
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 6,
+          "max_query_age_seconds": 0.003218
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 33374,
+        "xact_rollback": 23612,
+        "blks_read": 55,
+        "blks_hit": 3363822,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 62913927,
+      "sample_seconds": 0.0018634959124028683,
+      "elapsed_seconds": 100.95580276707187
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "IO",
+          "connections": 1,
+          "max_query_age_seconds": 0.003178
+        },
+        {
+          "state": "active",
+          "wait_event_type": "LWLock",
+          "connections": 3,
+          "max_query_age_seconds": 0.005941
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 126,
+          "max_query_age_seconds": 111.37377
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 5,
+          "max_query_age_seconds": 0.001542
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 36730,
+        "xact_rollback": 26037,
+        "blks_read": 56,
+        "blks_hit": 3609814,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 65151511,
+      "sample_seconds": 0.0028367419727146626,
+      "elapsed_seconds": 110.95905938488431
+    },
+    {
+      "activity": [
+        {
+          "state": "active",
+          "wait_event_type": "IO",
+          "connections": 1,
+          "max_query_age_seconds": 0.003698
+        },
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 125,
+          "max_query_age_seconds": 121.378439
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 8,
+          "max_query_age_seconds": 0.001755
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.001164
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 39968,
+        "xact_rollback": 28404,
+        "blks_read": 56,
+        "blks_hit": 3854327,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 67285600,
+      "sample_seconds": 0.004484847886487842,
+      "elapsed_seconds": 120.96508488897234
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 127,
+          "max_query_age_seconds": 131.383502
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 7,
+          "max_query_age_seconds": 0.004028
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.000628
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 43195,
+        "xact_rollback": 30777,
+        "blks_read": 56,
+        "blks_hit": 4151798,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 69625375,
+      "sample_seconds": 0.00415863492526114,
+      "elapsed_seconds": 130.97057524090633
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 135,
+          "max_query_age_seconds": 141.388331
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 46376,
+        "xact_rollback": 33144,
+        "blks_read": 56,
+        "blks_hit": 4423409,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 71844094,
+      "sample_seconds": 0.0025578441563993692,
+      "elapsed_seconds": 140.9733079150319
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 132,
+          "max_query_age_seconds": 151.391229
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 2,
+          "max_query_age_seconds": 0.003756
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": null,
+          "connections": 1,
+          "max_query_age_seconds": 0.000302
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 49714,
+        "xact_rollback": 35558,
+        "blks_read": 56,
+        "blks_hit": 4698166,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 74011001,
+      "sample_seconds": 0.0022302521392703056,
+      "elapsed_seconds": 150.97587824007496
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 134,
+          "max_query_age_seconds": 161.394427
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 1,
+          "max_query_age_seconds": 0.002486
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 52968,
+        "xact_rollback": 37899,
+        "blks_read": 56,
+        "blks_hit": 4969804,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 76141295,
+      "sample_seconds": 0.0019464739598333836,
+      "elapsed_seconds": 160.97886096686125
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 134,
+          "max_query_age_seconds": 171.397117
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 1,
+          "max_query_age_seconds": 0.000483
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 56218,
+        "xact_rollback": 40267,
+        "blks_read": 56,
+        "blks_hit": 5246755,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 78317925,
+      "sample_seconds": 0.0023683798499405384,
+      "elapsed_seconds": 170.98186115990393
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 134,
+          "max_query_age_seconds": 181.400417
+        },
+        {
+          "state": "idle in transaction",
+          "wait_event_type": "Client",
+          "connections": 1,
+          "max_query_age_seconds": 0.00077
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 59220,
+        "xact_rollback": 42500,
+        "blks_read": 56,
+        "blks_hit": 5513757,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 80387807,
+      "sample_seconds": 0.0023041609674692154,
+      "elapsed_seconds": 180.98528410098515
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 135,
+          "max_query_age_seconds": 191.403845
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 59372,
+        "xact_rollback": 42558,
+        "blks_read": 56,
+        "blks_hit": 5536282,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 80962005,
+      "sample_seconds": 0.002548182150349021,
+      "elapsed_seconds": 190.9886269189883
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 135,
+          "max_query_age_seconds": 201.407164
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 59377,
+        "xact_rollback": 42559,
+        "blks_read": 56,
+        "blks_hit": 5538302,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 80962646,
+      "sample_seconds": 0.0023722879122942686,
+      "elapsed_seconds": 200.99177391896956
+    },
+    {
+      "activity": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "connections": 135,
+          "max_query_age_seconds": 210.461577
+        }
+      ],
+      "waiting_locks": 0,
+      "database": {
+        "xact_commit": 59382,
+        "xact_rollback": 42560,
+        "blks_read": 56,
+        "blks_hit": 5540322,
+        "deadlocks": 0,
+        "temp_bytes": 0
+      },
+      "cluster_wal_bytes": 80963338,
+      "sample_seconds": 0.0022338349372148514,
+      "elapsed_seconds": 210.0461576639209
+    }
   ]
 }
