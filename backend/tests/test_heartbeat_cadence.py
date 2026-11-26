@@ -145,7 +145,7 @@ def test_worker_main_loop_polls_independently_and_keeps_heartbeats(execution, mo
         assert any(100 < at < claims[1] for at in times)
     else:
         assert claims[1] == (104 if reject_heartbeat else 102)
-        assert max(b-a for a,b in zip(claims,claims[1:])) <= 2
+        assert all(b-a == pytest.approx(2) for a,b in zip(claims,claims[1:]))
     assert controller.source == 'agent'
 
 

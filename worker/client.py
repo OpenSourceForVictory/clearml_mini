@@ -976,6 +976,7 @@ class Worker:
         retry = Backoff(max_total=3.0)
         heartbeat_window, claim_window = RetryWindow(), RetryWindow()
         reply = {}
+        next_claim_at = 0
         while True:
             try:
                 for execution, child in list(self.children.items()):
@@ -1023,6 +1024,11 @@ class Worker:
                     self.control.refresh(reply)
                     self.stop_event.wait(min(cadence.delay(), claim_window.remaining()))
                     continue
+                claim_delay = next_claim_at - time.monotonic()
+                if claim_delay > 0:
+                    self.control.refresh(reply)
+                    time.sleep(min(cadence.delay(), claim_delay))
+                    continue
                 from .recovery_poll import poll
                 try:
                     response = poll(self, metadata(self.config),
@@ -1031,6 +1037,7 @@ class Worker:
                     claim_window.defer(exc)
                     raise
                 claim_window.reset()
+                next_claim_at = time.monotonic() + 2
                 for execution in response['cleanup']:
                     # An active thread owns its cleanup; signal it rather than racing its journal.
                     if execution in self.children:
@@ -1054,7 +1061,7 @@ class Worker:
                 # on authentication/configuration errors while retaining state.
                 time.sleep(2)
                 continue
-            time.sleep(cadence.delay())
+            time.sleep(min(cadence.delay(), max(0, next_claim_at - time.monotonic())))
 
 
 def main():
