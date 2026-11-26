@@ -124,7 +124,7 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 
 回连恢复：onboarding/executor.py verify/retry_verification 默认 300 秒、环境配置 30–1800；核对安装 revision/release 后才完成。Worker probe_dependencies.start 后台准备，心跳刷新 software；enrollment/worker_upgrades 版本验收豁免按节点动态上报的 service_readiness_v1 与 disconnected_execution_v1，业务准入仍按实际能力检查。旧验收规则会使带恢复能力的 0.21.22 Worker 在升级验证中超时回滚。文档 node-reenrollment.md、ssh-onboarding-executor.md、service-readiness.md、worker-upgrades.md；测试 test_reconnect_resilience.py 与 ssh-onboarding.spec.ts。HTTP 响应 5 秒超时与回连窗口分开诊断，不自动延长遥测有效期。
 
-29 节点 0.21.22 在线升级与 NPU2 受控中断实测见 `docs/validation/disconnected-execution-20261124/production-node-20261126.md`；该记录只证明单卡宿主机服务在 Worker 心跳中断后恢复，不包含断联期间结果补报或模型质量评测。
+29 节点 0.21.22 在线升级与 NPU2 受控中断实测见 `docs/validation/disconnected-execution-20261124/production-node-20261126.md`；包含 Worker 暂停及节点到平台 API 控制连接阻断 70 秒、原进程恢复和清理，但不包含断联期间结果补报或模型质量评测。
 
 宿主机首次握手恢复（Worker 0.18.1）：client.execute 在 started=false 的首次心跳 503 时有界重试，原租约与停止信号持续有效；调度 tick 对已读取候选报告采用读取完成时刻检查，显式 at 保持固定，未来和过期数据仍拒绝。回归 test_worker_execution_recovery.py、test_worker_service_execution.py、test_scheduling.py、test_freshness.py；现场证据见 host-shell-episode-launch 验证记录。
 
