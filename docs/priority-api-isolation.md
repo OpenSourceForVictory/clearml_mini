@@ -95,6 +95,8 @@ JSON可仅覆盖需要调整的类别，未知类别或非法值拒绝启动；s
 
 短测工具可加 `--web-users 100 --capacity-config deploy/profiles/team-capacity-candidate.json`。新增用户为隔离库内100个独立管理员身份，模拟每5秒查看共享批次/列表/资源池，页面多个请求并发；原控制场景继续提交/暂停/恢复/重评测。该模型验证多人API流量，不代表100个真实浏览器或100人同时提交；长测仍须另行验收。
 
+排查容量时可在隔离测试环境短时启用 `DB_BUDGET_DIAGNOSTICS=1`。API 日志会按类别记录入口准入等待、每次数据库池获取等待及超时，不包含请求体、令牌或 SQL 参数；负载摘要中的 `admission_wait_ms`、`pool_checkout_wait_ms` 可用于区分 HTTP 排队和数据库取连接排队。诊断会增加日志量，生产长期运行保持关闭；原 `initial_checkout_wait_ms` 只覆盖首次显式取连接。采样与判定口径见 [数据库容量与业务时延验收](database-capacity-acceptance.md)。
+
 交互角色也支持显式多副本：`API_INTERACTION_REPLICAS`默认1，允许1至8，Compose中的api服务按此扩容；`API_DB_PROCESS_COUNT`必须同时设为`2 + API_CONTROL_REPLICAS + API_INTERACTION_REPLICAS`。例如执行控制2副本、交互4副本时总进程8；worker-data与bulk-transfer仍各1，调度器仍唯一。PRIORITY_API_POOL_SIZES中的user_action/user_long/page_read为**每个交互副本**的连接数，总预算必须乘副本数，不能把多副本当成免费容量。健康指纹包含副本配置；角色健康检查不保证每一个副本健康，仍需Compose核对。单进程扩大池仍达不到目标吞吐时，可以在有CPU余量的前提下测试多交互进程。
 
 资源池列表的容量成本：`memberships.summary` 按单次请求批量读取设备账号、目标池和待清理槽位，并以SQL分组统计任务状态；避免每卡额外查询和将全部历史任务状态读入Python。就绪规则、缺失账号/目标池、禁用、待迁移和待清理的含义不变；快照不跨请求缓存，调度/资源修改不使用此展示上下文。回归测试`test_pool_summary_scale`在101个槽位下验证摘要与逐卡旧读取结果一致、查询数不随卡数线性增长。
