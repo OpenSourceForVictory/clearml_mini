@@ -1,0 +1,101 @@
+{
+  "passed": true,
+  "workers": 3,
+  "web_users": null,
+  "expired_leases": 0,
+  "busy_reasons": {},
+  "pool_checkout_wait_ms": {
+    "execution_control": {
+      "count": 129,
+      "timeout_count": 0,
+      "p95": 0.085,
+      "p99": 4.67
+    },
+    "user_action": {
+      "count": 13,
+      "timeout_count": 0,
+      "p95": 5.347,
+      "p99": 5.347
+    },
+    "page_read": {
+      "count": 104,
+      "timeout_count": 0,
+      "p95": 4.459,
+      "p99": 20.543
+    },
+    "worker_claim": {
+      "count": 31,
+      "timeout_count": 0,
+      "p95": 0.089,
+      "p99": 4.791
+    },
+    "scheduler": {
+      "count": 18,
+      "timeout_count": 0,
+      "p95": 3.895,
+      "p99": 3.895
+    },
+    "worker_observation": {
+      "count": 36,
+      "timeout_count": 0,
+      "p95": 0.084,
+      "p99": 4.118
+    },
+    "worker_result": {
+      "count": 7,
+      "timeout_count": 0,
+      "p95": 4.647,
+      "p99": 4.647
+    },
+    "bulk_transfer": {
+      "count": 12,
+      "timeout_count": 0,
+      "p95": 4.524,
+      "p99": 4.524
+    }
+  },
+  "admission_wait_ms": {
+    "execution_control": {
+      "count": 80,
+      "rejected_count": 0,
+      "p95": 0.003,
+      "p99": 0.003
+    },
+    "page_read": {
+      "count": 105,
+      "rejected_count": 0,
+      "p95": 0.003,
+      "p99": 0.004
+    },
+    "user_action": {
+      "count": 4,
+      "rejected_count": 0,
+      "p95": 0.004,
+      "p99": 0.004
+    },
+    "worker_observation": {
+      "count": 18,
+      "rejected_count": 0,
+      "p95": 0.004,
+      "p99": 0.004
+    },
+    "worker_claim": {
+      "count": 30,
+      "rejected_count": 0,
+      "p95": 0.003,
+      "p99": 0.003
+    },
+    "worker_result": {
+      "count": 7,
+      "rejected_count": 0,
+      "p95": 0.002,
+      "p99": 0.002
+    },
+    "bulk_transfer": {
+      "count": 10,
+      "rejected_count": 0,
+      "p95": 0.004,
+      "p99": 0.004
+    }
+  }
+}
