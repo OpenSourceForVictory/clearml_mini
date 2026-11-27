@@ -19,7 +19,7 @@ from sqlalchemy import func, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from .core import Event, Job, Pool, Run, RunLog, Slot, Status, User, SchedulerState, session_factory
-from .scheduling import ControlBusy, lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE
+from .scheduling import ControlBusy, lock, user_control_lock, loop, online, telemetry_fresh, transition, TERMINAL, ACTIVE
 from .freshness import RESOURCE_SAMPLE_SECONDS, recent
 from .execution import install
 from .clients import ClientRequest, snapshot, install as install_clients
@@ -350,7 +350,7 @@ def get_job(job_id: str, user: User = Depends(current), s: Session = Depends(db)
 
 @app.post('/api/v1/jobs/{job_id}/cancel', status_code=202)
 def cancel(job_id: str, user: User = Depends(current), s: Session = Depends(db)):
-    lock(s)
+    user_control_lock(s)
     job = s.get(Job, job_id, options=[selectinload(Job.runs)])
     if not job:
         raise HTTPException(404, 'job not found')

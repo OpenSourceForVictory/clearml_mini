@@ -102,6 +102,33 @@ def test_terminal_history_and_bulk_retry_remain_paused(env):
     assert c.post('/api/v1/jobs/'+b['cases'][0]['job_id']+'/cancel',headers=auth['alice']).status_code==409
 
 
+def test_cancel_queued_batch_uses_loaded_runs_without_per_job_lock_queries(env, monkeypatch):
+    from backend.app import batch_controls
+    from backend.app.core import Job, Run
+    main,c,auth=env;b,_,_=setup(env)
+    with main.SessionLocal() as s:
+        first=s.get(Job,b['cases'][0]['job_id'])
+        more=[Job(batch_id=b['id'],owner_id=first.owner_id,pool_id=first.pool_id,
+                  title=f'queued-{i}',benchmark='mock',model_ref='m',episodes=1,
+                  status='PENDING') for i in range(98)]
+        s.add_all(more);s.flush()
+        s.add_all(Run(job_id=job.id,attempt=1,status='PENDING') for job in more)
+        s.commit()
+    # The helper has already loaded both jobs and their latest runs. A queued
+    # cancellation must not issue one SELECT FOR UPDATE per task.
+    original=batch_controls.select
+    def guarded(model):
+        assert model is not Run, 'queued cancellation queried Run again'
+        return original(model)
+    monkeypatch.setattr(batch_controls,'select',guarded)
+    response=control(env,b,'cancel',0)
+    assert response.status_code==200,response.text
+    assert response.json()['counts']['cancelled']==100
+    with main.SessionLocal() as s:
+        assert all(s.get(Job,item['job_id']).status=='CANCELLED' for item in b['cases'])
+        assert all(s.get(Job,job.id).status=='CANCELLED' for job in more)
+
+
 def test_paused_batch_does_not_block_other_batch_after_api_reload(env):
     import importlib
     main,c,auth=env;b,_,_=setup(env)

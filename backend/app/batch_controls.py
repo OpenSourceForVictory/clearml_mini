@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from .core import now, Run
-from .scheduling import lock, transition, TERMINAL
+from .scheduling import user_control_lock, transition, TERMINAL
 
 
 class Control(BaseModel):
@@ -17,6 +17,12 @@ def cancel_job(s, job):
     # Callers retain the scheduler lock for batch/resource intent, but startup
     # reports no longer take it. Lock and refresh the execution before deciding
     # the transition, never write a cancellation from a stale Job snapshot.
+    # PENDING and RESERVED are changed only while holding the scheduler lock.
+    # The caller has already loaded the latest run, so avoid one row-lock query
+    # and one refresh per queued task in a large batch cancellation.
+    if job.status in ('PENDING', 'RESERVED'):
+        transition(s, job.runs[-1], 'CANCELLED')
+        return job.status
     run = s.scalar(select(Run).where(Run.job_id == job.id)
                    .order_by(Run.attempt.desc()).limit(1)
                    .with_for_update(key_share=True).execution_options(populate_existing=True))
@@ -42,7 +48,7 @@ def install(app, db, current):
 
     @app.post('/api/v1/batches/{batch_id}/control')
     def control(batch_id: str, body: Control, user=Depends(current), s=Depends(db)):
-        lock(s)
+        user_control_lock(s)
         batch = owned(s, batch_id, user)
         if batch.control_revision != body.expected_revision:
             raise HTTPException(409, 'batch control changed; refresh before retrying')

@@ -1,9 +1,45 @@
 """Real PostgreSQL pool exhaustion; no production databases or workers."""
 import time
+from concurrent.futures import ThreadPoolExecutor
 import pytest
 from backend.tests.test_db_budget import online, pg
 from backend.tests.test_services import setup
-from backend.app.core import Pool, Job, Run
+from backend.app.core import Pool, Job, Run, EvaluationBatch
+
+
+def test_batch_cancel_retries_transient_scheduler_lock(online):
+    from backend.app.scheduling import lock
+    main,c,_=online
+    auth={'Authorization':'Bearer '+main.login_token('u',int(time.time()))['access_token']}
+    with main.SchedulerSessionLocal() as holder, ThreadPoolExecutor(1) as executor:
+        lock(holder)
+        pending=executor.submit(c.post,'/api/v1/batches/b/control',headers=auth,
+                                json={'action':'cancel','expected_revision':0})
+        time.sleep(.2)  # Longer than this deployment's 0.1s SQL lock timeout.
+        assert not pending.done()
+        holder.rollback()
+        response=pending.result(timeout=3)
+    assert response.status_code==200,response.text
+    assert response.json()['counts']['cancel_requested']==1
+    with main.ControlSessionLocal() as s:
+        assert s.get(Job,'j').status=='CANCEL_REQUESTED'
+    assert main.ControlSessionLocal.kw['bind'].pool.checkedout()==0
+
+
+def test_batch_cancel_persistent_scheduler_lock_has_no_partial_effect(online):
+    from backend.app.scheduling import lock
+    main,c,_=online
+    auth={'Authorization':'Bearer '+main.login_token('u',int(time.time()))['access_token']}
+    with main.SchedulerSessionLocal() as holder:
+        lock(holder)
+        response=c.post('/api/v1/batches/b/control',headers=auth,
+                        json={'action':'cancel','expected_revision':0})
+        assert response.status_code==503,response.text
+        assert response.json()['reason']=='scheduler_lock'
+    with main.ControlSessionLocal() as s:
+        assert s.get(EvaluationBatch,'b').control_revision==0
+        assert s.get(Job,'j').status=='RUNNING'
+    assert main.ControlSessionLocal.kw['bind'].pool.checkedout()==0
 
 
 @pytest.mark.parametrize('operation',['retry','retry-failed','service-start'])

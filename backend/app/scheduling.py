@@ -2,6 +2,7 @@
 import logging
 import os
 import threading
+import time
 from datetime import timedelta, timezone
 from sqlalchemy import exists, or_, select, text
 from fastapi import HTTPException
@@ -47,6 +48,25 @@ def fast_lock(s):
     """High-frequency reports must release their connection instead of queuing on admission."""
     if not lock(s, wait=False):
         raise ControlBusy('scheduler_lock')
+
+
+def user_control_lock(s, wait_seconds=2.0):
+    """Wait briefly for scheduler admission without occupying a DB connection."""
+    from .db_budget import request_budget
+    deadline = time.monotonic() + wait_seconds
+    budget = request_budget.get()
+    if budget is not None:
+        deadline = min(deadline, budget - .1)
+    while True:
+        if lock(s, wait=False):
+            return
+        # pg_try_advisory_xact_lock starts a transaction even on failure.
+        # Roll it back before sleeping so other controls can use this pool slot.
+        s.rollback()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ControlBusy('scheduler_lock')
+        time.sleep(min(.05, remaining))
 
 
 def transition(s, run, status, message=None):

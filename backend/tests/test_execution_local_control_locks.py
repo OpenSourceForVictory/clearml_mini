@@ -10,7 +10,7 @@ from backend.app import recovery_records, recovery_control as control
 from backend.app.batch_controls import cancel_job
 from backend.app.core import Job, Run, ServiceInstance, Worker, now
 from backend.app.execution_logs import append, LogChunk
-from backend.app.scheduling import ControlBusy, lock
+from backend.app.scheduling import ControlBusy, lock, user_control_lock
 from backend.tests.test_execution_logs_postgres import pg, seed
 from backend.tests.test_recovery_control import apply, observation
 from backend.tests.test_recovery_launch import setup, prepare
@@ -144,3 +144,30 @@ def test_cancel_before_first_start_keeps_platform_intent(pg):
     with factory() as s:
         assert s.get(Run, 'r').started_at is None
         assert not s.get(Run, 'r').cleanup_confirmed
+
+
+def test_user_control_wait_releases_connection_and_accepts_after_scheduler(pg):
+    factory = seed(pg[0])
+    with factory() as scheduler, factory() as cancelling, ThreadPoolExecutor(1) as executor:
+        lock(scheduler)
+        future = executor.submit(user_control_lock, cancelling, 1.5)
+        deadline = time.monotonic()+1
+        while time.monotonic()<deadline and pg[0].pool.checkedout()>1:
+            time.sleep(.01)
+        assert pg[0].pool.checkedout()==1  # waiter released its checkout
+        scheduler.rollback()
+        future.result(timeout=2)
+        assert pg[0].pool.checkedout()==1  # successful transaction owns its lock
+        cancelling.rollback()
+    assert pg[0].pool.checkedout()==0
+
+
+def test_user_control_wait_times_out_without_leaking_connection(pg):
+    factory = seed(pg[0])
+    with factory() as scheduler, factory() as cancelling:
+        lock(scheduler)
+        with pytest.raises(ControlBusy) as error:
+            user_control_lock(cancelling, .12)
+        assert error.value.reason=='scheduler_lock'
+        assert pg[0].pool.checkedout()==1
+    assert pg[0].pool.checkedout()==0

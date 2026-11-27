@@ -332,7 +332,7 @@ SSH执行器IPC必须在释放认证Session和只读预检调度锁后调用，�
 
 已有平台切换双 API 的可执行步骤见 `docs/split-api-startup.md`：保留项目名/环境/覆盖文件，基础 Compose 与 scripts/control.py 不会自动启用双进程；迁移前停两组 API，已有账号不重跑 bootstrap。
 
-控制操作背压：重评 retry/retry-failed 与 nginx 同步进入 control；services.control_ack 提交前生成纯值确认，提交后不读取 ORM/完整详情。monitoring 批量重评只查选中任务但保留完整尝试关系。见 docs/control-operation-backpressure.md；test_control_operations、test_control_operations_postgres、services.spec.ts。调度锁仍保留，双进程不隔离 PostgreSQL 锁。
+控制操作背压：重评 retry/retry-failed 与 nginx 同步进入 control；services.control_ack 提交前生成纯值确认，提交后不读取 ORM/完整详情。monitoring 批量重评只查选中任务但保留完整尝试关系。见 docs/control-operation-backpressure.md；test_control_operations、test_control_operations_postgres、services.spec.ts。调度锁仍保留，双进程不隔离 PostgreSQL 锁。取消整批与单任务取消使用 scheduling.user_control_lock 限时尝试，失败轮次回滚归还连接，超限返回 503/scheduler_lock；排队任务复用已加载最新 Run，运行中仍逐项锁定刷新。见 docs/batch-controls.md；test_batch_controls 与 test_execution_local_control_locks。增加控制 API 进程数不消除这把锁的竞争。
 
 监控背压：frontend/src/poll.ts 支持 intervalMs，批次 monitor 5秒、其他默认2秒；失败指数退避至30秒并尊重更长Retry-After，document隐藏/卸载取消fetch，401停止自动轮询。api.ts ApiError保留status/reason/retryAfterMs。preflight.DiagnosticContext只在请求内按批次+服务集合+workload缓存托管候选并预计算holdings，不能用于scheduler共享快照。说明docs/batch-monitoring.md；回归test_monitor_backpressure.py、query-polling.spec.ts。
 
@@ -444,7 +444,7 @@ Compose API必须显式映射`RECOVERY_EXECUTION_ENABLED`，不能仅写`.env`�
 
 百人团队分类容量与交互多副本：配置与回滚见 `docs/priority-api-isolation.md`，实测边界见 `docs/validation/team-capacity-20261126/README.md`。100用户/100节点/100Worker候选见 `deploy/profiles/team-capacity-100.json` 及同名env.example；交互8副本、实际168连接、PG至少200。新缺省批量入口队列192/等待2秒，100Worker/100Web的90秒复核见 `docs/validation/heartbeat-cadence-20261126/bulk-queue-100-recheck.json`；旧30分钟长测仍是96/1秒，不得混用。800Worker混合档失败，不能称为百台八卡并行业务容量已达标。独立API进程的压测不计入父进程覆盖率。
 
-执行锁范围优化：见 `docs/execution-lock-scope.md`。STARTING 心跳、原执行 prepare、非资源变更 reconcile 不取全局调度锁；Run 使用 NO KEY UPDATE，prepare/reconcile 按 Run→grant NOWAIT。cancel_job 锁最新 attempt 并刷新 Job，调度超时保持 SKIP LOCKED 后重查。过期服务恢复清除就绪仍取全局锁，租约跨界返回 execution_recheck，禁止 Run 后取全局锁。ControlBusy 通过 main 异常处理器返回 scheduler_lock/execution_lock/execution_recheck；压测缺失 reason 归 unspecified_busy，不再误称全局锁。验证入口 test_execution_local_control_locks，资源释放与 tick 全局锁未取消。
+执行锁范围优化：见 `docs/execution-lock-scope.md`。STARTING 心跳、原执行 prepare、非资源变更 reconcile 不取全局调度锁；Run 使用 NO KEY UPDATE，prepare/reconcile 按 Run→grant NOWAIT。cancel_job 对已领取执行锁最新 attempt 并刷新 Job，排队任务复用已加载 Run；调度超时保持 SKIP LOCKED 后重查。过期服务恢复清除就绪仍取全局锁，租约跨界返回 execution_recheck，禁止 Run 后取全局锁。ControlBusy 通过 main 异常处理器返回 scheduler_lock/execution_lock/execution_recheck；压测缺失 reason 归 unspecified_busy，不再误称全局锁。验证入口 test_execution_local_control_locks，资源释放与 tick 全局锁未取消。
 
 调度临界区查询优化：scheduling.reconcile按Run/Job联查并保持Run取锁后刷新；tick活动占用联查Job，批次元数据限定pending引用集合，空队列不加载历史批次。没有锁外资源缓存，没有拆资源核对/预约事务。test_scheduler_query_scope验证查询数量/对象加载对历史和活动规模的关系；对照与上线范围见docs/validation/scheduler-critical-section-20261126/README.md。
 
