@@ -12,6 +12,8 @@
 
 使用四角色 API 覆盖配置时，执行器必须通过内部 `api-gateway:8000` 回调平台。它会读取交互角色的机器列表，也会从批量角色下载节点安装包；若仍直连 `api:8000`，SSH 检查阶段可能报 `control_api_rejected_404`。应用新的 `priority-api-compose.yml` 后重建 `onboarding` 容器并核对命令中的 `--api-url`。
 
+若纳管页显示“服务已就绪”，但点击“检查连接与环境”立即返回 `unknown onboarding field`，先核对**API 实际使用的执行器**，不要只重建一个健康但未被 API 使用的容器：`docker exec mini-eval-api-1 python -c "import os; print(os.getenv('ONBOARDING_SOCKET'))"`。默认 `/run/mini-eval-managed-onboarding/control.sock` 指向 Compose 的 `onboarding` 容器；旧部署显式设置 `/run/mini-eval-onboarding/control.sock` 时，API 使用宿主机用户级执行器。此时更新容器不能更新旧进程，应在没有进行中纳管操作时，用原业务账号重启 `mini-eval-onboarding.service`，或按部署计划切换所有交互 API 到托管 socket 并重建 API。分别核对各交互副本的配置，避免同一入口随机命中不同版本。2026-11-27 本机真实浏览器测试曾复现新前端/API 配旧用户服务返回 409；重启旧用户服务加载当前代码后，页面提交返回 200，并能展示故意不可达 SSH 地址的分类错误。该验证只覆盖页面、API、执行器和 SSH 失败路径，未安装真实节点。
+
 ## 默认部署无需用户配置
 
 当前默认 Compose 包含 onboarding 服务，平台启动时自动构建并启动执行器、创建共享 socket 卷和独立状态卷，API 等待其健康后启动。用户只需在界面“机器管理 → 注册新机器”填写 SSH 信息、确认主机指纹和安装计划，无需安装 systemd 服务、填写 socket 或执行修复命令。

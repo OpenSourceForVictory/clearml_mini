@@ -24,6 +24,7 @@
 | 机器和节点程序 | frontend/src/administration.tsx、node-agent.tsx、ssh-onboarding.tsx；docs/node-agent.md、node-reenrollment.md | 心跳/遥测、期望与生效配置、排空、升级 |
 
 SSH 纳管环境检查：`onboarding/executor.py` 的 `check → probe → fail` 决定操作状态；`CHECK_FAILED` 附带 `plan.issues`，`FAILED/onboarding_step_failed` 是未分类异常。新版本只在执行器日志记录操作 ID、步骤、异常类型及源码位置，不记录异常消息或远程输出；对应排查命令、旧版本限制及回归边界见 `docs/ssh-onboarding-executor.md` 和 `backend/tests/test_onboarding_recovery_edges.py`。目标部署未升级前，通用错误本身无法反推根因。
+纳管立即 `unknown onboarding field` 时，先从每个交互 API 的 `ONBOARDING_SOCKET` 确认实际调用的是托管容器还是旧用户服务；两套可同时健康，重建未使用的一套不会修复界面。2026-11-27 本机通过真实浏览器/API 复现并在重启旧用户服务后验证分类 SSH 失败路径；未执行目标节点环境检查或安装。
 | 资源池和调度 | backend/app/scheduling.py、job_resources.py、node_resources.py、orchestration_scheduler.py；docs/gpu-scheduling.md、resource-pool-membership.md | 服务/客户端共同预约、CPU/RAM/显存、准入与清理 |
 
 | 服务运行和探测 | runner/service_entry.py、readiness_contract.py；frontend/src/readiness-editor.tsx；docs/service-readiness.md | 端口、网络、就绪门槛、服务代次及客户端关联 |
