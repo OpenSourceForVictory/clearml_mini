@@ -5,7 +5,7 @@ import {ServiceProbeStatus} from './service-probe-status';
 import React,{useState} from 'react';
 import {api} from './api';
 import {usePoll} from './poll';
-type Service={current_job_id?:string|null;placement?:Placement|null;id:string;name:string;state:string;endpoint:string;revision:number;error:string|null;cleanup_pending:boolean;service_key:string};
+type Service={current_job_id?:string|null;placement?:Placement|null;id:string;name:string;state:string;endpoint:string;revision:number;error:string|null;cleanup_pending:boolean;desired_running?:boolean;service_key:string};
 type Scheduling={key:string;pool_name:string;status:string;reasons:{code:string;message:string}[];nodes:{node_name:string;gpu_index:number;ready:boolean;reasons:{code:string;message:string}[]}[]};
 type Detail={cases:{placement?:Placement|null;case_id:string;endpoint:string|null;service_key:string|null;service_instance_id:string|null;service_execution_id:string|null;waiting_service:boolean}[];orchestration:{service_mode:string;stop_after_batch:boolean;services:Service[];scheduling?:Scheduling[];definitions:{key:string;mode:string;instance_count?:number|null;max_instances?:number;parameters?:Record<string,unknown>;resources?:Record<string,unknown>;template?:{name:string;version:string}}[]}};
 const serviceStates:Record<string,string>={PENDING:'等待调度',RESERVED:'已分配资源',STARTING:'正在启动或等待健康检查',RUNNING:'进程运行中',HEALTHY:'已就绪',UNHEALTHY:'健康检查未通过',UNKNOWN:'健康状态未知',FAILED:'启动或运行失败',TIMED_OUT:'启动或运行超时',CANCEL_REQUESTED:'停止中',CANCELLED:'已取消',SUCCEEDED:'已结束',STOPPED:'已停止'};
@@ -45,8 +45,8 @@ function ServiceInstanceRow({batchId,service:s,busy,onAction}:{batchId:string;se
  const [open,setOpen]=useState(false);
  return <><tr aria-label={'服务实例 '+s.id}><td><strong>{s.name}</strong><small>实例 ID：{s.id}</small><small>逻辑服务：{s.service_key}</small></td>
  <td>{s.state==='PENDING'&&!s.placement?<span>等待调度</span>:<ExecutionPlacement value={s.placement}/>}</td><td>{s.endpoint||'等待地址分配'}</td>
- <td><strong>{serviceState(s.state)}</strong><p>{s.state==='PENDING'?'等待资源调度':s.state==='RESERVED'?'资源已预约，等待 Worker 接单':s.placement?'已分配节点和设备':'暂无分配记录'}</p>{s.cleanup_pending&&<small>执行资源尚未释放</small>}{s.error&&<p className="error">{s.error}</p>}<ServiceProbeStatus service={s}/></td>
- <td><button onClick={()=>setOpen(true)}>查看 {s.name} 日志</button><button disabled={busy} onClick={()=>onAction(s,'stop')}>停止 {s.name}</button><button disabled={busy||s.cleanup_pending} onClick={()=>onAction(s,'start')}>恢复 {s.name}</button></td></tr>
+ <td><strong>{serviceState(s.state)}</strong><p>{s.state==='PENDING'?'等待资源调度':s.state==='RESERVED'?'资源已预约，等待 Worker 接单':s.placement?'已分配节点和设备':'暂无分配记录'}</p>{s.cleanup_pending&&<small>执行资源尚未释放，等待节点 Worker 确认清理</small>}{s.error&&<p className="error">{s.error}</p>}<ServiceProbeStatus service={s}/></td>
+ <td><button onClick={()=>setOpen(true)}>查看 {s.name} 日志</button><button disabled={busy||s.desired_running===false} onClick={()=>onAction(s,'stop')}>停止 {s.name}</button><button disabled={busy||s.cleanup_pending} title={s.cleanup_pending?'等待 Worker 确认清理后才能恢复':undefined} onClick={()=>onAction(s,'start')}>恢复 {s.name}</button></td></tr>
  {open&&<tr><td colSpan={5}><section aria-label={'实例 '+s.id+' 日志'}><h4>{s.name} · 实例 {s.id} 日志</h4>{s.current_job_id&&<ServiceProcessLogs jobId={s.current_job_id}/>}<button onClick={()=>setOpen(false)}>关闭服务日志</button><ExecutionLogs key={s.current_job_id||s.id} path={`orchestrations/${batchId}/services/${s.id}/logs${s.current_job_id?'?job_id='+s.current_job_id:''}`}/></section></td></tr>}</>;
 }
 

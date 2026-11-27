@@ -1,4 +1,24 @@
 import {test,expect} from '@playwright/test';
+test('timed-out service can request stop while restart waits for cleanup',async({page})=>{
+ const controls:any[]=[];
+ await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
+ await page.route('**/api/v1/**',async route=>{
+  const path=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
+  if(path==='auth/me')data={id:'u',username:'User',role:'user'};
+  if(path==='batches/b/monitor')data={id:'b',title:'Timed out',orchestrated:true,cases:[],total:1,finished:1,max_concurrent:1,total_episodes:0,control_revision:0,summary:{states:{TIMED_OUT:1},completed_episodes:0,successes:0,goal_failures:0,episode_errors:0,execution_failures:1,unreported_tasks:0,success_rate:null}};
+  if(path==='orchestrations/b')data={cases:[],orchestration:{service_mode:'managed',stop_after_batch:false,definitions:[],services:[{id:'s',name:'Server',service_key:'model',state:'TIMED_OUT',error:'执行心跳租约过期',desired_running:true,cleanup_pending:true,revision:2}]}};
+  if(path==='orchestrations/b/services/s/control'){controls.push(route.request().postDataJSON());data={accepted:true};}
+  await route.fulfill({json:data});
+ });
+ await page.goto('/#/cs/batches/b');
+ await page.getByRole('button',{name:'服务端与关联',exact:true}).click();
+ const panel=page.getByRole('region',{name:'客户端与服务关系'});
+ await expect(panel).toContainText('执行心跳租约过期');
+ await expect(panel).toContainText('等待节点 Worker 确认清理');
+ await expect(panel.getByRole('button',{name:'恢复 Server'})).toBeDisabled();
+ await panel.getByRole('button',{name:'停止 Server'}).click();
+ await expect.poll(()=>controls).toEqual([{action:'stop',expected_revision:2}]);
+});
 test('owned batch shows task service generation, logs and revisioned stop',async({page})=>{
  const calls:any[]=[];
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));

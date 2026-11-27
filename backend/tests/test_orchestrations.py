@@ -1,4 +1,5 @@
 import copy
+from fastapi import HTTPException
 from sqlalchemy import select,func,event
 from backend.tests.test_execution import env,node,claim
 from backend.app.core import Slot,Worker,Run,Job,EvaluationSuite,EvaluationBatch,ServiceInstance,now
@@ -288,6 +289,72 @@ def test_retained_service_explicit_stop_and_restart_keeps_old_binding(env,monkey
     with main.SessionLocal() as s:
         r=s.scalar(select(Run).where(Run.execution_id==client['execution_id']))
         assert r.assigned_service_execution_id==service['execution_id']
+
+
+def test_stopping_already_finished_service_disables_it_without_409(env,monkeypatch):
+    main,c,a=env;st,ss,_,_,body=setup(env,monkeypatch)
+    body['stop_after_batch']=False;body['cases']=body['cases'][:1]
+    batch=submit(env,body,'finished-service-stop')
+    service=healthy(env,st,ss)
+    finish(env,st,service,'CANCELLED')
+    detail=c.get('/api/v1/orchestrations/'+batch['id'],headers=a['alice']).json()
+    item=detail['orchestration']['services'][0]
+    path='/api/v1/orchestrations/'+batch['id']+'/services/'+item['id']+'/control'
+    response=c.post(path,headers=a['alice'],json={'action':'stop','expected_revision':item['revision']})
+    assert response.status_code==200,response.text
+    with main.SessionLocal() as session:
+        stored=session.get(ServiceInstance,item['id'])
+        assert stored.desired_running is False and stored.auto_stopped is False
+    stale=c.post(path,headers=a['alice'],json={'action':'stop','expected_revision':item['revision']})
+    assert stale.status_code==409 and stale.json()['detail']=='service changed; refresh'
+
+
+def test_service_stop_handles_completion_race_but_preserves_other_409(env,monkeypatch):
+    from backend.app import batch_controls
+    _,client,auth=env;server_token,server_slot,_,_,body=setup(env,monkeypatch)
+    batch=submit(env,body,'service-stop-race')
+    healthy(env,server_token,server_slot)
+    item=client.get('/api/v1/orchestrations/'+batch['id'],headers=auth['alice']).json()['orchestration']['services'][0]
+    path='/api/v1/orchestrations/'+batch['id']+'/services/'+item['id']+'/control'
+
+    def conflict(_session,_job):
+        raise HTTPException(409,'another conflict')
+
+    monkeypatch.setattr(batch_controls,'cancel_job',conflict)
+    request={'action':'stop','expected_revision':item['revision']}
+    response=client.post(path,headers=auth['alice'],json=request)
+    assert response.status_code==409 and response.json()['detail']=='another conflict'
+
+    def finished(_session,_job):
+        raise HTTPException(409,'terminal job')
+
+    monkeypatch.setattr(batch_controls,'cancel_job',finished)
+    response=client.post(path,headers=auth['alice'],json=request)
+    assert response.status_code==200,response.text
+
+
+def test_timed_out_service_stop_succeeds_but_restart_waits_for_cleanup(env,monkeypatch):
+    main,client,auth=env;server_token,server_slot,_,_,body=setup(env,monkeypatch)
+    body['stop_after_batch']=False;body['cases']=body['cases'][:1]
+    batch=submit(env,body,'timed-out-service-control')
+    service=healthy(env,server_token,server_slot)
+    with main.SessionLocal() as session:
+        run=session.scalar(select(Run).where(Run.execution_id==service['execution_id']))
+        job=session.get(Job,run.job_id)
+        run.status=job.status='TIMED_OUT';run.cleanup_confirmed=False
+        job.error='执行心跳租约过期';session.commit()
+    item=client.get('/api/v1/orchestrations/'+batch['id'],headers=auth['alice']).json()['orchestration']['services'][0]
+    assert item['cleanup_pending'] is True
+    path='/api/v1/orchestrations/'+batch['id']+'/services/'+item['id']+'/control'
+    stopped=client.post(path,headers=auth['alice'],json={'action':'stop','expected_revision':item['revision']})
+    assert stopped.status_code==200,stopped.text
+    blocked=client.post(path,headers=auth['alice'],json={'action':'start','expected_revision':item['revision']+1})
+    assert blocked.status_code==409 and blocked.json()['detail']=='wait for current service cleanup before restarting'
+    with main.SessionLocal() as session:
+        run=session.scalar(select(Run).where(Run.execution_id==service['execution_id']))
+        run.cleanup_confirmed=True;session.commit()
+    resumed=client.post(path,headers=auth['alice'],json={'action':'start','expected_revision':item['revision']+1})
+    assert resumed.status_code==200,resumed.text
 
 
 def test_port_conflict_retries_bounded_and_health_does_not_survive_generation(env,monkeypatch):

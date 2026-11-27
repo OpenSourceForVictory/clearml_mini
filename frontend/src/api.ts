@@ -25,6 +25,9 @@ const errors: Record<string, string> = {
   "pending limit": "排队任务已达上限，请等待部分任务完成",
   "previous execution cleanup is not confirmed":
     "正在等待 Worker 确认旧容器已停止，暂时无法重试",
+  "service changed; refresh": "服务实例状态已变化，请刷新批次后核对并重试",
+  "wait for current service cleanup before restarting": "服务资源仍待 Worker 确认清理，请等待节点回连和清理完成后再恢复",
+  "terminal job": "服务任务已结束，请刷新批次后核对实例状态",
   "node already provisioned": "该机器名称已注册；已解除的机器请从原机器详情进入重新纳管",
   "finish re-enrollment verification before enabling": "请先完成全部 Worker 和升级执行器的回连验收",
   "all original GPU workers and the updater must reconnect with the installation bundle": "原机器的全部 GPU 和升级执行器尚未通过安装包版本验证",

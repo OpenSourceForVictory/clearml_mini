@@ -141,6 +141,8 @@ cgroup 兼容（Worker 0.17.1）：root host_identity.verify_system 实测限制
 
 两端运行位置：批次默认“任务与结果”页提供独立“客户端分配位置”列；托管服务启动摘要和“服务端与关联”详情展示服务端分配位置。位置来自当前任务最新执行尝试的 Run.slot_id，包含节点、GPU/NPU 类型、卡号及型号；悬停可查看设备身份。位置表示资源分配，预约/运行/停止仍以状态为准。尚无分配或历史槽位不可用时明确提示，重试不会回退显示旧尝试的位置；软删除但仍保留的槽位可显示历史位置。外部服务只展示地址，不推测其节点或卡。旧 API 缺少 placement 时显示位置信息不可用，需要同步更新平台 API 和前端；无需数据库迁移或 Worker 升级。
 
+批次服务控制：`orchestrations.py` 的实例“停止”在服务任务已终态或刚完成时仍写入 `desired_running=false`，只忽略 `cancel_job` 的特定 `terminal job` 409；旧实例 revision 冲突仍返回 409。租约过期后 `Run.cleanup_confirmed=false` 保留资源，`services.held` 阻止恢复，须由原 Worker 回连并确认清理，不可通过停止按钮或数据库状态更改绕过。界面说明见 `docs/batch-monitoring.md`。
+
 ### 客户端总执行时限
 
 `backend/app/clients.py` 的认证接口 `/api/v1/execution-limits` 返回 `EXECUTION_TIMEOUT_SECONDS` 上限与默认值；客户端提交按该上限校验。`scheduling.py` 对已提交客户端使用快照时限，不因后续降低平台上限截短，并区分总时限、启动超时和租约过期。`frontend/src/run-wizard.tsx` 动态显示上限并阻止未加载配置时提交。操作见 `docs/operations.md`，验证见 `backend/tests/test_client_execution_limits.py` 和 `frontend/tests/run-wizard.spec.ts`；变更不涉及 Worker 升级或数据库迁移。

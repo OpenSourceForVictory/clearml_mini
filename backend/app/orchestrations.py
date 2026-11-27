@@ -272,7 +272,14 @@ def install(app,db,current):
             item.desired_running=False;item.auto_stopped=False
             if item.current_job_id:
                 from .batch_controls import cancel_job
-                cancel_job(s,s.get(Job,item.current_job_id))
+                job=s.get(Job,item.current_job_id)
+                if job:
+                    try:
+                        cancel_job(s,job)
+                    except HTTPException as exc:
+                        # Completion may win the race after this request loaded
+                        # the service. Stop still needs to disable future starts.
+                        if exc.status_code!=409 or exc.detail!='terminal job':raise
         else:
             if services.held(s,item):raise HTTPException(409,'wait for current service cleanup before restarting')
             # Explicit restart permits the dependency scheduler to reserve a
