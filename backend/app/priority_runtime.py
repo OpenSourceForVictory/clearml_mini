@@ -27,6 +27,21 @@ ROLE_POOLS = {
 DEFAULT_POOLS = dict(execution_control=24, user_action=10, user_long=4, page_read=10,
                      worker_claim=6, worker_result=7, worker_observation=8, scheduler=1, bulk_transfer=10)
 SCALED_POOLS = dict(DEFAULT_POOLS, execution_control=12)
+# Deployment default for the 100-user / 100 single-card Worker profile. Keep the
+# four-process Settings defaults above for legacy callers and explicit small fleets.
+TEAM_CAPACITY_DEFAULTS = {
+    'pool_sizes': dict(SCALED_POOLS, user_action=3, user_long=1),
+    'admission_limits': dict(execution_control=20, user_action=6, user_long=2, page_read=12,
+                             worker_claim=10, worker_result=12, worker_observation=12, bulk_transfer=12),
+    'queue_limits': dict(execution_control=80, user_action=80, user_long=24, page_read=160,
+                         worker_claim=40, worker_result=48, worker_observation=128, bulk_transfer=192),
+    'queue_waits': dict(execution_control=1, user_action=2, user_long=3, page_read=3,
+                        worker_claim=.5, worker_result=.5, worker_observation=1, bulk_transfer=2),
+    'pool_waits': dict(execution_control=1, user_action=1, user_long=1, page_read=3,
+                       worker_claim=.5, worker_result=.5, worker_observation=.5, bulk_transfer=.5),
+    'request_budgets': dict(user_action=12, page_read=12, user_long=30),
+    'connection_budget': 180,
+}
 PEERS = {role: f'http://{role}-api:8000' for role in ROLE_POOLS}
 
 
@@ -154,7 +169,10 @@ class Settings:
             ('request_timeout', 'DB_REQUEST_TIMEOUT_SECONDS', float),
             ('long_request_timeout', 'DB_LONG_REQUEST_TIMEOUT_SECONDS', float),
         ) if name in os.environ and os.environ[name]}
-        if 'pool_sizes' not in values and values.get('control_replicas', 1) == 2:
+        if values.get('control_replicas', 1) == 2 and values.get('interaction_replicas', 1) == 8:
+            for name, default in TEAM_CAPACITY_DEFAULTS.items():
+                values.setdefault(name, default.copy() if isinstance(default, dict) else default)
+        elif 'pool_sizes' not in values and values.get('control_replicas', 1) == 2:
             values['pool_sizes'] = SCALED_POOLS.copy()
         return cls(route_group=os.environ['API_ROUTE_GROUP'],
                    scheduler_enabled=os.getenv('SCHEDULER_ENABLED', '1') == '1', **values)

@@ -36,6 +36,8 @@ docker compose version
 4. 目标代码或镜像已到这台机器。源码构建需要 Docker 能访问依赖源；离线环境应先导入准备好的完整目标镜像。
 5. 备份位置有足够空间，Docker 权限及支持 `up --wait` 的 Compose 插件可用。
 
+基础 Compose 现在给新部署的 PostgreSQL 设置 `POSTGRES_MAX_CONNECTIONS` 缺省 200，以容纳四角色推荐档的 180 总预算和 20 预留。已有数据库从旧 Compose 更新到此配置时，`db` 容器可能重建并重启；先排空、备份，并核对实际 `SHOW max_connections`，不要把数据库重启当作无中断热更新。外部 PostgreSQL 不受此 Compose 参数控制，须由数据库管理员调整。仅修改容量缺省没有新增 Alembic 迁移。
+
 本文的数据库服务名 `db`、数据库名和用户名 `eval` 来自项目默认 Compose。自定义过这些值的部署必须同步调整命令。文档不会自动识别、迁移或重启任何机器；只有你在目标部署机器执行命令才会生效。
 
 ## 1. Compose 是否会自动迁移

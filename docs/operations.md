@@ -12,6 +12,8 @@
 
 连接池背压及双进程隔离于 2026-11-23 在本机启用，2026-11-25 已升级为[四角色 API 隔离](priority-api-isolation.md)，保留原访问地址；当前仍未测得可承诺的 Worker 容量上限。Worker 的 HTTP 客户端保留 `Retry-After`（秒数或 HTTP 日期），单次调用不自动重放；执行调用层将 429/502/503/504 和网络超时视为暂时故障，在 Retry-After 指定的最早重试时间后增加最长 2 秒的随机退避，等待仍受剩余租约约束。回合、日志、产物及完成上报暂时失败后返回心跳循环，确认接收前不推进可靠数据游标。400/401/403/404/409/413/422 不属于过载重试；既有清理和日志配额规则仍有效。本次同时实现默认关闭的数据库连接隔离与锁等待限制，详细验收进度见 OpenSpec `worker-control-plane-backpressure`。
 
+四角色新部署缺省采用 12 个 API 进程、实际池上限 168、批量队列 192/等待 2 秒；基础 Compose 的 PostgreSQL 缺省 `max_connections=200`。本节以下 80 连接等数值仅是单/双进程兼容配置；已有部署的显式环境变量和后置 Compose 覆盖仍优先，改仓库默认值不会自动改变现网容器。部署与容量校验见[四角色指南](priority-api-isolation.md)。
+
 ## 单/双进程连接预算（兼容部署）
 
 基础 Compose 保持原启动方式，背压开关 `DB_BACKPRESSURE_ENABLED` 默认 `0`；本机现使用四角色覆盖配置；本节五类池参数仅适用于单/双进程，四角色改用 `PRIORITY_API_POOL_SIZES`，见上面的部署指南。其他部署先验证并升级目标 Worker 至 0.21.16，再重建 API。不要仅改环境文件后执行 restart，已有容器不会重新读取 Compose 环境。迁移和备份不使用在线短超时。连接预算本身不要求新表，但当前工作树同时包含 Agent 观察状态分表迁移 `ad074e5`（前置 `ac963d4`），需先停止旧 API 写入并迁移，不能混跑新旧 API；分表已在本机迁移至 `ad074e5`；100 Worker 混合负载验证及容量边界见四角色验收记录。
@@ -47,7 +49,7 @@
 
 `deploy/split-api-compose.yml` 在基础 Compose 之上增加独立控制 API 和 Nginx 网关。两个 API 容器各自在内部监听 8000，只有网关绑定原 `API_BIND_HOST:API_BIND_PORT`；浏览器和 Worker 的平台地址不变。控制进程只接收执行控制 POST（续租、服务状态/探测、完成/清理、停止许可、取消/服务控制），普通进程处理 Agent 监控、领取、结果、日志、产物和 Web。两个进程的 FastAPI 同步线程池独立，普通进程运行调度器，控制进程设置 `SCHEDULER_ENABLED=0`。误路由在鉴权和数据库访问前返回 404；网关不会在控制进程故障时回退到普通进程。
 
-启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程启用 `DB_BACKPRESSURE_ENABLED=1`、`DB_ADMISSION_ENABLED=0` 和 `API_DB_PROCESS_COUNT=2`。`DB_ADMISSION_ENABLED=0` 取消新增的分类入口并发闸门；数据库连接池仍有界，连接等待超时仍会返回可重试 503。双进程使用同一组类别额度，默认普通/控制/观察/结果/调度为 23/40/9/7/1；普通 API 实际创建 23+9+7+1=40 个连接上限，控制 API 创建 40 个，合计最多 80 个，分别对齐每进程默认 40 个同步线程额度。普通、观察、结果和控制主要预算可分别用 `DB_SPLIT_ORDINARY_POOL_SIZE`、`DB_SPLIT_OBSERVATION_POOL_SIZE`、`DB_SPLIT_RESULT_POOL_SIZE`、`DB_SPLIT_CONTROL_POOL_SIZE` 覆盖；改动后用 Compose 展开结果核对两进程参数一致及总预算。当前 PostgreSQL `max_connections=100`、保留管理员连接 3 个；80 只是 API 理论上限，还必须计入其他连接，启用前检查实测余量，不要仅因配置通过就上线。池大小是同时持有的数据库连接上限，并非 Worker 数或同类 HTTP 入口并发上限；同步线程额度另由 AnyIO 管理，仍共享主机 CPU。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
+启用时必须使用 Compose v2.24 或更新版本（覆盖文件使用 `!reset` 清除原 API 端口），并确认目标 Worker 能正确处理暂时性 503；两进程启用 `DB_BACKPRESSURE_ENABLED=1`、`DB_ADMISSION_ENABLED=0` 和 `API_DB_PROCESS_COUNT=2`。`DB_ADMISSION_ENABLED=0` 取消新增的分类入口并发闸门；数据库连接池仍有界，连接等待超时仍会返回可重试 503。双进程使用同一组类别额度，默认普通/控制/观察/结果/调度为 23/40/9/7/1；普通 API 实际创建 23+9+7+1=40 个连接上限，控制 API 创建 40 个，合计最多 80 个，分别对齐每进程默认 40 个同步线程额度。普通、观察、结果和控制主要预算可分别用 `DB_SPLIT_ORDINARY_POOL_SIZE`、`DB_SPLIT_OBSERVATION_POOL_SIZE`、`DB_SPLIT_RESULT_POOL_SIZE`、`DB_SPLIT_CONTROL_POOL_SIZE` 覆盖；改动后用 Compose 展开结果核对两进程参数一致及总预算。当时双进程测试环境 PostgreSQL `max_connections=100`、保留管理员连接 3 个；新基础 Compose 缺省为 200，仍以现场 `SHOW max_connections` 为准；80 只是 API 理论上限，还必须计入其他连接，启用前检查实测余量，不要仅因配置通过就上线。池大小是同时持有的数据库连接上限，并非 Worker 数或同类 HTTP 入口并发上限；同步线程额度另由 AnyIO 管理，仍共享主机 CPU。不要同时使用原 `deploy/lan-compose.yml` 给 `api` 重新绑定端口；需要第二个私网入口时，在双进程覆盖文件后再加 `deploy/split-api-lan-compose.yml`，由网关绑定该地址。启用前检查现有执行、完成数据库备份并使用原环境文件验证配置：
 
 ```bash
 docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/split-api-compose.yml config --quiet

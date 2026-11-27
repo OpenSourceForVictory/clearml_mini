@@ -1,25 +1,25 @@
 # 四角色 API 隔离
 
-此部署将平台的一个外部 API 地址分流到四类角色。 当前本机已采用12进程百人专项配置，见文末“百人团队候选配置与升级”和[本次报告](validation/team-capacity-20261126/README.md)；下表仍为不填写新增参数时的兼容默认值。新覆盖配置启动五个处理进程，其中执行控制有两个副本；旧四进程配置保持兼容。它不修改业务调度规则或 Worker 协议。本机平台于 2026-11-26 切换到五进程配置，发布状态与验证边界见[容量验证](validation/disconnected-execution-20261124/control-scale-20261126.md)。本次镜像同时包含独立的恢复结果字段迁移 `c14d09e`；仅调整四角色副本数本身不需要新表结构，跨版本升级仍应先检查迁移头。
+此部署将平台的一个外部 API 地址分流到四类角色。当前四角色 Compose **不填写容量覆盖项**时采用已验证的百人/百单卡 Worker 推荐档：交互 8、执行控制 2、Worker 数据 1、批量传输 1，共 12 个进程；实际连接池上限 168，预算 180，PostgreSQL 至少 200。批量传输入口队列 192、最多等 2 秒，数据库池仍为 10。该档不是所有硬件和负载的全局最优，也不保证百台八卡节点；隔离测试和边界见[容量报告](validation/heartbeat-cadence-20261126/README.md)。显式 `PRIORITY_API_*` 环境变量仍优先，原四进程/五进程部署在明确同时设置副本数和进程数时可保留旧额度。单 API 与双 API 路径不启用此四角色推荐档。仅调整容量不需要新表结构，跨版本升级仍应先检查迁移头。
 
 | 进程角色 | 请求范围 | 默认数据库连接上限 |
 | --- | --- | --- |
 | `execution-control`（2 个副本） | Worker 续租、服务健康、停止许可、完成及清理确认 | 每副本 12，合计 24 |
-| `interaction` | 登录、用户提交与管理、向导预检、页面查询 | 用户操作 10、预检/长操作 4、页面读取 10 |
+| `interaction`（8 个副本） | 登录、用户提交与管理、向导预检、页面查询 | 每副本用户操作 3、预检/长操作 1、页面读取 10，合计 112 |
 | `worker-data` | 任务领取、协议结果、Agent 采样与配置回执；唯一后台调度器 | 领取 6、结果 7、观测 8、调度 1 |
 | `bulk-transfer` | 日志及历史产物上报、文件和视频字节流 | 批量传输 10 |
 
-合计最多 80 个连接，每个池 `max_overflow=0`。两个执行控制副本仍共享 PostgreSQL CPU、磁盘、WAL 和行锁；同一行上的操作仍可能等待或返回可重试的繁忙响应。200 Worker 的隔离 60 秒档通过不代表生产容量或长时间故障档通过。
+合计最多 168 个连接，每个池 `max_overflow=0`；连接预算缺省 180，预留 20，基础 Compose 的 PostgreSQL 缺省 `max_connections=200`。两个执行控制副本仍共享 PostgreSQL CPU、磁盘、WAL 和行锁；同一行上的操作仍可能等待或返回可重试的繁忙响应。200 Worker 的隔离短测通过不代表生产容量或长时间故障档通过。
 
 ## 配置与容量
 
 只有四角色覆盖配置使用以下参数，单 API 与原双 API 保留原参数语义：
 
-- `API_ROUTE_GROUP`：由覆盖文件指定角色；新覆盖配置使用 `API_DB_PROCESS_COUNT=5`、`API_CONTROL_REPLICAS=2`。旧四进程部署不设置后者，继续使用每类原额度。
+- `API_ROUTE_GROUP`：由覆盖文件指定角色；四角色 Compose 缺省 `API_DB_PROCESS_COUNT=12`、`API_INTERACTION_REPLICAS=8`、`API_CONTROL_REPLICAS=2`。缩减交互副本时须同时修改进程数及连接预算；旧四进程部署可保留原显式配置。
 - `DB_BACKPRESSURE_ENABLED=1`、`DB_ADMISSION_ENABLED=1`：四角色模式必需。类别许可在鉴权、数据库连接和同步线程分派前获取，最多等待 `DB_POOL_TIMEOUT_SECONDS`；等待取消后释放排队位置。日志和页面不能借用用户操作或执行控制的额度。
-- `PRIORITY_API_POOL_SIZES`：可选 JSON，必须同时包含全部九类额度，所有进程使用同一份配置。新五进程配置为空时使用 `{"execution_control":12,"user_action":10,"user_long":4,"page_read":10,"worker_claim":6,"worker_result":7,"worker_observation":8,"scheduler":1,"bulk_transfer":10}`；执行控制的 12 须按两个副本计入总预算。旧四进程配置为空时仍使用执行控制 24。调度池必须为 1。
-- `DB_CONNECTION_BUDGET`：所有实际进程的池上限之和，默认 80；不能分别给每个进程分配 80。
-- `DB_CONNECTION_HEADROOM`：为其他数据库客户端、管理员及 PostgreSQL 保留连接留出的总余量，默认 20。每个进程启动时读取实际 `max_connections` 和超级用户保留连接，预算加余量超过数据库上限即拒绝启动。此检查不预测其他应用未来占用；部署前仍需核对并配置实际余量。
+- `PRIORITY_API_POOL_SIZES`：可选 JSON，必须同时包含全部九类额度，所有进程使用同一份配置。12 进程缺省采用 `deploy/profiles/team-capacity-100.json` 的池额度；显式五进程旧拓扑仍使用原 80 连接池额度。执行控制的 12 须按两个副本计入总预算。调度池必须为 1。
+- `DB_CONNECTION_BUDGET`：所有实际进程的池上限之和，四角色 Compose 默认 180、实际池合计 168；不能分别给每个进程分配 180。显式五进程旧拓扑可继续使用较小预算。
+- `DB_CONNECTION_HEADROOM`：为其他数据库客户端、管理员及 PostgreSQL 保留连接留出的总余量，默认 20。基础 Compose 的 `POSTGRES_MAX_CONNECTIONS` 默认 200，可显式覆盖；外部 PostgreSQL 须自行设置足够的硬上限。每个进程启动时读取实际 `max_connections` 和超级用户保留连接，预算加余量超过数据库上限即拒绝启动。此检查不预测其他应用未来占用；部署前仍需核对并配置实际余量。
 - `DB_POOL_TIMEOUT_SECONDS` 默认 0.25，`DB_LOCK_TIMEOUT_SECONDS` 默认 0.5，短请求 SQL 总预算 `DB_REQUEST_TIMEOUT_SECONDS` 默认 4，必须小于 Worker 单次 HTTP 的 5 秒超时。
 - `DB_LONG_REQUEST_TIMEOUT_SECONDS` 默认 30，范围大于 20 且不超过 60；用于等待 SSH 执行器等长操作，防止原 4 秒预算使外部等待后的数据库处理必然失败。这是 SQL 剩余预算，不是强制中止任意 Python 函数的计时器。
 - `PRIORITY_API_PEERS`：仅自定义内部拓扑时使用，JSON 中必须包含全部四角色的 HTTP/HTTPS origin，禁止路径和凭据。普通 Compose 使用内部服务名，无需设置。
@@ -45,7 +45,7 @@ docker compose --env-file .env -p mini-eval \
   -f deploy/compose.yml -f deploy/priority-api-compose.yml ps
 ```
 
-新配置应显示两个 `execution-control-api` 副本及各一个交互、Worker 数据、批量进程。若旧 `.env` 显式设置 `PRIORITY_API_POOL_SIZES` 为旧的执行控制 24，启动会因五进程总连接预算超限而拒绝；先移除该旧覆盖值或改为上面的每副本 12，并通过 `config --quiet`。更新覆盖文件后须重建网关及 API，不可只重启现有容器。其他平台不会因本机代码提交或部署自动切换，升级前仍须排空与备份。
+新配置应显示两个 `execution-control-api` 副本、八个交互副本及各一个 Worker 数据和批量进程。旧 `.env` 或后置 Compose 文件如显式设置了 96/1 秒批量入口、五进程副本数或其他额度，仍以显式值为准；需逐项清除旧覆盖或同步调整，不能只看到新默认就认定现场已生效。旧 `.env` 若显式设置执行控制池为 24，启动可能因总连接预算超限而拒绝；按实际副本数改为每副本 12，并通过 `config --quiet`。更新覆盖文件后须重建网关及 API，不可只重启现有容器。其他平台不会因本机代码提交或部署自动切换，升级前仍须排空与备份。
 
 纳管执行器同时读取交互接口和安装包下载接口，后者属于批量进程。四角色覆盖文件将其内部控制地址设为 `http://api-gateway:8000`；更新覆盖文件后需重建 `onboarding` 容器。旧容器若仍直连 `http://api:8000`，在 SSH 检查阶段下载安装包会收到 `control_api_rejected_404`。排查时核对 `docker compose ... config` 中 `onboarding.command` 的 `--api-url`，以及 `/api/v1/admin/node-installation-bundle` 经网关是否返回鉴权响应；不要把未带凭据时的 401 误判成路由失败。
 
@@ -77,15 +77,15 @@ API 隔离本身不替代断联执行恢复。新恢复协议需 API 与节点�
 
 ## 分开配置请求准入和数据库容量
 
-新增可选参数仅用于四角色模式；不填写时沿用原额度和等待，单/双API不受影响。所有角色必须拿到相同JSON配置：
+新增可选参数仅用于四角色模式；12 进程缺省读取百人推荐档，显式旧拓扑继续使用原额度和等待，单/双 API 不受影响。所有角色必须拿到相同 JSON 配置：
 
 | 参数 | 含义 | 缺省 |
 |---|---|---|
-| `PRIORITY_API_ADMISSION_LIMITS` | 各类同时处理的HTTP请求数 | 对应数据库池大小 |
-| `PRIORITY_API_QUEUE_LIMITS` | 各类入口等待人数，0表示不排队 | HTTP准入数的4倍 |
-| `PRIORITY_API_QUEUE_WAITS` | 入口最长排队秒数，0表示立即准入或拒绝 | DB_POOL_TIMEOUT_SECONDS |
-| `PRIORITY_API_POOL_WAITS` | 各类实际取数据库连接的等待秒数 | DB_POOL_TIMEOUT_SECONDS |
-| `PRIORITY_API_REQUEST_BUDGETS` | 从入口开始计算的SQL总预算 | 短类4秒，user_long30秒 |
+| `PRIORITY_API_ADMISSION_LIMITS` | 各类同时处理的HTTP请求数 | 12进程按百人档；旧拓扑按池大小 |
+| `PRIORITY_API_QUEUE_LIMITS` | 各类入口等待人数，0表示不排队 | 12进程按百人档，批量192；旧拓扑为HTTP准入数的4倍 |
+| `PRIORITY_API_QUEUE_WAITS` | 入口最长排队秒数，0表示立即准入或拒绝 | 12进程按百人档，批量2秒；旧拓扑按DB_POOL_TIMEOUT_SECONDS |
+| `PRIORITY_API_POOL_WAITS` | 各类实际取数据库连接的等待秒数 | 12进程按百人档，批量0.5秒；旧拓扑按DB_POOL_TIMEOUT_SECONDS |
+| `PRIORITY_API_REQUEST_BUDGETS` | 从入口开始计算的SQL总预算 | 12进程页面/操作12秒、长操作30秒；Worker4秒 |
 
 JSON可仅覆盖需要调整的类别，未知类别或非法值拒绝启动；scheduler只有数据库池，没有HTTP准入。请求和队列额度分别要求正整数/非负整数；等待必须有限。显式设置的排队等待与连接等待之和必须小于该类总预算；Worker类别预算严格小于5秒，交互类别最多60秒。数据库锁等待仍受独立参数和剩余总预算共同限制。总预算不是任意Python函数的强制终止时间。
 
@@ -99,7 +99,7 @@ JSON可仅覆盖需要调整的类别，未知类别或非法值拒绝启动；s
 
 排查容量时可在隔离测试环境短时启用 `DB_BUDGET_DIAGNOSTICS=1`。API 日志会按类别记录入口准入等待、每次数据库池获取等待及超时，不包含请求体、令牌或 SQL 参数；负载摘要中的 `admission_wait_ms`、`pool_checkout_wait_ms` 可用于区分 HTTP 排队和数据库取连接排队。诊断会增加日志量，生产长期运行保持关闭；原 `initial_checkout_wait_ms` 只覆盖首次显式取连接。采样与判定口径见 [数据库容量与业务时延验收](database-capacity-acceptance.md)。
 
-交互角色也支持显式多副本：`API_INTERACTION_REPLICAS`默认1，允许1至8，Compose中的api服务按此扩容；`API_DB_PROCESS_COUNT`必须同时设为`2 + API_CONTROL_REPLICAS + API_INTERACTION_REPLICAS`。例如执行控制2副本、交互4副本时总进程8；worker-data与bulk-transfer仍各1，调度器仍唯一。PRIORITY_API_POOL_SIZES中的user_action/user_long/page_read为**每个交互副本**的连接数，总预算必须乘副本数，不能把多副本当成免费容量。健康指纹包含副本配置；角色健康检查不保证每一个副本健康，仍需Compose核对。单进程扩大池仍达不到目标吞吐时，可以在有CPU余量的前提下测试多交互进程。
+交互角色也支持显式多副本：四角色 Compose 的 `API_INTERACTION_REPLICAS` 默认8，允许1至8，Compose中的api服务按此扩容；`API_DB_PROCESS_COUNT`必须同时设为`2 + API_CONTROL_REPLICAS + API_INTERACTION_REPLICAS`。例如执行控制2副本、交互4副本时总进程8；worker-data与bulk-transfer仍各1，调度器仍唯一。PRIORITY_API_POOL_SIZES中的user_action/user_long/page_read为**每个交互副本**的连接数，总预算必须乘副本数，不能把多副本当成免费容量。健康指纹包含副本配置；角色健康检查不保证每一个副本健康，仍需Compose核对。单进程扩大池仍达不到目标吞吐时，可以在有CPU余量的前提下测试多交互进程。
 
 当前Compose的四类API共用进程数、交互副本数和容量配置。改变交互副本数必须同时更新总进程数及连接预算；用Compose重建时其他API角色也可能短暂中断，不能视为在途任务无损的动态扩缩容。运行中的旧协议Worker只在收到成功心跳后续租，默认执行租约30秒；若控制API/网关不可用直到本地租约到期，看门狗会停止所管理的程序。恢复协议需API开关与节点能力同时启用，旧执行不会追溯切换。当前交互副本上限为8；生产扩缩容前排空/备份，并在新角色逐个健康后确认心跳及日志恢复。
 
@@ -107,7 +107,7 @@ JSON可仅覆盖需要调整的类别，未知类别或非法值拒绝启动；s
 
 大批次监控响应使用`MonitorResponse`直接编码原生字典/列表树，只对日期等非原生叶值沿用FastAPI转换，避免对每个任务的每个节点诊断再进行完整Python递归遍历。接口字段、日期格式、权限检查和诊断内容不变；非法非有限数字仍拒绝。此优化不缓存监控快照、不改变调度计算。
 
-## 百人团队候选配置与升级
+## 百人团队推荐配置与升级
 
 [2026-11-26专项](validation/team-capacity-20261126/README.md)给出了全部失败对照与通过边界。`deploy/profiles/team-capacity-100.env.example`可按键合并进现有`.env`，保留凭据、存储等原配置；它与同名JSON配置有自动一致性测试。该档交互8副本（每副本操作3、长操作1、读取10），执行控制2×12、数据22、批量10，实际最多168连接；数据库总预算180另预留20，要求PostgreSQL实际max_connections至少200。HTTP页面每副本12、队列160、排队最多3秒、连接等待3秒、SQL总预算12秒。此等待不会把Worker五秒超时一并延长。
 

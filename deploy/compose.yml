@@ -2,6 +2,7 @@ services:
   db:
     restart: unless-stopped
     image: m.daocloud.io/docker.io/library/postgres:16.8
+    command: ["postgres", "-c", "max_connections=${POSTGRES_MAX_CONNECTIONS:-200}"]
     environment:
       POSTGRES_DB: eval
       POSTGRES_USER: eval

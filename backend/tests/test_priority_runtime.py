@@ -2,6 +2,9 @@ import asyncio
 from dataclasses import replace
 import json
 import importlib.util
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 import re
@@ -81,6 +84,61 @@ def test_environment_manifest_and_config_drift(monkeypatch):
     monkeypatch.setenv('SCHEDULER_ENABLED', '0')
     with pytest.raises(ValueError, match='scheduler'):
         runtime.Settings.environment()
+
+
+def test_team_deployment_defaults_match_tested_profile_and_explicit_override(monkeypatch):
+    profile = json.loads(Path('deploy/profiles/team-capacity-100.json').read_text())
+    for name in ('PRIORITY_API_POOL_SIZES', 'PRIORITY_API_ADMISSION_LIMITS',
+                 'PRIORITY_API_QUEUE_LIMITS', 'PRIORITY_API_QUEUE_WAITS',
+                 'PRIORITY_API_POOL_WAITS', 'PRIORITY_API_REQUEST_BUDGETS',
+                 'DB_CONNECTION_BUDGET'):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv('API_ROUTE_GROUP', 'bulk-transfer')
+    monkeypatch.setenv('SCHEDULER_ENABLED', '0')
+    monkeypatch.setenv('API_DB_PROCESS_COUNT', '12')
+    monkeypatch.setenv('API_CONTROL_REPLICAS', '2')
+    monkeypatch.setenv('API_INTERACTION_REPLICAS', '8')
+    current = runtime.Settings.environment()
+    assert current.configured_connections == 168
+    assert current.queue_size('bulk_transfer') == 192
+    assert current.queue_seconds('bulk_transfer') == 2
+    assert current.pool_seconds('bulk_transfer') == .5
+    for key, value in runtime.TEAM_CAPACITY_DEFAULTS.items():
+        assert getattr(current, key) == value == profile[key]
+    monkeypatch.setenv('PRIORITY_API_QUEUE_LIMITS', '{"bulk_transfer":5}')
+    assert runtime.Settings.environment().queue_size('bulk_transfer') == 5
+    monkeypatch.delenv('PRIORITY_API_QUEUE_LIMITS')
+    monkeypatch.setenv('API_DB_PROCESS_COUNT', '5')
+    monkeypatch.setenv('API_INTERACTION_REPLICAS', '1')
+    legacy = runtime.Settings.environment()
+    assert legacy.configured_connections == 80
+    assert legacy.queue_size('bulk_transfer') == 40
+
+
+def test_priority_compose_default_capacity_and_postgres_limit(tmp_path):
+    if not shutil.which('docker'):
+        pytest.skip('Docker Compose is required for deployment rendering')
+    env_file = tmp_path/'empty.env'
+    env_file.write_text('')
+    env = {'PATH': os.environ['PATH'], 'HOME': str(tmp_path),
+           'POSTGRES_PASSWORD': 'test-only', 'ADMIN_USERNAME': 'test-only',
+           'ADMIN_PASSWORD': 'test-only', 'JWT_SECRET': 'test-only'}
+    command = ['docker', 'compose', '--env-file', str(env_file), '-p', 'priority-default-test',
+               '-f', 'deploy/compose.yml', '-f', 'deploy/priority-api-compose.yml',
+               'config', '--format', 'json']
+    result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
+    services = json.loads(result.stdout)['services']
+    assert services['db']['command'] == ['postgres', '-c', 'max_connections=200']
+    assert services['api']['scale'] == 8
+    for role in ('api', 'execution-control-api', 'worker-data-api', 'bulk-transfer-api'):
+        values = services[role]['environment']
+        assert values['API_DB_PROCESS_COUNT'] == '12'
+        assert values['API_INTERACTION_REPLICAS'] == '8'
+        assert values['DB_CONNECTION_BUDGET'] == '180'
+    assert services['execution-control-api']['scale'] == 2
+    env['POSTGRES_MAX_CONNECTIONS'] = '240'
+    assert json.loads(subprocess.run(command, env=env, capture_output=True, text=True,
+                                     check=True).stdout)['services']['db']['command'][-1] == 'max_connections=240'
 
 
 async def invoke(middleware, path, method='GET', kind='http'):
@@ -207,8 +265,11 @@ def test_priority_compose_has_single_scheduler_and_preserves_public_port():
         env = service['environment']
         assert service['ports'] == []
         profile = runtime.Settings(env['API_ROUTE_GROUP'], env['SCHEDULER_ENABLED'] == '1',
-                                   pool_sizes=runtime.SCALED_POOLS, processes=int(env['API_DB_PROCESS_COUNT'].split(':-')[-1].rstrip('}')),
-                                   control_replicas=int(env['API_CONTROL_REPLICAS']))
+                                   pool_sizes=runtime.TEAM_CAPACITY_DEFAULTS['pool_sizes'],
+                                   processes=int(env['API_DB_PROCESS_COUNT'].split(':-')[-1].rstrip('}')),
+                                   control_replicas=int(env['API_CONTROL_REPLICAS']),
+                                   interaction_replicas=int(env['API_INTERACTION_REPLICAS'].split(':-')[-1].rstrip('}')),
+                                   connection_budget=int(env['DB_CONNECTION_BUDGET'].split(':-')[-1].rstrip('}')))
         roles[profile.route_group] = profile
     assert set(roles) == set(runtime.ROLE_POOLS)
     assert [r for r,p in roles.items() if p.scheduler_enabled] == ['worker-data']
