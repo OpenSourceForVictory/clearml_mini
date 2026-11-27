@@ -4,11 +4,13 @@ from concurrent.futures import ThreadPoolExecutor
 import copy
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import re
 import threading
 import time
+import traceback
 import urllib.request
 import urllib.error
 import uuid
@@ -16,6 +18,7 @@ from .contracts import validate, public_form, Rejected
 from .ssh import Remote
 from scripts.deploy_node import validate_bundle
 
+logger=logging.getLogger(__name__)
 ACTIVE={'CHECKING','NEEDS_HOST_KEY','READY','INSTALLING','VERIFYING'}
 
 
@@ -178,7 +181,17 @@ class Operations:
             return self.update(identity,'CANCELLED',error=None)
     def fail(self,identity,error):
         # No raw exception, remote stdout/stderr, password, key or token is persisted.
-        code=str(error) if isinstance(error,Rejected) else 'onboarding_step_failed'
+        if isinstance(error,Rejected):
+            code=str(error)
+        else:
+            code='onboarding_step_failed'
+            frames=traceback.extract_tb(error.__traceback__)
+            source=Path(frames[-1].filename).name if frames else 'unknown'
+            line=frames[-1].lineno if frames else 0
+            # Exception messages and traceback source text can contain SSH input or
+            # remote output. Only fixed metadata is safe for the operator log.
+            logger.error('onboarding unexpected failure operation=%s stage=%s exception_type=%s source=%s:%d',
+                         identity,self.jobs[identity]['stage'],type(error).__name__,source,line)
         self.update(identity,'FAILED',error=code)
     def cleanup_remote(self,remote,form,plan=None,identity=None):
         source=Path(__file__).with_name('cleanup.py').read_text()

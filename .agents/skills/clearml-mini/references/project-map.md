@@ -22,6 +22,8 @@
 | 模板和参数 | frontend/src/templates.tsx、command-mappings.tsx；runner/template_contract.py、parameter_contract.py、task_input.py；docs/runtime-templates.md、task-input.md | 类型、覆盖权限、argv/env 冲突、目录解析；业务字段已绑定时仍可在映射选择框定位现有配置，见 template-guidance.spec.ts |
 | SDK 与直接协议 | runner/sdk.py、task_result_contract.py、command_sdk.py、episode_contract.py、cs_entry.py；examples/integration | Worker 按执行 ID 隔离转发任务级/回合事件；API 幂等与权限；final 和退出码独立 |
 | 机器和节点程序 | frontend/src/administration.tsx、node-agent.tsx、ssh-onboarding.tsx；docs/node-agent.md、node-reenrollment.md | 心跳/遥测、期望与生效配置、排空、升级 |
+
+SSH 纳管环境检查：`onboarding/executor.py` 的 `check → probe → fail` 决定操作状态；`CHECK_FAILED` 附带 `plan.issues`，`FAILED/onboarding_step_failed` 是未分类异常。新版本只在执行器日志记录操作 ID、步骤、异常类型及源码位置，不记录异常消息或远程输出；对应排查命令、旧版本限制及回归边界见 `docs/ssh-onboarding-executor.md` 和 `backend/tests/test_onboarding_recovery_edges.py`。目标部署未升级前，通用错误本身无法反推根因。
 | 资源池和调度 | backend/app/scheduling.py、job_resources.py、node_resources.py、orchestration_scheduler.py；docs/gpu-scheduling.md、resource-pool-membership.md | 服务/客户端共同预约、CPU/RAM/显存、准入与清理 |
 
 | 服务运行和探测 | runner/service_entry.py、readiness_contract.py；frontend/src/readiness-editor.tsx；docs/service-readiness.md | 端口、网络、就绪门槛、服务代次及客户端关联 |

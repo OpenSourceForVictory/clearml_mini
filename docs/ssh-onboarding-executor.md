@@ -1,5 +1,13 @@
 # SSH 纳管执行器部署
 
+## 环境检查出现通用“当前步骤未完成”
+
+界面在“环境检查”步骤显示“操作失败 / 当前步骤未完成，请核对环境后重新检查”，对应操作记录 `error=onboarding_step_failed`。这表示执行器遇到了未分类异常；正常预检不通过会返回 `CHECK_FAILED` 和逐项 `plan.issues`，SSH 命令退出非零等已分类故障也有单独错误码。仅凭这条通用提示不能断定是 Python、设备驱动或目录权限问题。先在机器管理的操作记录核对状态和步骤；操作 ID 可从浏览器网络面板的 `admin/ssh-onboarding` 响应中读取。不要反复清理节点或修改数据库状态。
+
+更新执行器后重试一次，在平台宿主机运行 `docker logs --since 10m mini-eval-onboarding-1 2>&1 | grep 'onboarding unexpected failure'`，按 `operation` 对照操作 ID。日志只记录步骤、异常类型和代码文件/行号；不会输出异常消息、远程 stdout/stderr、SSH 密码、私钥或平台令牌。把这几个字段交给维护人员定位具体分支，再按原因处理。如果使用非 Compose 的用户级执行器，改用 `journalctl --user -u mini-eval-onboarding.service --since '10 minutes ago'` 查看相同日志。未更新的执行器不会生成这条诊断，历史失败也不能补出原始异常。
+
+此修正只增加未分类失败的脱敏诊断，不更改检查条件、安装流程或页面错误码。回归覆盖正常预检与未分类异常脱敏；尚未复现其他平台上的具体故障，需用该平台的一次新失败记录确认根因。
+
 机器管理的 SSH 检查、注册与重新纳管，需要独立运行的 `onboarding.server`。API 只通过本地 Unix socket 调用它，执行器负责 SSH 和临时凭据；不对公网开放执行器端口。
 
 使用四角色 API 覆盖配置时，执行器必须通过内部 `api-gateway:8000` 回调平台。它会读取交互角色的机器列表，也会从批量角色下载节点安装包；若仍直连 `api:8000`，SSH 检查阶段可能报 `control_api_rejected_404`。应用新的 `priority-api-compose.yml` 后重建 `onboarding` 容器并核对命令中的 `--api-url`。

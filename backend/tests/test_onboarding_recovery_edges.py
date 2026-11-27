@@ -45,6 +45,22 @@ def test_operation_authorization_expiry_and_deletion(operations,mode):
         else:assert ops.jobs[identity]['state']=='CANCELLED'
 
 
+def test_unclassified_environment_failure_logs_only_safe_diagnostic(operations,caplog):
+    ops,_=operations
+    def broken_probe(*_):raise ValueError('SECRET_REMOTE_OUTPUT')
+    ops.probe=broken_probe
+    with caplog.at_level('ERROR',logger='onboarding.executor'):
+        job=ops.start('admin',form(fingerprint='SHA256:'+'A'*43),'Bearer SECRET_TOKEN')
+        identity=job['id']
+        wait(lambda:ops.jobs[identity]['state']=='FAILED')
+    final=ops.jobs[identity]
+    assert final['state']=='FAILED' and final['error']=='onboarding_step_failed'
+    assert 'SECRET_REMOTE_OUTPUT' not in caplog.text
+    assert 'SECRET_TOKEN' not in caplog.text
+    assert 'SECRET_REMOTE_OUTPUT' not in json.dumps(final)
+    assert f'operation={identity} stage=ENVIRONMENT exception_type=ValueError source=test_onboarding_recovery_edges.py:' in caplog.text
+
+
 @pytest.mark.parametrize('mode',['existing','cleanup-warning','already-complete','reconnect-timeout','invalid-temp','resource-rejected'])
 def test_install_recovery_edges(operations,monkeypatch,mode):
     ops,calls=operations
