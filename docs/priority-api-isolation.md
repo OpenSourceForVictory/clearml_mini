@@ -28,6 +28,27 @@
 
 ## 启动与检查
 
+已有单 API/双 API 平台可使用一条命令完成检查、备份、迁移和四角色启动。先在界面暂停新任务、排空执行并停止新的纳管操作，再在**平台服务器项目根目录**运行；`--drained` 表示管理员已完成这项维护准备，脚本还会查询 `evaluation_runs`，发现活动执行或清理未确认时拒绝切换。以下是原来仅用基础 Compose、源码构建的部署：
+
+```bash
+python3 -m scripts.deploy_priority_api --drained
+```
+
+脚本沿用 `.env`、`mini-eval` 项目及其原 PostgreSQL 数据卷，不生成或覆盖密钥。它先验证旧/新 Compose，并核对 API 四角色、迁移和初始化使用同一镜像，随后构建目标 API/迁移/纳管镜像并读取目标 Alembic head；确认无活动执行后，用 `pg_dump -Fc` 备份并用 `pg_restore --list` 校验。随后停止旧 API，启动 PostgreSQL（可能重启并提高 `max_connections` 到 200）、迁移到目标 head，最后启动四角色并等待健康检查。备份默认保存到 `.runtime/db-backups/<项目>-before-<head>.dump`，同名备份已存在时会拒绝覆盖；可用 `--backup-dir /安全备份目录` 指定新目录。失败时立即停止后续步骤，**不会自动降级数据库或恢复旧 API**；保留备份和报错，按[迁移故障处理](database-migration.md)核对后恢复。此命令会产生 API 停机窗口。
+
+原部署使用其他环境文件、项目名或 Compose 覆盖文件时，必须明确传入原参数；`--previous-overlay` 按旧 `-f` 顺序重复指定，`--overlay` 仅放兼容四角色的新覆盖文件。例如原双 API 加 LAN 入口：
+
+```bash
+python3 -m scripts.deploy_priority_api --drained \
+  --env-file /实际路径/platform.env --project mini-eval \
+  --previous-overlay deploy/split-api-compose.yml \
+  --overlay deploy/split-api-lan-compose.yml
+```
+
+若使用固定版本镜像，可增加 `--image-mode pull` 并通过 `--overlay` 指定同步覆盖 `api`、`migrate`、`bootstrap` 的目标镜像；脚本不会猜测旧部署的镜像、共享挂载或私网入口。执行前核对目标覆盖文件也应用到全部四个角色，尤其 `bulk-transfer-api` 的产物挂载。原配置通过 `ONBOARDING_SOCKET` 使用宿主机用户级执行器时，脚本不会替你更新或切换该执行器；需按[SSH 纳管执行器指南](ssh-onboarding-executor.md)单独核对。脚本仅负责已有 Compose 平台切换，**全新平台初始化**仍使用 `scripts/control.py` 建立 `.env` 后按本指南部署四角色。
+
+完成后运行 `docker compose --env-file .env -p mini-eval -f deploy/compose.yml -f deploy/priority-api-compose.yml ps`；应看到 8 个交互、2 个执行控制、各 1 个 Worker 数据/批量进程及网关。自定义参数部署须在检查命令中重复相同的 `--env-file`、`-p` 和 `-f`。再从原平台地址检查 `/healthz`、登录与小批次，并观察 Worker 心跳；`ps` 健康不替代业务验收。脚本的专项模拟测试不代表在其他生产机器上执行过升级。
+
 使用原环境文件、项目名、数据库卷和镜像。不要同时叠加 `split-api-compose.yml` 或把外部端口重新绑定到 `api`。从旧部署切换前应完成备份、排空并确认没有待确认的执行；停止旧 API 后再启动新角色，避免旧调度器继续运行。
 
 ```bash
