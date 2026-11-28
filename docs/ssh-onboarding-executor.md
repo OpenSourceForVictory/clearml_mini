@@ -12,6 +12,8 @@
 
 使用四角色 API 覆盖配置时，执行器必须通过内部 `api-gateway:8000` 回调平台。它会读取交互角色的机器列表，也会从批量角色下载节点安装包；若仍直连 `api:8000`，SSH 检查阶段可能报 `control_api_rejected_404`。应用新的 `priority-api-compose.yml` 后重建 `onboarding` 容器并核对命令中的 `--api-url`。
 
+`control_api_rejected_503` 或 `control_api_rejected_504` 表示纳管执行器收到了平台 API 的相应 HTTP 状态，不等于目标机器 SSH 或 Python 检查失败。环境检查阶段会读取 `admin/nodes`、`admin/node-installation-bundle`、`admin/health`；机器列表和健康信息走交互 API，安装包走批量 API。当前执行器错误码不保留具体路径或 503 正文，须按失败时间关联 `api-gateway` 访问日志中的这三个路径，再看对应 API 角色日志中的 `reason`：`request_concurrency`、`connection_pool`、`lock_timeout`、`request_budget` 等需要分别处理。504 还须检查网关与后端超时或不可用，不能仅调大调度周期。排查前确认执行器 `--api-url` 指向内部网关；不要在诊断记录中输出授权头或令牌。
+
 若纳管页显示“服务已就绪”，但点击“检查连接与环境”立即返回 `unknown onboarding field`，先核对**API 实际使用的执行器**，不要只重建一个健康但未被 API 使用的容器：`docker exec mini-eval-api-1 python -c "import os; print(os.getenv('ONBOARDING_SOCKET'))"`。默认 `/run/mini-eval-managed-onboarding/control.sock` 指向 Compose 的 `onboarding` 容器；旧部署显式设置 `/run/mini-eval-onboarding/control.sock` 时，API 使用宿主机用户级执行器。此时更新容器不能更新旧进程，应在没有进行中纳管操作时，用原业务账号重启 `mini-eval-onboarding.service`，或按部署计划切换所有交互 API 到托管 socket 并重建 API。分别核对各交互副本的配置，避免同一入口随机命中不同版本。2026-11-27 本机真实浏览器测试曾复现新前端/API 配旧用户服务返回 409；重启旧用户服务加载当前代码后，页面提交返回 200，并能展示故意不可达 SSH 地址的分类错误。该验证只覆盖页面、API、执行器和 SSH 失败路径，未安装真实节点。
 
 ## 默认部署无需用户配置
