@@ -120,3 +120,55 @@ def test_host_two_services_fixed_slot_and_missing_snapshot_fields(env,monkeypatc
         orch=s.get(EvaluationOrchestration,b['id']);definition=copy.deepcopy(orch.definition);del definition['services'][0]['template'];orch.definition=definition;s.commit()
     data=draft(env,b['id']).json()
     assert any(i['fatal'] for i in data['issues']) and 'DO_NOT_EXPORT' not in json.dumps(data)
+
+
+def test_output_dir_is_reserved_in_typed_template_but_legacy_input_can_be_edited(env,monkeypatch):
+    main,c,a=env;*_,body=setup(env,monkeypatch)
+    typed=c.post('/api/v1/admin/client-templates',headers=a['admin'],json={
+        'name':'typed-output','version':'1','image':'image:1','command':['python','client.py'],
+        'parameter_schema':{'version':1,'fields':{'output_dir':{'type':'string'}}}})
+    assert typed.status_code==400
+    assert typed.json()['detail']=='invalid request parameters'
+
+    body['cases'][0]['parameters']={'output_dir':'/business/old'}
+    original=submit(env,body,'original-output')
+    rerun=draft(env,original['id'])
+    assert rerun.status_code==200,rerun.text
+    submission=rerun.json()['submission']
+    assert submission['cases'][0]['parameters']['output_dir']=='/business/old'
+    submission['cases'][0]['parameters']['output_dir']='/business/new'
+    check=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=submission)
+    assert check.status_code==200,check.text
+    recreated=submit(env,submission,'edited-output')
+    with main.SessionLocal() as s:
+        first=s.scalar(select(Job).where(Job.batch_id==recreated['id'],Job.case_id=='0'))
+        assert first.client_spec['parameters']['output_dir']=='/business/new'
+        assert first.client_spec['template']['parameter_schema'] is None
+        from runner.task_input import build
+        resolved=build(first.client_spec,{'MINI_EVAL_OUTPUT_DIR':'/platform/assigned'})
+        assert resolved['business']['output_dir']=='/business/new'
+        assert resolved['platform']['paths']['output']=='/platform/assigned'
+
+
+def test_rerun_rebinds_edited_business_output_option_from_new_job_snapshot(env,monkeypatch):
+    from runner.parameter_contract import bind_values
+    main,c,a=env;*_,body=setup(env,monkeypatch)
+    response=c.post('/api/v1/admin/client-templates',headers=a['admin'],json={
+        'name':'mapped-output','version':'1','image':'image:1','command':['python','client.py'],
+        'parameter_schema':{'version':1,'fields':{'result_dir':{'type':'string',
+            'binding':{'target':'argv','name':'--output-dir'}}}}})
+    assert response.status_code==201,response.text
+    body['client']['template_id']=response.json()['id']
+    body['cases'][0]['parameters']={'result_dir':'/business/old'}
+    old=submit(env,body,'mapped-original')
+    submission=draft(env,old['id']).json()['submission']
+    submission['cases'][0]['parameters']['result_dir']='/business/new'
+    assert c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=submission).status_code==200
+    new=submit(env,submission,'mapped-rerun')
+    with main.SessionLocal() as s:
+        original=s.scalar(select(Job).where(Job.batch_id==old['id'],Job.case_id=='0')).client_spec
+        updated=s.scalar(select(Job).where(Job.batch_id==new['id'],Job.case_id=='0')).client_spec
+        old_argv,_=bind_values(original['template']['parameter_schema'],original['parameters'],original['template']['command'])
+        new_argv,_=bind_values(updated['template']['parameter_schema'],updated['parameters'],updated['template']['command'])
+        assert old_argv==['python','client.py','--output-dir','/business/old']
+        assert new_argv==['python','client.py','--output-dir','/business/new']

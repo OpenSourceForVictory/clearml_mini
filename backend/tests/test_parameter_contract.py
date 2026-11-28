@@ -83,7 +83,7 @@ def test_missing_optional_value_is_not_null_or_empty():
 
 
 def test_reserved_names_and_invalid_defaults_are_rejected():
-    for field in ['seed','episodes','task_name','work_dir','MINI_EVAL_CUSTOM']:
+    for field in ['seed','episodes','task_name','work_dir','output_dir','MINI_EVAL_CUSTOM']:
         with pytest.raises(ValueError):validate_schema({'version':1,'fields':{field:{'type':'string'}}})
     s=schema();s['fields']['trials']['default']=0
     with pytest.raises(ValueError):validate_schema(s)

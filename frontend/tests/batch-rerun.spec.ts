@@ -20,7 +20,7 @@ async function setup(page:Page,availableSuite=true){
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/results');
- return {draft,requests,setFail:(v:boolean)=>{fail=v;},setDelay:(v:number)=>{delay=v;},lose:()=>{lose=true;}};
+ return {draft,template,requests,setFail:(v:boolean)=>{fail=v;},setDelay:(v:number)=>{delay=v;},lose:()=>{lose=true;}};
 }
 
 test('list import preserves overrides, edit, fresh preflight and idempotent new submission',async({page})=>{
@@ -176,4 +176,22 @@ test('historical server business parameters remain editable without switching te
  await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();
  await expect(w.getByRole('region',{name:'服务端配置确认'})).toContainText('3');
  expect(c.requests.at(-1).body.services[0].parameters).toEqual({count:3});
+});
+
+test('legacy output_dir business input can be changed in rerun without a typed schema',async({page})=>{
+ const c=await setup(page);
+ (c.template as any).parameter_schema=null;
+ c.draft.submission.cases[0].parameters={output_dir:'/business/old'};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue(/\/business\/old/);
+ await w.getByLabel('第 1 项参数',{exact:true}).fill('{"output_dir":"/business/new"}');
+ await w.getByLabel('第 1 项任务名').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.cases[0].parameters).toEqual({output_dir:'/business/new'});
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
+ expect(c.requests.at(-1).body.cases[0].parameters).toEqual({output_dir:'/business/new'});
 });

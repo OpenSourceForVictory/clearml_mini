@@ -86,7 +86,7 @@ SDK 校验结果并生成原有 STARTED/COMPLETED/ERROR 回合事件，最终生
 
 ## 产物目录参数
 
-客户端/服务端模板均可在动态参数映射选择“产物目录”，绑定 argv --output-dir 或自定义环境变量；底层来源为 platform.paths.output。不要再定义同名业务参数或在基础命令重复写 --output-dir。也可使用 ${output_dir}、MINI_EVAL_OUTPUT_DIR 或输入 JSON。独立节点产物根不会改变业务 cwd；宿主机每回合启动时传当前回合目录，整个任务启动时传公共目录，容器传容器内路径。配置与升级见[共享产物指南](shared-storage-artifacts.md)。
+客户端/服务端模板均可在动态参数映射选择“产物目录”，绑定 argv --output-dir 或自定义环境变量；底层来源为 platform.paths.output。`output_dir` 是平台保留名，不能创建同名类型化业务参数；旧式无类型化模板即使在任务参数 JSON 中填写或修改 `output_dir`，该值也只进入业务输入，不改变平台分配的产物目录，也不会自动追加到启动命令。需要把平台目录传给程序时，使用上述平台映射、`${output_dir}` 或 `MINI_EVAL_OUTPUT_DIR`；需要独立业务目录参数时，使用其他业务字段名并明确绑定到程序选项。不要在基础命令重复写 --output-dir。独立节点产物根不会改变业务 cwd；宿主机每回合启动时传当前回合目录，整个任务启动时传公共目录，容器传容器内路径。配置与升级见[共享产物指南](shared-storage-artifacts.md)。
 
 
 ### 自定义结果浏览目录
