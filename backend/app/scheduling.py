@@ -425,4 +425,4 @@ def loop(factory, stop: threading.Event):
             tick(factory)
         except Exception:
             logging.getLogger(__name__).exception('scheduler tick failed')
-        stop.wait(seconds('SCHEDULER_TICK_SECONDS', 2))
+        stop.wait(seconds('SCHEDULER_TICK_SECONDS', 10))

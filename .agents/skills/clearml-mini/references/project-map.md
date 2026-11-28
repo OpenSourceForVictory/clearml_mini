@@ -8,6 +8,8 @@
 
 四角色 API 隔离为可选部署；新缺省为百人/百单卡 Worker 推荐档：8 交互、2 控制、各 1 Worker 数据和批量，共 12 进程，实际池额度 168、预算 180，批量入口队列 192/等待 2 秒。基础 Compose 的 PostgreSQL 缺省 `max_connections=200`；后置覆盖文件及环境变量仍优先，已部署机器不会自动采用新值。`backend/app/priority_route_manifest.json` 是 167 条方法/路径的唯一分类源；`priority_gateway.py` 生成网关，`priority_runtime.py` 校验角色、总连接预算与 PostgreSQL 余量，并隔离各类准入队列。`deploy/priority-api-compose.yml` 分离执行控制、用户交互、Worker 数据和批量传输，仅 Worker 数据角色启动调度器；纳管执行器经网关回调交互与批量接口，直连 `api` 会使安装包下载返回 404。网关健康检查聚合四角色及配置指纹。部署、回退和连接预算见 [四角色部署指南](../../../../docs/priority-api-isolation.md)。单/双 API 保留原分类和行为。
 
+调度器每轮提交后等待 `SCHEDULER_TICK_SECONDS`，代码与基础 Compose 默认均为 10 秒；只运行调度器的 API 角色使用它。该设置减少定时扫描争锁频率，但增加下一轮分配、回收与服务补位等待，不改变持锁范围或 Worker 心跳。操作说明见 [部署与运维](../../../../docs/operations.md)。
+
 证据见 [API 流量审计与混合基线](../../../../docs/validation/priority-api-isolation-20261124/README.md)：包含全路由请求体契约、事务/锁抽查、真实 PostgreSQL 混合压测。`backend/tests/control_plane_load.py --mixed-ui --continuous-batches` 使用模拟 Worker 驱动真实调度，重复提交、暂停/恢复、失败/重评测、幂等结果和完成；不能替代真实模型评测。Agent 心跳同时包含可合并采样与配置 ACK/事件，不能整条丢弃。API 隔离不消除跨池行锁，也未完成断联后持续执行与持久 outbox；租约 watchdog 仍生效。
 
 | 边界 | 源码 / 文档 | 关联检查 |

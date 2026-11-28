@@ -230,3 +230,24 @@ def test_scheduler_loop_recovers_after_failed_reservation_commit(farm, monkeypat
     assert observed[1][0] == 'RESERVED' and observed[1][1]
     assert 'scheduler tick failed' in caplog.text
     assert 'reservation commit unavailable' in caplog.text
+
+
+def test_scheduler_loop_defaults_to_ten_second_post_tick_wait(monkeypatch):
+    from backend.app import scheduling
+
+    monkeypatch.delenv('SCHEDULER_TICK_SECONDS', raising=False)
+    ticks = []
+    waits = []
+    monkeypatch.setattr(scheduling, 'tick', lambda factory: ticks.append(factory))
+
+    class Stop:
+        def is_set(self):
+            return bool(waits)
+
+        def wait(self, seconds):
+            waits.append(seconds)
+
+    factory = object()
+    scheduling.loop(factory, Stop())
+    assert ticks == [factory]
+    assert waits == [10]
