@@ -209,7 +209,7 @@ Seed专项：test_episode_mapping_pipeline.py 覆盖初始0/42/2147483647、10�
 
 整任务普通命令展示：`backend/app/result_views.py` 的 detail_mode 由任务类型及进程模式决定，`episodes.py` 不补造此类计划回合，`frontend/src/cs.tsx` 展示整次执行；批次入口复用同一模式。该模式使用任务退出码统计执行（不冒充独立业务子进程退出证据），保留生命周期诊断。协议单进程及逐回合路径不变；操作说明见 docs/batch-monitoring.md。
 
-历史批次再次运行：`backend/app/batch_rerun.py` 提供只读 `GET /api/v1/batches/{id}/rerun-draft`，按任务/编排快照白名单恢复提交字段，批量检查模板和池；`frontend/src/batch-rerun.ts` 定义草稿契约，列表/详情经 CSWorkbench 导入 RunWizard。导入时将所有历史任务相同的业务参数移入向导公共草稿并从单项草稿移除，任务间不同值保留在单项草稿；后续复用普通预检、提交及参数优先级。旧模板的共同值可在客户端 JSON 中编辑；单项值仍优先于公共值，预检展示逐项有效值。服务端换模板时清除旧模板参数。来源只在草稿显示，不复用执行地址、实例或幂等键。缺失、异构和不可用配置明确提示；操作见 docs/suite-run-preflight.md，定向测试见 test_batch_rerun.py 与 batch-rerun.spec.ts。无需本功能数据库迁移。
+历史批次再次运行：`backend/app/batch_rerun.py` 提供只读 `GET /api/v1/batches/{id}/rerun-draft`，按任务/编排快照白名单恢复提交字段及类型化参数来源，批量检查模板和池；`frontend/src/batch-rerun.ts` 定义草稿契约，列表/详情经 CSWorkbench 导入 RunWizard。模板来源从单项快照剥离，集合来源预填集合公共草稿，batch/override 来源预填客户端公共草稿，case 来源保留在任务清单；无类型化旧式参数只能按共同值回填客户端；类型化快照缺来源时保留单项值。后续复用普通预检、提交及单项优先级。服务端换模板时清除旧模板参数。来源只在草稿显示，不复用执行地址、实例或幂等键。缺失、异构和不可用配置明确提示；操作见 docs/suite-run-preflight.md，定向测试见 test_batch_rerun.py 与 batch-rerun.spec.ts。无需本功能数据库迁移。
 
 历史 `output_dir` 边界：`runner/parameter_contract.py` 将其列为平台保留名，类型化模板注册返回 400；无类型化模板的同名业务输入可经再次运行修改，但与 `platform.paths.output` 独立，也不会生成 argv。新执行从当前模板快照按绑定重新生成启动命令，不复制历史 argv。使用 `platform.paths.output` 映射 `--output-dir`，或改名为其他业务字段并显式绑定；验证见 `backend/tests/test_batch_rerun.py` 和 docs/runtime-templates.md。
 

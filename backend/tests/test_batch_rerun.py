@@ -178,3 +178,24 @@ def test_rerun_rebinds_edited_business_output_option_from_new_job_snapshot(env,m
         new_argv,_=bind_values(updated['template']['parameter_schema'],updated['parameters'],updated['template']['command'])
         assert old_argv==['python','client.py','--output-dir','/business/old']
         assert new_argv==['python','client.py','--output-dir','/business/new']
+
+
+def test_rerun_draft_preserves_parameter_provenance_separately_from_submission(env,monkeypatch):
+    _,c,a=env;*_,body=setup(env,monkeypatch)
+    response=c.post('/api/v1/admin/client-templates',headers=a['admin'],json={
+        'name':'typed-source','version':'1','image':'image:1','command':['python','client.py'],
+        'parameter_schema':{'version':1,'fields':{'speed':{'type':'integer','default':3},
+                                                'quality':{'type':'integer','default':0}}}})
+    assert response.status_code==201,response.text
+    body['client']['template_id']=response.json()['id']
+    body['client']['parameters']={'quality':7}
+    body['cases'][0]['parameters']={'speed':5}
+    original=submit(env,body,'source-original')
+    result=draft(env,original['id']);assert result.status_code==200,result.text
+    data=result.json()
+    assert data['parameter_sources']['0']['speed']=='case'
+    assert data['parameter_sources']['1']['speed']=='template'
+    assert data['parameter_sources']['0']['quality']=='batch'
+    assert data['parameter_sources']['1']['quality']=='batch'
+    assert data['submission']['cases'][1]['parameters']['speed']==3
+    assert 'parameter_sources' not in data['submission']

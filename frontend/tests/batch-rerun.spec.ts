@@ -3,7 +3,7 @@ async function setup(page:Page,availableSuite=true){
  let fail=false,delay=0,lose=false;const requests:any[]=[];
  const template={id:'t',name:'Historical client',version:'1',execution_mode:'host',host_runtime:{episode_launch:'whole_task',overridable_env:['MODE']},enabled:true,protocols:['ws'],task_type:'evaluation',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true}}}};
  const server={id:'s',name:'Historical server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{count:{type:'integer'}}}};
- const draft:any={schema_version:1,source:{batch_id:'old',title:'历史批次',suite_id:'changed-suite'},templates:{client:template,services:[server]},issues:[],submission:{title:'历史批次（再次运行）',pool_id:'pool',max_concurrent:2,suite_id:null,resources:{},stop_after_batch:false,client:{template_id:'t',service_mode:'managed',timeout_seconds:0,request_timeout_seconds:19,environment:{MODE:'old'}},cases:[{case_id:'a',task_name:'first',episodes:3,seed:0,parameters:{speed:2},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,memory_unlimited:false},service_keys:['model']},{case_id:'b',task_name:'second',episodes:7,seed:20,parameters:{speed:5},resources:{cpus:4,ram_gb:8},service_keys:['model']}],services:[{key:'model',template_id:'s',pool_id:'pool',slot_id:'fixed-slot',mode:'shared',instance_count:2,parameters:{count:0},environment:{},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,gpu_mode:'exclusive',requested_vram_gb:0,accelerator_type:'npu'}}]}};
+ const draft:any={schema_version:1,source:{batch_id:'old',title:'历史批次',suite_id:'changed-suite'},templates:{client:template,services:[server]},issues:[],parameter_sources:{a:{speed:'case'},b:{speed:'case'}},submission:{title:'历史批次（再次运行）',pool_id:'pool',max_concurrent:2,suite_id:null,resources:{},stop_after_batch:false,client:{template_id:'t',service_mode:'managed',timeout_seconds:0,request_timeout_seconds:19,environment:{MODE:'old'}},cases:[{case_id:'a',task_name:'first',episodes:3,seed:0,parameters:{speed:2},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,memory_unlimited:false},service_keys:['model']},{case_id:'b',task_name:'second',episodes:7,seed:20,parameters:{speed:5},resources:{cpus:4,ram_gb:8},service_keys:['model']}],services:[{key:'model',template_id:'s',pool_id:'pool',slot_id:'fixed-slot',mode:'shared',instance_count:2,parameters:{count:0},environment:{},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,gpu_mode:'exclusive',requested_vram_gb:0,accelerator_type:'npu'}}]}};
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
  await page.route('**/api/v1/**',async route=>{
   const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
@@ -133,7 +133,7 @@ test('history confirmation stays by actions and edits invalidate acknowledgement
 });
 
 test('common historical client parameter is prefilled and edited through ordinary submission',async({page})=>{
- const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;
+ const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;c.draft.parameter_sources={a:{speed:'batch'},b:{speed:'batch'}};
  await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  const w=page.getByRole('region',{name:'集合运行向导'});
  await w.getByRole('button',{name:'下一步',exact:true}).click();
@@ -222,7 +222,7 @@ test('legacy output_dir can be changed once for all historical tasks',async({pag
 });
 
 test('shared historical typed value is prefilled but a later single-task edit remains local',async({page})=>{
- const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;
+ const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;c.draft.parameter_sources={a:{speed:'batch'},b:{speed:'batch'}};
  await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  const w=page.getByRole('region',{name:'集合运行向导'});
  await w.getByText('任务 1 详细配置',{exact:true}).click();
@@ -238,6 +238,58 @@ test('shared historical typed value is prefilled but a later single-task edit re
  await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
  expect(c.requests.at(-1).body.client.parameters.speed).toBe(2);
  expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([7,undefined]);
+});
+
+test('template defaults and equal per-task values do not become common input',async({page})=>{
+ const c=await setup(page);
+ c.draft.submission.cases[0].parameters.speed=1;
+ c.draft.submission.cases[1].parameters.speed=1;
+ c.draft.parameter_sources={a:{speed:'template'},b:{speed:'template'}};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue('{}');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('speed')).toHaveValue('1');
+ await expect(w.getByRole('button',{name:'使用继承值'})).toHaveCount(0);
+ await page.evaluate(()=>{location.hash='/cs/results';});
+ c.draft.submission.cases[0].parameters.speed=2;
+ c.draft.submission.cases[1].parameters.speed=2;
+ c.draft.parameter_sources={a:{speed:'case'},b:{speed:'case'}};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue(/"speed"\s*:\s*2/);
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('speed')).toHaveValue('1');
+});
+
+test('historical suite defaults and client inputs return to their own wizard steps',async({page})=>{
+ const c=await setup(page);
+ (c.template as any).parameter_schema.fields.quality={type:'integer',default:0};
+ for(const item of c.draft.submission.cases){item.parameters.speed=4;item.parameters.quality=6;}
+ c.draft.parameter_sources={a:{speed:'suite',quality:'batch'},b:{speed:'suite',quality:'batch'}};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await expect(w.getByLabel('历史集合公共业务参数 JSON')).toHaveValue(/"speed"\s*:\s*4/);
+ await w.getByLabel('历史集合公共业务参数 JSON').fill('{"speed":9}');
+ await w.getByLabel('批次名称',{exact:true}).click();
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue('{}');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('quality')).toHaveValue('6');
+ await w.getByLabel('quality').fill('8');
+ await expect(w.getByLabel('speed')).toHaveValue('1');
+ await expect(w.getByRole('button',{name:'使用继承值'})).toHaveCount(1);
+ await expect(w).toContainText('平台上限 7200 秒');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ expect(c.requests[0].body.client.parameters).toMatchObject({speed:9,quality:8});
+ expect(c.requests[0].body.cases.map((x:any)=>x.parameters)).toEqual([{},{}]);
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters).toMatchObject({speed:9,quality:8});
 });
 
 test('historically different task values keep ordinary per-task precedence after common edit',async({page})=>{

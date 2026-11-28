@@ -116,6 +116,8 @@ def build(s, batch, jobs, user):
             item['resources']=resources(d.get('resources'),path+'.resources')
             services.append(item)
     return {'schema_version':1,'source':{'batch_id':batch.id,'title':batch.title,'suite_id':batch.suite_id},
+            'parameter_sources':{j.case_id:deepcopy(x.get('parameter_sources',{}))
+                                 for j,x in zip(jobs,specs)},
             'templates':{'client':original_client,'services':original_servers},'issues':issues,
             'submission':{'title':(batch.title+'（再次运行）')[:200],'pool_id':jobs[0].pool_id,
                           'max_concurrent':batch.max_concurrent,
