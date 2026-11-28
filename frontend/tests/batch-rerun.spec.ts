@@ -240,7 +240,7 @@ test('shared historical typed value is prefilled but a later single-task edit re
  expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([7,undefined]);
 });
 
-test('template defaults and equal per-task values do not become common input',async({page})=>{
+test('template defaults stay inherited while equal per-task values become editable common input',async({page})=>{
  const c=await setup(page);
  c.draft.submission.cases[0].parameters.speed=1;
  c.draft.submission.cases[1].parameters.speed=1;
@@ -258,9 +258,26 @@ test('template defaults and equal per-task values do not become common input',as
  c.draft.parameter_sources={a:{speed:'case'},b:{speed:'case'}};
  await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  await w.getByText('任务 1 详细配置',{exact:true}).click();
- await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue(/"speed"\s*:\s*2/);
+ await expect(w.getByLabel('第 1 项参数',{exact:true})).toHaveValue('{}');
  await w.getByRole('button',{name:'下一步',exact:true}).click();
- await expect(w.getByLabel('speed')).toHaveValue('1');
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+});
+
+test('editing a shared historical per-task value changes the new batch',async({page})=>{
+ const c=await setup(page);
+ for(const item of c.draft.submission.cases)item.parameters.speed=2;
+ c.draft.parameter_sources={a:{speed:'case'},b:{speed:'case'}};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w).toContainText('平台上限 7200 秒');
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+ await w.getByLabel('speed').fill('6');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters.speed).toBe(6);
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters)).toEqual([{},{}]);
 });
 
 test('historical suite defaults and client inputs return to their own wizard steps',async({page})=>{
@@ -307,4 +324,24 @@ test('historically different task values keep ordinary per-task precedence after
  expect(c.requests[0].body.client.parameters.speed).toBe(8);
  expect(c.requests[0].body.cases.map((x:any)=>x.parameters.speed)).toEqual([2,5]);
  await expect(w.getByText('有效业务参数与来源')).toBeVisible();
+});
+
+test('new client input absent from historical suite and edited server input reach rerun submission',async({page})=>{
+ const c=await setup(page);
+ (c.template.parameter_schema.fields as any).run_tag={type:'string',default:'',overridable:true};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w).toContainText('平台上限 7200 秒');
+ await w.getByLabel('run_tag').fill('rerun-new-value');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByLabel('服务 1 历史业务参数 JSON').fill('{"count":3}');
+ await w.getByLabel('服务 1 模板',{exact:true}).click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters.run_tag).toBe('rerun-new-value');
+ expect(c.requests.at(-1).body.services[0].parameters.count).toBe(3);
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters.run_tag).toBe('rerun-new-value');
+ expect(c.requests.at(-1).body.services[0].parameters.count).toBe(3);
 });

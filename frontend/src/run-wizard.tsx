@@ -25,7 +25,7 @@ function sharedCaseParameters(cases:Case[]):Record<string,unknown>{
 function editableSharedParameters(cases:Case[],schema:ParameterSchema|null|undefined,sources:Record<string,Record<string,string>>,layer:'suite'|'client'):Record<string,unknown>{
   const shared=sharedCaseParameters(cases);
   return schema?Object.fromEntries(Object.entries(shared).filter(([name])=>
-    Object.hasOwn(schema.fields,name)&&cases.every(c=>layer==='suite'?sources[c.case_id]?.[name]==='suite':['batch','override'].includes(sources[c.case_id]?.[name])))):layer==='client'?shared:{};
+    Object.hasOwn(schema.fields,name)&&cases.every(c=>layer==='suite'?sources[c.case_id]?.[name]==='suite':['batch','override','case'].includes(sources[c.case_id]?.[name])))):layer==='client'?shared:{};
 }
 function parameterDraft(schema:ParameterSchema|null|undefined,parameters:Record<string,unknown>):ValuesDraft{
   return Object.fromEntries(Object.entries(parameters).filter(([name])=>Object.hasOwn(schema?.fields||{},name)).map(([name,value])=>
@@ -207,7 +207,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     <p className="hint">选择业务配置与并发偏好，平台负责分配机器和传递参数；实际通信和执行可通过试跑验证。</p>
     {error&&<p role="alert" className="error">{error}</p>}
     {imported&&<section aria-label="历史批次来源"><h3>基于历史批次创建</h3><p>来源：{imported.source.title} · {imported.source.batch_id}。只创建新批次，不改变原批次。原客户端：{imported.templates.client.name} / {imported.templates.client.version}。</p><ul>{imported.templates.services.map((t,i)=><li key={i}>原服务 {i+1}：{t.name} / {t.version} · {t.id}</li>)}</ul>
-    <p>已恢复历史任务清单与资源。类型化参数按原来源分别预填集合公共值、客户端公共值和任务单项值；模板默认值仍由模板提供。无类型化旧参数按共同值回填客户端；类型化快照缺少来源时保留为单项，避免误归类。之后按普通向导预检和提交，不复用原实例或预检结果。</p>
+    <p>已恢复历史任务清单与资源。类型化参数按来源回填集合与客户端公共值；所有任务相同的单项值也预填到客户端，修改后直接生效。不同的单项值仍留在清单；模板默认值仍由模板提供。无类型化旧参数按共同值回填客户端；类型化快照缺少来源时保留为单项，避免误归类。之后按普通向导预检和提交，不复用原实例或预检结果。</p>
     {imported.issues.length>0&&<p>有 {imported.issues.length} 项历史配置需要核对，请在本步骤底部查看“历史配置确认”。</p>}
     </section>}
     <p className="wizard-context">{draft.title||'未命名批次'} · {cases.length} 项任务 · {stepTitles[step]}</p><form onSubmit={next} onInvalidCapture={revealInvalid}><fieldset disabled={busy} className="wizard-form">
@@ -230,7 +230,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。选择不限仍需心跳续租，且支持取消；需要 Worker 协议 16。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
       {limitError&&<p role="alert">平台执行时限读取失败：{limitError}</p>}<button type="button" onClick={()=>{setPreview(null);setLimitReload(n=>n+1)}}>刷新执行时限</button>
       </WizardModule>{template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
-      {template&&<WizardModule title="业务参数"><p className="hint">{imported&&!suiteId?'历史公共输入已预填；模板默认值沿用模板，任务单项值留在清单中。':'这里设置公共参数；集合和任务单项同名配置可能覆盖它。'}预检后可逐项核对最终值与来源。</p><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/>{imported&&!suiteId&&!template.parameter_schema&&<><p className="hint">旧模板没有类型化字段。这里预填共同业务参数 JSON，例如 {`{"output_dir":"/old/path"}`}；修改后按普通向导提交。不同值在任务清单中逐项修改。</p><JsonDraft label="客户端业务参数 JSON" value={legacyOverrides} onChange={setLegacyOverrides}/></>}</WizardModule>}
+      {template&&<WizardModule title="业务参数"><p className="hint">{imported&&!suiteId?'历史公共输入及所有任务相同的单项值已预填；模板默认值沿用模板，不同的单项值留在清单中。':'这里设置公共参数；集合和任务单项同名配置可能覆盖它。'}预检后可逐项核对最终值与来源。</p><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/>{imported&&!suiteId&&!template.parameter_schema&&<><p className="hint">旧模板没有类型化字段。这里预填共同业务参数 JSON，例如 {`{"output_dir":"/old/path"}`}；修改后按普通向导提交。不同值在任务清单中逐项修改。</p><JsonDraft label="客户端业务参数 JSON" value={legacyOverrides} onChange={setLegacyOverrides}/></>}</WizardModule>}
       <WizardModule title="环境变量"><EnvironmentEditor label="启动变量覆盖 JSON" value={draft.environment} onChange={v=>update('environment',v)} allowed={(template?.runtime||template?.host_runtime)?.overridable_env||[]}/></WizardModule>
     </>}
     {step===2&&<WizardModule title="服务配置"><Field label="服务来源"><select value={serviceMode} onChange={e=>setServiceMode(e.target.value as typeof serviceMode)}><option value="external">提供外部服务地址</option><option value="managed">平台启动服务端模板</option><option value="none">无需服务（普通批处理）</option></select></Field>
