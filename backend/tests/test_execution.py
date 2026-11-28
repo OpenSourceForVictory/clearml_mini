@@ -175,7 +175,8 @@ def test_cancel_timeout_quarantine_and_retry(env):
     assert c.get(f'/api/v1/jobs/{job}', headers=auth['alice']).json()['status'] == 'TIMED_OUT'
     assert c.post(f'/api/v1/jobs/{job}/retry', headers=auth['alice']).status_code == 409
     assert c.post(f'/api/v1/worker/executions/{new["execution_id"]}/complete', headers=token, json={'status': 'SUCCEEDED', 'metrics': {'success_rate': 1, 'episode_count': 3, 'runtime': 1}}).status_code == 409
-    assert c.post(f'/api/v1/worker/executions/{new["execution_id"]}/cleanup', headers=token).status_code == 200
+    # Installed legacy Worker sends {} even when calling post(path) without data.
+    assert c.post(f'/api/v1/worker/executions/{new["execution_id"]}/cleanup', headers=token, json={}).status_code == 200
     assert c.post(f'/api/v1/jobs/{job}/retry', headers=auth['alice']).status_code == 202
     assert claim(env, token, slots[0])['execution_id'] != new['execution_id']
 

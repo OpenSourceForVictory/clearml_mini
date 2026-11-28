@@ -464,3 +464,5 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 
 长测及池配置结论：30分钟100模拟Worker/100Web用户持续批次通过，日志72,819条全确认、负载窗口租约过期0；168连接池无超时。168/180/仅延长等待三档180秒对照无池超时，锁类503主导，保留168生产池预算。初始168档模拟退出与可选产物上报竞态产生409，control_plane_load以每执行ID局部锁先停可选上报再退出，同档复测通过；失败证据保留。见docs/database-capacity-acceptance.md、docs/validation/heartbeat-cadence-20261126/README.md。未测每档三轮统计和数据库延迟拐点，不将200硬上限称为可承载200条有效并行查询。
 2026-11-26发布：主分支d2ad332的API镜像已用于本机12个四角色进程；数据库迁移头仍c14d09e，连接预算168不变。六台真机13卡位通过平台在线升级到Worker 0.21.21，全部回连，心跳/遥测最近更新时间已核对；证据见docs/validation/heartbeat-cadence-20261126/release-20261126.json。发布检查未运行真实GPU/NPU模型任务，不代表模型验收。
+
+2026-11-28 旧Worker清理兼容：worker/client.py 的 post(path) 实际发送 JSON `{}`。execution.cleanup 将空对象视作无证明旧协议，仅非空对象校验 RecoveryProof；有恢复授权时仍拒绝裸清理。真机旧版0.21.21服务端在API停机约26秒后停止host unit，恢复后旧租约判TIMED_OUT；修复前空对象被FastAPI校验400导致清理确认卡住。见 docs/validation/disconnected-execution-20261124/api-outage-service-20261128.md。

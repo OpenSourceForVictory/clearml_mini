@@ -10,7 +10,7 @@ from datetime import timedelta
 from typing import Literal, Optional
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, Field, ConfigDict, ValidationError, field_validator, model_validator
 from argon2 import PasswordHasher
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
@@ -709,10 +709,17 @@ def install(app, db, current):
         return {'accepted': True, 'duplicate': False}
 
     @app.post('/api/v1/worker/executions/{execution_id}/cleanup')
-    def cleanup(execution_id: str, body: RecoveryProof | None = None, worker=Depends(worker_auth), s: Session = Depends(db)):
-        if body is not None:
+    def cleanup(execution_id: str, body: dict | None = None, worker=Depends(worker_auth), s: Session = Depends(db)):
+        # Legacy Worker always sends JSON {} for a bodyless POST. Treat only
+        # that empty object as the legacy cleanup path; nonempty recovery
+        # proofs still require the full identity schema.
+        if body:
+            try:
+                proof = RecoveryProof.model_validate(body)
+            except ValidationError:
+                raise HTTPException(400, 'invalid request parameters') from None
             from .recovery_finish import cleanup as recovery_cleanup
-            result = recovery_cleanup(s, worker_id=worker.id, execution_id=execution_id, proof=body)
+            result = recovery_cleanup(s, worker_id=worker.id, execution_id=execution_id, proof=proof)
             s.commit()
             return result
         lock(s)

@@ -149,9 +149,9 @@ def test_http_completion_cleanup_and_legacy_bypass_rejected(api):
         generation=grant(s,run,'w').generation;s.commit()
     proof=prepare(factory,generation)
     base='/api/v1/worker/executions/e/'
-    for suffix,body in [('complete',{'status':'SUCCEEDED','exit_code':0}),('cleanup',None)]:
+    for suffix,body in [('complete',{'status':'SUCCEEDED','exit_code':0}),('cleanup',None),('cleanup',{}),('cleanup',{'unexpected':'proof'})]:
         response=client.post(base+suffix,headers=headers,json=body)
-        assert response.status_code==409,response.text
+        assert response.status_code==(400 if body == {'unexpected':'proof'} else 409),response.text
     body={'status':'SUCCEEDED','exit_code':0,'recovery':proof.model_dump()}
     response=client.post(base+'complete',headers=headers,json=body)
     assert response.status_code==200,response.text

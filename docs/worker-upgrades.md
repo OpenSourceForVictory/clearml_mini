@@ -188,7 +188,7 @@ HostBackend 的服务 Description 和 Docker 创建 label 支持可选 recovery_
 
 修正后 29 节点在线升级及 NPU2 的 70 秒心跳中断实测见[生产节点验收记录](validation/disconnected-execution-20261124/production-node-20261126.md)。
 
-已有节点升级时，先按平台排空流程确认各卡无活动执行、待清理执行及未完成恢复 journal。升级后到“机器管理 → 查看配置 → 基本配置”查看“断联恢复能力”的在线卡数与已上报卡数；只有平台总闸和节点能力都具备，新领取才使用恢复协议。老节点若状态路径不可用，先用`systemctl show <worker服务名> -p ExecStart -p User -p WorkingDirectory`定位配置，再检查 `state_path` 的父目录是否为持久、纳管账号可写且无符号链接的目录；不需要修改业务工作目录。新版 Compose 四角色默认传递 `RECOVERY_EXECUTION_ENABLED=1`；旧 `.env` 若写了 `0`，须改为 `1` 或删除该项。更新 Compose 或 `.env` 后要重建 API 容器，单改文件不会影响运行中的进程。升级排空与真实任务断联恢复验收仍须分别核对，界面能力数字不是执行验收结论；已超时的旧执行不能因切换开关自动恢复。
+已有节点升级时，先按平台排空流程确认各卡无活动执行、待清理执行及未完成恢复 journal。升级后到“机器管理 → 查看配置 → 基本配置”查看“断联恢复能力”的在线卡数与已上报卡数；只有平台总闸和节点能力都具备，新领取才使用恢复协议。老节点若状态路径不可用，先用`systemctl show <worker服务名> -p ExecStart -p User -p WorkingDirectory`定位配置，再检查 `state_path` 的父目录是否为持久、纳管账号可写且无符号链接的目录；不需要修改业务工作目录。新版 Compose 四角色默认传递 `RECOVERY_EXECUTION_ENABLED=1`；旧 `.env` 若写了 `0`，须改为 `1` 或删除该项。更新 Compose 或 `.env` 后要重建 API 容器，单改文件不会影响运行中的进程。升级排空与真实任务断联恢复验收仍须分别核对，界面能力数字不是执行验收结论；已超时的旧执行不能因切换开关自动恢复。 旧 Worker 的 `post(path)` 会发送 JSON `{}`；新版 API 清理接口将空对象按旧协议处理，而非要求恢复证明，前提仍是无恢复授权且原执行归属匹配。服务端旧 Worker 在 API 断联超过租约时会主动停进程，API 恢复后可能显示“执行心跳租约过期”；升级服务端 Worker 只能保护后续通过能力协商领取的执行。
 
 Worker 的领取主循环现经 recovery_poll 统一分流：未声明能力且没有待恢复领取文件时仍发原协议请求；已有 .claim.json 时即使当前版本不声明能力，也必须先按原 request_id 恢复，不能绕过待确认分配领取新任务。收据先落盘，再幂等写入执行 journal 的 recovery_assignment，最后清除领取请求。磁盘写入失败、快照冲突、停止处置均保留证据；不得手工删除文件以绕过。完整监督入口尚未接线，带 recovery_assignment 的执行会拒绝进入旧 watchdog/启动路径；这不是已启用断联执行，禁止手工添加能力标识。
 
