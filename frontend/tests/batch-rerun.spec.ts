@@ -2,6 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 async function setup(page:Page,availableSuite=true){
  let fail=false,delay=0,lose=false;const requests:any[]=[];
  const template={id:'t',name:'Historical client',version:'1',execution_mode:'host',host_runtime:{episode_launch:'whole_task',overridable_env:['MODE']},enabled:true,protocols:['ws'],task_type:'evaluation',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true}}}};
+ const additionalTemplates:any[]=[];
  const server={id:'s',name:'Historical server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{count:{type:'integer'}}}};
  const draft:any={schema_version:1,source:{batch_id:'old',title:'历史批次',suite_id:'changed-suite'},templates:{client:template,services:[server]},issues:[],parameter_sources:{a:{speed:'case'},b:{speed:'case'}},submission:{title:'历史批次（再次运行）',pool_id:'pool',max_concurrent:2,suite_id:null,resources:{},stop_after_batch:false,client:{template_id:'t',service_mode:'managed',timeout_seconds:0,request_timeout_seconds:19,environment:{MODE:'old'}},cases:[{case_id:'a',task_name:'first',episodes:3,seed:0,parameters:{speed:2},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,memory_unlimited:false},service_keys:['model']},{case_id:'b',task_name:'second',episodes:7,seed:20,parameters:{speed:5},resources:{cpus:4,ram_gb:8},service_keys:['model']}],services:[{key:'model',template_id:'s',pool_id:'pool',slot_id:'fixed-slot',mode:'shared',instance_count:2,parameters:{count:0},environment:{},resources:{cpus:2,ram_gb:4,cpu_unlimited:true,gpu_mode:'exclusive',requested_vram_gb:0,accelerator_type:'npu'}}]}};
  await page.addInitScript(()=>sessionStorage.setItem('eval-token','test'));
@@ -9,7 +10,7 @@ async function setup(page:Page,availableSuite=true){
   const p=new URL(route.request().url()).pathname.replace('/api/v1/','');let data:any=[];
   if(p==='auth/me')data={id:'user',username:'user',role:'user'};
   if(p==='execution-limits'){await new Promise(r=>setTimeout(r,100));data={client_execution_max_seconds:7200,client_execution_default_seconds:300};}
-  if(p==='client-templates')data=[template];if(p==='runtime-templates/server')data=[server];if(p==='pools')data=[{id:'pool',name:'历史池'}];
+  if(p==='client-templates')data=[template,...additionalTemplates];if(p==='runtime-templates/server')data=[server];if(p==='pools')data=[{id:'pool',name:'历史池'}];
   if(p==='suites')data=availableSuite?[{id:'changed-suite',name:'原评测集合',version:'2',template_id:'t',cases:[{case_id:'current',task_name:'new-task',episodes:1,seed:99}]}]:[];
   if(p==='suites/manage')data={items:[],total:0};
   if(p==='batches')data=[{id:'old',title:'历史批次',status:'SUCCEEDED',total:2,finished:2,succeeded:2,total_episodes:10,cases:[]}];
@@ -20,7 +21,7 @@ async function setup(page:Page,availableSuite=true){
   await route.fulfill({json:data});
  });
  await page.goto('/#/cs/results');
- return {draft,template,requests,setFail:(v:boolean)=>{fail=v;},setDelay:(v:number)=>{delay=v;},lose:()=>{lose=true;}};
+ return {draft,template,requests,addTemplate:(t:any)=>additionalTemplates.push(t),setFail:(v:boolean)=>{fail=v;},setDelay:(v:number)=>{delay=v;},lose:()=>{lose=true;}};
 }
 
 test('list import preserves overrides, edit, fresh preflight and idempotent new submission',async({page})=>{
@@ -344,4 +345,31 @@ test('new client input absent from historical suite and edited server input reac
  await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
  expect(c.requests.at(-1).body.client.parameters.run_tag).toBe('rerun-new-value');
  expect(c.requests.at(-1).body.services[0].parameters.count).toBe(3);
+});
+
+test('switching to a compatible client template version keeps historical shared values',async({page})=>{
+ const c=await setup(page);
+ c.draft.source.suite_id=null;
+ c.draft.submission.cases[1].parameters.speed=2;
+ c.addTemplate({...c.template,id:'t2',version:'2',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true},run_tag:{type:'string',overridable:true}}}});
+ c.addTemplate({...c.template,id:'other',name:'Other client',version:'1',parameter_schema:{version:1,fields:{speed:{type:'integer',default:1,overridable:true}}}});
+ await page.reload();
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+ await w.getByLabel('客户端模板',{exact:true}).selectOption('t2');
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+ await w.getByLabel('run_tag').fill('new-value');
+ await expect(w).toContainText('平台上限 7200 秒');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端资源池')).toBeVisible();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters).toMatchObject({speed:2,run_tag:'new-value'});
+ expect(c.requests.at(-1).body.cases.every((item:any)=>!Object.hasOwn(item.parameters,'speed'))).toBe(true);
+ await w.getByRole('button',{name:'修改客户端'}).click();
+ await w.getByLabel('客户端模板',{exact:true}).selectOption('other');
+ await expect(w.getByLabel('speed')).toHaveValue('1');
 });
