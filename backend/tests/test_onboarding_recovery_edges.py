@@ -141,3 +141,30 @@ def test_current_authorization_replaces_check_token_without_persisting(operation
     else:ops.trust(identity,'admin','SHA256:'+'A'*43,'Bearer FRESH')
     assert observed==['Bearer FRESH']
     assert 'Bearer' not in ''.join(p.read_text() for p in ops.root.glob('*.json'))
+
+
+@pytest.mark.parametrize('mode',['not-available','cleanup','already-verifying','not-failed','conflict','resume'])
+def test_reconnect_verification_is_idempotent_and_keeps_node_exclusive(operations,monkeypatch,mode):
+    ops,_=operations
+    job=ops.start('admin',form(),'Bearer fixture')
+    identity=job['id']
+    wait(lambda:ops.jobs[identity]['state']=='NEEDS_HOST_KEY')
+    ops.update(identity,'FAILED',node_id='node-1',verification_available=mode!='not-available')
+    if mode=='cleanup':ops.jobs[identity]['kind']='cleanup'
+    if mode=='already-verifying':ops.update(identity,'VERIFYING')
+    if mode=='not-failed':ops.update(identity,'READY')
+    if mode=='conflict':
+        other=copy.deepcopy(ops.jobs[identity])
+        other.update(id='other',state='INSTALLING')
+        ops.jobs['other']=other
+    submissions=[]
+    monkeypatch.setattr(ops.pool,'submit',lambda *args:submissions.append(args))
+    if mode in ('not-available','cleanup','not-failed','conflict'):
+        reason='target_has_active_operation' if mode=='conflict' else 'verification_not_available'
+        with pytest.raises(Rejected,match=reason):ops.retry_verification(identity,'admin','Bearer fresh')
+        assert submissions==[]
+    else:
+        result=ops.retry_verification(identity,'admin','Bearer fresh')
+        assert result['state']=='VERIFYING'
+        assert len(submissions)==(1 if mode=='resume' else 0)
+        if submissions:assert submissions[0][1:]==(identity,'Bearer fresh')

@@ -2,6 +2,7 @@
 import io
 import json
 import urllib.error
+import urllib.request
 from types import SimpleNamespace
 
 import pytest
@@ -72,3 +73,38 @@ def test_control_response_bounds_and_redacted_errors(monkeypatch,scenario):
     else:
         expected={'oversize':'control_response_limit','bad-json':'control_api_unreachable','network':'control_api_unreachable','http':'control_api_rejected_403'}[scenario]
         with pytest.raises(Rejected,match=expected):Control('http://test','Bearer test-only').call('check',{'x':1})
+
+
+@pytest.mark.parametrize('host,direct', [('api-gateway',True),('api',True),('platform.example',False)])
+def test_control_internal_api_ignores_environment_proxy(monkeypatch,host,direct):
+    handlers=[]
+    monkeypatch.setenv('HTTP_PROXY','http://proxy.invalid:8080')
+
+    def build(*items):
+        handlers.extend(items)
+        return SimpleNamespace(open=lambda request,timeout:io.BytesIO(b'{"ok":true}'))
+
+    monkeypatch.setattr('onboarding.executor.urllib.request.build_opener',build)
+    assert Control(f'http://{host}:8000','Bearer test-only').call('admin/health')=={'ok':True}
+    assert len(handlers)==(2 if direct else 1)
+    if direct:
+        assert isinstance(handlers[1],urllib.request.ProxyHandler)
+        assert handlers[1].proxies=={}
+
+
+@pytest.mark.parametrize('status,body,expected_reason',[
+    (503,b'{"reason":"connection_pool"}','connection_pool'),
+    (503,b'{"reason":"private token"}','unavailable'),
+    (503,b'not-json','unavailable'),
+    (504,b'<html>gateway timeout</html>','unavailable')])
+def test_control_busy_error_logs_route_without_secret(monkeypatch,caplog,status,body,expected_reason):
+    def build(*handlers):
+        def fail(request,timeout):
+            raise urllib.error.HTTPError(request.full_url,status,'private text',{},io.BytesIO(body))
+        return SimpleNamespace(open=fail)
+    monkeypatch.setattr('onboarding.executor.urllib.request.build_opener',build)
+    with pytest.raises(Rejected,match=f'control_api_rejected_{status}'):
+        Control('http://api-gateway:8000','Bearer hidden-secret').call('admin/health')
+    assert f'path=admin/health status={status} reason={expected_reason}' in caplog.text
+    assert 'hidden-secret' not in caplog.text
+    assert 'private text' not in caplog.text

@@ -13,6 +13,7 @@ import time
 import traceback
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 import uuid
 from .contracts import validate, public_form, Rejected
 from .ssh import Remote
@@ -23,18 +24,34 @@ ACTIVE={'CHECKING','NEEDS_HOST_KEY','READY','INSTALLING','VERIFYING'}
 
 
 class Control:
-    def __init__(self,base,authorization):self.base=base.rstrip('/')+'/api/v1/';self.authorization=authorization
+    def __init__(self,base,authorization):
+        self.base=base.rstrip('/')+'/api/v1/'
+        self.authorization=authorization
+        self.internal=urlsplit(self.base).hostname in {'api','api-gateway','localhost','127.0.0.1','::1'}
     def call(self,path,body=None):
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self,*a,**kw):return None
         req=urllib.request.Request(self.base+path,data=None if body is None else json.dumps(body).encode(),headers={'Authorization':self.authorization,'Content-Type':'application/json'})
+        handlers=[NoRedirect()]
+        if self.internal:
+            # Internal Compose services must never be sent to an inherited HTTP proxy.
+            handlers.append(urllib.request.ProxyHandler({}))
         try:
-            with urllib.request.build_opener(NoRedirect()).open(req,timeout=15) as r:
+            with urllib.request.build_opener(*handlers).open(req,timeout=15) as r:
                 payload=r.read(4*1024*1024+1)
                 if len(payload)>4*1024*1024:raise Rejected('control_response_limit')
                 return json.loads(payload)
         except Rejected:raise
-        except urllib.error.HTTPError as exc:raise Rejected('control_api_rejected_'+str(exc.code)) from None
+        except urllib.error.HTTPError as exc:
+            if exc.code in (503,504):
+                reason=None
+                if exc.code==503:
+                    try:
+                        value=json.loads(exc.read(512)).get('reason')
+                        if value in {'request_concurrency','connection_pool','lock_timeout','statement_timeout','request_budget','scheduler_lock','deadlock','serialization_retry'}:reason=value
+                    except (ValueError,AttributeError,TypeError):pass
+                logger.warning('control API rejected path=%s status=%s reason=%s',path,exc.code,reason or 'unavailable')
+            raise Rejected('control_api_rejected_'+str(exc.code)) from None
         except (OSError,ValueError):raise Rejected('control_api_unreachable') from None
 
 
