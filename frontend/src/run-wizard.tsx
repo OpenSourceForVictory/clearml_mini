@@ -17,6 +17,23 @@ type Candidate = {slot_id:string;node_name:string;gpu_index:number;gpu_model:str
 type Preview = {case_checks?:{case_id:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];service_plan?:{key:string;resources:Record<string,unknown>;resource_sources:Record<string,string>}[];server_checks?:{key:string;pool_name:string;status:string;reasons:Reason[];nodes:Candidate[]}[];effective_parameters?:{case_id:string;parameters:Record<string,unknown>;sources:Record<string,string>}[];pair_checks?:{case_id:string;pair_ready:boolean}[];endpoints?:{url:string;mode:string;available:boolean;occupancy:number}[];checked_at:string;can_submit:boolean;status:string;task_count:number;total_episodes:number;cases:Case[];note:string;reasons:Reason[];nodes:Candidate[]};
 type Trial = {id:string;title:string;status:string;cases:{task_type?:string;job_id:string;status:string;episode_reporting:boolean;progress:{completed:number;successes:number};error:string|null}[]};
 const statuses:Record<string,string>={PENDING:'排队中',RESERVED:'已分配',STARTING:'正在启动',RUNNING:'运行中',SUCCEEDED:'执行完成',FAILED:'执行失败',TIMED_OUT:'超时',CANCELLED:'已取消',CANCEL_REQUESTED:'取消中'};
+function sharedCaseParameters(cases:Case[]):Record<string,unknown>{
+  if(!cases.length)return {};
+  return Object.fromEntries(Object.entries(cases[0].parameters||{}).filter(([name,value])=>cases.every(c=>
+    Object.hasOwn(c.parameters||{},name)&&JSON.stringify(c.parameters?.[name])===JSON.stringify(value))));
+}
+function editableSharedParameters(cases:Case[],schema:ParameterSchema|null|undefined):Record<string,unknown>{
+  const shared=sharedCaseParameters(cases);
+  return schema?Object.fromEntries(Object.entries(shared).filter(([name])=>Object.hasOwn(schema.fields,name))):shared;
+}
+function parameterDraft(schema:ParameterSchema|null|undefined,parameters:Record<string,unknown>):ValuesDraft{
+  return Object.fromEntries(Object.entries(parameters).filter(([name])=>Object.hasOwn(schema?.fields||{},name)).map(([name,value])=>
+    [name,schema?.fields[name].type==='string'?String(value):JSON.stringify(value)]));
+}
+function historyCasesWithoutShared(cases:Case[],shared:Record<string,unknown>):Case[]{
+  const names=new Set(Object.keys(shared));
+  return cases.map(c=>({...c,parameters:Object.fromEntries(Object.entries(c.parameters||{}).filter(([name])=>!names.has(name)))}));
+}
 function Field({label,children}:{label:string;children:React.ReactNode}) {
   const id=React.useId();
   return <div className="field"><label htmlFor={id}>{label}</label>{React.cloneElement(children as React.ReactElement<{id:string}>,{id})}</div>;
@@ -49,7 +66,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(draft.unlimited_timeout)return;
     if(!Number.isInteger(draft.timeout_seconds)||draft.timeout_seconds<1||draft.timeout_seconds>executionLimit)throw Error(`每项总执行时限须为 1–${executionLimit} 秒的整数`);
   }
-  const [values,setValues]=useState<ValuesDraft>({}),[extraTemplates,setExtraTemplates]=useState<Template[]>([]),[copy,setCopy]=useState<{kind:'client'|'server';source:CopyTemplate}|null>(null);
+  const [values,setValues]=useState<ValuesDraft>({}),[legacyOverrides,setLegacyOverrides]=useState<Record<string,unknown>>({}),[extraTemplates,setExtraTemplates]=useState<Template[]>([]),[copy,setCopy]=useState<{kind:'client'|'server';source:CopyTemplate}|null>(null);
   const [saveSuite,setSaveSuite]=useState(false),[suiteName,setSuiteName]=useState(''),[suiteVersion,setSuiteVersion]=useState('1'),[suiteDefaults,setSuiteDefaults]=useState<Record<string,unknown>>({});
   const allTemplates=[...templates,...extraTemplates.filter(t=>!templates.some(x=>x.id===t.id))];
   useEffect(()=>{let active=true;api<ServerTemplate[]>('runtime-templates/server').then(rows=>{if(active)setServers(rows)}).catch(e=>{if(active)setError(String(e))});return()=>{active=false}},[]);
@@ -65,13 +82,15 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
   useEffect(()=>{if(imported&&template?.id===imported.submission.client.template_id)return;if(template)setServiceMode(old=>template.task_type==='command'?'none':old==='none'?'external':old);},[template?.id,template?.task_type]);
   useEffect(()=>{if(!addressDirty.current)setAddresses(a=>a.map(e=>({...e,mode:template?.endpoint_exclusive?'exclusive':'shared'})));},[template?.id,template?.endpoint_exclusive]);
   function availableTemplate(s:Suite){return (s.template_ids||[s.template_id]).find(id=>allTemplates.some(t=>t.id===id))||s.template_id;}
-  useEffect(()=>{if(launch?.suite){setHistoricalSuite(false);setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
+  useEffect(()=>{if(launch?.suite){setHistoricalSuite(false);setSaveSuite(false);setSuiteDefaults(launch.suite.client_defaults||{});setValues({});setLegacyOverrides({});setSuiteId(launch.suite.id);setTemplateId(availableTemplate(launch.suite));setCases(launch.suite.cases);setStep(0);}},[launch]);
   useEffect(()=>{
     if(!launch?.rerun)return;
     const input=launch.rerun.submission,c=input.client;
     timeoutEdited.current=true;addressDirty.current=true;sequence.current++;keys.current={};
     setHistoricalSuite(!!launch.rerun.source.suite_id);setImportAcknowledged(false);setTrial(null);setTrialError('');setTrialCase('');setSubmitted('');setSubmittedId('');setPreview(null);setError('');setStep(0);
-    setSaveSuite(false);setSuiteId('');setSuiteDefaults({});setValues({});setTemplateId(c.template_id);setCases(input.cases);
+    const selected=templates.find(t=>t.id===c.template_id);
+    const shared=selected?editableSharedParameters(input.cases,selected.parameter_schema):{};
+    setSaveSuite(false);setSuiteId('');setSuiteDefaults({});setValues(parameterDraft(selected?.parameter_schema,shared));setLegacyOverrides(selected?.parameter_schema?{}:shared);setTemplateId(c.template_id);setCases(historyCasesWithoutShared(input.cases,shared));
     setDraft({...initial,title:input.title,pool_id:input.pool_id,max_concurrent:input.max_concurrent,
       environment:JSON.stringify(c.environment||{},null,2),request_timeout_seconds:c.request_timeout_seconds,
       timeout_seconds:c.timeout_seconds,unlimited_timeout:c.timeout_seconds===0,
@@ -87,7 +106,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       gpu_mode:v.resources?.gpu_mode||'exclusive',requested_vram_gb:v.resources?.requested_vram_gb??0})): [newService()]);
   },[launch]);
   // Invalidating in an effect also covers edits by CaseEditor and suite handoff.
-  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');setImportAcknowledged(false);},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,saveSuite,suiteName,suiteVersion,suiteDefaults]);
+  useEffect(()=>{sequence.current++;setPreview(null);setError('');setSubmitted('');setImportAcknowledged(false);},[resourceDrafts,draft,addresses,cases,suiteId,templateId,serviceMode,serviceRows,stopAfter,values,legacyOverrides,saveSuite,suiteName,suiteVersion,suiteDefaults]);
   useEffect(()=>{sequence.current++;setPreview(null);},[importAcknowledged]);
   const missingInstanceCount=serviceMode==='managed'&&!!imported?.issues.some(i=>{
     const match=/^services\.(\d+)\.instance_count$/.exec(i.path);
@@ -102,7 +121,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     void poll();const timer=setInterval(poll,2000);return()=>{active=false;clearInterval(timer);};
   },[trial?.id]);
   const update=(key:keyof typeof initial,value:string|number|boolean)=>setDraft(d=>({...d,[key]:value}));
-  function chooseSuite(id:string,current=false){if(id&&id===historyOption&&imported&&!current){setHistoricalSuite(true);setSuiteId('');setSaveSuite(false);setSuiteDefaults({});setValues({});setCases(imported.submission.cases);setTemplateId(imported.submission.client.template_id);return;}setHistoricalSuite(false);setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});if(s.template_id!==templateId)setValues({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
+  function chooseSuite(id:string,current=false){if(id&&id===historyOption&&imported&&!current){const selected=allTemplates.find(t=>t.id===imported.submission.client.template_id),shared=selected?editableSharedParameters(imported.submission.cases,selected.parameter_schema):{};setHistoricalSuite(true);setSuiteId('');setSaveSuite(false);setSuiteDefaults({});setValues(parameterDraft(selected?.parameter_schema,shared));setLegacyOverrides(selected?.parameter_schema?{}:shared);setCases(historyCasesWithoutShared(imported.submission.cases,shared));setTemplateId(imported.submission.client.template_id);return;}setHistoricalSuite(false);setSuiteId(id);const s=suites.find(x=>x.id===id);if(s){setSaveSuite(false);setSuiteDefaults(s.client_defaults||{});setValues({});setLegacyOverrides({});setCases(s.cases);setTemplateId(availableTemplate(s));}}
   function validateAddresses(){
     const keys=new Set<string>();
     for(const [i,e] of addresses.entries()){
@@ -129,9 +148,10 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     if(serviceMode==='none'&&template.task_type!=='command')throw Error('无服务模式需要普通命令模板');
     if(saveSuite&&(!suiteName.trim()||!suiteVersion.trim()))throw Error('请填写新集合名称和版本');
     const inputCases=parseCases(ordinaryOnce&&!imported?cases.map(c=>({...c,episodes:1})):cases);
+    const publicParameters={...parseValues(template.parameter_schema,values),...(!template.parameter_schema?legacyOverrides:{})};
     return {resources:template.resource_requirements?(resourceDrafts[templateId]||{}):{...(draft.cpu_unlimited?{cpu_unlimited:true}:{}),...(draft.memory_unlimited?{memory_unlimited:true}:{}),...(draft.cpus?{cpus:Number(draft.cpus)}:{}),...(draft.ram_gb?{ram_gb:Number(draft.ram_gb)}:{})},title:draft.title,pool_id:draft.pool_id,...(template.resource_requirements?{}:{gpu_mode:draft.gpu_mode,requested_vram_gb:draft.requested_vram_gb,required_gpu_model:draft.required_gpu_model.trim()||null}),max_concurrent:draft.max_concurrent,disconnect_tolerance_seconds:draft.limited_disconnect?draft.disconnect_tolerance_seconds:null,suite_id:suiteId||null,cases:suiteId||saveSuite?[]:inputCases,
-      new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
-      client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...parseValues(template.parameter_schema,values)},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.unlimited_timeout?0:draft.timeout_seconds}};
+      new_suite:saveSuite?{name:suiteName,version:suiteVersion,template_id:templateId,cases:inputCases,client_defaults:imported?{...suiteDefaults,...publicParameters}:suiteDefaults}:null,services:serviceMode==='managed'?servicePayload(serviceRows,servers,draft.pool_id):[],stop_after_batch:stopAfter,
+      client:{template_id:templateId,service_mode:serviceMode,endpoints:serviceMode==='external'?addresses:undefined,parameters:{...(suiteId||saveSuite?{}:suiteDefaults),...publicParameters},environment,request_timeout_seconds:draft.request_timeout_seconds,timeout_seconds:draft.unlimited_timeout?0:draft.timeout_seconds}};
   }
   async function inspect(){
     if(pending.current)return;
@@ -180,7 +200,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     <p className="hint">选择业务配置与并发偏好，平台负责分配机器和传递参数；实际通信和执行可通过试跑验证。</p>
     {error&&<p role="alert" className="error">{error}</p>}
     {imported&&<section aria-label="历史批次来源"><h3>基于历史批次创建</h3><p>来源：{imported.source.title} · {imported.source.batch_id}。只创建新批次，不改变原批次。原客户端：{imported.templates.client.name} / {imported.templates.client.version}。</p><ul>{imported.templates.services.map((t,i)=><li key={i}>原服务 {i+1}：{t.name} / {t.version} · {t.id}</li>)}</ul>
-    <p>已恢复各任务的最终参数和资源，单项配置优先于公共配置。要修改某项任务，请编辑清单中的单项参数；要统一修改所有任务，请在客户端步骤填写公共参数后点击“将已填写的公共参数应用到所有任务”。重新预检后才能提交，不复用原实例或预检结果。</p>
+    <p>已恢复各任务的最终参数和资源。共同业务参数预填在客户端步骤，任务间不同的值保留在各任务清单；之后按普通向导预检和提交。只改某项任务请编辑清单中的单项参数。重新预检后才能提交，不复用原实例或预检结果。</p>
     {imported.issues.length>0&&<p>有 {imported.issues.length} 项历史配置需要核对，请在本步骤底部查看“历史配置确认”。</p>}
     </section>}
     <p className="wizard-context">{draft.title||'未命名批次'} · {cases.length} 项任务 · {stepTitles[step]}</p><form onSubmit={next} onInvalidCapture={revealInvalid}><fieldset disabled={busy} className="wizard-form">
@@ -194,7 +214,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <CaseEditor cases={cases} setCases={setCases} setError={setError} disabled={!!suiteId} ordinary={ordinaryOnce&&!imported}/>
     </WizardModule>}
     {step===1&&<><WizardModule title="运行模板"><div className="submit-grid">
-      <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({})}}><option value="" disabled>选择客户端及版本</option>{templateId&&!template&&<option value={templateId} disabled>{imported?.templates.client.id===templateId?`${imported.templates.client.name} / ${imported.templates.client.version}`:templateId}（当前不可用，请重新选择）</option>}{allTemplates.filter(t=>{const relation=historicalSuite?sourceSuite:selectedSuite;return !relation||(relation.template_ids||[relation.template_id]).includes(t.id)||(historicalSuite&&t.id===imported?.submission.client.template_id)}).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
+      <Field label="客户端模板"><select required value={templateId} onChange={e=>{setTemplateId(e.target.value);setValues({});setLegacyOverrides({})}}><option value="" disabled>选择客户端及版本</option>{templateId&&!template&&<option value={templateId} disabled>{imported?.templates.client.id===templateId?`${imported.templates.client.name} / ${imported.templates.client.version}`:templateId}（当前不可用，请重新选择）</option>}{allTemplates.filter(t=>{const relation=historicalSuite?sourceSuite:selectedSuite;return !relation||(relation.template_ids||[relation.template_id]).includes(t.id)||(historicalSuite&&t.id===imported?.submission.client.template_id)}).map(t=><option key={t.id} value={t.id}>{t.name} / {t.version}</option>)}</select></Field>
       <TemplateDescription template={template} label="客户端模板说明"/>
       </div>{templateId&&!template&&<p role="alert" className="error">原客户端模板 {imported?.templates.client.name||templateId} 当前不在可用模板列表中，可能已停用、归档、删除或无访问权限。请从原集合允许的可用客户端模板中重新选择；若没有选项，请到集合管理检查关联模板及发布状态。</p>}<RuntimeSummary template={template}/></WizardModule><WizardModule title="执行时限"><div className="submit-grid">
       <Field label="请求超时秒"><input type="number" required min={1} max={120} value={draft.request_timeout_seconds} onChange={e=>update('request_timeout_seconds',Number(e.target.value))}/></Field>
@@ -202,7 +222,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
       <p>客户端总执行时限：每项任务全部回合共用，不是每回合单独计时。选择不限仍需心跳续租，且支持取消；需要 Worker 协议 16。{executionLimit!==null?`平台上限 ${executionLimit} 秒。`:'正在读取平台上限。'}</p>
       {limitError&&<p role="alert">平台执行时限读取失败：{limitError}</p>}<button type="button" onClick={()=>{setPreview(null);setLimitReload(n=>n+1)}}>刷新执行时限</button>
       </WizardModule>{template?.task_type==='command'&&<p className="hint">{ordinaryOnce?'普通命令：每项执行一次，清单回合数不用于重复执行。':'宿主机逐回合普通命令：每回合启动一次，按退出码记录完成进度。'}默认无需推理服务；不计算评测目标成功率。</p>}
-      {template&&<WizardModule title="业务参数"><p className="hint">这里设置公共参数；集合和任务单项同名配置可能覆盖它。预检后可逐项核对最终值与来源。</p><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/>{imported&&<button type="button" onClick={()=>{try{const parameters=parseValues(template.parameter_schema,values);setCases(old=>old.map(c=>({...c,parameters:{...c.parameters,...parameters}})));setError('');}catch(e){setError(String(e));}}}>将已填写的公共参数应用到所有任务</button>}</WizardModule>}
+      {template&&<WizardModule title="业务参数"><p className="hint">{imported&&!suiteId?'历史任务的共同值已预填；不同值在任务清单中逐项修改。':'这里设置公共参数；集合和任务单项同名配置可能覆盖它。'}预检后可逐项核对最终值与来源。</p><button type="button" onClick={()=>setCopy({kind:'client',source:template})}>复制修改客户端模板</button><BusinessValues label="客户端业务参数" schema={template.parameter_schema} value={values} onChange={setValues}/>{imported&&!suiteId&&!template.parameter_schema&&<><p className="hint">旧模板没有类型化字段。这里预填共同业务参数 JSON，例如 {`{"output_dir":"/old/path"}`}；修改后按普通向导提交。不同值在任务清单中逐项修改。</p><JsonDraft label="客户端业务参数 JSON" value={legacyOverrides} onChange={setLegacyOverrides}/></>}</WizardModule>}
       <WizardModule title="环境变量"><EnvironmentEditor label="启动变量覆盖 JSON" value={draft.environment} onChange={v=>update('environment',v)} allowed={(template?.runtime||template?.host_runtime)?.overridable_env||[]}/></WizardModule>
     </>}
     {step===2&&<WizardModule title="服务配置"><Field label="服务来源"><select value={serviceMode} onChange={e=>setServiceMode(e.target.value as typeof serviceMode)}><option value="external">提供外部服务地址</option><option value="managed">平台启动服务端模板</option><option value="none">无需服务（普通批处理）</option></select></Field>
@@ -229,8 +249,8 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     {step===4&&<>
       <h3>确认运行配置</h3><p>核对以下配置；预检通过前，参数和资源仅为待解析配置。提交不会立即保证获得资源。</p>
       <WizardModule title="任务清单确认"><button type="button" onClick={()=>goBack(0)}>修改任务清单</button><dl className="run-summary"><dt>批次名称</dt><dd>{draft.title}</dd><dt>集合</dt><dd>{selectedSuite?selectedSuite.name+' / '+selectedSuite.version:historicalSuite?historyLabel:'自定义清单'}</dd><dt>任务与回合</dt><dd>{ordinaryOnce?`${cases.length} 项任务，每项启动一次`: `${cases.length} 项任务，${cases.reduce((sum,c)=>sum+c.episodes,0)} 个回合`}</dd></dl>
-      <details><summary>逐项任务与参数</summary>{cases.map(c=><section key={c.case_id}><h4>{c.task_name} · {c.case_id}</h4><p>{ordinaryOnce?'执行一次':`${c.episodes} 回合`} · 种子 {c.seed}</p><ValueTable value={c.parameters}/>{c.resources&&<ValueTable value={c.resources}/>}<p>服务关联：{c.service_keys?.join('、')||'兼容服务'}</p></section>)}</details></WizardModule>
-      <WizardModule title="客户端配置确认"><button type="button" onClick={()=>goBack(1)}>修改客户端</button><p>{template?.name} / {template?.version}</p><RuntimeSummary template={template}/><p>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.unlimited_timeout?'不限':draft.timeout_seconds+' 秒'}（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</p><p>断联继续执行：{draft.limited_disconnect?`${draft.disconnect_tolerance_seconds} 秒`:'不限'}（客户端与托管服务共用）</p><details><summary>模板与集合参数默认值</summary><h4>模板默认</h4><ValueTable value={Object.fromEntries(Object.entries(template?.parameter_schema?.fields||{}).filter(([,v])=>v.default!==undefined).map(([k,v])=>[k,v.default]))}/><h4>集合公共参数</h4><ValueTable value={suiteDefaults}/></details><h4>本次公共参数覆盖</h4><ValueTable value={values}/><p className="hint">未输入的参数继承模板或集合；单项覆盖以预检最终值为准。</p><h4>本次启动变量覆盖</h4><pre>{draft.environment}</pre></WizardModule>
+      <details><summary>逐项任务与参数</summary>{(preview?.cases||cases).map(c=><section key={c.case_id}><h4>{c.task_name} · {c.case_id}</h4><p>{ordinaryOnce?'执行一次':`${c.episodes} 回合`} · 种子 {c.seed}</p><ValueTable value={preview?.effective_parameters?.find(p=>p.case_id===c.case_id)?.parameters??c.parameters}/>{c.resources&&<ValueTable value={c.resources}/>}<p>服务关联：{c.service_keys?.join('、')||'兼容服务'}</p></section>)}</details></WizardModule>
+      <WizardModule title="客户端配置确认"><button type="button" onClick={()=>goBack(1)}>修改客户端</button><p>{template?.name} / {template?.version}</p><RuntimeSummary template={template}/><p>请求 {draft.request_timeout_seconds} 秒 / 每项总执行时限 {draft.unlimited_timeout?'不限':draft.timeout_seconds+' 秒'}（全部回合共用）；平台上限 {executionLimit??'未获取'} 秒</p><p>断联继续执行：{draft.limited_disconnect?`${draft.disconnect_tolerance_seconds} 秒`:'不限'}（客户端与托管服务共用）</p><details><summary>模板与集合参数默认值</summary><h4>模板默认</h4><ValueTable value={Object.fromEntries(Object.entries(template?.parameter_schema?.fields||{}).filter(([,v])=>v.default!==undefined).map(([k,v])=>[k,v.default]))}/><h4>集合公共参数</h4><ValueTable value={suiteDefaults}/></details><h4>{imported&&!suiteId?'本次客户端业务参数（历史共同值已预填）':'本次公共参数覆盖'}</h4><ValueTable value={template?.parameter_schema?values:legacyOverrides}/><p className="hint">未输入的参数继承模板或集合；任务间不同的值以清单中的单项配置为准。最终值在预检结果中逐项显示。</p><h4>本次启动变量覆盖</h4><pre>{draft.environment}</pre></WizardModule>
       <WizardModule title="服务端配置确认"><button type="button" onClick={()=>goBack(2)}>修改服务端</button>{serviceMode==='managed'?serviceRows.map(row=><section className="wizard-service-card" key={row.key}><h4>{row.key} · {servers.find(t=>t.id===row.template_id)?.name} / {servers.find(t=>t.id===row.template_id)?.version}</h4><dl className="run-summary"><dt>服务实例数</dt><dd>{row.instance_count}</dd><dt>资源池</dt><dd>{pools.find(p=>p.id===(row.pool_id||draft.pool_id))?.name||'未选择'}{!row.pool_id?'（跟随客户端）':''}</dd><dt>服务访问方式</dt><dd>{row.mode==='shared'?'多个客户端共享服务':'每实例同时一个客户端'}</dd><dt>服务地址</dt><dd>启动后由平台分配，等待就绪检查</dd><dt>固定槽位</dt><dd>{row.slot_id||'自动选择'}</dd></dl><h4>模板参数默认值</h4><ValueTable value={Object.fromEntries(Object.entries(servers.find(t=>t.id===row.template_id)?.parameter_schema?.fields||{}).filter(([,v])=>v.default!==undefined).map(([k,v])=>[k,v.default]))}/><h4>本次业务参数覆盖</h4><ValueTable value={row.imported_parameters??row.parameters}/><h4>本次运行变量</h4><pre>{row.environment}</pre><h4>资源申请</h4><ValueTable value={preview?.service_plan?.find(s=>s.key===row.key)?.resources||row.resource_overrides||{cpus:row.cpus||'待解析',ram_gb:row.ram_gb||'待解析',cpu_unlimited:!!row.cpu_unlimited,memory_unlimited:!!row.memory_unlimited,gpu_mode:row.gpu_mode,requested_vram_gb:row.requested_vram_gb}} sources={preview?.service_plan?.find(s=>s.key===row.key)?.resource_sources}/></section>):serviceMode==='none'?<p>无需服务</p>:addresses.map(e=><p key={e.url}>{e.url} · {e.mode==='shared'?'共享':'独占'}</p>)}{serviceMode==='managed'&&<p>结束策略：{stopAfter?'批次结束且客户端清理完成后停止服务':'保留服务运行'}</p>}</WizardModule>
       <WizardModule title="资源与并发确认"><button type="button" onClick={()=>goBack(3)}>修改资源与并发</button><p>{pools.find(p=>p.id===draft.pool_id)?.name} · 最大并发 {draft.max_concurrent}</p><p>每项申请与来源在下方预检结果中逐项显示；服务端与客户端分别占用资源。</p></WizardModule>
       <button type="button" onClick={()=>void inspect()}>重新检查</button>
@@ -239,7 +259,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
         <details><summary>有效资源申请与来源</summary><p>以下为后端按模板、提交及集合单项解析的结果。</p>{preview.case_checks?.map(c=><section key={c.case_id}><h4>客户端 · {c.case_id}</h4><ValueTable value={c.resources} sources={c.resource_sources}/></section>)}{preview.service_plan?.map(c=><section key={c.key}><h4>服务端 · {c.key}</h4><ValueTable value={c.resources} sources={c.resource_sources}/></section>)}</details>
         <h3>{preview.status==='ready'?'当前有节点可接纳单项任务':preview.status==='waiting_resources'?'需要等待资源':'需要准备运行环境'}</h3>
         <p>配置校验：{preview.can_submit?'允许提交':'需要修正'}。资源与环境状态见下方；连通性尚未通过本次实际执行验证。</p><p className="hint">检查时间：{new Date(preview.checked_at).toLocaleTimeString()}。{preview.note} 最大并发为上限，不保证同时启动。</p>
-        <details><summary>有效业务参数与来源</summary>{preview.effective_parameters?.map(p=><div key={p.case_id}><h4>{p.case_id}</h4><ValueTable value={p.parameters} sources={p.sources}/></div>)}</details>{preview.pair_checks?.map(p=><p key={p.case_id}>{p.case_id}：{p.pair_ready?'两端资源当前可接纳':'等待两端资源或服务环境'}</p>)}<Reasons reasons={preview.reasons}/><ul>{preview.endpoints?.map(e=><li key={e.url}>{e.url} · {e.mode==='exclusive'?'独占':'共享'} · {e.available?'当前可分配':'等待互斥占用释放'} · 当前占用 {e.occupancy} · 可分配不代表已验证连通</li>)}</ul>
+        <details open={!!imported}><summary>有效业务参数与来源</summary>{preview.effective_parameters?.map(p=><div key={p.case_id}><h4>{p.case_id}</h4><ValueTable value={p.parameters} sources={p.sources}/></div>)}</details>{preview.pair_checks?.map(p=><p key={p.case_id}>{p.case_id}：{p.pair_ready?'两端资源当前可接纳':'等待两端资源或服务环境'}</p>)}<Reasons reasons={preview.reasons}/><ul>{preview.endpoints?.map(e=><li key={e.url}>{e.url} · {e.mode==='exclusive'?'独占':'共享'} · {e.available?'当前可分配':'等待互斥占用释放'} · 当前占用 {e.occupancy} · 可分配不代表已验证连通</li>)}</ul>
         <h4>客户端候选设备</h4>{!preview.nodes.length&&<p>没有客户端候选设备，请检查资源池及上方原因。</p>}<div className="table-scroll"><table><thead><tr><th>节点 / 设备</th><th>当前状态与操作建议</th></tr></thead><tbody>{preview.nodes.map(n=><tr key={n.slot_id}><td>{n.node_name} / 设备 {n.gpu_index}<small>{n.gpu_model}</small></td><td>{n.ready?'当前可接纳单项任务':<><Reasons reasons={n.reasons}/>{!n.reasons.length&&'等待上方平台或用户配额释放'}</>}</td></tr>)}</tbody></table></div>
         {preview.server_checks?.map(service=><section key={service.key} aria-label={`服务端 ${service.key} 候选设备`}><h4>服务端 {service.key} · 资源池 {service.pool_name}</h4><p>{service.status==='ready'?'当前有服务端候选设备':service.status==='waiting_resources'?'服务端等待资源':'服务端环境未就绪'}</p><Reasons reasons={service.reasons}/>{service.nodes.length?<div className="table-scroll"><table><thead><tr><th>节点 / 设备</th><th>当前状态与操作建议</th></tr></thead><tbody>{service.nodes.map(node=><tr key={node.slot_id}><td>{node.node_name} / 设备 {node.gpu_index}<small>{node.gpu_model}</small></td><td>{node.ready?'符合服务端要求':node.reasons.length?<Reasons reasons={node.reasons}/>:<span>设备自身满足要求，等待上方配额或两端联合分配</span>}</td></tr>)}</tbody></table></div>:<p>资源池中没有可用的服务端设备。</p>}</section>)}
         <p>环境缺失和资源占用不会阻止合法任务提交排队；环境问题需要管理员处理，不会因为提交排队就自动解决。</p>

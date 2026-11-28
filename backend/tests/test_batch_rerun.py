@@ -140,6 +140,12 @@ def test_output_dir_is_reserved_in_typed_template_but_legacy_input_can_be_edited
     check=c.post('/api/v1/orchestrations/preflight',headers=a['alice'],json=submission)
     assert check.status_code==200,check.text
     recreated=submit(env,submission,'edited-output')
+    detail=c.get('/api/v1/batches/'+recreated['id'],headers=a['alice'])
+    assert detail.status_code==200,detail.text
+    job_id=next(case['job_id'] for case in detail.json()['cases'] if case['case_id']=='0')
+    saved=c.get('/api/v1/jobs/'+job_id,headers=a['alice'])
+    assert saved.status_code==200,saved.text
+    assert saved.json()['client_spec']['parameters']['output_dir']=='/business/new'
     with main.SessionLocal() as s:
         first=s.scalar(select(Job).where(Job.batch_id==recreated['id'],Job.case_id=='0'))
         assert first.client_spec['parameters']['output_dir']=='/business/new'

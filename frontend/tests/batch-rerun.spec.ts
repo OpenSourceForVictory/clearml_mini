@@ -15,7 +15,7 @@ async function setup(page:Page,availableSuite=true){
   if(p==='batches')data=[{id:'old',title:'历史批次',status:'SUCCEEDED',total:2,finished:2,succeeded:2,total_episodes:10,cases:[]}];
   if(p.endsWith('/monitor'))data={id:'old',title:'历史批次',max_concurrent:2,total:2,finished:2,total_episodes:10,cases:[],summary:{states:{},completed_episodes:0,successes:0}};
   if(p.endsWith('/rerun-draft')){const wait=delay,bad=fail;await new Promise(r=>setTimeout(r,wait));if(bad){await route.fulfill({status:404,json:{detail:'batch not found'}});return;}data=draft;}
-  if(p==='orchestrations/preflight'){const body=route.request().postDataJSON();requests.push({kind:'check',body});data={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:body.cases,reasons:[],nodes:[],note:'test',effective_parameters:body.cases.map((c:any)=>({case_id:c.case_id,parameters:c.parameters,sources:{}}))};}
+  if(p==='orchestrations/preflight'){const body=route.request().postDataJSON();requests.push({kind:'check',body});data={checked_at:new Date().toISOString(),can_submit:true,status:'ready',cases:body.cases,reasons:[],nodes:[],note:'test',effective_parameters:body.cases.map((c:any)=>({case_id:c.case_id,parameters:{...body.client.parameters,...c.parameters},sources:{}}))};}
   if(p==='orchestrations'){requests.push({kind:'submit',body:route.request().postDataJSON(),key:route.request().headers()['idempotency-key']});if(lose){lose=false;await route.abort();return;}data={id:'new',title:'new',cases:[]};}
   await route.fulfill({json:data});
  });
@@ -132,23 +132,25 @@ test('history confirmation stays by actions and edits invalidate acknowledgement
  expect(c.requests).toHaveLength(1);expect(c.requests[0].body.services[0].instance_count).toBe(3);
 });
 
-test('imported client parameters can change per task or be applied to every task',async({page})=>{
- const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+test('common historical client parameter is prefilled and edited through ordinary submission',async({page})=>{
+ const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
  const w=page.getByRole('region',{name:'集合运行向导'});
- await w.getByText('任务 1 详细配置',{exact:true}).click();
- await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":7}');await w.getByLabel('第 1 项任务名').click();
  await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+ await expect(w).toContainText('平台上限 7200 秒');
  await w.getByLabel('speed').fill('8');
- await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端资源池')).toBeVisible();
  await w.getByRole('button',{name:'检查并确认',exact:true}).click();
- expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([7,5]);
- await w.getByRole('button',{name:'修改客户端'}).click();
- await w.getByRole('button',{name:'将已填写的公共参数应用到所有任务'}).click();
- await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
- await w.getByRole('button',{name:'检查并确认',exact:true}).click();
- expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([8,8]);
+ await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ expect(c.requests.at(-1).body.client.parameters.speed).toBe(8);
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters)).toEqual([{},{}]);
+ await expect(w.getByText('有效业务参数与来源')).toBeVisible();
  await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
- expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([8,8]);
+ expect(c.requests.at(-1).body.client.parameters.speed).toBe(8);
 });
 
 test('changing a historical server template clears parameters from the previous template',async({page})=>{
@@ -189,9 +191,68 @@ test('legacy output_dir business input can be changed in rerun without a typed s
  await w.getByLabel('第 1 项参数',{exact:true}).fill('{"output_dir":"/business/new"}');
  await w.getByLabel('第 1 项任务名').click();
  await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');
- await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端业务参数 JSON')).toHaveValue('{}');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端资源池')).toBeVisible();
  await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
  expect(c.requests.at(-1).body.cases[0].parameters).toEqual({output_dir:'/business/new'});
  await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
  expect(c.requests.at(-1).body.cases[0].parameters).toEqual({output_dir:'/business/new'});
+});
+
+test('legacy output_dir can be changed once for all historical tasks',async({page})=>{
+ const c=await setup(page);(c.template as any).parameter_schema=null;
+ c.draft.submission.cases[0].parameters={output_dir:'/business/old',keep:1};
+ c.draft.submission.cases[1].parameters={output_dir:'/business/old',keep:2};
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端业务参数 JSON')).toHaveValue(/\/business\/old/);
+ await w.getByLabel('客户端业务参数 JSON').fill('{"output_dir":"/business/new"}');
+ await w.getByLabel('请求超时秒').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters).toEqual({output_dir:'/business/new'});
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters)).toEqual([{keep:1},{keep:2}]);
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
+ expect(c.requests.at(-1).body.client.parameters.output_dir).toBe('/business/new');
+});
+
+test('shared historical typed value is prefilled but a later single-task edit remains local',async({page})=>{
+ const c=await setup(page);c.draft.submission.cases[1].parameters.speed=2;
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":7}');
+ await w.getByLabel('第 1 项任务名').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('speed')).toHaveValue('2');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端资源池')).toBeVisible();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ expect(c.requests.at(-1).body.client.parameters.speed).toBe(2);
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([7,undefined]);
+});
+
+test('historically different task values keep ordinary per-task precedence after common edit',async({page})=>{
+ const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w).toContainText('平台上限 7200 秒');
+ await w.getByLabel('speed').fill('8');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务来源')).toBeVisible();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('客户端资源池')).toBeVisible();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByRole('button',{name:'提交评测批次',exact:true})).toBeEnabled();
+ expect(c.requests[0].body.client.parameters.speed).toBe(8);
+ expect(c.requests[0].body.cases.map((x:any)=>x.parameters.speed)).toEqual([2,5]);
+ await expect(w.getByText('有效业务参数与来源')).toBeVisible();
 });
