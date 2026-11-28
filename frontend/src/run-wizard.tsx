@@ -180,7 +180,7 @@ export function RunWizard({templates,pools,suites,launch,onSubmitted,onJob,onBat
     <p className="hint">选择业务配置与并发偏好，平台负责分配机器和传递参数；实际通信和执行可通过试跑验证。</p>
     {error&&<p role="alert" className="error">{error}</p>}
     {imported&&<section aria-label="历史批次来源"><h3>基于历史批次创建</h3><p>来源：{imported.source.title} · {imported.source.batch_id}。只创建新批次，不改变原批次。原客户端：{imported.templates.client.name} / {imported.templates.client.version}。</p><ul>{imported.templates.services.map((t,i)=><li key={i}>原服务 {i+1}：{t.name} / {t.version} · {t.id}</li>)}</ul>
-    <p>已恢复各任务的最终参数和资源，单项配置优先于公共配置；请在清单中逐项修改。重新预检后才能提交，不复用原实例或预检结果。</p>
+    <p>已恢复各任务的最终参数和资源，单项配置优先于公共配置。要修改某项任务，请编辑清单中的单项参数；要统一修改所有任务，请在客户端步骤填写公共参数后点击“将已填写的公共参数应用到所有任务”。重新预检后才能提交，不复用原实例或预检结果。</p>
     {imported.issues.length>0&&<p>有 {imported.issues.length} 项历史配置需要核对，请在本步骤底部查看“历史配置确认”。</p>}
     </section>}
     <p className="wizard-context">{draft.title||'未命名批次'} · {cases.length} 项任务 · {stepTitles[step]}</p><form onSubmit={next} onInvalidCapture={revealInvalid}><fieldset disabled={busy} className="wizard-form">

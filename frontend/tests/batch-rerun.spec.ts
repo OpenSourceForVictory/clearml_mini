@@ -131,3 +131,49 @@ test('history confirmation stays by actions and edits invalidate acknowledgement
  const box=await panel.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(390);
  expect(c.requests).toHaveLength(1);expect(c.requests[0].body.services[0].instance_count).toBe(3);
 });
+
+test('imported client parameters can change per task or be applied to every task',async({page})=>{
+ const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByText('任务 1 详细配置',{exact:true}).click();
+ await w.getByLabel('第 1 项参数',{exact:true}).fill('{"speed":7}');await w.getByLabel('第 1 项任务名').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByLabel('speed').fill('8');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([7,5]);
+ await w.getByRole('button',{name:'修改客户端'}).click();
+ await w.getByRole('button',{name:'将已填写的公共参数应用到所有任务'}).click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([8,8]);
+ await w.getByRole('button',{name:'提交评测批次',exact:true}).click();
+ expect(c.requests.at(-1).body.cases.map((x:any)=>x.parameters.speed)).toEqual([8,8]);
+});
+
+test('changing a historical server template clears parameters from the previous template',async({page})=>{
+ const c=await setup(page);
+ await page.route('**/api/v1/runtime-templates/server',route=>route.fulfill({json:[
+  {id:'s',name:'Historical server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{count:{type:'integer'}}}},
+  {id:'replacement',name:'Replacement server',version:'1',execution_mode:'host',enabled:true,status:'published',protocol:'ws',parameter_schema:{version:1,fields:{model:{type:'string'}}}},
+ ]}));
+ await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();
+ await expect(w.getByLabel('服务 1 历史业务参数 JSON')).toHaveValue(/count/);
+ await w.getByLabel('服务 1 模板',{exact:true}).selectOption('replacement');
+ await expect(w.getByLabel('服务 1 历史业务参数 JSON')).toHaveCount(0);
+ await w.getByLabel('model').fill('new-model');
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ expect(c.requests.at(-1).body.services[0]).toMatchObject({template_id:'replacement',parameters:{model:'new-model'}});
+});
+
+test('historical server business parameters remain editable without switching templates',async({page})=>{
+ const c=await setup(page);await page.getByRole('button',{name:'基于此批次创建',exact:true}).click();
+ const w=page.getByRole('region',{name:'集合运行向导'});
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await expect(w).toContainText('平台上限 7200 秒');await w.getByRole('button',{name:'下一步',exact:true}).click();
+ const parameters=w.getByLabel('服务 1 历史业务参数 JSON');
+ await parameters.fill('{"count":3}');await w.getByLabel('服务 1 实例数').click();
+ await w.getByRole('button',{name:'下一步',exact:true}).click();await w.getByRole('button',{name:'检查并确认',exact:true}).click();
+ await expect(w.getByRole('region',{name:'服务端配置确认'})).toContainText('3');
+ expect(c.requests.at(-1).body.services[0].parameters).toEqual({count:3});
+});
