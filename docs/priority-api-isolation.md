@@ -94,7 +94,7 @@ docker compose --env-file .env -p mini-eval \
 
 隔离负载工具的`--bulk-extra`可临时增加第二个批量API进程，要求`--priority-api`且不得与批量故障注入同时使用。工具单独核算实际多出的10个连接、等待额外副本就绪并将网关指向两个批量后端；跳过单后端停机探测。**这不是生产Compose副本开关**：生产Settings/网关/健康与故障恢复尚未支持批量副本，不能直接对`bulk-transfer-api`执行扩容。与加长批量队列的200 Worker对照见[数据库容量验收](database-capacity-acceptance.md)。
 
-API 隔离本身不替代断联执行恢复。新恢复协议需 API 与节点显式启用、持久 outbox 和能力协商；未启用的旧执行仍沿用原租约行为。当前恢复发布状态、真实协议矩阵与灰度边界见 [恢复验收](validation/disconnected-execution-20261124/recovery-acceptance-20261126.md)。
+API 隔离本身不替代断联执行恢复。新版 Compose 四角色默认设置 `RECOVERY_EXECUTION_ENABLED=1`，显式设置 `0` 可关闭新领取；仍需节点持久 outbox、能力协商，且只影响新执行。旧 Worker 或旧执行仍沿用原租约行为。更新配置后须重建 API 容器；当前恢复发布状态、真实协议矩阵与灰度边界见 [恢复验收](validation/disconnected-execution-20261124/recovery-acceptance-20261126.md)。
 
 ## 分开配置请求准入和数据库容量
 

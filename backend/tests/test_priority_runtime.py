@@ -284,7 +284,7 @@ def test_priority_compose_has_single_scheduler_and_preserves_public_port():
     assert role_for('/api/v1/admin/node-installation-bundle', 'GET') == 'bulk-transfer'
 
 
-@pytest.mark.parametrize('enabled', [None, '1'])
+@pytest.mark.parametrize('enabled', [None, '0', '1'])
 def test_recovery_flag_reaches_every_api_role(tmp_path, enabled):
     """A .env-only flag is ineffective unless Compose passes it to every API role."""
     import os
@@ -308,7 +308,7 @@ def test_recovery_flag_reaches_every_api_role(tmp_path, enabled):
     config = json.loads(subprocess.run(command, env=env, capture_output=True,
                                       text=True, check=True).stdout)
     for role in ('api', 'execution-control-api', 'worker-data-api', 'bulk-transfer-api'):
-        assert config['services'][role]['environment']['RECOVERY_EXECUTION_ENABLED'] == (enabled or '0')
+        assert config['services'][role]['environment']['RECOVERY_EXECUTION_ENABLED'] == (enabled if enabled is not None else '1')
 
 
 def test_postgres_budget_and_pool_exhaustion_are_role_local(pg):

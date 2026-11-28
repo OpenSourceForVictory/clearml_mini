@@ -259,7 +259,7 @@ OpenSpec 变更：`shared-gpu-scheduling`。R8000 服务端已迁移到 `b42e901
 
 ### 断联补报接收接口的边界（开发中）
 
-2026-11-26 当前部署状态：API 四角色已通过 Compose 接收 `RECOVERY_EXECUTION_ENABLED=1`，1.95.69.29 的 NPU0 Worker 已配置共享 `node_outbox_root` 并声明 `disconnected_execution_v1`；该机 NPU1–7 尚未打开节点能力。下文“生产开关关闭”“节点尚未广告”是分阶段实施时的历史记录，不代表当前灰度状态。API 和节点开关同时打开只允许新领取走恢复协议，不能证明真实任务断联恢复已验收；扩大范围前须完成原执行身份、结果补报和清理的真机验证。具体节点操作与回退边界见[Worker 更新说明](worker-upgrades.md)。
+2026-11-26 灰度部署状态：API 四角色已通过 Compose 接收 `RECOVERY_EXECUTION_ENABLED=1`，1.95.69.29 的 NPU0 Worker 已配置共享 `node_outbox_root` 并声明 `disconnected_execution_v1`；该机 NPU1–7 当时尚未打开节点能力。2026-11-28 起新版 Compose 默认传递 `1`；现有 `.env` 显式 `0` 优先，更新文件后必须重建 API 容器。下文“生产开关关闭”“节点尚未广告”是分阶段实施时的历史记录，不代表新版默认值。API 和节点能力同时具备只允许新领取走恢复协议；旧执行仍按原租约处理，已超时执行不会自动复活。具体节点操作与回退边界见[Worker 更新说明](worker-upgrades.md)。
 
 `POST /api/v1/worker/executions/{execution_id}/recovery/control` 进入执行控制通道，`.../recovery/results` 进入可靠结果通道；四角色网关和旧双进程网关同步维护。请求使用 Worker 鉴权及原分配代次，旧执行没有显式恢复授权会返回 404，不会仅因调用新接口就升级策略。
 
