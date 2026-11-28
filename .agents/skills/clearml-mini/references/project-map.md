@@ -469,3 +469,4 @@ Worker 0.21.21 基础心跳：worker/heartbeat_cadence.py 采用单调时钟，�
 2026-11-26发布：主分支d2ad332的API镜像已用于本机12个四角色进程；数据库迁移头仍c14d09e，连接预算168不变。六台真机13卡位通过平台在线升级到Worker 0.21.21，全部回连，心跳/遥测最近更新时间已核对；证据见docs/validation/heartbeat-cadence-20261126/release-20261126.json。发布检查未运行真实GPU/NPU模型任务，不代表模型验收。
 
 2026-11-28 旧Worker清理兼容：worker/client.py 的 post(path) 实际发送 JSON `{}`。execution.cleanup 将空对象视作无证明旧协议，仅非空对象校验 RecoveryProof；有恢复授权时仍拒绝裸清理。真机旧版0.21.21服务端在API停机约26秒后停止host unit，恢复后旧租约判TIMED_OUT；修复前空对象被FastAPI校验400导致清理确认卡住。见 docs/validation/disconnected-execution-20261124/api-outage-service-20261128.md。
+设备身份：`gpu_slots.gpu_uuid` 对 GPU 仍以 `uq_live_gpu_uuid` 约束全平台存活唯一；NPU 上报 `ascend:<PCI BDF>:<chip>`，PCI BDF 可跨机器重复，以 `uq_live_npu_node_uuid` 约束同机存活唯一。`execution.register` 的 NPU 查找带 `node_name`，GPU 仍全局查找；其他读取按 slot_id/worker_id 或在已选 slot 上比对设备身份。迁移 `d28f6a1`，操作见 docs/node-reenrollment.md、docs/database-migration.md，测试见 test_slot_identity_scope.py。

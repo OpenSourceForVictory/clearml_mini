@@ -122,7 +122,16 @@ class Slot(Base):
     accelerator_backends: Mapped[list] = mapped_column(JSON_TYPE,default=list,server_default='[]')
     __tablename__ = 'gpu_slots'
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    __table_args__ = (Index('uq_live_slot_index', 'node_name', 'gpu_index', unique=True, postgresql_where=text('deleted_at IS NULL'), sqlite_where=text('deleted_at IS NULL')), Index('uq_live_slot_uuid', 'gpu_uuid', unique=True, postgresql_where=text('deleted_at IS NULL'), sqlite_where=text('deleted_at IS NULL')))
+    __table_args__ = (
+        Index('uq_live_slot_index', 'node_name', 'gpu_index', unique=True,
+              postgresql_where=text('deleted_at IS NULL'), sqlite_where=text('deleted_at IS NULL')),
+        Index('uq_live_gpu_uuid', 'gpu_uuid', unique=True,
+              postgresql_where=text("deleted_at IS NULL AND accelerator_type = 'gpu'"),
+              sqlite_where=text("deleted_at IS NULL AND accelerator_type = 'gpu'")),
+        Index('uq_live_npu_node_uuid', 'node_name', 'gpu_uuid', unique=True,
+              postgresql_where=text("deleted_at IS NULL AND accelerator_type = 'npu'"),
+              sqlite_where=text("deleted_at IS NULL AND accelerator_type = 'npu'")),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     node_name: Mapped[str] = mapped_column(String(100))
     gpu_index: Mapped[int] = mapped_column(Integer)

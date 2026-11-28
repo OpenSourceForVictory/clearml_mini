@@ -323,7 +323,10 @@ def install(app, db, current):
             raise HTTPException(400, 'virtual and physical device identities must be distinct')
         if body.accelerator_type=='npu' and (body.protocol_version<11 or not body.gpu_uuid.startswith('ascend:')):
             raise HTTPException(400,'NPU registration requires protocol 11 and stable Ascend identity')
-        existing = s.scalar(select(Slot).where(Slot.gpu_uuid == body.gpu_uuid, Slot.deleted_at.is_(None)))
+        identity = select(Slot).where(Slot.gpu_uuid == body.gpu_uuid, Slot.deleted_at.is_(None))
+        if body.accelerator_type == 'npu':
+            identity = identity.where(Slot.node_name == worker.node_name)
+        existing = s.scalar(identity)
         indexed = s.scalar(select(Slot).where(Slot.node_name == worker.node_name, Slot.gpu_index == body.gpu_index, Slot.deleted_at.is_(None)))
         if existing and (existing.worker_id != worker.id or existing.gpu_index != body.gpu_index):
             raise HTTPException(409, 'GPU UUID already registered to another slot')
